@@ -1,12 +1,11 @@
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import * as Haptics from 'expo-haptics';
 import React from 'react';
-import { Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { useTheme } from '@/contexts/theme';
 import { Icon } from '@/components/ui';
-import { Text } from '@/components/ui';
+import { accentShadow, colors as C, shadows } from '@/lib/theme';
 
 type TabDef = {
   route: string;
@@ -19,15 +18,13 @@ type TabDef = {
 const TABS: TabDef[] = [
   { route: 'index',     iconOutline: 'home-outline',   iconFilled: 'home',   label: '홈' },
   { route: 'community', iconOutline: 'people-outline', iconFilled: 'people', label: '커뮤니티' },
-  { route: 'create',    iconOutline: 'add',            iconFilled: 'add',    label: '코스생성', center: true },
+  { route: 'create',    iconOutline: 'add',            iconFilled: 'add',    label: '뛰러 가기', center: true },
   { route: 'records',   iconOutline: 'list-outline',   iconFilled: 'list',   label: '기록' },
   { route: 'profile',   iconOutline: 'person-outline', iconFilled: 'person', label: '프로필' },
 ];
 
 export function FreshTabBar({ state, navigation }: BottomTabBarProps) {
-  const { colors, elevation } = useTheme();
   const insets = useSafeAreaInsets();
-  const c = colors;
 
   function handlePress(routeName: string, routeKey: string, isFocused: boolean) {
     if (Platform.OS === 'ios') {
@@ -45,42 +42,33 @@ export function FreshTabBar({ state, navigation }: BottomTabBarProps) {
 
   return (
     <View
-      style={[
-        styles.wrapper,
-        { paddingBottom: insets.bottom + 8 },
-        { backgroundColor: 'transparent' },
-      ]}
+      style={[styles.wrapper, { paddingBottom: insets.bottom + 8 }]}
       pointerEvents="box-none"
     >
-      <View
-        style={[
-          styles.pill,
-          {
-            backgroundColor: c.surfaceContainerLowest,
-            borderColor: c.outlineVariant + '44',
-          },
-          elevation.sheet,
-        ]}
-      >
+      <View style={[styles.pill, shadows.md]}>
         {TABS.map((tab) => {
           const route = state.routes.find((r) => r.name === tab.route);
           const isFocused = route ? state.index === state.routes.indexOf(route) : false;
+          const iconColor = isFocused ? C.accentGrn : C.faint;
 
           if (tab.center) {
             return (
               <Pressable
                 key={tab.route}
-                onPress={() => route && handlePress(tab.route, route.key, isFocused)}
+                onPress={() => {
+                  if (route) handlePress(tab.route, route.key, isFocused);
+                }}
                 style={({ pressed }) => [
-                  styles.centerBtn,
-                  {
-                    backgroundColor: c.primary,
-                    transform: [{ scale: pressed ? 0.93 : 1 }],
-                  },
-                  elevation.fab,
+                  styles.centerOuter,
+                  { transform: [{ scale: pressed ? 0.93 : 1 }] },
                 ]}
               >
-                <Icon name="add" size={28} color={c.onPrimary} />
+                <View style={[styles.centerCircle, { backgroundColor: C.accent }, accentShadow(C.accent)]}>
+                  <Icon name="add" size={26} color={C.accentText} />
+                </View>
+                <Text style={[styles.lbl, { color: C.accentGrn, fontWeight: '700' }]}>
+                  {tab.label}
+                </Text>
               </Pressable>
             );
           }
@@ -94,13 +82,9 @@ export function FreshTabBar({ state, navigation }: BottomTabBarProps) {
               <Icon
                 name={isFocused ? tab.iconFilled : tab.iconOutline}
                 size={22}
-                color={isFocused ? c.primary : c.onSurfaceVariant}
+                color={iconColor}
               />
-              <Text
-                variant="labelSm"
-                color={isFocused ? 'primary' : 'onSurfaceVariant'}
-                weight={isFocused ? '600' : '500'}
-              >
+              <Text style={[styles.lbl, { color: iconColor, fontWeight: isFocused ? '700' : '500' }]}>
                 {tab.label}
               </Text>
             </Pressable>
@@ -119,14 +103,17 @@ const styles = StyleSheet.create({
     right: 0,
     paddingHorizontal: 16,
     paddingTop: 8,
+    backgroundColor: 'transparent',
   },
   pill: {
     height: 66,
     borderRadius: 33,
     borderWidth: 1,
+    borderColor: C.border,
+    backgroundColor: C.surface,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
+    paddingHorizontal: 6,
   },
   tabBtn: {
     flex: 1,
@@ -135,13 +122,22 @@ const styles = StyleSheet.create({
     gap: 3,
     paddingVertical: 8,
   },
-  centerBtn: {
-    width: 50,
-    height: 50,
-    borderRadius: 17,
+  centerOuter: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    paddingBottom: 8,
+  },
+  centerCircle: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: -10,
-    marginHorizontal: 8,
+    marginBottom: 3,
+  },
+  lbl: {
+    fontSize: 10,
+    letterSpacing: -0.1,
   },
 });

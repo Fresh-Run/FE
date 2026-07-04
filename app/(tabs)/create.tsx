@@ -1,18 +1,242 @@
-import React from 'react';
-import { View } from 'react-native';
+import { router } from 'expo-router';
+import React, { useMemo } from 'react';
+import {
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Icon, Screen, Text } from '@/components/ui';
-import { useTheme } from '@/contexts/theme';
+import { MiniMap } from '@/components/mini-map';
+import { Icon } from '@/components/ui';
+import { useCurrentLocation } from '@/hooks/use-current-location';
+import { useRuns } from '@/hooks/use-runs';
+import { FR_WEATHER } from '@/lib/weather-mock';
+import {
+  colors as C,
+  radius as R,
+  shadows,
+  spacing as S,
+  type as T,
+} from '@/lib/theme';
 
-export default function CreateScreen() {
-  const { colors } = useTheme();
+function getWeekBounds(): [Date, Date] {
+  const now = new Date();
+  const daysFromMon = (now.getDay() + 6) % 7;
+  const mon = new Date(now);
+  mon.setHours(0, 0, 0, 0);
+  mon.setDate(mon.getDate() - daysFromMon);
+  const sun = new Date(mon);
+  sun.setDate(sun.getDate() + 6);
+  sun.setHours(23, 59, 59, 999);
+  return [mon, sun];
+}
+
+export default function CreateTabScreen() {
+  const insets = useSafeAreaInsets();
+  const { placeName } = useCurrentLocation();
+  const { runs, signedOut } = useRuns();
+
+  const weeklyKm = useMemo(() => {
+    if (signedOut) return 0;
+    const [mon, sun] = getWeekBounds();
+    return runs
+      .filter(r => { const d = new Date(r.ran_at); return d >= mon && d <= sun; })
+      .reduce((s, r) => s + r.distance_km, 0);
+  }, [runs, signedOut]);
+
   return (
-    <Screen>
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 }}>
-        <Icon name="add-circle" size={48} color={colors.primary} />
-        <Text variant="headlineMd" center>코스생성</Text>
-        <Text variant="bodyMd" color="onSurfaceVariant" center>Coming soon</Text>
-      </View>
-    </Screen>
+    <View style={[st.root, { paddingTop: insets.top }]}>
+      <ScrollView
+        style={st.scroll}
+        contentContainerStyle={st.content}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* ── Title ─────────────────────────────────────────────────── */}
+        <Text style={st.title}>오늘 어떻게 달릴까요?</Text>
+        <Text style={st.subtitle}>당신의 컨디션에 맞는 완벽한 코스를 선택하세요.</Text>
+
+        {/* ── Card 1: AI course ────────────────────────────────────── */}
+        <Pressable
+          onPress={() => router.push('/(course)/create')}
+          style={({ pressed }) => [st.card, st.cardAi, { opacity: pressed ? 0.92 : 1 }]}
+        >
+          <View style={st.cardCircle} pointerEvents="none" />
+          <View style={st.iconSq}>
+            <Icon name="sparkles" size={26} color={C.accentText} />
+          </View>
+          <Text style={st.cardTitle}>AI 맞춤 코스로 시작</Text>
+          <Text style={st.cardDesc}>
+            현재 위치, 날씨, 개인 체력을 분석하여 가장 쾌적한 최적의 코스를 제안합니다.
+          </Text>
+          <View style={st.cardCta}>
+            <Text style={st.cardCtaTxt}>추천 코스 보기</Text>
+            <Icon name="chevron-forward" size={14} color={C.accentGrn} />
+          </View>
+        </Pressable>
+
+        {/* ── Card 2: Free running ─────────────────────────────────── */}
+        <Pressable
+          onPress={() => router.push('/(course)/tracking' as any)}
+          style={({ pressed }) => [st.card, { opacity: pressed ? 0.88 : 1 }]}
+        >
+          <View style={st.iconSq}>
+            <Icon name="walk" size={26} color={C.accentText} />
+          </View>
+          <Text style={st.cardTitle}>지금 바로 자유 러닝</Text>
+          <Text style={st.cardDesc}>
+            익숙한 나만의 경로를 따라 자유롭게 달리세요. 거리와 시간을 실시간으로 기록합니다.
+          </Text>
+          <View style={st.cardCta}>
+            <Text style={st.cardCtaTxt}>트래킹 시작하기</Text>
+            <Icon name="chevron-forward" size={14} color={C.accentGrn} />
+          </View>
+        </Pressable>
+
+        {/* ── Stats row: two separate cards ────────────────────────── */}
+        <View style={st.statsRow}>
+          <View style={[st.statCard, shadows.sm]}>
+            <Text style={st.statLabel}>주간 누적 거리</Text>
+            <Text style={st.statVal}>
+              {weeklyKm.toFixed(1)}<Text style={st.statUnit}> km</Text>
+            </Text>
+          </View>
+          <View style={[st.statCard, shadows.sm]}>
+            <Text style={st.statLabel}>현재 온도</Text>
+            <View style={st.tempRow}>
+              <Icon name="sunny" size={16} color={C.sun} />
+              <Text style={st.statVal}>{FR_WEATHER.temp}°</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* ── Location map card (inset, rounded, dark) ─────────────── */}
+        <View style={[st.mapCard, shadows.sm]}>
+          <MiniMap seed="chooser-map" height={164} borderRadius={R.xl} />
+          <View style={st.locationPill}>
+            <Icon name="location" size={13} color={C.accentGrn} />
+            <Text style={st.locationTxt} numberOfLines={1}>
+              현재 위치: {placeName ?? '위치 확인 중…'}
+            </Text>
+          </View>
+        </View>
+
+        {/* ── Saved courses row ─────────────────────────────────────── */}
+        <Pressable style={({ pressed }) => [st.savedRow, shadows.sm, { opacity: pressed ? 0.85 : 1 }]}>
+          <View style={st.savedIcon}>
+            <Icon name="bookmark" size={20} color={C.accentGrn} />
+          </View>
+          <View style={st.savedBody}>
+            <Text style={st.savedTitle}>저장된 코스들</Text>
+            <Text style={st.savedSub}>피드에서 마음에 드는 코스를 북마크해보세요</Text>
+          </View>
+          <Icon name="chevron-forward" size={18} color={C.faint} />
+        </Pressable>
+      </ScrollView>
+    </View>
   );
 }
+
+const st = StyleSheet.create({
+  root:    { flex: 1, backgroundColor: C.bg },
+  scroll:  { flex: 1 },
+  content: { paddingHorizontal: S.gutter, paddingBottom: 110 },
+
+  // Title
+  title:    { fontSize: 26, fontWeight: '800', letterSpacing: -0.8, color: C.text, marginTop: S.xl, marginBottom: 6 },
+  subtitle: { ...T.bodyMd, color: C.sub, marginBottom: S.xl },
+
+  // Option cards
+  card: {
+    backgroundColor: C.surface,
+    borderRadius:    R.xl,
+    borderWidth:     1,
+    borderColor:     C.border,
+    padding:         S.lg,
+    marginBottom:    S.md,
+    overflow:        'hidden',
+  },
+  cardAi: {
+    borderColor: C.accent + '55',
+  },
+  cardCircle: {
+    position:        'absolute',
+    top:             -40,
+    right:           -40,
+    width:           130,
+    height:          130,
+    borderRadius:    65,
+    backgroundColor: C.accentDim,
+  },
+  iconSq: {
+    width:           52,
+    height:          52,
+    borderRadius:    R.lg,
+    backgroundColor: C.accent,
+    alignItems:      'center',
+    justifyContent:  'center',
+    marginBottom:    S.md,
+  },
+  cardTitle: { fontSize: 18, fontWeight: '800', letterSpacing: -0.5, color: C.text, marginBottom: 6 },
+  cardDesc:  { ...T.bodyMd, color: C.sub, marginBottom: S.md },
+  cardCta:   { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  cardCtaTxt:{ ...T.labelLg, color: C.accentGrn, fontWeight: '700' },
+
+  // Stats row
+  statsRow: { flexDirection: 'row', gap: S.md, marginBottom: S.md },
+  statCard: {
+    flex:              1,
+    backgroundColor:   C.surface,
+    borderRadius:      R.xl,
+    borderWidth:       1,
+    borderColor:       C.border,
+    paddingHorizontal: S.lg,
+    paddingVertical:   S.md,
+  },
+  statLabel: { ...T.labelSm, color: C.sub, marginBottom: 5 },
+  statVal:   { ...T.metricLg, color: C.text },
+  statUnit:  { ...T.labelMd, color: C.sub },
+  tempRow:   { flexDirection: 'row', alignItems: 'center', gap: 5 },
+
+  // Map card
+  mapCard: { height: 164, borderRadius: R.xl, overflow: 'hidden', marginBottom: S.md },
+  locationPill: {
+    position:          'absolute',
+    top:               12,
+    left:              12,
+    flexDirection:     'row',
+    alignItems:        'center',
+    gap:               5,
+    backgroundColor:   'rgba(255,255,255,0.92)',
+    borderRadius:      R.pill,
+    paddingHorizontal: 10,
+    paddingVertical:   6,
+  },
+  locationTxt: { fontSize: 12, fontWeight: '600', color: C.text, letterSpacing: -0.2 },
+
+  // Saved courses
+  savedRow: {
+    flexDirection:   'row',
+    alignItems:      'center',
+    backgroundColor: C.surface,
+    borderRadius:    R.xl,
+    borderWidth:     1,
+    borderColor:     C.border,
+    padding:         S.md,
+    gap:             S.md,
+  },
+  savedIcon: {
+    width:           44,
+    height:          44,
+    borderRadius:    R.lg,
+    backgroundColor: C.accentDim,
+    alignItems:      'center',
+    justifyContent:  'center',
+    flexShrink:      0,
+  },
+  savedBody:  { flex: 1, gap: 3 },
+  savedTitle: { ...T.headingSm, color: C.text },
+  savedSub:   { ...T.labelMd, color: C.sub },
+});

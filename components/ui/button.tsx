@@ -76,7 +76,7 @@ export function Button({
       ) : (
         <View style={styles.row}>
           {icon ? <Icon name={icon} size={large ? 22 : 18} color={fg[variant]} /> : null}
-          <Text variant={large ? 'headlineMd' : 'labelLg'} color={fg[variant]}>
+          <Text variant={large ? 'bodyLg' : 'labelLg'} color={fg[variant]}>
             {label}
           </Text>
         </View>
