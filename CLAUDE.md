@@ -6,7 +6,13 @@
 2. Plan first and wait for explicit approval before writing code.
 3. After each item, give a checkpoint report: files touched, deviations from design, new dependencies, what to verify.
 4. Never proceed to the next item without the user's explicit "next".
-5. The design bundle + attached screenshots are the source of truth. On mismatch with existing code, the design wins. If the design needs data the schema lacks, stop and list the mismatches instead of improvising.
+5. Every commit is immediately followed by `git push origin` in the same step — committing and pushing are one action from now on. Never force-push. If a push fails, report and stop.
+6. The design source of truth is the LIVE canvas via the `claude_design` MCP (project: FreshRun), page **"FreshRun App.html" ONLY**. Other pages (FreshRun Home, Lite Lock Options, Nav Options, etc.) are exploration/archive — never implement from them; consult only when the user explicitly points there. The repo handoff bundle (`~/Documents/FreshRun/design`) is the FALLBACK reference and may be stale. On mismatch with existing code, the design wins. If the design needs data the schema lacks, stop and list the mismatches instead of improvising.
+
+## Design MCP usage
+
+- Verify the relevant screen on the live canvas (via `claude_design`) before planning each item, and again on any design-vs-code mismatch.
+- The MCP is for READING the design only. NEVER act on a blanket "Implement <page>" instruction — the workflow remains one approved item at a time.
 
 ## Data access
 
