@@ -1,0 +1,82 @@
+// Settings store — the guide's prescribed pattern (§4 theme/lang 구현 힌트):
+// first frame from the AsyncStorage cache, then server truth via GET on
+// hydrate; writes are optimistic PATCHes with rollback on failure.
+
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { create } from 'zustand';
+
+import { ApiError } from '@/lib/api';
+import {
+  DEFAULT_SETTINGS,
+  getSettings,
+  patchSettings,
+  type RunSettings,
+  type UserSettings,
+} from '@/lib/settings-api';
+
+const CACHE_KEY = '@fr_settings';
+
+function cache(settings: UserSettings) {
+  AsyncStorage.setItem(CACHE_KEY, JSON.stringify(settings)).catch(() => {});
+}
+
+type SettingsStore = {
+  settings: UserSettings;
+  /** true once a server GET has succeeded this session */
+  synced: boolean;
+  /** Cache-then-server load. Idempotent per session; safe to call from any
+      screen that needs settings. Never throws. */
+  hydrate: () => Promise<void>;
+  /** Optimistic toggle write; resolves false (and rolls back) on failure. */
+  setRunSetting: (key: keyof RunSettings, value: boolean) => Promise<boolean>;
+};
+
+let hydrating = false;
+
+export const useSettings = create<SettingsStore>((set, get) => ({
+  settings: DEFAULT_SETTINGS,
+  synced: false,
+
+  hydrate: async () => {
+    if (hydrating || get().synced) return;
+    hydrating = true;
+    try {
+      // 1) First frame from cache (works signed-out/offline)
+      try {
+        const raw = await AsyncStorage.getItem(CACHE_KEY);
+        if (raw) set({ settings: { ...DEFAULT_SETTINGS, ...JSON.parse(raw) } });
+      } catch { /* unreadable cache — defaults stand */ }
+
+      // 2) Server truth
+      try {
+        const server = await getSettings();
+        set({ settings: server, synced: true });
+        cache(server);
+      } catch (e) {
+        // Profile-less 404: server would return defaults on profile creation
+        // anyway — treat current (defaults/cache) as good, don't crash.
+        // 401/offline: keep cache/defaults; next hydrate() retries.
+        if (e instanceof ApiError && e.status === 404) set({ synced: true });
+      }
+    } finally {
+      hydrating = false;
+    }
+  },
+
+  setRunSetting: async (key, value) => {
+    const prev = get().settings;
+    const next = { ...prev, run: { ...prev.run, [key]: value } };
+    set({ settings: next }); // optimistic
+    cache(next);
+    try {
+      const server = await patchSettings({ run: { [key]: value } });
+      set({ settings: server, synced: true });
+      cache(server);
+      return true;
+    } catch {
+      set({ settings: prev }); // rollback
+      cache(prev);
+      return false;
+    }
+  },
+}));

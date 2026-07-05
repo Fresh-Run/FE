@@ -1,5 +1,28 @@
 # TODO
 
+## PAUSED: tracking-filter under-credit bug (2026-07-06)
+
+**Symptom:** 100+ real meters walked outdoors → filtered distance < 10m → "너무 짧은 러닝은 저장되지 않아요". The GPS filters are eating real distance.
+
+**STATUS**
+- Instrumentation is LIVE in `hooks/use-run-tracker.ts`, marked `DEBUG(short-run)`: every GPS fix prints one Metro line with its decision label (`ACCEPT` / `REJECT accuracy>25` / `REJECT speed>7` / `SKIP stationary — ANCHOR MOVED` / `SKIP jitter<5 — anchor held`) plus a running `accepted=` vs `raw=` tally (raw = naive sum over all fixes, gates ignored).
+- Zero logic changes; typecheck + lint clean.
+- **UNCOMMITTED WIP** — not phone-verified, do not commit yet. (Note: items 16 crew migration + badge fix and 17 코스 러닝 are also uncommitted, pending their own verification; last commit is `3679f51` feed v1.)
+
+**BLOCKED ON** (the one action that unblocks everything)
+- A calibrated outdoor walk: KNOWN measured distance, 150–300m, normal pace, phone carried naturally. Reload the app first so the instrumented build is live. Paste the full `[track]` Metro log block into chat.
+- Capture 3 numbers: real measured distance / what the app screen credited / final `accepted=` and `raw=` from the last log line.
+
+**DIAGNOSIS FRAME** (don't re-derive)
+- `raw ≈ real` but `accepted` tiny → filters are the culprit; the label counts name the guilty gate.
+- `raw` ALSO way short → problem is upstream of the gates (fix delivery/throttling) — fix lives elsewhere.
+- Ranked suspects: (1) `SKIP stationary — ANCHOR MOVED` — the only gate that DESTROYS distance instead of deferring; fires when OS speed flickers < 0.5 m/s mid-walk. (2) A wall of `REJECT accuracy>25` if urban accuracy sits 20–40m. (3) `SKIP jitter` should be harmless (anchor held, distance defers) — log confirms whether deferred segments actually get credited later.
+
+**SEQUENCED FOLLOW-UPS** (only AFTER a real 100m+ walk reliably credits ~100m)
+- Raise `MIN_SAVE_KM` 0.01 → 0.05 (50m floor) in `app/(course)/run-result.tsx`.
+- Copy update IF any user-facing copy mentions a distance (current copy doesn't — verify before touching).
+- Remove all `DEBUG(short-run)` instrumentation.
+
 ## Frozen — AI 맞춤 코스 path (keep working; no changes without unfreezing)
 
 - `.env.local` `EXPO_PUBLIC_API_URL` is pinned to the Mac's DHCP address (`192.168.219.65`) — first thing to check when generation stops reaching the backend
@@ -25,7 +48,16 @@
 
 ## Next named item
 
-- **Community crew hooks → backend API migration** (queued after the owner-split fix, 2026-07-04): full surface — join/leave/browse/mine/detail via `/api/crews/*`, including the approval flow (join → 202 → pending-request state UI, owner approve/decline). Removes the interim approval-crew guard in `community.tsx` and the direct-insert `joinCrew`/`leaveCrew` in `use-crews.ts`. Proper plan when we get there.
+- ~~Community crew hooks → backend API migration~~ DONE 2026-07-05 (item 16): all crew reads/writes via `/api/crews/*`, approval flow + invite-code join shipped, interim guard and direct-insert mutations removed.
+
+## Crew follow-ups (from item 16)
+
+- **Backend ask (forwarded 2026-07-05): member join must 409** — `POST /crews/{id}/join` currently lets existing members create real pending requests on approval crews (guide contract says 409 이미 멤버). Our 가입됨 badge blocks it UI-side meanwhile.
+- **Backend ask (forwarded 2026-07-05): `GET /me/join-requests`** (all my requests, one call) — Stage B: hydrate `store/join-requests.ts` once per browse load for cross-session truthful badges. `hydrate()` is already in the store waiting.
+
+- Owner-side invite code UI (issue/rotate/share) — no bundle design exists; owners can rotate via Swagger meanwhile. Waiting on canvas design.
+- Invite-code entry sheet + row are invented UI — canvas design to follow; flag visual mismatches then (user note, 2026-07-05).
+- `CrewMemberResponse` has no `avatar_url` — member list uses initials avatars; raise with partner if photos matter.
 
 ## Small improvements from API_GUIDE.md (2026-07-05)
 
@@ -34,6 +66,8 @@
 - Home feed v1 target per guide §4: `GET /feed` (course feed, `PublicRouteResponse[]` with `like_count`/`is_liked`/`comment_count`/`polyline`); run activity feed (`/feed/activities` + kudos) is the agreed v2
 
 ## Later items (noted)
+
+- Course-run polish: draw the live GPS trail *and* the course shape together on the tracking map (MiniMap renders one path today); AI-generated courses can't start a tracked run until `RouteResponse` gains an `id` (existing backend ask) — create-flow "시작하기" stays frozen until then
 
 - Real base map (Kakao via JS-SDK WebView) — considered for the live-tracking screen only. Partner's existing key is REST (server-side only, cannot render maps); a JS key has been requested from her. When it arrives: put it in the app's `.env.local` as `EXPO_PUBLIC_KAKAO_JS_KEY`, and the integration item MUST include registering the platform/origin in her Kakao developers console — unregistered origins fail silently (blank map, no error)
 - Background GPS tracking (runs keep recording with the app backgrounded) — requires a dev build (not Expo Go), `expo-location` plugin config + `UIBackgroundModes` + background permission + TaskManager; slice 2 is deliberately foreground-only with straight-line gap bridging

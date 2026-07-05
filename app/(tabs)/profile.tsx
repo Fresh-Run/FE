@@ -1,5 +1,5 @@
 import Constants from 'expo-constants';
-import React, { useState } from 'react';
+import React, { useEffect } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -15,7 +15,9 @@ import { Icon } from '@/components/ui';
 import { useProfile, type Profile, type RunStats } from '@/hooks/use-profile';
 import { avatarBg } from '@/lib/fr-hash';
 import { fmtPace } from '@/lib/run-format';
+import type { RunSettings } from '@/lib/settings-api';
 import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
+import { useSettings } from '@/store/use-settings';
 import { useStore } from '@/store/use-store';
 
 // ─── Avatar ───────────────────────────────────────────────────────────────────
@@ -180,8 +182,6 @@ function PremiumBanner() {
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
-type Toggles = { autoPause: boolean; voiceCue: boolean; haptics: boolean; keepScreen: boolean };
-
 const APP_VERSION = Constants.expoConfig?.version ?? '1.0.0';
 
 export default function ProfileScreen() {
@@ -189,13 +189,16 @@ export default function ProfileScreen() {
   const signOut = useStore(s => s.signOut);
   const { profile, stats, loading, error, signedOut, refetch } = useProfile();
 
-  const [toggles, setToggles] = useState<Toggles>({
-    autoPause:  false,
-    voiceCue:   false,
-    haptics:    false,
-    keepScreen: false,
-  });
-  const setToggle = (k: keyof Toggles, v: boolean) => setToggles(t => ({ ...t, [k]: v }));
+  // 러닝 동작 — bound to /me/settings (server truth, AsyncStorage first frame)
+  const runSettings   = useSettings(s => s.settings.run);
+  const hydrate       = useSettings(s => s.hydrate);
+  const setRunSetting = useSettings(s => s.setRunSetting);
+  useEffect(() => { hydrate(); }, [hydrate]);
+
+  async function toggleRun(key: keyof RunSettings, value: boolean) {
+    const ok = await setRunSetting(key, value); // optimistic; rolls back on failure
+    if (!ok) Alert.alert('저장 실패', '설정을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.');
+  }
 
   function handleSignOut() {
     Alert.alert('로그아웃', '정말 로그아웃하시겠어요?', [
@@ -299,12 +302,15 @@ export default function ProfileScreen() {
           />
         </SettingGroup>
 
-        {/* 러닝 동작 */}
+        {/* 러닝 동작 — persisted via PATCH /me/settings.
+            Runtime effects: haptics is live (gates hold-stop feedback);
+            auto_pause / voice_cue persist-only (features unbuilt);
+            keep_screen_on persist-only for now (see TODO(keep-awake) in tracking.tsx). */}
         <SettingGroup title="러닝 동작">
-          <ToggleRow label="자동 일시정지"  on={toggles.autoPause}  onChange={v => setToggle('autoPause',  v)} />
-          <ToggleRow label="음성 안내"      on={toggles.voiceCue}   onChange={v => setToggle('voiceCue',   v)} />
-          <ToggleRow label="햅틱 피드백"    on={toggles.haptics}    onChange={v => setToggle('haptics',    v)} />
-          <ToggleRow label="화면 항상 켜기" on={toggles.keepScreen} onChange={v => setToggle('keepScreen', v)} />
+          <ToggleRow label="자동 일시정지"  on={runSettings.auto_pause}     onChange={v => toggleRun('auto_pause',     v)} />
+          <ToggleRow label="음성 안내"      on={runSettings.voice_cue}      onChange={v => toggleRun('voice_cue',      v)} />
+          <ToggleRow label="햅틱 피드백"    on={runSettings.haptics}        onChange={v => toggleRun('haptics',        v)} />
+          <ToggleRow label="화면 항상 켜기" on={runSettings.keep_screen_on} onChange={v => toggleRun('keep_screen_on', v)} />
         </SettingGroup>
 
         {/* 설정 */}
