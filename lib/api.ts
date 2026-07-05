@@ -13,13 +13,28 @@ type ApiOptions = {
   timeoutMs?: number;
 };
 
-export async function apiFetch<T>(path: string, opts: ApiOptions = {}): Promise<T> {
+/** Error with the HTTP status and the backend's structured error code
+    (guide §5: detail may be a string or `{error, message, ...}`). */
+export class ApiError extends Error {
+  status: number;      // 0 = network / timeout (no response)
+  code: string | null; // e.g. 'already_requested', 'rsvp_closed'
+  constructor(message: string, status: number, code: string | null = null) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+    this.code = code;
+  }
+}
+
+/** Like apiFetch, but exposes the HTTP status — for endpoints that branch
+    on it (e.g. crew join: 200 joined vs 202 request pending). */
+export async function apiRequest<T>(path: string, opts: ApiOptions = {}): Promise<{ status: number; data: T }> {
   if (!API_URL) {
-    throw new Error('백엔드 주소가 설정되지 않았어요. .env.local의 EXPO_PUBLIC_API_URL을 확인해 주세요.');
+    throw new ApiError('백엔드 주소가 설정되지 않았어요. .env.local의 EXPO_PUBLIC_API_URL을 확인해 주세요.', 0, 'config');
   }
 
   const { data: { session } } = await supabase.auth.getSession();
-  if (!session) throw new Error('로그인이 필요해요');
+  if (!session) throw new ApiError('로그인이 필요해요', 401, null);
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), opts.timeoutMs ?? DEFAULT_TIMEOUT_MS);
@@ -36,22 +51,32 @@ export async function apiFetch<T>(path: string, opts: ApiOptions = {}): Promise<
       signal: controller.signal,
     });
   } catch {
-    if (controller.signal.aborted) throw new Error('요청 시간이 초과됐어요. 다시 시도해 주세요.');
-    throw new Error('서버에 연결할 수 없어요. 백엔드 서버가 실행 중인지 확인해 주세요.');
+    if (controller.signal.aborted) throw new ApiError('요청 시간이 초과됐어요. 다시 시도해 주세요.', 0, 'timeout');
+    throw new ApiError('서버에 연결할 수 없어요. 백엔드 서버가 실행 중인지 확인해 주세요.', 0, 'network');
   } finally {
     clearTimeout(timer);
   }
 
   if (!res.ok) {
-    if (res.status === 401) throw new Error('로그인이 필요해요');
-    let detail: string | null = null;
+    let message: string | null = null;
+    let code: string | null = null;
     try {
       const body = await res.json();
-      detail = typeof body?.detail === 'string' ? body.detail : null;
+      if (typeof body?.detail === 'string') {
+        message = body.detail;
+      } else if (body?.detail && typeof body.detail === 'object') {
+        code = typeof body.detail.error === 'string' ? body.detail.error : null;
+        message = typeof body.detail.message === 'string' ? body.detail.message : null;
+      }
     } catch { /* non-JSON error body */ }
-    throw new Error(detail ?? `요청에 실패했어요 (${res.status})`);
+    if (res.status === 401) throw new ApiError('로그인이 필요해요', 401, code);
+    throw new ApiError(message ?? `요청에 실패했어요 (${res.status})`, res.status, code);
   }
 
-  if (res.status === 204) return undefined as T; // idempotent toggles (like/bookmark)
-  return (await res.json()) as T;
+  const data = res.status === 204 ? (undefined as T) : ((await res.json()) as T);
+  return { status: res.status, data };
+}
+
+export async function apiFetch<T>(path: string, opts: ApiOptions = {}): Promise<T> {
+  return (await apiRequest<T>(path, opts)).data;
 }
