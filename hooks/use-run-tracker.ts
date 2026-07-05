@@ -9,6 +9,15 @@ import type { Coordinate } from '@/types';
 
 export type TrackerState = 'idle' | 'countdown' | 'running' | 'paused' | 'ended';
 
+export type RunSnapshot = {
+  distanceKm: number;
+  elapsedSec: number;
+  avgPaceSecPerKm: number | null;
+  kcal: number;
+  path: Coordinate[];
+  endedAt: number;
+};
+
 const COUNTDOWN_FROM = 3;
 
 // ── GPS tuning — one place to adjust ──────────────────────────────────────────
@@ -179,15 +188,26 @@ export function useRunTracker() {
     });
   }, []);
 
-  const stop = useCallback(() => {
-    setState(s => {
-      if (s !== 'running' && s !== 'paused') return s;
-      if (segmentStartRef.current != null) {
-        accumulatedMsRef.current += Date.now() - segmentStartRef.current;
-        segmentStartRef.current = null;
-      }
-      return 'ended';
-    });
+  /** Ends the run and returns its final snapshot (null if nothing was running). */
+  const stop = useCallback((): RunSnapshot | null => {
+    const s = stateRef.current;
+    if (s !== 'running' && s !== 'paused') return null;
+    if (segmentStartRef.current != null) {
+      accumulatedMsRef.current += Date.now() - segmentStartRef.current;
+      segmentStartRef.current = null;
+    }
+    setState('ended');
+
+    const finalSec = Math.floor(accumulatedMsRef.current / 1000);
+    const finalKm  = distanceMRef.current / 1000;
+    return {
+      distanceKm: finalKm,
+      elapsedSec: finalSec,
+      avgPaceSecPerKm: finalKm >= 0.05 && finalSec > 0 ? Math.round(finalSec / finalKm) : null,
+      kcal: Math.round(finalKm * 62),
+      path: [...pathRef.current],
+      endedAt: Date.now(),
+    };
   }, []);
 
   const elapsedMs =

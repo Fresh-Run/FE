@@ -1,5 +1,6 @@
+import { useFocusEffect } from '@react-navigation/native';
 import { router } from 'expo-router';
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -279,6 +280,11 @@ function RunRow({ run }: { run: Run }) {
 export default function RecordsScreen() {
   const insets = useSafeAreaInsets();
   const { runs, loading, error, signedOut, refetch } = useRuns();
+
+  // Refetch on focus so runs saved from the tracking flow appear immediately
+  useFocusEffect(useCallback(() => {
+    refetch();
+  }, [refetch]));
 
   if (loading) {
     return (

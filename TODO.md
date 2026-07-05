@@ -17,9 +17,19 @@
 
 ## Backend follow-ups (partner's repo, read-only — raise with her, don't fix)
 
-- `POST /api/runs` (`RunRequest`) accepts no polyline/path field — free-run GPS geometry can't persist until the contract grows one (matters for tracking slice 3)
+- `POST /api/runs` (`RunRequest`) accepts no polyline/path field (still true as of backend `846dc26`) — she's adding one; the recorded path is kept client-side (`store/pending-run.ts`) with a marked `SEAM (path upload)` in `lib/runs-api.ts` ready for the contract change
 - `RouteResponse` has no `id` — needed for `runs.route_id` linking after generation
 - Stopgap `.env` lacks `OPENWEATHER_API_KEY` (new in this clone) — `/api/weather` fails until her real values arrive
+
+## Next named item
+
+- **Community crew hooks → backend API migration** (queued after the owner-split fix, 2026-07-04): full surface — join/leave/browse/mine/detail via `/api/crews/*`, including the approval flow (join → 202 → pending-request state UI, owner approve/decline). Removes the interim approval-crew guard in `community.tsx` and the direct-insert `joinCrew`/`leaveCrew` in `use-crews.ts`. Proper plan when we get there.
+
+## Small improvements from API_GUIDE.md (2026-07-05)
+
+- `lib/api.ts`: guide §2 recommends 401 → `supabase.auth.refreshSession()` + one retry before failing — our wrapper doesn't do this yet
+- Error handling: guide §5 says `detail` may be a structured object (`{error, message, ...}`), and 429 quota errors carry `{limit, used, remaining, reset_at}` — our mappers only read string `detail`
+- Home feed v1 target per guide §4: `GET /feed` (course feed, `PublicRouteResponse[]` with `like_count`/`is_liked`/`comment_count`/`polyline`); run activity feed (`/feed/activities` + kudos) is the agreed v2
 
 ## Later items (noted)
 

@@ -33,6 +33,7 @@ import Svg, { Circle } from 'react-native-svg';
 import { MiniMap } from '@/components/mini-map';
 import { Icon } from '@/components/ui';
 import { useRunTracker } from '@/hooks/use-run-tracker';
+import { setPendingRun } from '@/store/pending-run';
 import { fmtPace } from '@/lib/run-format';
 import { accentShadow, colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
 
@@ -219,10 +220,12 @@ export default function TrackingScreen() {
   }, [navigation]);
 
   const endRun = () => {
-    stop();
-    Alert.alert('준비 중', '기록 저장은 다음 슬라이스에서 지원됩니다.', [
-      { text: '확인', onPress: () => { exitingRef.current = true; router.back(); } },
-    ]);
+    const snapshot = stop();
+    exitingRef.current = true;
+    if (!snapshot) { router.back(); return; }
+    setPendingRun(snapshot);
+    // replace: back must never land on a dead tracking screen
+    router.replace('/(course)/run-result' as any);
   };
 
   const handleStart = async () => {

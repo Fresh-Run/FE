@@ -20,6 +20,7 @@ export type Crew = {
   active_days: string[] | null;
   active_time: string | null;
   color: string | null;
+  join_policy: 'open' | 'approval';
   member_count: number;
   myRole?: 'owner' | 'member';
 };
@@ -52,6 +53,7 @@ function mapCrew(row: Record<string, unknown>, myRole?: 'owner' | 'member'): Cre
     active_days: row.active_days as string[] | null,
     active_time: row.active_time as string | null,
     color:       row.color as string | null,
+    join_policy: (row.join_policy as 'open' | 'approval') ?? 'open',
     member_count: memberRows?.[0]?.count ?? 0,
     myRole,
   };
@@ -122,7 +124,7 @@ export function useMyCrews() {
 
       const { data: memberships, error: mErr } = await supabase
         .from('crew_members')
-        .select('crew_id, role')
+        .select('crew_id')
         .eq('user_id', userId);
 
       if (cancelled) return;
@@ -130,9 +132,6 @@ export function useMyCrews() {
 
       const crewIds = (memberships ?? []).map(m => m.crew_id as string);
       if (crewIds.length === 0) { setCrews([]); setLoading(false); return; }
-
-      const myRoles: Record<string, 'owner' | 'member'> = {};
-      (memberships ?? []).forEach(m => { myRoles[m.crew_id as string] = m.role as 'owner' | 'member'; });
 
       const { data, error: cErr } = await supabase
         .from('crews')
@@ -143,7 +142,12 @@ export function useMyCrews() {
       if (cancelled) return;
       if (cErr) { setError(cErr.message); setLoading(false); return; }
 
-      setCrews((data ?? []).map(row => mapCrew(row as Record<string, unknown>, myRoles[(row as Record<string, unknown>).id as string])));
+      // Ownership truth is crews.owner_id (matches the backend's ensure_owner);
+      // crew_members.role is kept in sync server-side but is not the authority.
+      setCrews((data ?? []).map(row => {
+        const r = row as Record<string, unknown>;
+        return mapCrew(r, (r.owner_id as string) === userId ? 'owner' : 'member');
+      }));
       setLoading(false);
     })();
 
@@ -195,10 +199,13 @@ export function useCrewDetail(crewId: string | null) {
       if (cancelled) return;
       if (mErr) { setError(mErr.message); setLoading(false); return; }
 
-      // Derive the signed-in user's role from the member list
+      // Ownership truth is crews.owner_id; membership comes from the member list
+      const crewRow  = crewRes.data as Record<string, unknown>;
       const myMember = userId ? (memberRows ?? []).find(m => m.user_id === userId) : undefined;
-      const myRole   = myMember ? (myMember.role as 'owner' | 'member') : undefined;
-      setCrew(mapCrew(crewRes.data as Record<string, unknown>, myRole));
+      const myRole   = userId && (crewRow.owner_id as string) === userId
+        ? 'owner' as const
+        : myMember ? 'member' as const : undefined;
+      setCrew(mapCrew(crewRow, myRole));
 
       const userIds = (memberRows ?? []).map(m => m.user_id as string);
       if (userIds.length === 0) { setMembers([]); setLoading(false); return; }
@@ -238,6 +245,9 @@ export function useCrewDetail(crewId: string | null) {
 // Client-side fullness check is done by the caller before calling this.
 // Known limitation: two near-simultaneous joins can both succeed if the server
 // has no CHECK constraint — server-side enforcement is a backend item.
+// INTERIM: only valid for join_policy === 'open' crews — the caller must gate
+// approval crews (direct insert bypasses the backend's 202 → approve flow).
+// Removed entirely when crew hooks migrate to the backend API.
 
 export async function joinCrew(crewId: string): Promise<MutResult> {
   const { data: { user } } = await supabase.auth.getUser();

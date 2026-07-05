@@ -5,8 +5,9 @@
  *   create          — AI course preferences + generation
  *   preview         — 코스 미리보기: shared-course preview from a feed card, confirm/cancel
  *   result          — map preview of generated route, start/cancel
- *   tracking        — live run tracking (slice 1: state machine + mock movement)
- *   feedback        — post-run like/tags
+ *   tracking        — live run tracking (real GPS, foreground-only)
+ *   run-result      — post-run stats + 2-tap feedback, saves via POST /api/runs
+ *   run-saved       — save confirmation → records / home
  *   personal-best   — PR celebration overlay
  *   challenge-done  — challenge completion
  */

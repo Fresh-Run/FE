@@ -209,6 +209,12 @@ function DiscoverTab() {
   });
 
   function handleJoin(crew: Crew) {
+    // INTERIM guard until crew hooks migrate to the backend API: our direct
+    // insert would bypass the server's approval flow (202 → owner approves).
+    if (crew.join_policy !== 'open') {
+      Alert.alert('가입 신청은 곧 지원돼요', '이 크루는 승인제예요. 가입 신청 기능이 곧 추가됩니다.');
+      return;
+    }
     joinCrew(crew.id).then(({ error: err, code }) => {
       if (err) {
         // 23505 = unique_violation — user already has a row in crew_members
@@ -270,9 +276,17 @@ function MyCrewsTab() {
   if (signedOut) return <EmptyState text="로그인이 필요해요" />;
   if (error)     return <ErrorState message={error} onRetry={refetch} />;
 
+  // Split by ownership (myRole is derived from crews.owner_id — the backend's
+  // authority field), not by crew_members.role.
+  const owned  = crews.filter(c => c.myRole === 'owner');
+  const joined = crews.filter(c => c.myRole !== 'owner');
+
+  const openCrew = (c: Crew) =>
+    router.push({ pathname: '/(community)/crew-detail' as any, params: { crewId: c.id } });
+
   return (
     <ScrollView contentContainerStyle={{ paddingBottom: 36 }} showsVerticalScrollIndicator={false}>
-      {/* Create crew — disabled placeholder */}
+      {/* Owned crews — dashed create-placeholder is the empty state */}
       <View style={{ paddingHorizontal: S.gutter, paddingTop: S.xl }}>
         <View style={st.sectionHead}>
           <Text style={st.sectionTitle}>내가 만든 크루</Text>
@@ -281,30 +295,34 @@ function MyCrewsTab() {
             <Text style={st.createTxt}>크루 생성</Text>
           </View>
         </View>
-        <View style={st.emptyDashed}>
-          <View style={st.emptyDashedIcon}>
-            <Icon name="people-outline" size={20} color={C.accentGrn} />
+        {owned.length === 0 ? (
+          <View style={st.emptyDashed}>
+            <View style={st.emptyDashedIcon}>
+              <Icon name="people-outline" size={20} color={C.accentGrn} />
+            </View>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={st.emptyDashedTitle}>직접 크루 만들기</Text>
+              <Text style={st.emptyDashedSub}>크루 생성은 다음 업데이트에서 지원돼요</Text>
+            </View>
           </View>
-          <View style={{ flex: 1, minWidth: 0 }}>
-            <Text style={st.emptyDashedTitle}>직접 크루 만들기</Text>
-            <Text style={st.emptyDashedSub}>크루 생성은 다음 업데이트에서 지원돼요</Text>
+        ) : (
+          <View style={{ gap: 13 }}>
+            {owned.map(c => (
+              <MyCrewCard key={c.id} crew={c} onPress={() => openCrew(c)} />
+            ))}
           </View>
-        </View>
+        )}
       </View>
 
       {/* Joined crews */}
       <View style={{ paddingHorizontal: S.gutter, paddingTop: S.xl }}>
         <Text style={[st.sectionTitle, { marginBottom: 13 }]}>참여한 크루</Text>
-        {crews.length === 0 ? (
+        {joined.length === 0 ? (
           <EmptyState text="참여한 크루가 없어요" />
         ) : (
           <View style={{ gap: 13 }}>
-            {crews.map(c => (
-              <MyCrewCard
-                key={c.id}
-                crew={c}
-                onPress={() => router.push({ pathname: '/(community)/crew-detail' as any, params: { crewId: c.id } })}
-              />
+            {joined.map(c => (
+              <MyCrewCard key={c.id} crew={c} onPress={() => openCrew(c)} />
             ))}
           </View>
         )}
