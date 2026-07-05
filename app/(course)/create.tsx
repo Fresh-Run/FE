@@ -29,6 +29,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MiniMap } from '@/components/mini-map';
 import { Icon } from '@/components/ui';
 import { useCurrentLocation } from '@/hooks/use-current-location';
+import { KM_PER_MI } from '@/lib/run-format';
+import { useSettings } from '@/store/use-settings';
 import {
   useGenerateRoute,
   type GeneratedRoute,
@@ -120,7 +122,15 @@ export default function CreateScreen() {
   const { generate } = useGenerateRoute();
 
   // ── Form state ──────────────────────────────────────────────────────────────
+  // distanceKm stays km-internal (payload unit); the slider is UNIT-NATIVE
+  // (owner design change 2026-07-06): km mode 1–30km, mi mode 0.5–20mi with
+  // mi steps. Backend bound verified: target_distance_km gt=0 le=100 — 20mi
+  // (32.19km) fits, no clamp needed. Unit switches preserve physical distance
+  // because only the km value is stored.
   const [distanceKm, setDistanceKm] = useState(5);
+  const units = useSettings(s => s.settings.units);
+  const isMi = units === 'mi';
+  const distDisplay = isMi ? distanceKm / KM_PER_MI : distanceKm;
   const [pitstop, setPitstop]       = useState<string | null>(null);
   const [vibes, setVibes]           = useState<string[]>([]);
 
@@ -329,25 +339,25 @@ export default function CreateScreen() {
           <SectionLabel text="목표 거리" />
           <View style={st.distanceDisplay}>
             <Text style={st.distanceValue}>
-              {distanceKm.toFixed(1)}
-              <Text style={st.distanceUnit}> km</Text>
+              {distDisplay.toFixed(1)}
+              <Text style={st.distanceUnit}> {isMi ? 'mi' : 'km'}</Text>
             </Text>
             <Text style={st.distanceEst}>약 {fmtMin(estMinForm)} 예상</Text>
           </View>
           <Slider
             style={st.slider}
-            minimumValue={1}
-            maximumValue={30}
+            minimumValue={isMi ? 0.5 : 1}
+            maximumValue={isMi ? 20 : 30}
             step={0.5}
-            value={distanceKm}
-            onValueChange={setDistanceKm}
+            value={distDisplay}
+            onValueChange={v => setDistanceKm(isMi ? v * KM_PER_MI : v)}
             minimumTrackTintColor={C.accent}
             maximumTrackTintColor={C.border}
             thumbTintColor={C.accent}
           />
           <View style={st.sliderLabels}>
-            <Text style={st.sliderLabel}>1 km</Text>
-            <Text style={st.sliderLabel}>30 km</Text>
+            <Text style={st.sliderLabel}>{isMi ? '0.5 mi' : '1 km'}</Text>
+            <Text style={st.sliderLabel}>{isMi ? '20 mi' : '30 km'}</Text>
           </View>
         </View>
 

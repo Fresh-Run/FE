@@ -29,6 +29,11 @@ type SettingsStore = {
   hydrate: () => Promise<void>;
   /** Optimistic toggle write; resolves false (and rolls back) on failure. */
   setRunSetting: (key: keyof RunSettings, value: boolean) => Promise<boolean>;
+  /** Optimistic units write; resolves false (and rolls back) on failure. */
+  setUnits: (units: UserSettings['units']) => Promise<boolean>;
+  /** Optimistic theme write; resolves false (and rolls back) on failure.
+      T1: persist-only — rendering is the 다크 렌더링 sweep (TODO.md T2). */
+  setTheme: (theme: UserSettings['theme']) => Promise<boolean>;
 };
 
 let hydrating = false;
@@ -70,6 +75,40 @@ export const useSettings = create<SettingsStore>((set, get) => ({
     cache(next);
     try {
       const server = await patchSettings({ run: { [key]: value } });
+      set({ settings: server, synced: true });
+      cache(server);
+      return true;
+    } catch {
+      set({ settings: prev }); // rollback
+      cache(prev);
+      return false;
+    }
+  },
+
+  setUnits: async (units) => {
+    const prev = get().settings;
+    const next = { ...prev, units };
+    set({ settings: next }); // optimistic
+    cache(next);
+    try {
+      const server = await patchSettings({ units });
+      set({ settings: server, synced: true });
+      cache(server);
+      return true;
+    } catch {
+      set({ settings: prev }); // rollback
+      cache(prev);
+      return false;
+    }
+  },
+
+  setTheme: async (theme) => {
+    const prev = get().settings;
+    const next = { ...prev, theme };
+    set({ settings: next }); // optimistic
+    cache(next);
+    try {
+      const server = await patchSettings({ theme });
       set({ settings: server, synced: true });
       cache(server);
       return true;

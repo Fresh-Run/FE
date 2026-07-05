@@ -4,6 +4,34 @@ export function fmtPace(sec: number): string {
   return `${m}'${String(s).padStart(2, '0')}"`;
 }
 
+// ─── Unit-aware display formatting (단위 setting) ─────────────────────────────
+// Pure and unit-parameterized: callers pass settings.units. Internal values
+// stay km everywhere (backend fields, gates, aggregation) — conversion happens
+// only at these format calls.
+
+export type Units = 'km' | 'mi';
+
+export const KM_PER_MI = 1.609344;
+const MI_PER_KM = 0.621371;
+
+/** Distance for display: km in → formatted number in the selected unit. */
+export function fmtDist(km: number, units: Units, dp: number): string {
+  return (units === 'mi' ? km * MI_PER_KM : km).toFixed(dp);
+}
+
+export function distUnit(units: Units): string {
+  return units === 'mi' ? 'mi' : 'km';
+}
+
+/** Pace for display: sec/km in → 5'20" string in the selected unit. */
+export function fmtPaceIn(secPerKm: number, units: Units): string {
+  return fmtPace(units === 'mi' ? secPerKm / MI_PER_KM : secPerKm);
+}
+
+export function paceUnit(units: Units): string {
+  return units === 'mi' ? '/mi' : '/km';
+}
+
 export function fmtDuration(sec: number): string {
   const h = Math.floor(sec / 3600);
   const m = Math.floor((sec % 3600) / 60);

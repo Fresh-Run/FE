@@ -14,8 +14,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MiniMap } from '@/components/mini-map';
 import { Icon } from '@/components/ui';
 import { useRunDetail } from '@/hooks/use-runs';
-import { fmtDuration, fmtPace, fmtWhen, timeTitle } from '@/lib/run-format';
+import { distUnit, fmtDist, fmtDuration, fmtPaceIn, fmtWhen, timeTitle } from '@/lib/run-format';
 import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
+import { useSettings } from '@/store/use-settings';
 
 // ─── Stat tile ────────────────────────────────────────────────────────────────
 
@@ -46,6 +47,7 @@ export default function ActivityScreen() {
   const insets = useSafeAreaInsets();
   const { runId } = useLocalSearchParams<{ runId: string }>();
   const { run, loading, error, refetch } = useRunDetail(runId ?? null);
+  const units = useSettings(s => s.settings.units);
 
   // ── Loading ────────────────────────────────────────────────────────────────
   if (loading) {
@@ -76,9 +78,9 @@ export default function ActivityScreen() {
     );
   }
 
-  const dist  = run.distance_km.toFixed(2);
+  const dist  = fmtDist(run.distance_km, units, 2);
   const dur   = fmtDuration(run.duration_sec);
-  const pace  = run.avg_pace_sec_per_km != null ? fmtPace(run.avg_pace_sec_per_km) : '--';
+  const pace  = run.avg_pace_sec_per_km != null ? fmtPaceIn(run.avg_pace_sec_per_km, units) : '--';
   const when  = fmtWhen(run.ran_at);
   const title = timeTitle(run.ran_at);
 
@@ -121,7 +123,7 @@ export default function ActivityScreen() {
 
           {/* Stat tiles */}
           <View style={st.tileRow}>
-            <StatTile icon="location-outline"    label="거리"      value={dist}  unit="km" accent />
+            <StatTile icon="location-outline"    label="거리"      value={dist}  unit={distUnit(units)} accent />
             <StatTile icon="time-outline"        label="시간"      value={dur} />
             <StatTile icon="speedometer-outline" label="평균 페이스" value={pace} />
           </View>

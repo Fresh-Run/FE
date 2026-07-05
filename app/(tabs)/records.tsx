@@ -15,8 +15,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MiniMap } from '@/components/mini-map';
 import { Icon } from '@/components/ui';
 import { useRuns, type Run } from '@/hooks/use-runs';
-import { fmtDate, fmtDuration, fmtPace, fmtWhen, timeTitle } from '@/lib/run-format';
+import { distUnit, fmtDate, fmtDist, fmtDuration, fmtPaceIn, fmtWhen, timeTitle } from '@/lib/run-format';
 import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
+import { useSettings } from '@/store/use-settings';
 
 // ─── Month utilities ──────────────────────────────────────────────────────────
 
@@ -78,6 +79,7 @@ function sparkPaths(vals: readonly number[], W: number, H: number) {
 // All hooks are called unconditionally; early return is placed after the last hook.
 
 function MonthStats({ runs }: { runs: Run[] }) {
+  const units = useSettings(s => s.settings.units);
   const months = useMemo(() => getDistinctMonths(runs), [runs]);
   const [idx, setIdx] = useState(0);
 
@@ -137,9 +139,9 @@ function MonthStats({ runs }: { runs: Run[] }) {
   const { line, area } = sparkPaths(buckets, CHART_W, CHART_H);
 
   const stats: [string, string, string][] = [
-    ['총 거리',     totalDist.toFixed(1),                  'km'],
+    ['총 거리',     fmtDist(totalDist, units, 1),          distUnit(units)],
     ['세션',        String(sessions),                       '회'],
-    ['평균 페이스', avgPace != null ? fmtPace(avgPace) : '--', ''],
+    ['평균 페이스', avgPace != null ? fmtPaceIn(avgPace, units) : '--', ''],
     ['총 시간',     timeStr,                                'h'],
   ];
 
@@ -171,8 +173,8 @@ function MonthStats({ runs }: { runs: Run[] }) {
       <View style={[st.heroCard, shadows.md]}>
         <View style={st.heroTop}>
           <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6 }}>
-            <Text style={st.heroNum}>{totalDist.toFixed(1)}</Text>
-            <Text style={st.heroUnit}>km</Text>
+            <Text style={st.heroNum}>{fmtDist(totalDist, units, 1)}</Text>
+            <Text style={st.heroUnit}>{distUnit(units)}</Text>
           </View>
           {delta !== null && (
             <View style={[st.deltaBadge, { backgroundColor: delta >= 0 ? C.accentDim : '#EF444416' }]}>
@@ -250,6 +252,7 @@ function MetricPill({ icon, value, color }: { icon: string; value: string; color
 }
 
 function RunRow({ run }: { run: Run }) {
+  const units = useSettings(s => s.settings.units);
   return (
     <Pressable
       onPress={() => router.push({ pathname: '/(records)/activity', params: { runId: run.id } })}
@@ -265,9 +268,9 @@ function RunRow({ run }: { run: Run }) {
         </View>
         <Text style={st.runWhen} numberOfLines={1}>{fmtWhen(run.ran_at)}</Text>
         <View style={st.runMetrics}>
-          <MetricPill icon="location-outline"    value={`${run.distance_km.toFixed(2)} km`}                                        color={C.accentGrn} />
-          <MetricPill icon="time-outline"        value={fmtDuration(run.duration_sec)}                                             color={C.faint} />
-          <MetricPill icon="speedometer-outline" value={run.avg_pace_sec_per_km != null ? fmtPace(run.avg_pace_sec_per_km) : '--'} color={C.faint} />
+          <MetricPill icon="location-outline"    value={`${fmtDist(run.distance_km, units, 2)} ${distUnit(units)}`}                            color={C.accentGrn} />
+          <MetricPill icon="time-outline"        value={fmtDuration(run.duration_sec)}                                                         color={C.faint} />
+          <MetricPill icon="speedometer-outline" value={run.avg_pace_sec_per_km != null ? fmtPaceIn(run.avg_pace_sec_per_km, units) : '--'} color={C.faint} />
         </View>
       </View>
       <Icon name="chevron-forward" size={17} color={C.faint} />
