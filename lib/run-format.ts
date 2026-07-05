@@ -23,6 +23,15 @@ export function fmtDate(isoStr: string): string {
   return `${d.getMonth() + 1}월 ${d.getDate()}일`;
 }
 
+export function fmtAgo(isoStr: string): string {
+  const min = Math.floor((Date.now() - new Date(isoStr).getTime()) / 60_000);
+  if (min < 1) return '방금 전';
+  if (min < 60) return `${min}분 전`;
+  const h = Math.floor(min / 60);
+  if (h < 24) return `${h}시간 전`;
+  return fmtDate(isoStr);
+}
+
 export function fmtWhen(isoStr: string): string {
   const d = new Date(isoStr);
   const hh = String(d.getHours()).padStart(2, '0');

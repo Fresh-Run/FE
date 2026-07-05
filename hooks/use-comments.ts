@@ -1,51 +1,63 @@
+// Route comments — backed by GET/POST /api/routes/{id}/comments.
+// (Replaced the pre-feed-v1 local-state stub; the sheet's read interface
+// is unchanged: comments[], post, loading.)
+
 import { useCallback, useEffect, useState } from 'react';
 
-export type LocalComment = {
+import { getRouteComments, postRouteComment, type RouteComment } from '@/lib/routes-api';
+
+export type CommentView = {
   id: string;
   authorName: string;
   body: string;
   createdAt: string;
 };
 
-/**
- * Local-state comment list for a single activity.
- *
- * Interface contract (unchanged when wiring to Supabase):
- *   comments   → LocalComment[]  (seed + locally posted)
- *   post(body, authorName) → void  (optimistic append)
- *   loading    → boolean  (always false locally; meaningful after Supabase swap)
- *
- * TO SWAP IN SUPABASE:
- *   1. On activityId change, query:
- *        SELECT rc.id, rc.body, rc.created_at, p.display_name
- *        FROM run_comments rc JOIN profiles p ON p.id = rc.user_id
- *        WHERE rc.activity_id = activityId ORDER BY rc.created_at ASC
- *      Replace `seedComments` arg with the query result.
- *   2. In `post`, after the optimistic push also call:
- *        supabase.from('run_comments').insert({ activity_id, user_id, body })
- *      Rollback on error by filtering out the optimistic item by id.
- *   3. Set `loading` to true during the initial fetch, false after.
- */
-export function useComments(
-  activityId: string | null,
-  seedComments: LocalComment[] = [],
-) {
-  const [extra, setExtra] = useState<LocalComment[]>([]);
+function mapComment(row: RouteComment): CommentView {
+  return {
+    id: row.id,
+    authorName: row.nickname ?? '러너',
+    body: row.content,
+    createdAt: row.created_at,
+  };
+}
 
-  // Clear locally-posted comments when navigating to a different activity.
-  useEffect(() => { setExtra([]); }, [activityId]);
+export function useRouteComments(routeId: string | null) {
+  const [comments, setComments] = useState<CommentView[]>([]);
+  const [loading, setLoading]   = useState(false);
+  const [posting, setPosting]   = useState(false);
+  const [error, setError]       = useState<string | null>(null);
 
-  const post = useCallback((body: string, authorName: string) => {
-    const optimistic: LocalComment = {
-      id: `local-${Date.now()}`,
-      authorName,
-      body,
-      createdAt: new Date().toISOString(),
-    };
-    setExtra((prev) => [...prev, optimistic]);
-  }, []);
+  useEffect(() => {
+    if (!routeId) { setComments([]); setError(null); return; }
 
-  const comments: LocalComment[] = [...seedComments, ...extra];
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    getRouteComments(routeId)
+      .then(rows => { if (!cancelled) setComments(rows.map(mapComment)); })
+      .catch((e: unknown) => { if (!cancelled) setError(e instanceof Error ? e.message : '댓글을 불러올 수 없어요'); })
+      .finally(() => { if (!cancelled) setLoading(false); });
 
-  return { comments, post, loading: false } as const;
+    return () => { cancelled = true; };
+  }, [routeId]);
+
+  /** Posts a comment; resolves true on success (caller bumps the card count). */
+  const post = useCallback(async (body: string): Promise<boolean> => {
+    if (!routeId || posting) return false;
+    setPosting(true);
+    setError(null);
+    try {
+      const row = await postRouteComment(routeId, body);
+      setComments(prev => [...prev, mapComment(row)]);
+      return true;
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : '댓글을 등록하지 못했어요');
+      return false;
+    } finally {
+      setPosting(false);
+    }
+  }, [routeId, posting]);
+
+  return { comments, loading, posting, error, post };
 }

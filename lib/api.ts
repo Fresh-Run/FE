@@ -52,5 +52,6 @@ export async function apiFetch<T>(path: string, opts: ApiOptions = {}): Promise<
     throw new Error(detail ?? `요청에 실패했어요 (${res.status})`);
   }
 
+  if (res.status === 204) return undefined as T; // idempotent toggles (like/bookmark)
   return (await res.json()) as T;
 }

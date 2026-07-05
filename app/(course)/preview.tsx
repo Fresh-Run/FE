@@ -2,14 +2,13 @@
  * 코스 미리보기 — course preview + confirm, reached from a feed card's
  * "이 코스 달리기". Rebuilt 1:1 from the course-preview.jsx bundle spec.
  *
- * Course data arrives as a JSON-stringified `item` param (the feed is
- * client-side mock data — no courses table yet). When courses move to
- * Supabase, switch to a courseId param + fetch here; the rest of the
- * screen reads from `courseStats()` output and stays unchanged.
+ * Course data arrives via store/pending-course (set by the feed — the
+ * backend's GET /routes/{id} is owner-only, so a non-owner can't refetch
+ * a public course by id). Falls back to the legacy JSON `item` param.
  */
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Pressable,
@@ -23,7 +22,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MiniMap } from '@/components/mini-map';
 import { Icon } from '@/components/ui';
 import { avatarBg } from '@/lib/fr-hash';
-import { courseStats, type CourseStatsInput } from '@/lib/run-format';
+import { courseStats, fmtDuration, fmtPace, type CourseStatsInput } from '@/lib/run-format';
+import { clearPendingCourse, getPendingCourse } from '@/store/pending-course';
 import {
   accentShadow,
   colors as C,
@@ -51,7 +51,24 @@ function Avatar({ name, size = 26 }: { name: string; size?: number }) {
 export default function CoursePreviewScreen() {
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ item?: string }>();
-  const s = useMemo(() => courseStats(parseItem(params.item)), [params.item]);
+  const [pending] = useState(() => getPendingCourse());
+  useEffect(() => () => clearPendingCourse(), []);
+
+  const s = useMemo(() => {
+    if (pending) {
+      const dist = pending.total_distance_km;
+      const estMin = pending.estimated_duration_min;
+      return courseStats({
+        dist,
+        dur:  estMin != null ? fmtDuration(Math.round(estMin * 60)) : undefined,
+        pace: estMin != null && dist > 0 ? fmtPace(Math.round((estMin * 60) / dist)) : undefined,
+        title: pending.summary,
+        seed:  pending.id,
+        name:  pending.owner_nickname ?? undefined,
+      });
+    }
+    return courseStats(parseItem(params.item));
+  }, [pending, params.item]);
 
   const confirmRun = () => {
     // TODO(tracking): pop + push live tracking with this course once it exists.
@@ -63,7 +80,7 @@ export default function CoursePreviewScreen() {
       <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
         {/* ── Hero map ─────────────────────────────────────────────── */}
         <View style={st.hero}>
-          <MiniMap seed={s.seed ?? 'course-preview'} height={300} borderRadius={0} />
+          <MiniMap seed={s.seed ?? 'course-preview'} height={300} borderRadius={0} polyline={pending?.polyline ?? undefined} />
           <LinearGradient
             colors={['rgba(8,12,4,0.55)', 'rgba(8,12,4,0)']}
             style={st.heroScrim}
