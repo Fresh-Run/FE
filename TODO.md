@@ -1,5 +1,17 @@
 # TODO
 
+## PAUSED: crew verification desk-test (2026-07-06)
+
+**State:** crew migration work remains **UNCOMMITTED and unverified** — 6 files: `lib/api.ts` (ApiError/apiRequest), `lib/crews-api.ts` (new), `store/join-requests.ts` (new), `hooks/use-crews.ts`, `app/(tabs)/community.tsx`, `app/(community)/crew-detail.tsx`. Entanglement-checked: commits cleanly on its own, independent of item 17 and the tracking instrumentation.
+
+**Test script:** the 10-step phone+Swagger desk-test exists (in chat, 2026-07-06 — covers real-data render, open join, 승인제 신청→승인/거절/취소, badge-fix regression repro, invite-code join, demo5 fixture, failure states). Progress unknown/partial.
+
+**⚠️ State chain may be dirty:** a fresh test account may be mid-신청 or already a member on 한강 새벽 러닝 크루 from a partial run. **demo5 must remain the pending fixture** (owner-list screen depends on it).
+
+**Before resuming:** re-check the fresh account's actual state — token as that account → `GET /api/crews/{crewId}/join-requests/me` (and `GET /crews/mine`) — then restart the script from a clean point (탈퇴/신청 취소 as needed).
+
+**Gate: crew files must NOT be committed until this script passes.**
+
 ## PAUSED: tracking-filter under-credit bug (2026-07-06)
 
 **Symptom:** 100+ real meters walked outdoors → filtered distance < 10m → "너무 짧은 러닝은 저장되지 않아요". The GPS filters are eating real distance.
@@ -25,6 +37,8 @@
 
 ## Frozen — AI 맞춤 코스 path (keep working; no changes without unfreezing)
 
+- One-time unfreeze 2026-07-06 (owner design change, canvas to follow): the distance slider is now UNIT-NATIVE — km 1–30 / mi 0.5–20 (mi floor = smallest mi step above the server's gt=0; 20mi=32.19km fits the verified le=100 bound, no widen-ask needed). Payload stays km (`distanceKm` state is km-internal; unit switches preserve physical distance). Form re-frozen after this change.
+
 - `.env.local` `EXPO_PUBLIC_API_URL` is pinned to the Mac's DHCP address (`192.168.219.65`) — first thing to check when generation stops reaching the backend
 - 경로 저장 — result screen's notice still promises "다음 업데이트"; saving a generated route is unimplemented
 - Generated route `id` (returned by the backend, already typed on `GeneratedRoute`) → `runs.route_id` linking when run saving lands
@@ -38,9 +52,19 @@
 
 - Item 10 (course preview) and item 12 (tracking) design-canvas screenshots never arrived in chat — rule-5 comparison against the canvas is outstanding; verified against bundle JSX only
 
+## OWNER OVERRIDE: 개인 정보 local-only fields (2026-07-06)
+
+- The 개인 정보 screen ships FULL per design (owner decision), but 출생 연도/체중/키/성별 are **device-local only** (`store/use-local-profile.ts`, AsyncStorage) — the backend profile schema lacked them at build time.
+- **S2 now FULLY UNBLOCKED** (BE `01c6bc5`, verified 2026-07-06): `birth_year` (1920–2026), `weight_kg` (20–300), `height_cm` (100–250), `gender` on ProfileResponse/ProfileUpdate. Swap the storage target to `PATCH /me/profile` (UI reads the store shape, shouldn't change) + one-time migration of locally-saved values. Notes: **gender label mapping 여성→`female` / 남성→`male` / 선택 안 함→`undisclosed`**; her bounds are a superset of our steppers (30–150kg / 120–220cm) — no UI change needed.
+- **Avatar upload now UNBLOCKED too**: `POST /api/me/avatar/upload-url` (Storage signed-URL pattern). Pencil's 준비 중 can become real — needs an image picker (likely `expo-image-picker`, new dep) + upload flow; own small item.
+- Live-canvas verification of this screen still blocked — DesignSync `list_projects` returns empty for this account (project likely owned by 지연 / not design-system type).
+
 ## Backend follow-ups (partner's repo, read-only — raise with her, don't fix)
 
-- `POST /api/runs` (`RunRequest`) accepts no polyline/path field (still true as of backend `846dc26`) — she's adding one; the recorded path is kept client-side (`store/pending-run.ts`) with a marked `SEAM (path upload)` in `lib/runs-api.ts` ready for the contract change
+- **Nickname 409: unique constraint migration missing on `profiles.nickname` — code ready** (refined 2026-07-06 re-probe on `8bb56b0`): `profile_service.py` already catches the PG 23505 unique-violation (`NicknameTaken`), but the DB constraint doesn't exist so it never fires — probe still 200 (reverted, residue clean). Ask 지연 for the constraint migration, not code. Our inline-409 UI stays dormant until then.
+- **승인제 member-join still 202+phantom on `8bb56b0`** — re-probed; the earlier open-crew fix didn't cover the approval path. Repro unchanged; 가입됨 badge remains the UI-side defense. (Probe residue cleaned: test2 phantom deleted.)
+
+- ~~`POST /api/runs` path field~~ **LANDED** (BE `3779905`, verified 2026-07-06): `gps_track: Optional[list[GpsPoint]]` where `GpsPoint = {lat, lng, t: epoch ms, acc?: m ("강력 권장"), alt?}` — server pipeline owns validation (filters, splits, anti-cheat; out-of-bbox points silently dropped). **Wiring wants `t` + `acc` retention in the tracker's path buffer** (today we keep lat/lng only) — small `use-run-tracker` change that RIDES THE WALK CHAIN (filter fix first; don't upload known-broken tracks to a validating server). Then `SEAM (path upload)` in `lib/runs-api.ts` connects directly.
 - `RouteResponse` has no `id` — needed for `runs.route_id` linking after generation
 - Stopgap `.env` lacks `OPENWEATHER_API_KEY` (new in this clone) — `/api/weather` fails until her real values arrive
 - `PublicRouteResponse` has no `is_bookmarked` flag — feed v1 works around it with one `GET /routes/bookmarked?limit=100` per feed load (stale icons possible past 100 bookmarks); a response flag like `is_liked` would remove the extra call
@@ -52,8 +76,9 @@
 
 ## Crew follow-ups (from item 16)
 
-- **Backend ask (forwarded 2026-07-05): member join must 409** — `POST /crews/{id}/join` currently lets existing members create real pending requests on approval crews (guide contract says 409 이미 멤버). Our 가입됨 badge blocks it UI-side meanwhile.
-- **Backend ask (forwarded 2026-07-05): `GET /me/join-requests`** (all my requests, one call) — Stage B: hydrate `store/join-requests.ts` once per browse load for cross-session truthful badges. `hydrate()` is already in the store waiting.
+- **Member-join 409 fix: PARTIAL as of BE `ccac76b` (2026-07-06)** — guide now claims race-proof 409-first, and open-crew `join_crew` checks membership, but the **승인제 request path still returns 202 + creates a phantom for members** (reproduced live as test2, phantoms cleaned). Re-report to her with repro: token as test2 → `POST /crews/{한강crewId}/join` → expect 409, got 202. Our 가입됨 badge guard stays necessary.
+- **`GET /me/join-requests` SHIPPED** (BE has `test_my_join_requests_integration.py`) — Stage B unblocked: hydrate `store/join-requests.ts` once per browse load for cross-session truthful badges. `hydrate()` is already in the store waiting. Verify exact path/shape in Swagger before wiring.
+- New premium endpoints landed 2026-07-06 (future items): `POST /routes/{id}/coach-script` (오디오 코치, premium, 403 premium_required for free), `GET /me/insights/monthly` (월간 인사이트, premium).
 
 - Owner-side invite code UI (issue/rotate/share) — no bundle design exists; owners can rotate via Swagger meanwhile. Waiting on canvas design.
 - Invite-code entry sheet + row are invented UI — canvas design to follow; flag visual mismatches then (user note, 2026-07-05).
@@ -64,6 +89,10 @@
 - `lib/api.ts`: guide §2 recommends 401 → `supabase.auth.refreshSession()` + one retry before failing — our wrapper doesn't do this yet
 - Error handling: guide §5 says `detail` may be a structured object (`{error, message, ...}`), and 429 quota errors carry `{limit, used, remaining, reset_at}` — our mappers only read string `detail`
 - Home feed v1 target per guide §4: `GET /feed` (course feed, `PublicRouteResponse[]` with `like_count`/`is_liked`/`comment_count`/`polyline`); run activity feed (`/feed/activities` + kudos) is the agreed v2
+
+## T2 — 다크 렌더링 sweep (named, sized — approved for TODO 2026-07-06)
+
+Converge the two theme systems (`lib/theme` → themed hook backed by `contexts/theme`, fed by the persisted `settings.theme` instead of the device scheme), restructure ~20 module-scope StyleSheets into theme-aware factories, triage 113 color literals (audit 2026-07-06: worst files index.tsx 19, crew-detail 15, tracking 11; maps/scrims are dark-by-design and stay), wire the status bar to the setting. **Size: units sweep ×3–4. Schedule after crew/item-17 verification debt clears.** Until then the theme picker (T1) is persist-only with an in-UI notice.
 
 ## Later items (noted)
 

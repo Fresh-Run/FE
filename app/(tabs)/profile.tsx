@@ -1,5 +1,7 @@
+import { useFocusEffect } from '@react-navigation/native';
 import Constants from 'expo-constants';
-import React, { useEffect } from 'react';
+import { router } from 'expo-router';
+import React, { useCallback, useEffect } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -14,7 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '@/components/ui';
 import { useProfile, type Profile, type RunStats } from '@/hooks/use-profile';
 import { avatarBg } from '@/lib/fr-hash';
-import { fmtPace } from '@/lib/run-format';
+import { distUnit, fmtDist, fmtPaceIn, type Units } from '@/lib/run-format';
 import type { RunSettings } from '@/lib/settings-api';
 import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
 import { useSettings } from '@/store/use-settings';
@@ -124,21 +126,21 @@ function SettingGroup({ title, children }: { title: string; children: React.Reac
 
 // ─── IdentityCard ─────────────────────────────────────────────────────────────
 
-function IdentityCard({ profile, stats }: { profile: Profile; stats: RunStats }) {
-  const dist     = stats.totalDistKm.toFixed(1);
+function IdentityCard({ profile, stats, units, onEdit }: { profile: Profile; stats: RunStats; units: Units; onEdit: () => void }) {
+  const dist     = fmtDist(stats.totalDistKm, units, 1);
   const runs     = String(stats.totalRuns);
-  const bestPace = stats.bestPaceSec != null ? fmtPace(stats.bestPaceSec) : '--';
+  const bestPace = stats.bestPaceSec != null ? fmtPaceIn(stats.bestPaceSec, units) : '--';
 
   const quickStats: [string, string][] = [
-    [dist + ' km', '누적 거리'],
-    [runs,         '러닝'],
-    [bestPace,     '최고 페이스'],
+    [`${dist} ${distUnit(units)}`, '누적 거리'],
+    [runs,                         '러닝'],
+    [bestPace,                     '최고 페이스'],
   ];
 
   return (
     <View style={[st.identityCard, shadows.sm]}>
-      {/* Avatar + name row (tapping goes to personal info — no-op this pass) */}
-      <Pressable style={st.identityRow}>
+      {/* Avatar + name row → 개인 정보 edit screen */}
+      <Pressable onPress={onEdit} style={({ pressed }) => [st.identityRow, pressed && { opacity: 0.7 }]}>
         <View style={{ position: 'relative' }}>
           <Avatar name={profile.nickname} size={62} ring />
           <View style={st.editBadge}>
@@ -189,8 +191,10 @@ export default function ProfileScreen() {
   const signOut = useStore(s => s.signOut);
   const { profile, stats, loading, error, signedOut, refetch } = useProfile();
 
-  // 러닝 동작 — bound to /me/settings (server truth, AsyncStorage first frame)
+  // Settings — bound to /me/settings (server truth, AsyncStorage first frame)
   const runSettings   = useSettings(s => s.settings.run);
+  const units         = useSettings(s => s.settings.units);
+  const theme         = useSettings(s => s.settings.theme);
   const hydrate       = useSettings(s => s.hydrate);
   const setRunSetting = useSettings(s => s.setRunSetting);
   useEffect(() => { hydrate(); }, [hydrate]);
@@ -199,6 +203,11 @@ export default function ProfileScreen() {
     const ok = await setRunSetting(key, value); // optimistic; rolls back on failure
     if (!ok) Alert.alert('저장 실패', '설정을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.');
   }
+
+  // Refetch on focus so a nickname saved in 개인 정보 shows immediately
+  useFocusEffect(useCallback(() => {
+    refetch();
+  }, [refetch]));
 
   function handleSignOut() {
     Alert.alert('로그아웃', '정말 로그아웃하시겠어요?', [
@@ -258,7 +267,12 @@ export default function ProfileScreen() {
 
         {/* Identity card */}
         <View style={{ paddingHorizontal: S.gutter, paddingTop: S.lg }}>
-          <IdentityCard profile={profile} stats={stats} />
+          <IdentityCard
+            profile={profile}
+            stats={stats}
+            units={units}
+            onEdit={() => router.push({ pathname: '/personal-info' as any, params: { nickname: profile.nickname } })}
+          />
         </View>
 
         {/* Premium upsell */}
@@ -315,8 +329,18 @@ export default function ProfileScreen() {
 
         {/* 설정 */}
         <SettingGroup title="설정">
-          <SettingRow icon={<Icon name="resize-outline"        size={19} color={C.sub} />} label="단위"       value="km (킬로미터)" />
-          <SettingRow icon={<Icon name="moon-outline"          size={19} color={C.sub} />} label="다크 모드"   value="꺼짐" />
+          <SettingRow
+            icon={<Icon name="resize-outline" size={19} color={C.sub} />}
+            label="단위"
+            value={units === 'mi' ? 'mi (마일)' : 'km (킬로미터)'}
+            onPress={() => router.push('/units' as any)}
+          />
+          <SettingRow
+            icon={<Icon name="moon-outline" size={19} color={C.sub} />}
+            label="다크 모드"
+            value={theme === 'dark' ? '켜짐' : '꺼짐'}
+            onPress={() => router.push('/theme' as any)}
+          />
           <SettingRow icon={<Icon name="globe-outline"         size={19} color={C.sub} />} label="언어"       value="한국어" />
           <SettingRow icon={<Icon name="headset-outline"       size={19} color={C.sub} />} label="도움말 센터" />
           <SettingRow icon={<Icon name="document-text-outline" size={19} color={C.sub} />} label="서비스 약관" />
