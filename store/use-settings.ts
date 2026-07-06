@@ -13,11 +13,16 @@ import {
   type RunSettings,
   type UserSettings,
 } from '@/lib/settings-api';
+import { supabase } from '@/lib/supabase';
 
-const CACHE_KEY = '@fr_settings';
+// Per-user cache key — settings must not bleed across account switches.
+const cacheKey = (uid: string) => `@fr_settings:${uid}`;
+
+let cacheUid: string | null = null;
 
 function cache(settings: UserSettings) {
-  AsyncStorage.setItem(CACHE_KEY, JSON.stringify(settings)).catch(() => {});
+  if (!cacheUid) return;
+  AsyncStorage.setItem(cacheKey(cacheUid), JSON.stringify(settings)).catch(() => {});
 }
 
 type SettingsStore = {
@@ -25,8 +30,11 @@ type SettingsStore = {
   /** true once a server GET has succeeded this session */
   synced: boolean;
   /** Cache-then-server load. Idempotent per session; safe to call from any
-      screen that needs settings. Never throws. */
-  hydrate: () => Promise<void>;
+      screen that needs settings. Never throws. force=true re-fetches even
+      when synced (auth change). */
+  hydrate: (force?: boolean) => Promise<void>;
+  /** Reset to defaults (sign-out / account switch). */
+  reset: () => void;
   /** Optimistic toggle write; resolves false (and rolls back) on failure. */
   setRunSetting: (key: keyof RunSettings, value: boolean) => Promise<boolean>;
   /** Optimistic units write; resolves false (and rolls back) on failure. */
@@ -42,13 +50,17 @@ export const useSettings = create<SettingsStore>((set, get) => ({
   settings: DEFAULT_SETTINGS,
   synced: false,
 
-  hydrate: async () => {
-    if (hydrating || get().synced) return;
+  hydrate: async (force = false) => {
+    if (hydrating || (get().synced && !force)) return;
     hydrating = true;
     try {
-      // 1) First frame from cache (works signed-out/offline)
+      const { data: { session } } = await supabase.auth.getSession();
+      cacheUid = session?.user.id ?? null;
+      if (!cacheUid) return; // signed out — defaults stand
+
+      // 1) First frame from this user's cache (works offline)
       try {
-        const raw = await AsyncStorage.getItem(CACHE_KEY);
+        const raw = await AsyncStorage.getItem(cacheKey(cacheUid));
         if (raw) set({ settings: { ...DEFAULT_SETTINGS, ...JSON.parse(raw) } });
       } catch { /* unreadable cache — defaults stand */ }
 
@@ -66,6 +78,11 @@ export const useSettings = create<SettingsStore>((set, get) => ({
     } finally {
       hydrating = false;
     }
+  },
+
+  reset: () => {
+    cacheUid = null;
+    set({ settings: DEFAULT_SETTINGS, synced: false });
   },
 
   setRunSetting: async (key, value) => {
