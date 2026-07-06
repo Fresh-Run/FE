@@ -471,7 +471,7 @@ function MyCrewsTab() {
                       '프리미엄이 필요해요',
                       '무료 플랜은 크루를 1개까지 만들 수 있어요. 크루를 삭제하거나 소유권을 위임하면 다시 만들 수 있어요.',
                     ) // TODO(PR-2): push the premium upsell screen once it exists
-                  : Alert.alert('준비 중', '크루 만들기는 다음 업데이트에서 지원돼요.')}
+                  : router.push('/(community)/crew-create' as any)}
                 style={({ pressed }) => [st.createBtn, { opacity: pressed ? 0.7 : createLocked ? 0.45 : 1 }]}
               >
                 <Icon name={createLocked ? 'lock-closed-outline' : 'add'} size={13} color={C.accentGrn} />

@@ -99,6 +99,30 @@ function mapMember(row: ServerMember): CrewMember {
   };
 }
 
+// ─── Create ───────────────────────────────────────────────────────────────────
+
+export type CrewCreateInput = {
+  name: string;                       // server min 1; client enforces ≥2 per design
+  description?: string | null;
+  area?: string | null;
+  radius_km?: number | null;
+  sport?: string | null;
+  level?: CrewLevel;
+  max_members?: number | null;
+  is_public?: boolean;                // 비공개 = false (join via invite code only)
+  join_policy?: 'open' | 'approval';
+  active_days?: string[];
+  active_time?: string | null;
+  color?: string | null;
+};
+
+/** POST /crews — free tier: 1 owned crew (403 premium_required beyond);
+    returns the full crew, creator auto-membered. */
+export async function createCrew(input: CrewCreateInput): Promise<Crew> {
+  const row = await apiFetch<ServerCrew>('/api/crews', { method: 'POST', body: input });
+  return mapCrew(row, 'owner');
+}
+
 // ─── Reads ────────────────────────────────────────────────────────────────────
 
 export async function listCrews(): Promise<ServerCrew[]> {
