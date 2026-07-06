@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import {
+  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -13,6 +14,9 @@ import { MiniMap } from '@/components/mini-map';
 import { Icon } from '@/components/ui';
 import { useCurrentLocation } from '@/hooks/use-current-location';
 import { useRuns } from '@/hooks/use-runs';
+import { distUnit, fmtDist } from '@/lib/run-format';
+import { useQuota } from '@/store/use-quota';
+import { useSettings } from '@/store/use-settings';
 import { FR_WEATHER } from '@/lib/weather-mock';
 import {
   colors as C,
@@ -39,6 +43,23 @@ export default function CreateTabScreen() {
   const { placeName } = useCurrentLocation();
   const { runs, signedOut } = useRuns();
 
+  // Tier + weekly AI quota (design: PREMIUM badge for premium users; lock
+  // the AI card only once a free user's weekly quota is exhausted)
+  const isPremium = useQuota(s => s.isPremium);
+  const quota     = useQuota(s => s.aiGeneration);
+  const units     = useSettings(s => s.settings.units);
+  useEffect(() => { useQuota.getState().hydrate(); }, []);
+  const aiLocked = !isPremium && !quota.unlimited && (quota.remaining ?? 1) <= 0;
+
+  function handleAiPress() {
+    if (!aiLocked) { router.push('/(course)/create'); return; }
+    // TODO(PR-2): push the premium upsell screen once it exists
+    Alert.alert(
+      '이번 주 무료 생성을 모두 사용했어요',
+      `무료 플랜은 주 ${quota.limit ?? 3}회까지 AI 코스를 만들 수 있어요. 월요일에 초기화됩니다.`,
+    );
+  }
+
   const weeklyKm = useMemo(() => {
     if (signedOut) return 0;
     const [mon, sun] = getWeekBounds();
@@ -58,12 +79,19 @@ export default function CreateTabScreen() {
         <Text style={st.title}>오늘 어떻게 달릴까요?</Text>
         <Text style={st.subtitle}>당신의 컨디션에 맞는 완벽한 코스를 선택하세요.</Text>
 
-        {/* ── Card 1: AI course ────────────────────────────────────── */}
+        {/* ── Card 1: AI course (PREMIUM badge for premium users; locked
+               only when a free user's weekly quota is exhausted) ────── */}
         <Pressable
-          onPress={() => router.push('/(course)/create')}
+          onPress={handleAiPress}
           style={({ pressed }) => [st.card, st.cardAi, { opacity: pressed ? 0.92 : 1 }]}
         >
           <View style={st.cardCircle} pointerEvents="none" />
+          {isPremium && (
+            <View style={st.premiumBadge}>
+              <Icon name="flash" size={11} color="#fff" />
+              <Text style={st.premiumBadgeTxt}>PREMIUM</Text>
+            </View>
+          )}
           <View style={st.iconSq}>
             <Icon name="sparkles" size={26} color={C.accentText} />
           </View>
@@ -72,7 +100,8 @@ export default function CreateTabScreen() {
             현재 위치, 날씨, 개인 체력을 분석하여 가장 쾌적한 최적의 코스를 제안합니다.
           </Text>
           <View style={st.cardCta}>
-            <Text style={st.cardCtaTxt}>추천 코스 보기</Text>
+            {aiLocked && <Icon name="lock-closed" size={13} color={C.accentGrn} />}
+            <Text style={st.cardCtaTxt}>{aiLocked ? '프리미엄으로 잠금 해제' : '추천 코스 보기'}</Text>
             <Icon name="chevron-forward" size={14} color={C.accentGrn} />
           </View>
         </Pressable>
@@ -100,7 +129,7 @@ export default function CreateTabScreen() {
           <View style={[st.statCard, shadows.sm]}>
             <Text style={st.statLabel}>주간 누적 거리</Text>
             <Text style={st.statVal}>
-              {weeklyKm.toFixed(1)}<Text style={st.statUnit}> km</Text>
+              {fmtDist(weeklyKm, units, 1)}<Text style={st.statUnit}> {distUnit(units)}</Text>
             </Text>
           </View>
           <View style={[st.statCard, shadows.sm]}>
@@ -161,6 +190,13 @@ const st = StyleSheet.create({
   cardAi: {
     borderColor: C.accent + '55',
   },
+  premiumBadge: {
+    position: 'absolute', top: 16, right: 16, zIndex: 1,
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: C.accentGrn, borderRadius: R.pill,
+    paddingLeft: 9, paddingRight: 11, paddingVertical: 5,
+  },
+  premiumBadgeTxt: { fontSize: 10.5, fontWeight: '800', letterSpacing: 0.6, color: '#fff' },
   cardCircle: {
     position:        'absolute',
     top:             -40,

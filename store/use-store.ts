@@ -3,6 +3,8 @@ import { Session } from '@supabase/supabase-js';
 import { create } from 'zustand';
 
 import { supabase } from '@/lib/supabase';
+import { useQuota } from '@/store/use-quota';
+import { useSettings } from '@/store/use-settings';
 
 const DISPLAY_NAME_KEY = '@fr_display_name';
 
@@ -74,6 +76,15 @@ export const useStore = create<Store>((set, get) => ({
 
     supabase.auth.onAuthStateChange((_event, session) => {
       set({ session });
+      // Login/account-switch must always refetch per-user server state;
+      // sign-out must drop it (no tier/settings bleed across accounts).
+      if (session) {
+        useQuota.getState().hydrate(true);
+        useSettings.getState().hydrate(true);
+      } else {
+        useQuota.getState().reset();
+        useSettings.getState().reset();
+      }
     });
   },
 

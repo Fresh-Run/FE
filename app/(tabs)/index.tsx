@@ -9,6 +9,7 @@ import { router } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Modal,
   Pressable,
@@ -34,9 +35,11 @@ import {
   unlikeRoute,
   type PublicRoute,
 } from '@/lib/routes-api';
-import { fmtAgo, fmtDuration, fmtPace } from '@/lib/run-format';
+import { distUnit, fmtAgo, fmtDist, fmtDuration, fmtPaceIn, paceUnit, type Units } from '@/lib/run-format';
 import { colors as C, shadows, spacing as S } from '@/lib/theme';
 import { setPendingCourse } from '@/store/pending-course';
+import { useQuota } from '@/store/use-quota';
+import { useSettings } from '@/store/use-settings';
 import { useStore } from '@/store/use-store';
 import type { Coordinate } from '@/types';
 import { FR_WEATHER, type WTone } from '@/lib/weather-mock';
@@ -52,8 +55,9 @@ const FR_AQI_COLOR: Record<string, string> = {
 
 const EST_PACE_SEC_PER_KM = 320; // same assumption as courseStats
 
-/** Display fields the design shows that courses don't carry directly. */
-function courseDisplay(r: PublicRoute) {
+/** Display fields the design shows that courses don't carry directly.
+    All math stays km; `units` affects formatting only. */
+function courseDisplay(r: PublicRoute, units: Units) {
   const dist = r.total_distance_km;
   const estMin = r.estimated_duration_min ?? (dist * EST_PACE_SEC_PER_KM) / 60;
   const durSec = Math.round(estMin * 60);
@@ -62,7 +66,7 @@ function courseDisplay(r: PublicRoute) {
     name: r.owner_nickname ?? '러너',
     ago:  fmtAgo(r.created_at),
     dur:  fmtDuration(durSec),
-    pace: fmtPace(paceSec),
+    pace: fmtPaceIn(paceSec, units),
   };
 }
 
@@ -185,6 +189,9 @@ const wst = StyleSheet.create({
 // ─── Feed tabs ────────────────────────────────────────────────────────────────
 
 function FeedTabs({ tab, setTab }: { tab: string; setTab: (v: string) => void }) {
+  // Query radius stays 10km — the label converts for display only
+  const units = useSettings(s => s.settings.units);
+  const radiusLabel = units === 'mi' ? `내 위치 ${fmtDist(10, 'mi', 1)}mi 이내` : '내 위치 10km 이내';
   return (
     <View style={ftt.row}>
       <View style={ftt.seg}>
@@ -196,7 +203,7 @@ function FeedTabs({ tab, setTab }: { tab: string; setTab: (v: string) => void })
       </View>
       <View style={ftt.loc}>
         <Icon name="location-outline" size={13} color={C.faint} />
-        <RNText style={ftt.locTxt}>{tab === '전체' ? '내 위치 10km 이내' : '팔로잉'}</RNText>
+        <RNText style={ftt.locTxt}>{tab === '전체' ? radiusLabel : '팔로잉'}</RNText>
       </View>
     </View>
   );
@@ -222,7 +229,8 @@ function FeedCard({
   saved: boolean; awayKm: number | null;
   onLike: () => void; onSave: () => void; onOpen: () => void; onRun: () => void;
 }) {
-  const d = courseDisplay(item);
+  const units = useSettings(s => s.settings.units);
+  const d = courseDisplay(item, units);
   return (
     <View style={[fct.card, shadows.sm]}>
       {/* Header */}
@@ -235,7 +243,7 @@ function FeedCard({
             <RNText style={fct.sub} numberOfLines={1}>
               {d.ago}
               {awayKm != null
-                ? <RNText style={fct.away}> · {awayKm.toFixed(1)}km</RNText>
+                ? <RNText style={fct.away}> · {fmtDist(awayKm, units, 1)}{distUnit(units)}</RNText>
                 : null}
             </RNText>
           </View>
@@ -255,9 +263,9 @@ function FeedCard({
         <RNText style={fct.title} numberOfLines={1}>{item.summary}</RNText>
         <View style={fct.statsRow}>
           {([
-            [item.total_distance_km.toFixed(1), 'km',  '거리'],
-            [d.dur,                             '',    '예상 시간'],
-            [d.pace,                            '/km', '예상 페이스'],
+            [fmtDist(item.total_distance_km, units, 1), distUnit(units), '거리'],
+            [d.dur,                                     '',              '예상 시간'],
+            [d.pace,                                    paceUnit(units), '예상 페이스'],
           ] as [string, string, string][]).map(([val, unit, label], i) => (
             <View key={i} style={{ flexDirection: 'column', gap: 2 }}>
               <RNText style={fct.statVal}>
@@ -366,8 +374,9 @@ function CourseDetailSheet({
 }) {
   const insets = useSafeAreaInsets();
   const [draft, setDraft] = useState('');
+  const units = useSettings(s => s.settings.units);
   const { comments, loading, posting, error, post } = useRouteComments(item?.id ?? null);
-  const d = item ? courseDisplay(item) : null;
+  const d = item ? courseDisplay(item, units) : null;
 
   useEffect(() => { setDraft(''); }, [item?.id]);
 
@@ -408,9 +417,9 @@ function CourseDetailSheet({
               {/* Stats tiles */}
               <View style={rdt.statsRow}>
                 {([
-                  [`${item.total_distance_km.toFixed(1)} km`, '거리'],
-                  [d.dur,                                     '예상 시간'],
-                  [`${d.pace} /km`,                           '예상 페이스'],
+                  [`${fmtDist(item.total_distance_km, units, 1)} ${distUnit(units)}`, '거리'],
+                  [d.dur,                                                             '예상 시간'],
+                  [`${d.pace} ${paceUnit(units)}`,                                    '예상 페이스'],
                 ] as [string, string][]).map(([v, l], i) => (
                   <View key={i} style={rdt.statTile}>
                     <RNText style={rdt.statVal}>{v}</RNText>
@@ -544,7 +553,8 @@ export default function HomeScreen() {
   const insets      = useSafeAreaInsets();
   const displayName = useStore((s) => s.displayName);
   const signOut     = useStore((s) => s.signOut);
-  const premium     = false; // TODO: wire from subscription store
+  const premium     = useQuota((s) => s.isPremium);
+  useEffect(() => { useQuota.getState().hydrate(); }, []);
 
   const [tab, setTab]           = useState('친구');
   const [openItem, setOpenItem] = useState<PublicRoute | null>(null);
@@ -617,7 +627,10 @@ export default function HomeScreen() {
         refreshControl={
           <RefreshControl
             refreshing={tab === '전체' ? nearby.loading && nearby.items.length > 0 : feed.refreshing}
-            onRefresh={tab === '전체' ? nearby.refetch : feed.refresh}
+            onRefresh={() => {
+              useQuota.getState().hydrate(true); // recovery path for a failed tier sync
+              if (tab === '전체') nearby.refetch(); else feed.refresh();
+            }}
             tintColor={C.faint}
           />
         }
@@ -664,7 +677,10 @@ export default function HomeScreen() {
             <View style={{ paddingHorizontal: S.gutter, paddingTop: 26, paddingBottom: 26 }}>
               <AIBanner
                 locked={!premium}
-                onPress={() => router.push(!premium ? ('/premium' as any) : '/(course)/create')}
+                // TODO(PR-2): locked → push the premium upsell screen once it exists
+                onPress={() => premium
+                  ? router.push('/(course)/create')
+                  : Alert.alert('준비 중', '프리미엄 안내는 다음 업데이트에서 지원됩니다.')}
               />
             </View>
             {__DEV__ && (
