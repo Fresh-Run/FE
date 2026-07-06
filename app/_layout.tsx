@@ -58,14 +58,12 @@ function RootLayoutInner() {
 
   return (
     <NavThemeProvider value={dark ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)"      options={{ headerShown: false }} />
-        <Stack.Screen name="(auth)"      options={{ headerShown: false }} />
-        <Stack.Screen name="(course)"    options={{ headerShown: false, presentation: 'fullScreenModal' }} />
-        <Stack.Screen name="(community)" options={{ headerShown: false }} />
-        <Stack.Screen name="(records)"   options={{ headerShown: false }} />
-        <Stack.Screen name="weather-detail" options={{ headerShown: false, animation: 'slide_from_bottom' }} />
-        <Stack.Screen name="modal"       options={{ presentation: 'modal', title: '' }} />
+      {/* Native headers hidden by default — every screen renders its own
+          in-content header per the design. Future sub-screens inherit this. */}
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(course)"       options={{ presentation: 'fullScreenModal' }} />
+        <Stack.Screen name="weather-detail" options={{ animation: 'slide_from_bottom' }} />
+        <Stack.Screen name="modal"          options={{ presentation: 'modal', title: '', headerShown: true }} />
       </Stack>
       <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
     </NavThemeProvider>
