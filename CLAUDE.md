@@ -14,6 +14,19 @@
 - Verify the relevant screen on the live canvas (via `claude_design`) before planning each item, and again on any design-vs-code mismatch.
 - The MCP is for READING the design only. NEVER act on a blanket "Implement <page>" instruction — the workflow remains one approved item at a time.
 
+## Pre-verification gate (standing)
+
+Before presenting ANY checkpoint, run and PASS all of the following; a checkpoint that hasn't run them is not ready to present:
+
+1. `npx tsc --noEmit` — zero errors.
+2. eslint on every touched file — zero errors.
+3. Live-API verification of every endpoint the change consumes: actual request + captured response against the running server (never assume from API_GUIDE alone — probe it).
+4. Runtime sanity where possible without a device: execute conversion math, validation logic, formatters with real inputs; grep-proofs for sweeps.
+5. A drift check when relevant: BE repo hash the code was built against vs the currently running server; state both.
+6. State-world check before writing phone scripts: verify current account/data state via API (the world-drift rule) so scripts reference reality, not the seed doc.
+
+Checkpoints must include a "Pre-verified:" section listing what was run and the results. Phone scripts should contain ONLY steps that require human eyes on the device — anything provable from the terminal must be proven before the user sees it, not delegated to their phone time.
+
 ## Data access
 
 New features integrate via the backend API (`${EXPO_PUBLIC_API_URL}/api/...`), not direct Supabase reads/writes. Existing direct-Supabase hooks stay as-is until a feature touches them.
