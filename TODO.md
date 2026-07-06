@@ -1,6 +1,45 @@
 # TODO
 
-## PAUSED: crew verification desk-test (2026-07-06)
+## THE OUTDOOR SESSION — five payloads, one outing (owner-sequenced 2026-07-07)
+
+Simulator declined (no Xcode) — everything below verifies outdoors on the real device, in this order. **(a)+(b) must complete before (c)/(d)/(e) can trust their distances** — the walk portion comes first.
+
+- **(a) Calibrated walk** — 150–300m known distance, normal pace, phone carried naturally; instrumented build live; capture the `[track]` Metro log block + 3 numbers (real / app-credited / final `accepted=`/`raw=`) → filter-bug diagnosis per the frame below.
+- **(b) Filter fix** — from (a)'s log: fix the guilty gate(s), raise `MIN_SAVE_KM` 0.01 → 0.05, strip `DEBUG(short-run)`; re-walk to confirm ~100m credits ~100m.
+- **(c) Item-17 코스 러닝 E2E** — feed → preview → 네 뛸게요 (copy) → course pill/map tracking → save; verify `route_id` set on the run and `copy_count` bumped.
+- **(d) PB modal visual** — pre-seed via Swagger BEFORE heading out: fresh account + one short posted run (low baseline) so the real outdoor run triggers `new_records` → modal (confetti, comparison card, +N caption, CTA-dismiss, 공유 준비 중).
+- **(e) Units save-integrity** — run with 단위=mi → verify the stored `distance_km` is the true km (GET /runs), display mi everywhere.
+
+**Commit boundaries after the session:** PB modal + item-17 set (9 files incl. `components/pb-celebration.tsx`) commit together; `use-run-tracker.ts` commits after the (b) DEBUG strip. Then the tree is clean.
+
+**Xcode/simulator: declined for now** — revisit when dev builds become necessary (HealthKit, IAP, Maestro E2E).
+
+## ITEM (queued, post-item-17-commit): 러닝 저장 + 수고했어요 redesign implementation
+
+Canvas redesign 2026-07-07 (owner + backend decisions included). **Source of truth = the LIVE canvas (FreshRun App.html) as of 2026-07-07 — re-read both screens at planning time, do NOT build from this note.** Decisions that aren't obvious from pixels:
+
+- **러닝 저장 (FrRunSave):** editable title is the hero, placeholder auto-suggests by time of day (새벽/아침/저녁/야간 러닝); 공개 범위 is now one row → bottom-sheet picker (전체 공개/팔로워만/비공개); route-map preview card between date row and photo row, reusing the feed-card map style, HIDDEN when distance < 0.3km or no route points; photo add = compact button (UI-only this pass unless probed otherwise); no Sync/Health row.
+- **수고했어요:** the 4 platform share buttons are GONE — single 공유하기 (secondary) button → iOS native share sheet; NO mood-feedback section; NO AI insight card (owner+backend decision — coach-script, if ever built, lives elsewhere); record preview = 구간 페이스 bar chart with 평균 baseline + ⚡최고 구간 highlight, comparison rows (평균 페이스 vs 30일, 이번 주 누적 — data source likely /me/stats, PROBE at build time), conditional highlight chips (hidden when none) and conditional 고도 row.
+- Both screens live in item-17 territory (run-saved/run-result) → build queues behind the item-17 commit; recon must live-probe /me/stats shape, per-point tracker data (splits/elevation feasibility), and whether POST /runs accepts title/memo/visibility fields.
+
+## 내 프로필 (own-view) — BUILT 2026-07-07, honest-interim notes
+
+- **New ask for 지연: `location` field on profiles** — canvas shows "서울 성수동" under the name; no backend source. Interim: `bio` renders there (omit when empty).
+- Run cards are a reduced feed-style subset — canvas shows per-run title/area/tags/♥ counts/공개 태그; own-runs have no backend source for any of those (kudos counts exist only on `/feed/activities`). Re-expand when fields land. 공개 framing deferred with run visibility (pending 지연).
+- Gear icon routes to the 프로필 tab (판단 call — flag if canvas intends otherwise).
+- **Card social counts DEFERRED — batch ask for 지연 (2026-07-07):** add `kudos_count` (+`comment_count` when run-comments ship) to `GET /runs` rows. Probed: `/runs` has no counts; `/feed/activities` has `kudos_count` for own runs but is interleaved + offset-only → unbounded paging = disguised N+1, rejected per rule. When the field lands: ♥+count / 💬+count left-aligned on the card footer, 💬 tap → activity detail (no comment sheet on this screen).
+- **Visibility follow-up (blocked on runs visibility field, pending 지연):** 공개 게시물/팔로워만 corner tag bottom-right per canvas; 비공개 runs excluded from 내 프로필's list but retained in 기록.
+
+## ITEM (queued): 공개 프로필 screen
+
+The home-header profile avatar (next to the bell) is now pressable → user profile: avatar/name/location, 팔로잉·팔로워·활동 counts, 프로필 편집 + 프로필 공유 buttons, and 게시한 러닝 (a feed of the user's PUBLIC runs, with 공개 N개 count and 공개 게시물 tags). **Source of truth = live canvas; re-read at planning.** Notes:
+
+- This is the frontend of the strategy-scan item "public profiles + follow/unfollow + follower lists" — backend marked ready (profiles/follow endpoints per her Notion); recon must live-probe those endpoints.
+- Depends on run visibility (전체 공개/팔로워만/비공개) existing on runs — same POST /runs contract question already pending with 지연.
+- Own-profile vs other-user variant + follower-list screens: check canvas state at recon time; may be partially undesigned.
+- Entry point edit touches `app/(tabs)/index.tsx` header (committed territory).
+
+## ~~PAUSED: crew verification desk-test~~ DONE 2026-07-07 (10-step passed, committed `33c9b54`)
 
 **State:** crew migration work remains **UNCOMMITTED and unverified** — 6 files: `lib/api.ts` (ApiError/apiRequest), `lib/crews-api.ts` (new), `store/join-requests.ts` (new), `hooks/use-crews.ts`, `app/(tabs)/community.tsx`, `app/(community)/crew-detail.tsx`. Entanglement-checked: commits cleanly on its own, independent of item 17 and the tracking instrumentation.
 
@@ -82,8 +121,10 @@
 - **Member-join 409 fix: PARTIAL as of BE `ccac76b` (2026-07-06)** — guide now claims race-proof 409-first, and open-crew `join_crew` checks membership, but the **승인제 request path still returns 202 + creates a phantom for members** (reproduced live as test2, phantoms cleaned). Re-report to her with repro: token as test2 → `POST /crews/{한강crewId}/join` → expect 409, got 202. Our 가입됨 badge guard stays necessary.
 - **`GET /me/join-requests` SHIPPED** (BE has `test_my_join_requests_integration.py`) — Stage B unblocked: hydrate `store/join-requests.ts` once per browse load for cross-session truthful badges. `hydrate()` is already in the store waiting. Verify exact path/shape in Swagger before wiring.
 - New premium endpoints landed 2026-07-06 (future items): `POST /routes/{id}/coach-script` (오디오 코치, premium, 403 premium_required for free), `GET /me/insights/monthly` (월간 인사이트, premium).
+- **Design decision (owner+backend, 2026-07-07): AI feedback/coach-insight card is REMOVED from the 수고했어요 screen (run-result)** — never build it there. If/when coach-script ships, it lives on activity detail or its own surface, not the completion screen. (Nothing to remove app-side — the card was never built.)
 
-- Owner-side invite code UI (issue/rotate/share) — no bundle design exists; owners can rotate via Swagger meanwhile. Waiting on canvas design.
+- Owner-side invite code UI (issue/rotate/share) — **correction 2026-07-07: a bundle design DOES exist** (`FrCrewInvite`, crew-create.jsx:380); earlier "no design" note was wrong. Buildable as its own item; the create-success modal's 초대하기 CTA (준비 중 for now) is its entry point.
+- **첫 챌린지 at crew creation — deferred (owner call 2026-07-07)**: pair with the challenge-display item (crew-detail renders no challenges yet; `POST /crews/{id}/challenges` exists). The design's 첫 챌린지 form block joins that item.
 - Invite-code entry sheet + row are invented UI — canvas design to follow; flag visual mismatches then (user note, 2026-07-05).
 - `CrewMemberResponse` has no `avatar_url` — member list uses initials avatars; raise with partner if photos matter.
 

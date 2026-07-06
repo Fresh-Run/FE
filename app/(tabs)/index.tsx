@@ -122,7 +122,10 @@ function Greeting({ name, onBell }: { name: string; onBell: () => void }) {
           <Icon name="notifications-outline" size={20} color={C.text} />
           <View style={gst.notifDot} />
         </Pressable>
-        <Avatar name={name} size={38} ring />
+        {/* Avatar → 내 프로필 (social profile; canvas 2026-07-07) */}
+        <Pressable onPress={() => router.push('/my-profile' as any)} hitSlop={6}>
+          <Avatar name={name} size={38} ring />
+        </Pressable>
       </View>
     </View>
   );
