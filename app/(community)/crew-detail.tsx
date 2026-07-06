@@ -18,7 +18,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { MiniMap } from '@/components/mini-map';
 import { Icon } from '@/components/ui';
-import { joinCrew, leaveCrew, useCrewDetail, type Crew, type CrewMember } from '@/hooks/use-crews';
+import {
+  cancelJoinRequest,
+  joinCrew,
+  leaveCrew,
+  useCrewDetail,
+  type Crew,
+  type CrewMember,
+} from '@/hooks/use-crews';
 import { avatarBg } from '@/lib/fr-hash';
 import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
 
@@ -61,11 +68,11 @@ function MemberRow({ member, index }: { member: CrewMember; index: number }) {
 // ─── CTA footer ───────────────────────────────────────────────────────────────
 
 function CtaButton({
-  crew, busy,
-  onJoin, onLeave,
+  crew, requestPending, busy,
+  onJoin, onLeave, onCancelRequest,
 }: {
-  crew: Crew; busy: boolean;
-  onJoin: () => void; onLeave: () => void;
+  crew: Crew; requestPending: boolean; busy: boolean;
+  onJoin: () => void; onLeave: () => void; onCancelRequest: () => void;
 }) {
   if (crew.myRole === 'owner') {
     return (
@@ -96,6 +103,27 @@ function CtaButton({
     );
   }
 
+  // Pending join request (approval crew) — cancellable
+  if (requestPending) {
+    return (
+      <Pressable
+        onPress={onCancelRequest}
+        disabled={busy}
+        style={({ pressed }) => [st.ctaBtn, st.ctaPending, pressed && { opacity: 0.75 }]}
+      >
+        {busy
+          ? <ActivityIndicator size="small" color={C.accentGrn} />
+          : (
+            <>
+              <Icon name="hourglass-outline" size={18} color={C.accentGrn} />
+              <Text style={[st.ctaTxt, { color: C.accentGrn }]}>신청됨 · 취소</Text>
+            </>
+          )
+        }
+      </Pressable>
+    );
+  }
+
   if (isFull(crew)) {
     return (
       <View style={[st.ctaBtn, st.ctaDisabled]} pointerEvents="none">
@@ -105,6 +133,7 @@ function CtaButton({
     );
   }
 
+  // rejected (or no request) → apply-able again; label pre-set by join_policy
   return (
     <Pressable
       onPress={onJoin}
@@ -116,7 +145,7 @@ function CtaButton({
         : (
           <>
             <Icon name="people-outline" size={18} color={C.accentText} />
-            <Text style={st.ctaTxt}>가입하기</Text>
+            <Text style={st.ctaTxt}>{crew.join_policy === 'approval' ? '가입 신청하기' : '가입하기'}</Text>
           </>
         )
       }
@@ -131,7 +160,7 @@ const HERO_H = 220;
 export default function CrewDetailScreen() {
   const insets = useSafeAreaInsets();
   const { crewId } = useLocalSearchParams<{ crewId: string }>();
-  const { crew, members, loading, error, refetch } = useCrewDetail(crewId ?? null);
+  const { crew, members, myRequestStatus, loading, error, refetch } = useCrewDetail(crewId ?? null);
 
   const [busy, setBusy]       = useState(false);
   const [mutErr, setMutErr]   = useState<string | null>(null);
@@ -140,14 +169,42 @@ export default function CrewDetailScreen() {
     if (!crew) return;
     setBusy(true);
     setMutErr(null);
-    const { error: err, code } = await joinCrew(crew.id);
-    setBusy(false);
-    if (err) {
-      // 23505 = unique_violation — user is already a member
-      setMutErr(code === '23505' ? '이미 가입한 크루예요' : err);
-    } else {
+    try {
+      const result = await joinCrew(crew.id);
+      if (result === 'pending') {
+        Alert.alert('가입 신청 완료', '크루장이 승인하면 알려드릴게요.');
+      } else if (result === 'already_member') {
+        setMutErr('이미 가입한 크루예요');
+      }
       refetch();
+    } catch (e: unknown) {
+      setMutErr(e instanceof Error ? e.message : '가입에 실패했어요');
+    } finally {
+      setBusy(false);
     }
+  }
+
+  function handleCancelRequest() {
+    if (!crew) return;
+    Alert.alert('가입 신청 취소', '이 크루 가입 신청을 취소할까요?', [
+      { text: '아니요', style: 'cancel' },
+      {
+        text: '신청 취소',
+        style: 'destructive',
+        onPress: async () => {
+          setBusy(true);
+          setMutErr(null);
+          try {
+            await cancelJoinRequest(crew.id);
+            refetch();
+          } catch (e: unknown) {
+            setMutErr(e instanceof Error ? e.message : '취소에 실패했어요');
+          } finally {
+            setBusy(false);
+          }
+        },
+      },
+    ]);
   }
 
   function handleLeave() {
@@ -163,12 +220,13 @@ export default function CrewDetailScreen() {
           onPress: async () => {
             setBusy(true);
             setMutErr(null);
-            const { error: err } = await leaveCrew(crew.id);
-            setBusy(false);
-            if (err) {
-              setMutErr(err);
-            } else {
+            try {
+              await leaveCrew(crew.id);
               refetch();
+            } catch (e: unknown) {
+              setMutErr(e instanceof Error ? e.message : '탈퇴에 실패했어요');
+            } finally {
+              setBusy(false);
             }
           },
         },
@@ -297,7 +355,14 @@ export default function CrewDetailScreen() {
 
       {/* ── Sticky CTA ────────────────────────────────────────────────── */}
       <View style={[st.footer, { paddingBottom: Math.max(insets.bottom, S.lg) + S.sm }]}>
-        <CtaButton crew={crew} busy={busy} onJoin={handleJoin} onLeave={handleLeave} />
+        <CtaButton
+          crew={crew}
+          requestPending={myRequestStatus === 'pending'}
+          busy={busy}
+          onJoin={handleJoin}
+          onLeave={handleLeave}
+          onCancelRequest={handleCancelRequest}
+        />
       </View>
     </View>
   );
@@ -361,4 +426,5 @@ const st = StyleSheet.create({
   ctaTxt:      { fontSize: 16, fontWeight: '700', color: C.accentText, letterSpacing: -0.3 },
   ctaDisabled: { backgroundColor: C.surfaceAlt, borderWidth: 1, borderColor: C.border },
   ctaDanger:   { backgroundColor: '#EF444414', borderWidth: 1, borderColor: C.danger },
+  ctaPending:  { backgroundColor: C.accentDim, borderWidth: 1.5, borderColor: C.accent + '77' },
 });

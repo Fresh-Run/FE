@@ -6,6 +6,8 @@
 
 **Test script:** the 10-step phone+Swagger desk-test exists (in chat, 2026-07-06 — covers real-data render, open join, 승인제 신청→승인/거절/취소, badge-fix regression repro, invite-code join, demo5 fixture, failure states). Progress unknown/partial.
 
+**Script expectation updates (2026-07-06 re-verification):** the known-bug caveat is GONE — members POSTing join now 409 "Already a member" (verified), so no phantom-residue warnings apply to members; step 3 (가입됨 badge for test2) is INVALID as written — **test2 is no longer a member**; use demo2/한강질주 (verified member) for the 가입됨/member checks, or re-join test2 first. Pre-flight now mandatory: pull CURRENT member list + request states via API — the seed doc no longer matches reality (test1 = 테스트1).
+
 **⚠️ State chain may be dirty:** a fresh test account may be mid-신청 or already a member on 한강 새벽 러닝 크루 from a partial run. **demo5 must remain the pending fixture** (owner-list screen depends on it).
 
 **Before resuming:** re-check the fresh account's actual state — token as that account → `GET /api/crews/{crewId}/join-requests/me` (and `GET /crews/mine`) — then restart the script from a clean point (탈퇴/신청 취소 as needed).
@@ -61,12 +63,13 @@
 
 ## Backend follow-ups (partner's repo, read-only — raise with her, don't fix)
 
-- **Nickname 409: unique constraint migration missing on `profiles.nickname` — code ready** (refined 2026-07-06 re-probe on `8bb56b0`): `profile_service.py` already catches the PG 23505 unique-violation (`NicknameTaken`), but the DB constraint doesn't exist so it never fires — probe still 200 (reverted, residue clean). Ask 지연 for the constraint migration, not code. Our inline-409 UI stays dormant until then.
-- **승인제 member-join still 202+phantom on `8bb56b0`** — re-probed; the earlier open-crew fix didn't cover the approval path. Repro unchanged; 가입됨 badge remains the UI-side defense. (Probe residue cleaned: test2 phantom deleted.)
+- ~~Nickname 409~~ **RESOLVED — constraint applied and enforced** (verified 2026-07-06 on running `3f64aba`): real-duplicate probe (`{"nickname":"테스트1"}` as test2) → **409 "Nickname already taken"**. Earlier "still broken" re-probes were **false positives from world drift**: test1 had been renamed 테스트1 during phone verification, so my probe value 한강크루장 was no longer a duplicate (200 was correct). The ORIGINAL 2026-07-05 report was true at the time (rename genuinely succeeded pre-migration); `2026-07-06_profiles_nickname_unique.sql` fixed it. **개인 정보 inline 409 message is now LIVE.**
+- ~~승인제 member-join 202~~ **RESOLVED — real members get 409** (verified 2026-07-06: join as demo2/한강질주, a verified current member → **409 "Already a member"** ×2). My re-probes used test2, who is **no longer a crew member** (left during phone verification) — a non-member getting 202+pending is correct behavior. 가입됨 badge stays (correct UX, no longer a bug shield).
+- **⚠️ Demo world has drifted from DEMO_ACCOUNTS.md** (from phone sessions + probes): test1 nickname = 테스트1 (not 한강크루장); test2 = NOT a crew member (5 members remain); I deleted two of test2's legitimately-created pending requests during earlier "residue cleanup" under the stale member assumption (disclosed). **Always verify current state via API before probing — never trust the seed doc.** Re-running `seed_demo_data.py` is idempotent-additive but won't undo renames/leaves.
 
 - ~~`POST /api/runs` path field~~ **LANDED** (BE `3779905`, verified 2026-07-06): `gps_track: Optional[list[GpsPoint]]` where `GpsPoint = {lat, lng, t: epoch ms, acc?: m ("강력 권장"), alt?}` — server pipeline owns validation (filters, splits, anti-cheat; out-of-bbox points silently dropped). **Wiring wants `t` + `acc` retention in the tracker's path buffer** (today we keep lat/lng only) — small `use-run-tracker` change that RIDES THE WALK CHAIN (filter fix first; don't upload known-broken tracks to a validating server). Then `SEAM (path upload)` in `lib/runs-api.ts` connects directly.
 - `RouteResponse` has no `id` — needed for `runs.route_id` linking after generation
-- Stopgap `.env` lacks `OPENWEATHER_API_KEY` (new in this clone) — `/api/weather` fails until her real values arrive
+- ~~`OPENWEATHER_API_KEY` missing~~ **RESOLVED 2026-07-06** — key added to backend `.env` (owner), server restarted, `GET /api/weather` verified live with real Seoul data (200, full guide shape incl. `running_index.personalized`). **Weather integration (retire `weather-mock.ts`: home strip, weather-detail, chooser temp) is now fully unblocked** — S/M item, needs plan approval.
 - `PublicRouteResponse` has no `is_bookmarked` flag — feed v1 works around it with one `GET /routes/bookmarked?limit=100` per feed load (stale icons possible past 100 bookmarks); a response flag like `is_liked` would remove the extra call
 - `GET /routes/{id}` is owner-only, even for public routes — blocks id-based course-preview fetch; feed v1 works around it with an in-memory handoff (`store/pending-course.ts`)
 

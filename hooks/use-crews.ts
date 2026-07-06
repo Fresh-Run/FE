@@ -1,88 +1,54 @@
+// Crew hooks — backed by /api/crews/* (lib/crews-api.ts) since the crew
+// migration. Supabase is used for auth only (current user id), per the
+// API guide's architecture rule. Types and mutation functions re-export
+// from crews-api so screen imports stay unchanged.
+
 import { useCallback, useEffect, useState } from 'react';
 
+import {
+  getCrew,
+  getCrewMembers,
+  getMyJoinRequestStatus,
+  listCrews,
+  listMyCrews,
+  mapCrew,
+  type Crew,
+  type CrewMember,
+  type JoinRequestStatus,
+} from '@/lib/crews-api';
 import { supabase } from '@/lib/supabase';
+import { useJoinRequests } from '@/store/join-requests';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-export type CrewLevel = '무관' | '입문' | '중급' | '고급';
-
-export type Crew = {
-  id: string;
-  owner_id: string;
-  name: string;
-  description: string | null;
-  area: string | null;
-  radius_km: number | null;
-  sport: string | null;
-  level: CrewLevel;
-  max_members: number | null;
-  is_public: boolean;
-  active_days: string[] | null;
-  active_time: string | null;
-  color: string | null;
-  join_policy: 'open' | 'approval';
-  member_count: number;
-  myRole?: 'owner' | 'member';
-};
-
-export type CrewMember = {
-  user_id: string;
-  role: 'owner' | 'member';
-  joined_at: string;
-  nickname: string;
-  avatar_url: string | null;
-};
-
-export type MutResult = { error: string | null; code: string | null };
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function mapCrew(row: Record<string, unknown>, myRole?: 'owner' | 'member'): Crew {
-  const memberRows = row.crew_members as { count: number }[] | null;
-  return {
-    id:          row.id as string,
-    owner_id:    row.owner_id as string,
-    name:        row.name as string,
-    description: row.description as string | null,
-    area:        row.area as string | null,
-    radius_km:   row.radius_km as number | null,
-    sport:       row.sport as string | null,
-    level:       row.level as CrewLevel,
-    max_members: row.max_members as number | null,
-    is_public:   row.is_public as boolean,
-    active_days: row.active_days as string[] | null,
-    active_time: row.active_time as string | null,
-    color:       row.color as string | null,
-    join_policy: (row.join_policy as 'open' | 'approval') ?? 'open',
-    member_count: memberRows?.[0]?.count ?? 0,
-    myRole,
-  };
-}
+export {
+  cancelJoinRequest,
+  joinCrew,
+  joinCrewByCode,
+  leaveCrew,
+  previewCrewByCode,
+  type Crew,
+  type CrewLevel,
+  type CrewMember,
+  type JoinRequestStatus,
+  type JoinResult,
+} from '@/lib/crews-api';
 
 // ─── useBrowseCrews — public crew list for the discover tab ──────────────────
 
 export function useBrowseCrews() {
-  const [crews, setCrews]   = useState<Crew[]>([]);
+  const [crews, setCrews]     = useState<Crew[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError]   = useState<string | null>(null);
-  const [key, setKey]       = useState(0);
+  const [error, setError]     = useState<string | null>(null);
+  const [key, setKey]         = useState(0);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError(null);
 
-    supabase
-      .from('crews')
-      .select('*, crew_members(count)')
-      .eq('is_public', true)
-      .order('name')
-      .then(({ data, error: err }) => {
-        if (cancelled) return;
-        if (err) { setError(err.message); setLoading(false); return; }
-        setCrews((data ?? []).map(row => mapCrew(row as Record<string, unknown>)));
-        setLoading(false);
-      });
+    listCrews()
+      .then(rows => { if (!cancelled) setCrews(rows.map(r => mapCrew(r))); })
+      .catch((e: unknown) => { if (!cancelled) setError(e instanceof Error ? e.message : '크루를 불러올 수 없어요'); })
+      .finally(() => { if (!cancelled) setLoading(false); });
 
     return () => { cancelled = true; };
   }, [key]);
@@ -91,16 +57,15 @@ export function useBrowseCrews() {
   return { crews, loading, error, refetch };
 }
 
-// ─── useMyCrews — crews the signed-in user has joined ───────────────────────
-// Validates the session via supabase.auth.getUser() so dev-mock sessions
-// (non-UUID user ids) never reach the database query.
+// ─── useMyCrews — crews the signed-in user belongs to ─────────────────────────
+// Ownership truth is crews.owner_id (matches the backend's ensure_owner).
 
 export function useMyCrews() {
-  const [crews, setCrews]     = useState<Crew[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError]     = useState<string | null>(null);
+  const [crews, setCrews]         = useState<Crew[]>([]);
+  const [loading, setLoading]     = useState(true);
+  const [error, setError]         = useState<string | null>(null);
   const [signedOut, setSignedOut] = useState(false);
-  const [key, setKey]         = useState(0);
+  const [key, setKey]             = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -109,9 +74,7 @@ export function useMyCrews() {
     setSignedOut(false);
 
     (async () => {
-      // getUser() hits the Supabase auth server — dev-mock tokens return null user
       const { data: { user } } = await supabase.auth.getUser();
-
       if (cancelled) return;
       if (!user) {
         setSignedOut(true);
@@ -120,35 +83,15 @@ export function useMyCrews() {
         return;
       }
 
-      const userId = user.id; // guaranteed real UUID
-
-      const { data: memberships, error: mErr } = await supabase
-        .from('crew_members')
-        .select('crew_id')
-        .eq('user_id', userId);
-
-      if (cancelled) return;
-      if (mErr) { setError(mErr.message); setLoading(false); return; }
-
-      const crewIds = (memberships ?? []).map(m => m.crew_id as string);
-      if (crewIds.length === 0) { setCrews([]); setLoading(false); return; }
-
-      const { data, error: cErr } = await supabase
-        .from('crews')
-        .select('*, crew_members(count)')
-        .in('id', crewIds)
-        .order('name');
-
-      if (cancelled) return;
-      if (cErr) { setError(cErr.message); setLoading(false); return; }
-
-      // Ownership truth is crews.owner_id (matches the backend's ensure_owner);
-      // crew_members.role is kept in sync server-side but is not the authority.
-      setCrews((data ?? []).map(row => {
-        const r = row as Record<string, unknown>;
-        return mapCrew(r, (r.owner_id as string) === userId ? 'owner' : 'member');
-      }));
-      setLoading(false);
+      try {
+        const rows = await listMyCrews();
+        if (cancelled) return;
+        setCrews(rows.map(r => mapCrew(r, r.owner_id === user.id ? 'owner' : 'member')));
+      } catch (e: unknown) {
+        if (!cancelled) setError(e instanceof Error ? e.message : '크루를 불러올 수 없어요');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     })();
 
     return () => { cancelled = true; };
@@ -158,15 +101,15 @@ export function useMyCrews() {
   return { crews, loading, error, signedOut, refetch };
 }
 
-// ─── useCrewDetail — single crew + member list + current user's role ─────────
-// getUser() runs in parallel with the crew header fetch to determine myRole.
+// ─── useCrewDetail — crew + members + viewer's role / request status ─────────
 
 export function useCrewDetail(crewId: string | null) {
-  const [crew, setCrew]     = useState<Crew | null>(null);
+  const [crew, setCrew]       = useState<Crew | null>(null);
   const [members, setMembers] = useState<CrewMember[]>([]);
+  const [myRequestStatus, setMyRequestStatus] = useState<JoinRequestStatus | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError]   = useState<string | null>(null);
-  const [key, setKey]       = useState(0);
+  const [error, setError]     = useState<string | null>(null);
+  const [key, setKey]         = useState(0);
 
   useEffect(() => {
     if (!crewId) { setLoading(false); return; }
@@ -176,103 +119,48 @@ export function useCrewDetail(crewId: string | null) {
     setError(null);
     setCrew(null);
     setMembers([]);
+    setMyRequestStatus(null);
 
     (async () => {
-      // Q2 + auth in parallel — need both before we can set crew with myRole
-      const [crewRes, authRes] = await Promise.all([
-        supabase.from('crews').select('*, crew_members(count)').eq('id', crewId).single(),
-        supabase.auth.getUser(),
-      ]);
+      try {
+        const [{ data: { user } }, crewRow, memberRows] = await Promise.all([
+          supabase.auth.getUser(),
+          getCrew(crewId),
+          getCrewMembers(crewId),
+        ]);
+        if (cancelled) return;
 
-      if (cancelled) return;
-      if (crewRes.error) { setError(crewRes.error.message); setLoading(false); return; }
+        const userId = user?.id ?? null;
+        const myRole = userId && crewRow.owner_id === userId
+          ? 'owner' as const
+          : memberRows.some(m => m.user_id === userId) ? 'member' as const : undefined;
 
-      const userId = authRes.data.user?.id ?? null;
+        setCrew(mapCrew(crewRow, myRole));
+        setMembers(memberRows);
 
-      // Q3 step 1: memberships (also used to derive myRole)
-      const { data: memberRows, error: mErr } = await supabase
-        .from('crew_members')
-        .select('user_id, role, joined_at')
-        .eq('crew_id', crewId)
-        .order('joined_at', { ascending: true });
-
-      if (cancelled) return;
-      if (mErr) { setError(mErr.message); setLoading(false); return; }
-
-      // Ownership truth is crews.owner_id; membership comes from the member list
-      const crewRow  = crewRes.data as Record<string, unknown>;
-      const myMember = userId ? (memberRows ?? []).find(m => m.user_id === userId) : undefined;
-      const myRole   = userId && (crewRow.owner_id as string) === userId
-        ? 'owner' as const
-        : myMember ? 'member' as const : undefined;
-      setCrew(mapCrew(crewRow, myRole));
-
-      const userIds = (memberRows ?? []).map(m => m.user_id as string);
-      if (userIds.length === 0) { setMembers([]); setLoading(false); return; }
-
-      // Q3 step 2: profiles (no direct FK — manual join)
-      const { data: profileRows, error: pErr } = await supabase
-        .from('profiles')
-        .select('user_id, nickname, avatar_url')
-        .in('user_id', userIds);
-
-      if (cancelled) return;
-      if (pErr) { setError(pErr.message); setLoading(false); return; }
-
-      const profileMap: Record<string, { nickname: string; avatar_url: string | null }> = {};
-      (profileRows ?? []).forEach(p => {
-        profileMap[p.user_id as string] = { nickname: p.nickname as string, avatar_url: p.avatar_url as string | null };
-      });
-
-      setMembers((memberRows ?? []).map(m => ({
-        user_id:    m.user_id as string,
-        role:       m.role as 'owner' | 'member',
-        joined_at:  m.joined_at as string,
-        nickname:   profileMap[m.user_id as string]?.nickname ?? '알 수 없음',
-        avatar_url: profileMap[m.user_id as string]?.avatar_url ?? null,
-      })));
-      setLoading(false);
+        // Non-members of approval crews: the authoritative pending/rejected
+        // check (guide: rejection sends no notification — this IS the signal).
+        // Every outcome also updates the shared store so browse badges stay
+        // truthful (a detail visit corrects stale session-local state).
+        if (!myRole && (crewRow.join_policy ?? 'open') === 'approval') {
+          const status = await getMyJoinRequestStatus(crewId);
+          if (!cancelled) {
+            setMyRequestStatus(status);
+            useJoinRequests.getState().setPending(crewId, status === 'pending');
+          }
+        } else {
+          useJoinRequests.getState().setPending(crewId, false);
+        }
+      } catch (e: unknown) {
+        if (!cancelled) setError(e instanceof Error ? e.message : '크루를 찾을 수 없어요');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     })();
 
     return () => { cancelled = true; };
   }, [crewId, key]);
 
   const refetch = useCallback(() => setKey(k => k + 1), []);
-  return { crew, members, loading, error, refetch };
-}
-
-// ─── joinCrew — insert crew_members row with role 'member' ───────────────────
-// Client-side fullness check is done by the caller before calling this.
-// Known limitation: two near-simultaneous joins can both succeed if the server
-// has no CHECK constraint — server-side enforcement is a backend item.
-// INTERIM: only valid for join_policy === 'open' crews — the caller must gate
-// approval crews (direct insert bypasses the backend's 202 → approve flow).
-// Removed entirely when crew hooks migrate to the backend API.
-
-export async function joinCrew(crewId: string): Promise<MutResult> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { error: '로그인이 필요해요', code: null };
-
-  const { error } = await supabase
-    .from('crew_members')
-    .insert({ crew_id: crewId, user_id: user.id, role: 'member' });
-
-  return { error: error?.message ?? null, code: error?.code ?? null };
-}
-
-// ─── leaveCrew — delete own crew_members row ─────────────────────────────────
-// Owner-cannot-leave is enforced by the caller (crew.myRole === 'owner' check),
-// not by RLS — so the policy only needs to allow delete where user_id = auth.uid().
-
-export async function leaveCrew(crewId: string): Promise<MutResult> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { error: '로그인이 필요해요', code: null };
-
-  const { error } = await supabase
-    .from('crew_members')
-    .delete()
-    .eq('crew_id', crewId)
-    .eq('user_id', user.id);
-
-  return { error: error?.message ?? null, code: error?.code ?? null };
+  return { crew, members, myRequestStatus, loading, error, refetch };
 }
