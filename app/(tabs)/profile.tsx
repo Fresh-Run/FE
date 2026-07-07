@@ -313,6 +313,7 @@ export default function ProfileScreen() {
           <SettingRow
             icon={<Icon name="notifications-outline" size={19} color={C.sub} />}
             label="알림"
+            onPress={() => router.push('/notifications' as any)}
           />
         </SettingGroup>
 

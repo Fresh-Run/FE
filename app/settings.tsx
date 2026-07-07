@@ -139,13 +139,13 @@ export default function SettingsScreen() {
           <ToggleRow label="화면 항상 켜기" sub="러닝 중 화면 유지"         on={settings.run.keep_screen_on} onChange={v => toggleRun('keep_screen_on', v)} />
         </SettingGroup>
 
-        {/* 알림 & 데이터 — both destinations unbuilt (notifications screen;
-            HealthKit is Expo-Go-blocked) → honest 준비 중 */}
+        {/* 알림 & 데이터 — 건강 데이터 stays 준비 중 (HealthKit is
+            Expo-Go-blocked) */}
         <SettingGroup title="알림 & 데이터">
           <SettingRow
             icon={<Icon name="notifications-outline" size={19} color={C.sub} />}
             label="알림 센터"
-            onPress={() => notReady('알림 센터')}
+            onPress={() => router.push('/notifications' as any)}
           />
           <SettingRow
             icon={<Icon name="heart-outline" size={19} color={C.danger} />}
