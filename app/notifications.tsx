@@ -69,6 +69,33 @@ const TYPE_META: Record<string, Meta> = {
 // Unknown future types still render, generically
 const FALLBACK_META: Meta = { tag: '알림', tone: C.faint, icon: { name: 'notifications-outline', color: C.sub, bg: C.surfaceAlt }, copy: '새 소식이 있어요', actorless: true };
 
+// ─── Tabs (owner UX calls 2026-07-07; underline pattern from the concept
+//     canvas, membership over the REAL types) ────────────────────────────────
+// 팔로우 is its own tab (follows, not friend-requests — the concept canvas's
+// 수락/거절 buttons remain fiction). challenge_completed + unknown future
+// types appear in 전체 only, until a 시스템 tab earns members. Filtering is
+// client-side over the single fetch.
+
+type TabKey = 'all' | 'follow' | 'social' | 'crew';
+
+const TABS: { key: TabKey; label: string }[] = [
+  { key: 'all',    label: '전체' },
+  { key: 'follow', label: '팔로우' },
+  { key: 'social', label: '소셜' },
+  { key: 'crew',   label: '크루' },
+];
+
+const FOLLOW_TYPES = new Set(['user_followed']);
+const SOCIAL_TYPES = new Set(['run_kudoed', 'route_liked', 'route_commented']);
+const CREW_TYPES   = new Set(['crew_joined', 'join_requested', 'join_approved', 'crew_announcement']);
+
+function inTab(n: AppNotification, tab: TabKey): boolean {
+  if (tab === 'all') return true;
+  if (tab === 'follow') return FOLLOW_TYPES.has(n.type);
+  if (tab === 'social') return SOCIAL_TYPES.has(n.type);
+  return CREW_TYPES.has(n.type);
+}
+
 /** Where a tap navigates; null = truthful interim (mark-read only).
     Defensive on missing ids by contract (지연): old rows may lack the id a
     type needs — degrade to inert, never fake-nav or crash. */
@@ -148,6 +175,7 @@ export default function NotificationsScreen() {
   const [rows, setRows]           = useState<AppNotification[] | null>(null);
   const [error, setError]         = useState(false);
   const [refreshing, setRefresh]  = useState(false);
+  const [tab, setTab]             = useState<TabKey>('all');
 
   const load = useCallback(async (asRefresh = false) => {
     if (asRefresh) setRefresh(true);
@@ -196,6 +224,19 @@ export default function NotificationsScreen() {
         </Pressable>
       </View>
 
+      {/* Tab bar — concept-canvas underline pattern over the real types */}
+      <View style={st.tabBar}>
+        {TABS.map(t => {
+          const on = tab === t.key;
+          return (
+            <Pressable key={t.key} onPress={() => setTab(t.key)} hitSlop={6} style={st.tabBtn}>
+              <Text style={[st.tabLabel, on && st.tabLabelOn]}>{t.label}</Text>
+              {on && <View style={st.tabUnderline} />}
+            </Pressable>
+          );
+        })}
+      </View>
+
       {rows === null && !error ? (
         <View style={st.centered}><ActivityIndicator size="large" color={C.accent} /></View>
       ) : error ? (
@@ -206,7 +247,7 @@ export default function NotificationsScreen() {
         </View>
       ) : (
         <FlatList
-          data={rows}
+          data={(rows ?? []).filter(n => inTab(n, tab))}
           keyExtractor={n => n.id}
           renderItem={({ item }) => <NotifRow n={item} onPress={() => onRowPress(item)} />}
           ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
@@ -234,6 +275,13 @@ const st = StyleSheet.create({
   appBar:      { flexDirection: 'row', alignItems: 'center', paddingHorizontal: S.md, paddingVertical: 10 },
   appBarBtn:   { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   appBarTitle: { flex: 1, textAlign: 'center', fontSize: 16, fontWeight: '700', letterSpacing: -0.3, color: C.text },
+
+  // Tab bar (canvas: gap 8, 6/20/10 padding, hairline bottom, 2.5px underline)
+  tabBar:       { flexDirection: 'row', gap: 8, paddingHorizontal: S.gutter, paddingTop: 6, paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: C.border },
+  tabBtn:       { paddingVertical: 6, paddingHorizontal: 2 },
+  tabLabel:     { fontSize: 14, fontWeight: '600', color: C.faint, letterSpacing: -0.3 },
+  tabLabelOn:   { fontWeight: '700', color: C.text },
+  tabUnderline: { position: 'absolute', left: 2, right: 2, bottom: -2, height: 2.5, borderRadius: 99, backgroundColor: C.accent },
 
   // Card (canvas: gap 12, radius 18, padding 15) + unread treatment
   card:       { flexDirection: 'row', gap: 12, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 18, padding: 15 },

@@ -118,6 +118,7 @@ The home-header profile avatar (next to the bell) is now pressable → user prof
 ## Backend follow-ups (partner's repo, read-only — raise with her, don't fix)
 
 - ~~지연 ask: run comments~~ **SHE'S SHIPPING IT (announced 2026-07-07):** list/create/delete + `comment_count` batched on run rows, visibility-gated. → see "Blocked on 스테이징 반영됨" below.
+- **지연 ask (2026-07-07): `DELETE /notifications/{id}`** — no delete verb exists (OpenAPI has get/patch only; live DELETE on a real row → 404, probed on staging). Wanted for swipe-to-delete on 알림 센터; owner ruled NO local-only hiding (rows would resurrect on refetch), so the swipe waits for the endpoint.
 - ~~지연 ask: `crew_announcement` crew_id~~ **SHE'S SHIPPING IT (announced 2026-07-07)** + a full deep-link-id audit across all notification types. Contract per her: OLD rows lack `crew_id` → app degrades those to non-tappable (defensive wiring shipped in the 알림 센터 slice — new rows become tappable automatically). → see "Blocked on 스테이징 반영됨" below.
 
 ## Blocked on 스테이징 반영됨 (지연 features announced 2026-07-07 — do not start until she announces the deploy)
@@ -164,7 +165,7 @@ The home-header profile avatar (next to the bell) is now pressable → user prof
 - **timeTitle 7-bucket** — canvas run-save suggestion fn is 5-bucket; owner KEPT code's 7 buckets (새벽 04:00–06:59 … 야간 21:00–03:59), canvas to be updated (also noted in the 러닝 저장 delta calls above).
 - **햅틱 피드백 sub-label (설정 hub)** — canvas says "목표 달성 시 진동", which mis-describes live behavior (haptics fire on button interactions — hold-stop — not goal events). Shipped as "버튼 조작 시 진동" (owner, 2026-07-07); canvas copy to be corrected.
 - **💬 omission (내 프로필 card footer)** — app-side interim, NOT a canvas correction: canvas footer shows 💬 + count, but run comments don't exist server-side (지연 ask logged). Shipping a dead 💬 would violate the honesty rule; add it (canvas-verbatim) when her comments API lands.
-- **FrNotifications refresh owed (canvas)** — the canvas notifications screen is a pre-contract concept (AI recommendation / friend-request 수락·거절 / XP achievement / live session / premium rows) and matches none of the real 9 types. App shipped 2026-07-07 in the canvas SHELL (app bar + ✓ read-all + card anatomy) with owner-approved type→copy/icon mapping + unread treatment (accent dot + faint tint) — canvas should be redrawn to the real types; on refresh, re-conform the app rows.
+- **FrNotifications refresh owed (canvas)** — the canvas notifications screen is a pre-contract concept (AI recommendation / friend-request 수락·거절 / XP achievement / live session / premium rows) and matches none of the real 9 types. App shipped 2026-07-07 in the canvas SHELL (app bar + ✓ read-all + card anatomy) with owner-approved type→copy/icon mapping + unread treatment (accent dot + faint tint), **plus the canvas tab pattern over four REAL-type tabs (owner calls): 전체 · 팔로우 (user_followed — follows, NOT friend-requests; the concept's 수락/거절 buttons stay fiction) · 소셜 (run_kudoed/route_liked/route_commented) · 크루 (crew_joined/join_requested/join_approved/crew_announcement); challenge_completed + unknown types 전체-only until a 시스템 tab earns members.** Canvas refresh should carry these four tabs; on refresh, re-conform the app rows.
 
 ## T2 — 다크 렌더링 sweep (named, sized — approved for TODO 2026-07-06)
 
