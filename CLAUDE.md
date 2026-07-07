@@ -29,6 +29,12 @@ Before presenting ANY checkpoint, run and PASS all of the following; a checkpoin
 
 Checkpoints must include a "Pre-verified:" section listing what was run and the results. Phone scripts should contain ONLY steps that require human eyes on the device — anything provable from the terminal must be proven before the user sees it, not delegated to their phone time.
 
+## EAS publish rules
+
+- Before ANY `eas update` publish, verify `.env.local`'s `EXPO_PUBLIC_API_URL` is the staging URL, never localhost/LAN — a localhost publish ships a dead app.
+- Publishes happen only after verified commits, same authorization rule as commits.
+- Manual publish only (`eas update --channel main -m "<message>"`) — no CI auto-publish. Project lives under Ivan's Expo account; 지연 is an invited member.
+
 ## Data access
 
 New features integrate via the backend API (`${EXPO_PUBLIC_API_URL}/api/...`), not direct Supabase reads/writes. Existing direct-Supabase hooks stay as-is until a feature touches them.
