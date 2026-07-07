@@ -31,9 +31,11 @@ Checkpoints must include a "Pre-verified:" section listing what was run and the 
 
 ## EAS publish rules
 
-- Before ANY `eas update` publish, verify `.env.local`'s `EXPO_PUBLIC_API_URL` is the staging URL, never localhost/LAN — a localhost publish ships a dead app.
-- Publishes happen only after verified commits, same authorization rule as commits.
-- Manual publish only (`eas update --channel main -m "<message>"`) — no CI auto-publish. Project lives under Ivan's Expo account; 지연 is an invited member.
+**The Expo Go path is VALIDATED (지연 open-test succeeded 2026-07-07) and is the standing workflow** for getting her the latest app without Ivan's Mac: she opens the freshrun project in Expo Go (logged into her invited member account); each publish reaches her on next open.
+
+- Before ANY `eas update` publish, verify `.env.local`'s `EXPO_PUBLIC_API_URL` is the staging URL, never localhost/LAN — a localhost publish ships a dead app. Check it EVERY time, not from memory.
+- Publishes happen only after verified commits, same authorization rule as commits. Publish when the landed work is 지연-visible (screens/flows she'd open), skip for internal-only changes unless asked.
+- Manual publish only (`eas update --channel main -m "<message>"`) — no CI auto-publish. Project `99f17a15…` under the `freshrun1` account; runtimeVersion policy stays `sdkVersion` (Expo Go requirement — an `appVersion` policy publish is invisible to Expo Go).
 
 ## Data access
 
