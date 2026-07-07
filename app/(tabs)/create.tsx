@@ -1,5 +1,6 @@
+import { useFocusEffect } from '@react-navigation/native';
 import { router } from 'expo-router';
-import React, { useEffect, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Pressable,
@@ -14,7 +15,9 @@ import { MiniMap } from '@/components/mini-map';
 import { Icon } from '@/components/ui';
 import { useCurrentLocation } from '@/hooks/use-current-location';
 import { useRuns } from '@/hooks/use-runs';
+import { getBookmarkedRoutes } from '@/lib/bookmarks-api';
 import { distUnit, fmtDist } from '@/lib/run-format';
+import type { PublicRoute } from '@/lib/routes-api';
 import { useQuota } from '@/store/use-quota';
 import { useSettings } from '@/store/use-settings';
 import { FR_WEATHER } from '@/lib/weather-mock';
@@ -59,6 +62,16 @@ export default function CreateTabScreen() {
       `무료 플랜은 주 ${quota.limit ?? 3}회까지 AI 코스를 만들 수 있어요. 월요일에 초기화됩니다.`,
     );
   }
+
+  // 저장된 코스 entry card — live count + recent titles (canvas: FrRunChoice
+  // bottom card). Focus-refetch keeps it honest after unsaves elsewhere.
+  const [saved, setSaved] = useState<PublicRoute[] | null>(null);
+  useFocusEffect(useCallback(() => {
+    getBookmarkedRoutes().then(setSaved).catch(() => {});
+  }, []));
+  const savedSub = !saved || saved.length === 0
+    ? '피드에서 마음에 드는 코스를 북마크해보세요'
+    : saved.slice(0, 2).map(r => r.summary).join(', ') || `${saved.length}개 코스`;
 
   const weeklyKm = useMemo(() => {
     if (signedOut) return 0;
@@ -152,15 +165,23 @@ export default function CreateTabScreen() {
           </View>
         </View>
 
-        {/* ── Saved courses row ─────────────────────────────────────── */}
-        <Pressable style={({ pressed }) => [st.savedRow, shadows.sm, { opacity: pressed ? 0.85 : 1 }]}>
+        {/* ── Saved courses row → 저장된 코스 list (canvas: savedCourses) ── */}
+        <Pressable
+          onPress={() => router.push('/saved-courses' as any)}
+          style={({ pressed }) => [st.savedRow, shadows.sm, { opacity: pressed ? 0.85 : 1 }]}
+        >
           <View style={st.savedIcon}>
-            <Icon name="bookmark" size={20} color={C.accentGrn} />
+            <Icon name={saved && saved.length > 0 ? 'bookmark' : 'bookmark-outline'} size={20} color={C.accentGrn} />
           </View>
           <View style={st.savedBody}>
             <Text style={st.savedTitle}>저장된 코스들</Text>
-            <Text style={st.savedSub}>피드에서 마음에 드는 코스를 북마크해보세요</Text>
+            <Text style={st.savedSub} numberOfLines={1}>{savedSub}</Text>
           </View>
+          {saved !== null && saved.length > 0 && (
+            <View style={st.savedCountPill}>
+              <Text style={st.savedCountTxt}>{saved.length}개</Text>
+            </View>
+          )}
           <Icon name="chevron-forward" size={18} color={C.faint} />
         </Pressable>
       </ScrollView>
@@ -275,4 +296,6 @@ const st = StyleSheet.create({
   savedBody:  { flex: 1, gap: 3 },
   savedTitle: { ...T.headingSm, color: C.text },
   savedSub:   { ...T.labelMd, color: C.sub },
+  savedCountPill: { backgroundColor: C.accentDim, borderRadius: R.pill, paddingHorizontal: 10, paddingVertical: 4 },
+  savedCountTxt:  { fontSize: 12.5, fontWeight: '700', color: C.accentGrn, letterSpacing: -0.2 },
 });

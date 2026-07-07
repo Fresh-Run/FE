@@ -180,6 +180,12 @@ Dev-annoyance, not user-facing-broken — every screen works once past the landi
 - **💬 omission (내 프로필 card footer)** — app-side interim, NOT a canvas correction: canvas footer shows 💬 + count, but run comments don't exist server-side (지연 ask logged). Shipping a dead 💬 would violate the honesty rule; add it (canvas-verbatim) when her comments API lands.
 - **FrNotifications refresh owed (canvas)** — the canvas notifications screen is a pre-contract concept (AI recommendation / friend-request 수락·거절 / XP achievement / live session / premium rows) and matches none of the real 9 types. App shipped 2026-07-07 in the canvas SHELL (app bar + ✓ read-all + card anatomy) with owner-approved type→copy/icon mapping + unread treatment (accent dot + faint tint), **plus the canvas tab pattern over four REAL-type tabs (owner calls): 전체 · 팔로우 (user_followed — follows, NOT friend-requests; the concept's 수락/거절 buttons stay fiction) · 소셜 (run_kudoed/route_liked/route_commented) · 크루 (crew_joined/join_requested/join_approved/crew_announcement); challenge_completed + unknown types 전체-only until a 시스템 tab earns members.** Canvas refresh should carry these four tabs; on refresh, re-conform the app rows.
 
+## ~~OPEN DECISION~~ RESOLVED: 저장된 코스 entry = canvas position (owner ruling 2026-07-08)
+
+Entry wired as the 뛰러 가기 chooser bottom card (`create.tsx` — the dead placeholder row went live: push + filled/outline icon + first-2-titles sub + count pill, focus-refetched). The header-icon spec was a stale premise (FrGreeting has bell+avatar only — verified on live canvas); good-catch hold, owner reverted to canvas.
+
+Parity notes (app-side interims, canvas refresh candidates): undo snackbar on unsave (no 시안); tag chips dropped (no server tags); region chips derive from summary keywords (no area field).
+
 ## T2 — 다크 렌더링 sweep (named, sized — approved for TODO 2026-07-06)
 
 Converge the two theme systems (`lib/theme` → themed hook backed by `contexts/theme`, fed by the persisted `settings.theme` instead of the device scheme), restructure ~20 module-scope StyleSheets into theme-aware factories, triage 113 color literals (audit 2026-07-06: worst files index.tsx 19, crew-detail 15, tracking 11; maps/scrims are dark-by-design and stay), wire the status bar to the setting. **Size: units sweep ×3–4. Schedule after crew/item-17 verification debt clears.** Until then the theme picker (T1) is persist-only with an in-UI notice.
