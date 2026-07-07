@@ -92,7 +92,7 @@ export default function MyProfileScreen() {
     <View>
       {/* Identity */}
       <View style={st.identity}>
-        <Avatar name={profile.nickname} size={110} />
+        <Avatar name={profile.nickname} size={76} />
         <View style={{ flex: 1, minWidth: 0 }}>
           <Text style={st.name} numberOfLines={1}>{profile.nickname}</Text>
           {profile.bio ? (
@@ -104,17 +104,22 @@ export default function MyProfileScreen() {
         </View>
       </View>
 
-      {/* Counts — 팔로잉 · 팔로워 · 활동 (canvas order); non-tappable this slice */}
+      {/* Counts — 팔로잉/팔로워 tap → follow list; 활동 non-tappable */}
       <View style={st.countsRow}>
         {([
-          [profile.followingCount, '팔로잉'],
-          [profile.followerCount,  '팔로워'],
-          [profile.runCount,       '활동'],
-        ] as [number, string][]).map(([n, label]) => (
-          <View key={label} style={st.countCell}>
+          [profile.followingCount, '팔로잉', 'following'],
+          [profile.followerCount,  '팔로워', 'followers'],
+          [profile.runCount,       '활동',   null],
+        ] as [number, string, string | null][]).map(([n, label, tabParam]) => (
+          <Pressable
+            key={label}
+            disabled={!tabParam}
+            onPress={() => router.push({ pathname: '/follow-list' as any, params: { tab: tabParam! } })}
+            style={st.countCell}
+          >
             <Text style={st.countNum}>{n}</Text>
             <Text style={st.countLabel}>{label}</Text>
-          </View>
+          </Pressable>
         ))}
       </View>
 
@@ -198,23 +203,23 @@ const st = StyleSheet.create({
   appBarBtn:   { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   appBarTitle: { flex: 1, textAlign: 'center', fontSize: 16, fontWeight: '700', letterSpacing: -0.3, color: C.text },
 
-  identity: { flexDirection: 'row', alignItems: 'center', gap: 18, paddingHorizontal: S.gutter, paddingTop: 10 },
-  avatar:   { alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: C.accent },
-  name:     { fontSize: 24, fontWeight: '700', letterSpacing: -0.6, color: C.text },
-  bioRow:   { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6 },
+  identity: { flexDirection: 'row', alignItems: 'center', gap: 16, paddingHorizontal: S.gutter, paddingTop: 20 },
+  avatar:   { alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: C.accent },
+  name:     { fontSize: 22, fontWeight: '700', letterSpacing: -0.6, color: C.text },
+  bioRow:   { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 5 },
   bioTxt:   { fontSize: 13.5, color: C.sub, letterSpacing: -0.2 },
 
-  countsRow:  { flexDirection: 'row', gap: 26, paddingHorizontal: S.gutter, paddingTop: 20 },
+  countsRow:  { flexDirection: 'row', gap: 22, paddingHorizontal: S.gutter, paddingTop: 16 },
   countCell:  { flexDirection: 'row', alignItems: 'baseline', gap: 5 },
-  countNum:   { fontSize: 17, fontWeight: '800', color: C.text, letterSpacing: -0.4 },
-  countLabel: { fontSize: 13.5, color: C.faint, letterSpacing: -0.2 },
+  countNum:   { fontSize: 16, fontWeight: '800', color: C.text, letterSpacing: -0.3 },
+  countLabel: { fontSize: 12.5, color: C.faint, letterSpacing: -0.2 },
 
-  actionsRow: { flexDirection: 'row', gap: 10, paddingHorizontal: S.gutter, paddingTop: 16 },
-  actionBtn:  { flex: 1, height: 46, borderRadius: R.md, borderWidth: 1.5, borderColor: C.border, backgroundColor: C.surface, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
-  actionTxt:  { fontSize: 14, fontWeight: '700', color: C.text, letterSpacing: -0.3 },
+  actionsRow: { flexDirection: 'row', gap: 8, paddingHorizontal: S.gutter, paddingTop: 14 },
+  actionBtn:  { flex: 1, height: 36, borderRadius: 10, borderWidth: 1, borderColor: C.border, backgroundColor: C.surface, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
+  actionTxt:  { fontSize: 13, fontWeight: '600', color: C.text, letterSpacing: -0.2 },
 
-  sectionHead:  { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', paddingHorizontal: S.gutter, paddingTop: 28, paddingBottom: 14 },
-  sectionTitle: { fontSize: 20, fontWeight: '700', letterSpacing: -0.5, color: C.text },
+  sectionHead:  { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', paddingHorizontal: S.gutter, paddingTop: 24, paddingBottom: 14 },
+  sectionTitle: { fontSize: 17, fontWeight: '700', letterSpacing: -0.4, color: C.text },
   sectionCount: { fontSize: 13, color: C.faint, letterSpacing: -0.2 },
 
   card:      { backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 20, overflow: 'hidden' },

@@ -4,11 +4,18 @@
 
 Simulator declined (no Xcode) — everything below verifies outdoors on the real device, in this order. **(a)+(b) must complete before (c)/(d)/(e) can trust their distances** — the walk portion comes first.
 
+**PRE-FLIGHT (0a–0c, before anything else — 4th IP-drift incident; a dead link discovered mid-walk wastes the outing):**
+- **(0a)** `curl localhost:8000/health` — restart uvicorn if dead (`cd ~/Documents/FreshRun/backend && .venv.nosync/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000`).
+- **(0b)** `ipconfig getifaddr en0` vs `.env.local`'s `EXPO_PUBLIC_API_URL` — if drifted, sed-update the IP + **restart Metro** (env bakes at bundle time).
+- **(0c)** Phone Safari → `http://<IP>:8000/health` must render `{"status":"ok"}` **before leaving the house**.
+
 - **(a) Calibrated walk** — 150–300m known distance, normal pace, phone carried naturally; instrumented build live; capture the `[track]` Metro log block + 3 numbers (real / app-credited / final `accepted=`/`raw=`) → filter-bug diagnosis per the frame below.
 - **(b) Filter fix** — from (a)'s log: fix the guilty gate(s), raise `MIN_SAVE_KM` 0.01 → 0.05, strip `DEBUG(short-run)`; re-walk to confirm ~100m credits ~100m.
 - **(c) Item-17 코스 러닝 E2E** — feed → preview → 네 뛸게요 (copy) → course pill/map tracking → save; verify `route_id` set on the run and `copy_count` bumped.
 - **(d) PB modal visual** — pre-seed via Swagger BEFORE heading out: fresh account + one short posted run (low baseline) so the real outdoor run triggers `new_records` → modal (confetti, comparison card, +N caption, CTA-dismiss, 공유 준비 중).
 - **(e) Units save-integrity** — run with 단위=mi → verify the stored `distance_km` is the true km (GET /runs), display mi everywhere.
+- **러닝 저장 delta calls (owner, 2026-07-08):** 7-bucket `timeTitle` KEPT — canvas will be updated to match code (don't re-flag as drift); title cap 30 applied; custom centered discard modal applied; confirm-on-back KEPT (documented deviation, no-silent-loss).
+- **(f) 러닝 저장 outdoor half** — map card VISIBLE with the real path; save with typed title + 팔로워만 → `GET /runs` shows title/notes/visibility; 수고했어요 renders the saved title; PB modal + feedback intact post-save. *(Indoor half VERIFIED 2026-07-07, 6/6: compose routing, crash-recovery both paths, too-short gating, ‹-discard-confirm, sheet, old screen unreachable. Build style-matched to canvas screenshots; timeTitle 새벽 04:00–06:59 shipped.)*
 
 **Commit boundaries after the session:** PB modal + item-17 set (9 files incl. `components/pb-celebration.tsx`) commit together; `use-run-tracker.ts` commits after the (b) DEBUG strip. Then the tree is clean.
 
@@ -27,8 +34,18 @@ Canvas redesign 2026-07-07 (owner + backend decisions included). **Source of tru
 - **New ask for 지연: `location` field on profiles** — canvas shows "서울 성수동" under the name; no backend source. Interim: `bio` renders there (omit when empty).
 - Run cards are a reduced feed-style subset — canvas shows per-run title/area/tags/♥ counts/공개 태그; own-runs have no backend source for any of those (kudos counts exist only on `/feed/activities`). Re-expand when fields land. 공개 framing deferred with run visibility (pending 지연).
 - Gear icon routes to the 프로필 tab (판단 call — flag if canvas intends otherwise).
+- **Optional 지연 ask (follow-list, 2026-07-08):** `FollowUserItem` rows carry no bio/location — the canvas's row sub-line ("주 4회 · 서울 마포구") ships omitted (name-only rows) until a `bio` field lands on the row shape.
 - **Card social counts DEFERRED — batch ask for 지연 (2026-07-07):** add `kudos_count` (+`comment_count` when run-comments ship) to `GET /runs` rows. Probed: `/runs` has no counts; `/feed/activities` has `kudos_count` for own runs but is interleaved + offset-only → unbounded paging = disguised N+1, rejected per rule. When the field lands: ♥+count / 💬+count left-aligned on the card footer, 💬 tap → activity detail (no comment sheet on this screen).
-- **Visibility follow-up (blocked on runs visibility field, pending 지연):** 공개 게시물/팔로워만 corner tag bottom-right per canvas; 비공개 runs excluded from 내 프로필's list but retained in 기록.
+- **Visibility follow-up — UNBLOCKED (BE `2af3715`, 2026-07-07):** `visibility` now exists on runs and `GET /users/{id}/runs` filters it. Queue: 공개 게시물/팔로워만 corner tag bottom-right per canvas; 비공개 runs excluded from 내 프로필's list (switch its data source to the filtered endpoint or filter client-side) but retained in 기록; section can adopt the 공개 N개 framing.
+- **지연 ask (2026-07-07): legacy-run visibility backfill** — probe showed runs predating `2af3715` (null visibility) are invisible on `GET /users/{id}/runs`; old runs need a backfill to `public` (or the intended default) or profiles look empty.
+
+## ITEM (queued, premium family, AFTER the walk-fix): 오디오 코치 TTS
+
+Backend serves text cues; sound is frontend via expo-speech reading `cue.text`. Triggers per API_GUIDE coach-script section: start (run start) / distance_km (GPS cumulative reached) / waypoint (within 50m of coords) / finish. Speaker button on tracking = TTS mute toggle. Real-time stat readouts (현재 페이스 등) are computed LOCALLY, cadence from settings `audio_coach.cue_interval_km` — not server script. Wires the P1 음성 안내 toggle (persist-only today) to real behavior.
+
+**Sequencing:** lives in tracking/use-run-tracker = walk-gated territory, and distance-triggered cues depend on the distance filter being FIXED — **hard dependency on the outdoor session's payload (a)+(b)**. 지연's own priority: premium wrap-up, not urgent.
+
+**Recon must:** probe the coach-script endpoint shape live, check expo-speech works in Expo Go (it should — it's in our compatibility list), and read the API_GUIDE timing section.
 
 ## ITEM (queued): 공개 프로필 screen
 
