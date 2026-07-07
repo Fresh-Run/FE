@@ -180,6 +180,12 @@ Dev-annoyance, not user-facing-broken — every screen works once past the landi
 - **💬 omission (내 프로필 card footer)** — app-side interim, NOT a canvas correction: canvas footer shows 💬 + count, but run comments don't exist server-side (지연 ask logged). Shipping a dead 💬 would violate the honesty rule; add it (canvas-verbatim) when her comments API lands.
 - **FrNotifications refresh owed (canvas)** — the canvas notifications screen is a pre-contract concept (AI recommendation / friend-request 수락·거절 / XP achievement / live session / premium rows) and matches none of the real 9 types. App shipped 2026-07-07 in the canvas SHELL (app bar + ✓ read-all + card anatomy) with owner-approved type→copy/icon mapping + unread treatment (accent dot + faint tint), **plus the canvas tab pattern over four REAL-type tabs (owner calls): 전체 · 팔로우 (user_followed — follows, NOT friend-requests; the concept's 수락/거절 buttons stay fiction) · 소셜 (run_kudoed/route_liked/route_commented) · 크루 (crew_joined/join_requested/join_approved/crew_announcement); challenge_completed + unknown types 전체-only until a 시스템 tab earns members.** Canvas refresh should carry these four tabs; on refresh, re-conform the app rows.
 
+## 타인 프로필 + tappable names — BUILT 2026-07-08 (slice a), riders recorded
+
+- **Riders in item-17-gated `index.tsx` (commit with the walk gate): TWO, not one** — owner message said "lone (b) rider" (course comments) but feed-card authors live in the same gated file; both wired via `openProfile`, both ride. Everything else (likers sheet, follow-list, notification actors + user_followed graduation, crew members, 저장된 코스 owners) is committed-territory.
+- **Parity/interim notes:** 활동 count = `public_run_count` with the 공개 N개 framing explaining it; visibility caption omitted on other-user cards (server sends `visibility: null` on others' rows — **지연 ask: populate it for viewable rows**); 💬 omitted (graduates with the thread slice on BOTH profile surfaces); location line + card tags omitted (standing no-backend fields).
+- user_followed notification rows now navigate (chevron appeared automatically via deepLink).
+
 ## ~~OPEN DECISION~~ RESOLVED: 저장된 코스 entry = canvas position (owner ruling 2026-07-08)
 
 Entry wired as the 뛰러 가기 chooser bottom card (`create.tsx` — the dead placeholder row went live: push + filled/outline icon + first-2-titles sub + count pill, focus-refetched). The header-icon spec was a stale premise (FrGreeting has bell+avatar only — verified on live canvas); good-catch hold, owner reverted to canvas.

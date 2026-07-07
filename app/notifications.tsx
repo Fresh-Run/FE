@@ -33,6 +33,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/ui';
 import { avatarBg } from '@/lib/fr-hash';
+import { openProfile } from '@/lib/profile-nav';
 import {
   deleteNotification,
   getNotifications,
@@ -115,6 +116,11 @@ function deepLink(n: AppNotification): (() => void) | null {
     case 'join_approved':
       if (!n.target_id) return null;
       return () => router.push({ pathname: '/(community)/crew-detail' as any, params: { crewId: n.target_id! } });
+    case 'user_followed':
+      // GRADUATED 2026-07-08: target_id = the actor's uid (probed) — the
+      // other-user profile screen now exists. Never self.
+      if (!n.target_id) return null;
+      return () => openProfile(n.target_id, n.actor_nickname);
     case 'crew_announcement': {
       // Staging-probed 2026-07-07: new rows carry payload.crew_id; old rows
       // have payload:null and an ANNOUNCEMENT-id target_id — the announced
@@ -170,7 +176,15 @@ function NotifRow({ n, onPress, onDelete }: { n: AppNotification; onPress: () =>
         pressed && { opacity: 0.7 },
       ]}
     >
-      <NotifIcon meta={meta} actor={actor} />
+      {/* Actor avatar/icon → actor profile (routing rule); row tap keeps
+          its own deep-link. Actorless rows stay plain. */}
+      {n.actor_id && !meta.actorless ? (
+        <Pressable onPress={() => openProfile(n.actor_id, n.actor_nickname)} hitSlop={6}>
+          <NotifIcon meta={meta} actor={actor} />
+        </Pressable>
+      ) : (
+        <NotifIcon meta={meta} actor={actor} />
+      )}
       <View style={{ flex: 1, minWidth: 0 }}>
         <View style={st.rowHead}>
           <Text style={[st.tag, { color: meta.tone }]}>{meta.tag}</Text>

@@ -24,6 +24,7 @@ import { Icon } from '@/components/ui';
 import { useFollowList, type FollowUser } from '@/hooks/use-follow-list';
 import { apiFetch } from '@/lib/api';
 import { avatarBg } from '@/lib/fr-hash';
+import { openProfile } from '@/lib/profile-nav';
 import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
 import { useStore } from '@/store/use-store';
 
@@ -41,9 +42,11 @@ function Avatar({ name, size }: { name: string; size: number }) {
 
 export default function FollowListScreen() {
   const insets = useSafeAreaInsets();
-  const params = useLocalSearchParams<{ tab?: string }>();
+  // uid/name absent → own lists (existing behavior); present → that user's
+  const params = useLocalSearchParams<{ tab?: string; uid?: string; name?: string }>();
   const displayName = useStore(s => s.displayName) ?? '내 프로필';
-  const { following, followers, loading, error, refetch } = useFollowList();
+  const title = params.name ?? displayName;
+  const { following, followers, loading, error, refetch } = useFollowList(params.uid ?? null);
 
   const [tab, setTab] = useState<Tab>(params.tab === 'followers' ? 'followers' : 'following');
   // Optimistic follow-state overlay by user_id — applies across both tabs
@@ -75,7 +78,7 @@ export default function FollowListScreen() {
         <Pressable onPress={() => router.back()} hitSlop={12} style={st.backBtn}>
           <Icon name="chevron-back" size={22} color={C.text} />
         </Pressable>
-        <Text style={st.appBarTitle} numberOfLines={1}>{displayName}</Text>
+        <Text style={st.appBarTitle} numberOfLines={1}>{title}</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -115,8 +118,15 @@ export default function FollowListScreen() {
             const isF = isFollowing(item);
             return (
               <View style={[st.row, shadows.sm]}>
-                <Avatar name={item.nickname ?? '러너'} size={44} />
-                <Text style={st.rowName} numberOfLines={1}>{item.nickname ?? '러너'}</Text>
+                {/* Row body navigates (canvas: tappable-name zone); pill stays
+                    its own button — no chevron per owner call */}
+                <Pressable
+                  onPress={() => openProfile(item.user_id, item.nickname)}
+                  style={({ pressed }) => [st.rowBody, pressed && { opacity: 0.7 }]}
+                >
+                  <Avatar name={item.nickname ?? '러너'} size={44} />
+                  <Text style={st.rowName} numberOfLines={1}>{item.nickname ?? '러너'}</Text>
+                </Pressable>
                 <Pressable
                   onPress={() => toggle(item)}
                   style={[st.followBtn, isF ? st.followBtnOn : st.followBtnOff]}
@@ -154,6 +164,7 @@ const st = StyleSheet.create({
   tabUnderline: { position: 'absolute', left: '25%', right: '25%', bottom: -1, height: 2.5, borderRadius: 99, backgroundColor: C.accent },
 
   row:     { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 16, paddingVertical: 11, paddingHorizontal: 13 },
+  rowBody: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 12 },
   rowName: { flex: 1, minWidth: 0, fontSize: 15, fontWeight: '700', color: C.text, letterSpacing: -0.3 },
 
   followBtn:    { flexShrink: 0, height: 34, paddingHorizontal: 15, borderRadius: R.pill, alignItems: 'center', justifyContent: 'center' },

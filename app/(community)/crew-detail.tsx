@@ -27,6 +27,7 @@ import {
   type CrewMember,
 } from '@/hooks/use-crews';
 import { avatarBg } from '@/lib/fr-hash';
+import { openProfile } from '@/lib/profile-nav';
 import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -52,7 +53,11 @@ function Avatar({ name, size = 40 }: { name: string; size?: number }) {
 function MemberRow({ member, index }: { member: CrewMember; index: number }) {
   const isOwner = member.role === 'owner';
   return (
-    <View style={[st.memberRow, isOwner && st.memberRowOwner]}>
+    // Tappable per the routing rule — openProfile self-checks (me → 내 프로필)
+    <Pressable
+      onPress={() => openProfile(member.user_id, member.nickname)}
+      style={({ pressed }) => [st.memberRow, isOwner && st.memberRowOwner, pressed && { opacity: 0.7 }]}
+    >
       <Text style={st.memberRank}>{index + 1}</Text>
       <Avatar name={member.nickname} size={40} />
       <View style={{ flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -61,7 +66,7 @@ function MemberRow({ member, index }: { member: CrewMember; index: number }) {
           <View style={st.ownerBadge}><Text style={st.ownerTxt}>크루장</Text></View>
         )}
       </View>
-    </View>
+    </Pressable>
   );
 }
 

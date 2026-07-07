@@ -30,6 +30,7 @@ import { MiniMap } from '@/components/mini-map';
 import { Icon } from '@/components/ui';
 import { avatarBg } from '@/lib/fr-hash';
 import { getBookmarkedRoutes } from '@/lib/bookmarks-api';
+import { openProfile } from '@/lib/profile-nav';
 import { courseStats, fmtDuration } from '@/lib/run-format';
 import { bookmarkRoute, unbookmarkRoute, type PublicRoute } from '@/lib/routes-api';
 import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
@@ -79,12 +80,19 @@ function CourseRow({ route, onOpen, onUnsave }: { route: PublicRoute; onOpen: ()
           <View style={st.dot} />
           <Text style={st.statTxt}>{s.pace}</Text>
         </View>
-        <View style={st.ownerLine}>
+        {/* Owner line → profile (routing rule); falls back to plain when
+            owner_id is missing */}
+        <Pressable
+          onPress={() => openProfile(route.owner_id, route.owner_nickname)}
+          disabled={!route.owner_id}
+          hitSlop={6}
+          style={({ pressed }) => [st.ownerLine, pressed && { opacity: 0.7 }]}
+        >
           <View style={[st.ownerAvatar, { backgroundColor: avatarBg(owner) }]}>
             <Text style={st.ownerAvatarTxt}>{owner.trim()[0]?.toUpperCase() ?? '?'}</Text>
           </View>
           <Text style={st.ownerTxt} numberOfLines={1}>{owner} 코스</Text>
-        </View>
+        </Pressable>
       </View>
       {/* filled bookmark = unsave (canvas top-right) */}
       <Pressable onPress={onUnsave} hitSlop={8} style={st.unsaveBtn}>

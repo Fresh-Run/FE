@@ -8,6 +8,7 @@ import { getRouteComments, postRouteComment, type RouteComment } from '@/lib/rou
 
 export type CommentView = {
   id: string;
+  authorId: string | null;
   authorName: string;
   body: string;
   createdAt: string;
@@ -16,6 +17,7 @@ export type CommentView = {
 function mapComment(row: RouteComment): CommentView {
   return {
     id: row.id,
+    authorId: row.user_id ?? null,
     authorName: row.nickname ?? '러너',
     body: row.content,
     createdAt: row.created_at,

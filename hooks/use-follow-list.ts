@@ -14,7 +14,9 @@ export type FollowUser = {
   is_following: boolean;
 };
 
-export function useFollowList() {
+/** Own lists by default; pass overrideUid for another user's lists
+    (endpoints are viewer-readable — probed 2026-07-08). */
+export function useFollowList(overrideUid?: string | null) {
   const session = useStore(s => s.session);
   const [following, setFollowing] = useState<FollowUser[]>([]);
   const [followers, setFollowers] = useState<FollowUser[]>([]);
@@ -23,7 +25,7 @@ export function useFollowList() {
   const [key, setKey]             = useState(0);
 
   useEffect(() => {
-    const uid = session?.user.id;
+    const uid = overrideUid ?? session?.user.id;
     if (!uid) { setLoading(false); setError('로그인이 필요해요'); return; }
 
     let cancelled = false;
@@ -45,7 +47,7 @@ export function useFollowList() {
       .finally(() => { if (!cancelled) setLoading(false); });
 
     return () => { cancelled = true; };
-  }, [session?.user.id, key]);
+  }, [overrideUid, session?.user.id, key]);
 
   const refetch = useCallback(() => setKey(k => k + 1), []);
   return { following, followers, loading, error, refetch };

@@ -33,6 +33,7 @@ import { Icon } from '@/components/ui';
 import { useMyPublicProfile, type MyRun } from '@/hooks/use-my-public-profile';
 import { avatarBg } from '@/lib/fr-hash';
 import { getRunKudos, type RunKudoser } from '@/lib/kudos-api';
+import { openProfile } from '@/lib/profile-nav';
 import { distUnit, fmtAgo, fmtDist, fmtDuration, fmtPaceIn, fmtWhen, paceUnit, timeTitle } from '@/lib/run-format';
 import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
 import { useSettings } from '@/store/use-settings';
@@ -142,8 +143,15 @@ function KudosSheet({ run, onClose }: { run: MyRun; onClose: () => void }) {
               keyExtractor={k => k.user_id}
               renderItem={({ item }) => (
                 <View style={[st.likerRow, shadows.sm]}>
-                  <Avatar name={item.nickname} size={44} ring={C.border} />
-                  <Text style={st.likerName} numberOfLines={1}>{item.nickname}</Text>
+                  {/* Row body → profile (canvas tappable-name zone; self-case
+                      can't occur here — own runs reject self-kudos) */}
+                  <Pressable
+                    onPress={() => openProfile(item.user_id, item.nickname)}
+                    style={({ pressed }) => [st.likerBody, pressed && { opacity: 0.7 }]}
+                  >
+                    <Avatar name={item.nickname} size={44} ring={C.border} />
+                    <Text style={st.likerName} numberOfLines={1}>{item.nickname}</Text>
+                  </Pressable>
                   <Text style={st.likerWhen}>{fmtAgo(item.created_at)}</Text>
                 </View>
               )}
@@ -330,6 +338,7 @@ const st = StyleSheet.create({
   sheetTitle:    { fontSize: 16, fontWeight: '700', letterSpacing: -0.4, color: C.text, textAlign: 'center' },
   sheetState:    { alignItems: 'center', gap: 12, paddingVertical: 40 },
   likerRow:      { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 16, paddingVertical: 11, paddingHorizontal: 13 },
+  likerBody:     { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 12 },
   likerName:     { flex: 1, minWidth: 0, fontSize: 15, fontWeight: '700', color: C.text, letterSpacing: -0.3 },
   likerWhen:     { fontSize: 11.5, color: C.faint, letterSpacing: -0.2, flexShrink: 0 },
 
