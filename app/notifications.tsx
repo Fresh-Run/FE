@@ -27,11 +27,14 @@ import {
   Text,
   View,
 } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/ui';
 import { avatarBg } from '@/lib/fr-hash';
 import {
+  deleteNotification,
   getNotifications,
   markAllNotificationsRead,
   markNotificationRead,
@@ -58,6 +61,8 @@ const TYPE_META: Record<string, Meta> = {
   route_liked:         { tag: '좋아요',   tone: C.accentGrn, icon: 'avatar', copy: '님이 내 코스를 좋아해요' },
   route_commented:     { tag: '댓글',     tone: C.accentGrn, icon: 'avatar', copy: '님이 내 코스에 댓글을 남겼어요' },
   run_kudoed:          { tag: '응원',     tone: C.accentGrn, icon: 'avatar', copy: '님이 내 러닝을 응원해요' },
+  // 10th type, discovered live 2026-07-07 (ships with her run-comments batch)
+  run_commented:       { tag: '댓글',     tone: C.accentGrn, icon: 'avatar', copy: '님이 내 러닝에 댓글을 남겼어요' },
   user_followed:       { tag: '팔로우',   tone: CREW_BLUE,   icon: 'avatar', copy: '님이 회원님을 팔로우하기 시작했어요' },
   crew_joined:         { tag: '크루',     tone: CREW_BLUE,   icon: { name: 'people-outline',    color: CREW_BLUE,  bg: CREW_BLUE + '22' },  copy: '님이 크루에 가입했어요' },
   join_requested:      { tag: '크루 신청', tone: CREW_BLUE,   icon: { name: 'people-outline',    color: CREW_BLUE,  bg: CREW_BLUE + '22' },  copy: '님이 크루 가입을 신청했어요' },
@@ -86,7 +91,7 @@ const TABS: { key: TabKey; label: string }[] = [
 ];
 
 const FOLLOW_TYPES = new Set(['user_followed']);
-const SOCIAL_TYPES = new Set(['run_kudoed', 'route_liked', 'route_commented']);
+const SOCIAL_TYPES = new Set(['run_kudoed', 'run_commented', 'route_liked', 'route_commented']);
 const CREW_TYPES   = new Set(['crew_joined', 'join_requested', 'join_approved', 'crew_announcement']);
 
 function inTab(n: AppNotification, tab: TabKey): boolean {
@@ -102,6 +107,7 @@ function inTab(n: AppNotification, tab: TabKey): boolean {
 function deepLink(n: AppNotification): (() => void) | null {
   switch (n.type) {
     case 'run_kudoed':
+    case 'run_commented': // target_type "run", target_id = run id (probed)
       if (!n.target_id) return null;
       return () => router.push({ pathname: '/(records)/activity' as any, params: { runId: n.target_id! } });
     case 'crew_joined':
@@ -109,10 +115,15 @@ function deepLink(n: AppNotification): (() => void) | null {
     case 'join_approved':
       if (!n.target_id) return null;
       return () => router.push({ pathname: '/(community)/crew-detail' as any, params: { crewId: n.target_id! } });
-    case 'crew_announcement':
-      // crew_id ships with NEW rows once her payload lands; old rows stay inert
-      if (!n.crew_id) return null;
-      return () => router.push({ pathname: '/(community)/crew-detail' as any, params: { crewId: n.crew_id! } });
+    case 'crew_announcement': {
+      // Staging-probed 2026-07-07: new rows carry payload.crew_id; old rows
+      // have payload:null and an ANNOUNCEMENT-id target_id — the announced
+      // "target_id fallback" is contradicted by staging, so old rows stay
+      // inert (navigating with an announcement id would break crew-detail).
+      const crewId = n.payload?.crew_id;
+      if (!crewId) return null;
+      return () => router.push({ pathname: '/(community)/crew-detail' as any, params: { crewId } });
+    }
     default:
       return null;
   }
@@ -135,11 +146,22 @@ function NotifIcon({ meta, actor }: { meta: Meta; actor: string }) {
   );
 }
 
-function NotifRow({ n, onPress }: { n: AppNotification; onPress: () => void }) {
+function NotifRow({ n, onPress, onDelete }: { n: AppNotification; onPress: () => void; onDelete: () => void }) {
   const meta = TYPE_META[n.type] ?? FALLBACK_META;
   const actor = n.actor_nickname ?? '러너';
   const linked = deepLink(n) !== null;
   return (
+    <ReanimatedSwipeable
+      friction={2}
+      rightThreshold={40}
+      overshootRight={false}
+      renderRightActions={() => (
+        <Pressable onPress={onDelete} style={st.deleteAction}>
+          <Icon name="trash-outline" size={19} color="#fff" />
+          <Text style={st.deleteTxt}>삭제</Text>
+        </Pressable>
+      )}
+    >
     <Pressable
       onPress={onPress}
       style={({ pressed }) => [
@@ -165,6 +187,7 @@ function NotifRow({ n, onPress }: { n: AppNotification; onPress: () => void }) {
       )}
       {!n.is_read && <View style={st.unreadDot} />}
     </Pressable>
+    </ReanimatedSwipeable>
   );
 }
 
@@ -201,6 +224,16 @@ export default function NotificationsScreen() {
     deepLink(n)?.();
   }
 
+  function onRowDelete(n: AppNotification) {
+    const prev = rows;
+    if (!prev) return;
+    setRows(prev.filter(r => r.id !== n.id)); // optimistic remove
+    deleteNotification(n.id).catch(() => {
+      setRows(prev); // rollback to the exact prior list (position preserved)
+      Alert.alert('삭제 실패', '알림을 삭제하지 못했어요. 잠시 후 다시 시도해 주세요.');
+    });
+  }
+
   function onReadAll() {
     const prev = rows;
     if (!prev?.some(r => !r.is_read)) return;
@@ -212,7 +245,7 @@ export default function NotificationsScreen() {
   }
 
   return (
-    <View style={[st.root, { paddingTop: insets.top }]}>
+    <GestureHandlerRootView style={[st.root, { paddingTop: insets.top }]}>
       <View style={st.appBar}>
         <Pressable onPress={() => router.back()} hitSlop={12} style={st.appBarBtn}>
           <Icon name="chevron-back" size={22} color={C.text} />
@@ -249,7 +282,7 @@ export default function NotificationsScreen() {
         <FlatList
           data={(rows ?? []).filter(n => inTab(n, tab))}
           keyExtractor={n => n.id}
-          renderItem={({ item }) => <NotifRow n={item} onPress={() => onRowPress(item)} />}
+          renderItem={({ item }) => <NotifRow n={item} onPress={() => onRowPress(item)} onDelete={() => onRowDelete(item)} />}
           ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
           ListEmptyComponent={
             <View style={st.centered}>
@@ -263,7 +296,7 @@ export default function NotificationsScreen() {
           onRefresh={() => load(true)}
         />
       )}
-    </View>
+    </GestureHandlerRootView>
   );
 }
 
@@ -297,6 +330,10 @@ const st = StyleSheet.create({
   ago:     { fontSize: 11.5, color: C.faint, marginRight: 10 },
   body:    { fontSize: 13.5, lineHeight: 20, color: C.sub, letterSpacing: -0.2, marginTop: 5 },
   actor:   { color: C.text, fontWeight: '700' },
+
+  // Swipe-to-delete reveal
+  deleteAction: { width: 84, marginLeft: 10, borderRadius: 18, backgroundColor: C.danger, alignItems: 'center', justifyContent: 'center', gap: 4 },
+  deleteTxt:    { fontSize: 12, fontWeight: '700', color: '#fff', letterSpacing: -0.2 },
 
   centered: { alignItems: 'center', gap: 12, paddingVertical: 60 },
   stateTxt: { fontSize: 14, fontWeight: '600', color: C.faint, letterSpacing: -0.2 },
