@@ -23,6 +23,9 @@ export type MyRun = {
   distance_km: number;
   duration_sec: number;
   avg_pace_sec_per_km: number | null;
+  kudos_count: number;
+  // Never null on own list — legacy rows are 'followers' server-side (지연 확인)
+  visibility: 'public' | 'followers' | 'private';
 };
 
 type ProfileResp = { nickname: string; avatar_url: string | null; bio: string | null };

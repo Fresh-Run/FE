@@ -1,15 +1,17 @@
 /**
  * 내 프로필 — social/public profile, own-view (canvas 2026-07-07; screenshot-
- * verified). Pushed from the home header avatar. Distinct from the 프로필 TAB
- * (settings hub) — the gear here routes to it.
+ * verified). Pushed from the home header avatar. Distinct from the 프로필 TAB —
+ * the gear here routes to the 설정 hub (/settings).
  *
  * Approved interim honesty (backend gaps, TODO'd):
  *  - location row shows `bio` when present (no location field on profiles);
- *  - section = "내 러닝" + real total, NO 공개 framing (run visibility
- *    doesn't exist server-side yet);
- *  - run cards are reduced feed-style: no per-run title/area/tags/likes on
- *    own runs — title falls back to timeTitle(ran_at), footer omitted;
- *  - count taps non-tappable; 프로필 공유 → 준비 중 (no shareable URL yet).
+ *  - section = "내 러닝" + real total ("공개 N개" reframing is its own item);
+ *  - run cards are reduced feed-style: no per-run area/tags — title falls
+ *    back to timeTitle(ran_at);
+ *  - footer: ♥ kudos_count + likers sheet. NOT a toggle — self-kudos is a
+ *    server 400; heart+count are one tap target. 💬 omitted entirely (run
+ *    comments unshipped server-side — 지연 ask logged);
+ *  - 프로필 공유 → 준비 중 (no shareable URL yet).
  */
 import { useFocusEffect } from '@react-navigation/native';
 import { router } from 'expo-router';
@@ -18,6 +20,7 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  Modal,
   Pressable,
   StyleSheet,
   Text,
@@ -29,13 +32,14 @@ import { MiniMap } from '@/components/mini-map';
 import { Icon } from '@/components/ui';
 import { useMyPublicProfile, type MyRun } from '@/hooks/use-my-public-profile';
 import { avatarBg } from '@/lib/fr-hash';
-import { distUnit, fmtDist, fmtDuration, fmtPaceIn, fmtWhen, paceUnit, timeTitle } from '@/lib/run-format';
+import { getRunKudos, type RunKudoser } from '@/lib/kudos-api';
+import { distUnit, fmtAgo, fmtDist, fmtDuration, fmtPaceIn, fmtWhen, paceUnit, timeTitle } from '@/lib/run-format';
 import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
 import { useSettings } from '@/store/use-settings';
 
-function Avatar({ name, size }: { name: string; size: number }) {
+function Avatar({ name, size, ring = C.accent }: { name: string; size: number; ring?: string }) {
   return (
-    <View style={[st.avatar, { width: size, height: size, borderRadius: size / 2, backgroundColor: avatarBg(name) }]}>
+    <View style={[st.avatar, { width: size, height: size, borderRadius: size / 2, backgroundColor: avatarBg(name), borderColor: ring }]}>
       <Text style={{ fontWeight: '700', fontSize: Math.round(size * 0.38), color: '#fff' }}>
         {name.trim()[0]?.toUpperCase() ?? '?'}
       </Text>
@@ -43,9 +47,16 @@ function Avatar({ name, size }: { name: string; size: number }) {
   );
 }
 
-// Reduced feed-style run card (canvas shows title/area/tags/likes — no
-// backend source for own runs; honest subset, tap → activity detail)
-function RunCard({ run, name, units }: { run: MyRun; name: string; units: ReturnType<typeof useSettings.getState>['settings']['units'] }) {
+// Own-list visibility is never null (legacy rows = 'followers' server-side)
+const VIS_CAPTION: Record<MyRun['visibility'], string> = {
+  public:    '공개 게시물',
+  followers: '팔로워 공개',
+  private:   '비공개',
+};
+
+// Reduced feed-style run card (canvas shows area/tags — no backend source
+// for own runs; honest subset, tap → activity detail)
+function RunCard({ run, name, units, onKudos }: { run: MyRun; name: string; units: ReturnType<typeof useSettings.getState>['settings']['units']; onKudos: () => void }) {
   return (
     <Pressable
       onPress={() => router.push({ pathname: '/(records)/activity' as any, params: { runId: run.id } })}
@@ -76,7 +87,75 @@ function RunCard({ run, name, units }: { run: MyRun; name: string; units: Return
           ))}
         </View>
       </View>
+      {/* Footer — ♥ + count are ONE tap target → likers sheet (own cards
+          can't toggle: self-kudos = 400). No 💬 until run comments ship. */}
+      <View style={st.cardFooter}>
+        <Pressable onPress={onKudos} hitSlop={8} style={({ pressed }) => [st.kudosBtn, pressed && { opacity: 0.6 }]}>
+          <Icon name="heart-outline" size={18} color={C.sub} />
+          <Text style={st.kudosCount}>{run.kudos_count}</Text>
+        </Pressable>
+        <Text style={st.visCaption}>{VIS_CAPTION[run.visibility]}</Text>
+      </View>
     </Pressable>
+  );
+}
+
+// Likers bottom sheet (canvas: FrMyProfile likers sheet). Rows are the
+// follow-list card style minus the pill: name + relative time (no subtext —
+// no backend source). The canvas 나-badge/accent-ring self-row and heart
+// toggle belong to future other-user/feed contexts (TODO scoping note).
+function KudosSheet({ run, onClose }: { run: MyRun; onClose: () => void }) {
+  const [rows, setRows]       = React.useState<RunKudoser[] | null>(null);
+  const [failed, setFailed]   = React.useState(false);
+  const [attempt, setAttempt] = React.useState(0);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    setFailed(false);
+    getRunKudos(run.id)
+      .then(list => { if (!cancelled) setRows(list); })
+      .catch(() => { if (!cancelled) setFailed(true); });
+    return () => { cancelled = true; };
+  }, [run.id, attempt]);
+
+  return (
+    <Modal visible transparent animationType="slide" onRequestClose={onClose}>
+      <View style={st.sheetRoot}>
+        <Pressable style={st.sheetBackdrop} onPress={onClose} />
+        <View style={st.sheet}>
+          <View style={st.sheetHead}>
+            <View style={st.grabBar} />
+            <Text style={st.sheetTitle}>좋아요 {run.kudos_count}개</Text>
+          </View>
+          {failed ? (
+            <View style={st.sheetState}>
+              <Text style={st.stateTxt}>목록을 불러올 수 없어요</Text>
+              <Pressable onPress={() => { setRows(null); setAttempt(a => a + 1); }} style={st.retryBtn}>
+                <Text style={st.retryTxt}>다시 시도</Text>
+              </Pressable>
+            </View>
+          ) : rows === null ? (
+            <View style={st.sheetState}><ActivityIndicator color={C.accent} /></View>
+          ) : (
+            <FlatList
+              data={rows}
+              keyExtractor={k => k.user_id}
+              renderItem={({ item }) => (
+                <View style={[st.likerRow, shadows.sm]}>
+                  <Avatar name={item.nickname} size={44} ring={C.border} />
+                  <Text style={st.likerName} numberOfLines={1}>{item.nickname}</Text>
+                  <Text style={st.likerWhen}>{fmtAgo(item.created_at)}</Text>
+                </View>
+              )}
+              ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
+              ListEmptyComponent={<Text style={[st.stateTxt, { textAlign: 'center' }]}>아직 좋아요가 없어요</Text>}
+              contentContainerStyle={{ padding: 20, paddingTop: 14, paddingBottom: 28 }}
+              showsVerticalScrollIndicator={false}
+            />
+          )}
+        </View>
+      </View>
+    </Modal>
   );
 }
 
@@ -84,6 +163,7 @@ export default function MyProfileScreen() {
   const insets = useSafeAreaInsets();
   const units = useSettings(s => s.settings.units);
   const { profile, runs, loading, error, refetch } = useMyPublicProfile();
+  const [kudosRun, setKudosRun] = React.useState<MyRun | null>(null);
 
   // Refetch on focus — 프로필 편집 renames must show on return
   useFocusEffect(useCallback(() => { refetch(); }, [refetch]));
@@ -152,13 +232,13 @@ export default function MyProfileScreen() {
 
   return (
     <View style={[st.root, { paddingTop: insets.top }]}>
-      {/* App bar: back · title · gear → 프로필 tab (settings hub) */}
+      {/* App bar: back · title · gear → 설정 hub (canvas: settingsHub) */}
       <View style={st.appBar}>
         <Pressable onPress={() => router.back()} hitSlop={12} style={st.appBarBtn}>
           <Icon name="chevron-back" size={22} color={C.text} />
         </Pressable>
         <Text style={st.appBarTitle}>내 프로필</Text>
-        <Pressable onPress={() => router.push('/(tabs)/profile' as any)} hitSlop={12} style={st.appBarBtn}>
+        <Pressable onPress={() => router.push('/settings' as any)} hitSlop={12} style={st.appBarBtn}>
           <Icon name="settings-outline" size={20} color={C.text} />
         </Pressable>
       </View>
@@ -178,7 +258,7 @@ export default function MyProfileScreen() {
           ListHeaderComponent={header}
           renderItem={({ item }) => (
             <View style={{ paddingHorizontal: S.gutter }}>
-              <RunCard run={item} name={profile.nickname} units={units} />
+              <RunCard run={item} name={profile.nickname} units={units} onKudos={() => setKudosRun(item)} />
             </View>
           )}
           ItemSeparatorComponent={() => <View style={{ height: 14 }} />}
@@ -192,6 +272,8 @@ export default function MyProfileScreen() {
           showsVerticalScrollIndicator={false}
         />
       )}
+
+      {kudosRun && <KudosSheet run={kudosRun} onClose={() => setKudosRun(null)} />}
     </View>
   );
 }
@@ -232,6 +314,24 @@ const st = StyleSheet.create({
   statVal:   { fontSize: 16, fontWeight: '700', color: C.text, letterSpacing: -0.4 },
   statUnit:  { fontSize: 11, color: C.faint, fontWeight: '600' },
   statLbl:   { fontSize: 10.5, color: C.faint, letterSpacing: -0.1 },
+
+  // Card footer (canvas: hairline top, 8/14/12 padding)
+  cardFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 8, paddingBottom: 12, paddingHorizontal: 14, borderTopWidth: 1, borderTopColor: C.border },
+  kudosBtn:   { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 4 },
+  kudosCount: { fontSize: 13.5, fontWeight: '700', color: C.sub, letterSpacing: -0.2 },
+  visCaption: { fontSize: 11.5, color: C.faint, letterSpacing: -0.2 },
+
+  // Likers sheet (canvas: grab bar, centered title, 68% max height)
+  sheetRoot:     { flex: 1, justifyContent: 'flex-end' },
+  sheetBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.45)' },
+  sheet:         { backgroundColor: C.bg, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '68%' },
+  sheetHead:     { paddingTop: 12, paddingBottom: 12, paddingHorizontal: 20, borderBottomWidth: 1, borderBottomColor: C.border },
+  grabBar:       { width: 38, height: 5, borderRadius: 99, backgroundColor: C.border, alignSelf: 'center', marginBottom: 12 },
+  sheetTitle:    { fontSize: 16, fontWeight: '700', letterSpacing: -0.4, color: C.text, textAlign: 'center' },
+  sheetState:    { alignItems: 'center', gap: 12, paddingVertical: 40 },
+  likerRow:      { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 16, paddingVertical: 11, paddingHorizontal: 13 },
+  likerName:     { flex: 1, minWidth: 0, fontSize: 15, fontWeight: '700', color: C.text, letterSpacing: -0.3 },
+  likerWhen:     { fontSize: 11.5, color: C.faint, letterSpacing: -0.2, flexShrink: 0 },
 
   centered: { alignItems: 'center', gap: 12, paddingVertical: 60 },
   stateTxt: { fontSize: 14, fontWeight: '600', color: C.faint, letterSpacing: -0.2 },

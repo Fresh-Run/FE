@@ -32,12 +32,13 @@ Canvas redesign 2026-07-07 (owner + backend decisions included). **Source of tru
 ## 내 프로필 (own-view) — BUILT 2026-07-07, honest-interim notes
 
 - **New ask for 지연: `location` field on profiles** — canvas shows "서울 성수동" under the name; no backend source. Interim: `bio` renders there (omit when empty).
-- Run cards are a reduced feed-style subset — canvas shows per-run title/area/tags/♥ counts/공개 태그; own-runs have no backend source for any of those (kudos counts exist only on `/feed/activities`). Re-expand when fields land. 공개 framing deferred with run visibility (pending 지연).
+- Run cards are a reduced feed-style subset — canvas shows per-run area/tags; own-runs have no backend source for those. ~~♥ counts/공개 태그~~ **BUILT 2026-07-07** (♥ slice): `kudos_count` footer + likers sheet + visibility caption (공개 게시물/팔로워 공개/비공개), riding `GET /runs` (kudos_count landed BE `0c60601`).
+- **Kudos-sheet scoping note (own-profile build 2026-07-07):** the canvas likers sheet also designs a heart TOGGLE, a self-row with 나 badge + accent ring, and row subtext — all inapplicable own-profile (self-kudos = 400, no subtext source). Those variants apply when the sheet grows into **other-user profile / activity feed** contexts (my_kudos exists there); extract KudosSheet from my-profile.tsx into a shared component at that point.
 - Gear icon routes to the 프로필 tab (판단 call — flag if canvas intends otherwise).
 - **Optional 지연 ask (follow-list, 2026-07-08):** `FollowUserItem` rows carry no bio/location — the canvas's row sub-line ("주 4회 · 서울 마포구") ships omitted (name-only rows) until a `bio` field lands on the row shape.
 - **Card social counts DEFERRED — batch ask for 지연 (2026-07-07):** add `kudos_count` (+`comment_count` when run-comments ship) to `GET /runs` rows. Probed: `/runs` has no counts; `/feed/activities` has `kudos_count` for own runs but is interleaved + offset-only → unbounded paging = disguised N+1, rejected per rule. When the field lands: ♥+count / 💬+count left-aligned on the card footer, 💬 tap → activity detail (no comment sheet on this screen).
 - **Visibility follow-up — UNBLOCKED (BE `2af3715`, 2026-07-07):** `visibility` now exists on runs and `GET /users/{id}/runs` filters it. Queue: 공개 게시물/팔로워만 corner tag bottom-right per canvas; 비공개 runs excluded from 내 프로필's list (switch its data source to the filtered endpoint or filter client-side) but retained in 기록; section can adopt the 공개 N개 framing.
-- **지연 ask (2026-07-07): legacy-run visibility backfill** — probe showed runs predating `2af3715` (null visibility) are invisible on `GET /users/{id}/runs`; old runs need a backfill to `public` (or the intended default) or profiles look empty.
+- ~~지연 ask: legacy-run visibility backfill~~ **RESOLVED (지연 확인, 2026-07-07): visibility is never null** — legacy rows are `'followers'` server-side. Code branches on the explicit value directly (no null guard: `VIS_CAPTION` in my-profile.tsx, typed union on `MyRun`).
 
 ## ITEM (queued, premium family, AFTER the walk-fix): 오디오 코치 TTS
 
@@ -119,6 +120,8 @@ The home-header profile avatar (next to the bell) is now pressable → user prof
 
 ## Backend follow-ups (partner's repo, read-only — raise with her, don't fix)
 
+- **지연 ask (2026-07-07): run comments** — no run-comment endpoints exist (OpenAPI probed; guide says 미출시/후속). Needed for the card 💬: list/create/delete on runs + `comment_count` on run rows (`GET /runs`, `/users/{id}/runs`, `/feed/activities`). Until then 💬 is omitted app-side (see parity list).
+- **Staging URL incoming (지연)** — when it lands: point `EXPO_PUBLIC_API_URL` at staging and **THE OUTDOOR SESSION pre-flight 0a–0c goes obsolete** (no uvicorn restart, no LAN-IP drift dance, no phone-Safari health check — the whole 4th-IP-incident class disappears). Re-verify which BE hash staging runs before trusting probes against it.
 - ~~Nickname 409~~ **RESOLVED — constraint applied and enforced** (verified 2026-07-06 on running `3f64aba`): real-duplicate probe (`{"nickname":"테스트1"}` as test2) → **409 "Nickname already taken"**. Earlier "still broken" re-probes were **false positives from world drift**: test1 had been renamed 테스트1 during phone verification, so my probe value 한강크루장 was no longer a duplicate (200 was correct). The ORIGINAL 2026-07-05 report was true at the time (rename genuinely succeeded pre-migration); `2026-07-06_profiles_nickname_unique.sql` fixed it. **개인 정보 inline 409 message is now LIVE.**
 - ~~승인제 member-join 202~~ **RESOLVED — real members get 409** (verified 2026-07-06: join as demo2/한강질주, a verified current member → **409 "Already a member"** ×2). My re-probes used test2, who is **no longer a crew member** (left during phone verification) — a non-member getting 202+pending is correct behavior. 가입됨 badge stays (correct UX, no longer a bug shield).
 - **⚠️ Demo world has drifted from DEMO_ACCOUNTS.md** (from phone sessions + probes): test1 nickname = 테스트1 (not 한강크루장); test2 = NOT a crew member (5 members remain); I deleted two of test2's legitimately-created pending requests during earlier "residue cleanup" under the stale member assumption (disclosed). **Always verify current state via API before probing — never trust the seed doc.** Re-running `seed_demo_data.py` is idempotent-additive but won't undo renames/leaves.
@@ -150,6 +153,12 @@ The home-header profile avatar (next to the bell) is now pressable → user prof
 - `lib/api.ts`: guide §2 recommends 401 → `supabase.auth.refreshSession()` + one retry before failing — our wrapper doesn't do this yet
 - Error handling: guide §5 says `detail` may be a structured object (`{error, message, ...}`), and 429 quota errors carry `{limit, used, remaining, reset_at}` — our mappers only read string `detail`
 - Home feed v1 target per guide §4: `GET /feed` (course feed, `PublicRouteResponse[]` with `like_count`/`is_liked`/`comment_count`/`polyline`); run activity feed (`/feed/activities` + kudos) is the agreed v2
+
+## Canvas parity list — design-side corrections owed (code is right; don't re-flag as drift)
+
+- **timeTitle 7-bucket** — canvas run-save suggestion fn is 5-bucket; owner KEPT code's 7 buckets (새벽 04:00–06:59 … 야간 21:00–03:59), canvas to be updated (also noted in the 러닝 저장 delta calls above).
+- **햅틱 피드백 sub-label (설정 hub)** — canvas says "목표 달성 시 진동", which mis-describes live behavior (haptics fire on button interactions — hold-stop — not goal events). Shipped as "버튼 조작 시 진동" (owner, 2026-07-07); canvas copy to be corrected.
+- **💬 omission (내 프로필 card footer)** — app-side interim, NOT a canvas correction: canvas footer shows 💬 + count, but run comments don't exist server-side (지연 ask logged). Shipping a dead 💬 would violate the honesty rule; add it (canvas-verbatim) when her comments API lands.
 
 ## T2 — 다크 렌더링 sweep (named, sized — approved for TODO 2026-07-06)
 
