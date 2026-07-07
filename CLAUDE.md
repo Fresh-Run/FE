@@ -24,7 +24,7 @@ Before presenting ANY checkpoint, run and PASS all of the following; a checkpoin
 2. eslint on every touched file — zero errors.
 3. Live-API verification of every endpoint the change consumes: actual request + captured response against the running server (never assume from API_GUIDE alone — probe it).
 4. Runtime sanity where possible without a device: execute conversion math, validation logic, formatters with real inputs; grep-proofs for sweeps.
-5. A drift check when relevant: BE repo hash the code was built against vs the currently running server; state both.
+5. A drift check when relevant: BE repo hash the code was built against vs the currently running server; state both. **The "running server" is 지연's staging deploy `https://freshrun-api.fly.dev` (since 2026-07-07)** — she announces "스테이징 반영됨" when a deploy lands; a pulled BE HEAD is NOT on staging until announced (verify via OpenAPI markers when it matters). Local uvicorn remains an offline-dev option, no longer the default probe target.
 6. State-world check before writing phone scripts: verify current account/data state via API (the world-drift rule) so scripts reference reality, not the seed doc.
 
 Checkpoints must include a "Pre-verified:" section listing what was run and the results. Phone scripts should contain ONLY steps that require human eyes on the device — anything provable from the terminal must be proven before the user sees it, not delegated to their phone time.
@@ -35,4 +35,6 @@ New features integrate via the backend API (`${EXPO_PUBLIC_API_URL}/api/...`), n
 
 ## Backend repo (read-only)
 
-The backend is a git clone at `~/Documents/FreshRun/backend` (https://github.com/Fresh-Run/BE). It is READ-ONLY for us — **never push, never commit there**. Source of truth for the API contract: `docs/API_GUIDE.md` in that repo (once it exists) + the running server's `/docs` (Swagger). Always `git pull` the backend repo before planning any integration slice.
+The backend is a git clone at `~/Documents/FreshRun/backend` (https://github.com/Fresh-Run/BE). It is READ-ONLY for us — **never push, never commit there**. Source of truth for the API contract: `docs/API_GUIDE.md` in that repo + the running server's `/docs` (Swagger). Always `git pull` the backend repo before planning any integration slice.
+
+**Staging (default server since 2026-07-07): `https://freshrun-api.fly.dev`** — same Supabase project as local (accounts/tokens/seed identical; the token recipe works unchanged). Swagger: `https://freshrun-api.fly.dev/docs`. 지연 deploys and announces "스테이징 반영됨". Expected latency: ~120–130ms warm, ~0.5s on fly cold start (vs ~5ms localhost) — perceived sluggishness at that scale is the region, not an app bug.
