@@ -42,6 +42,8 @@ type SettingsStore = {
   /** Optimistic theme write; resolves false (and rolls back) on failure.
       T1: persist-only — rendering is the 다크 렌더링 sweep (TODO.md T2). */
   setTheme: (theme: UserSettings['theme']) => Promise<boolean>;
+  /** Optimistic lang write; persist-only — runtime i18n is a later item. */
+  setLang: (lang: UserSettings['lang']) => Promise<boolean>;
 };
 
 let hydrating = false;
@@ -126,6 +128,23 @@ export const useSettings = create<SettingsStore>((set, get) => ({
     cache(next);
     try {
       const server = await patchSettings({ theme });
+      set({ settings: server, synced: true });
+      cache(server);
+      return true;
+    } catch {
+      set({ settings: prev }); // rollback
+      cache(prev);
+      return false;
+    }
+  },
+
+  setLang: async (lang) => {
+    const prev = get().settings;
+    const next = { ...prev, lang };
+    set({ settings: next }); // optimistic
+    cache(next);
+    try {
+      const server = await patchSettings({ lang });
       set({ settings: server, synced: true });
       cache(server);
       return true;

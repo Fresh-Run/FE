@@ -1,0 +1,91 @@
+/**
+ * 언어 — language picker (canvas: FrLangScreen). Persist-only: the selection
+ * PATCHes /me/settings {lang} (optimistic, rollback) but runtime i18n is a
+ * later item — the notice below states this honestly (T1-theme pattern).
+ */
+import { router } from 'expo-router';
+import React from 'react';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { Icon } from '@/components/ui';
+import type { UserSettings } from '@/lib/settings-api';
+import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
+import { useSettings } from '@/store/use-settings';
+
+const OPTIONS: { value: UserSettings['lang']; label: string; sub: string }[] = [
+  { value: 'ko', label: '한국어',  sub: 'Korean' },
+  { value: 'en', label: 'English', sub: '영어' },
+];
+
+export default function LangScreen() {
+  const insets = useSafeAreaInsets();
+  const lang = useSettings(s => s.settings.lang);
+  const setLang = useSettings(s => s.setLang);
+
+  async function pick(value: UserSettings['lang']) {
+    if (value === lang) return;
+    const ok = await setLang(value); // optimistic; rolls back on failure
+    if (!ok) Alert.alert('저장 실패', '설정을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.');
+  }
+
+  return (
+    <View style={[st.root, { paddingTop: insets.top }]}>
+      <View style={st.appBar}>
+        <Pressable onPress={() => router.back()} hitSlop={12} style={st.backBtn}>
+          <Icon name="arrow-back" size={20} color={C.text} />
+        </Pressable>
+        <Text style={st.appBarTitle}>언어</Text>
+        <View style={{ width: 36 }} />
+      </View>
+
+      <View style={{ paddingHorizontal: S.gutter }}>
+        <Text style={st.groupTitle}>앱 언어</Text>
+        <View style={[st.groupCard, shadows.sm]}>
+          {OPTIONS.map((o, i) => (
+            <React.Fragment key={o.value}>
+              {i > 0 && <View style={st.divider} />}
+              <Pressable onPress={() => pick(o.value)} style={st.row}>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={st.rowLabel}>{o.label}</Text>
+                  <Text style={st.rowSub}>{o.sub}</Text>
+                </View>
+                <View style={[st.radioOuter, lang === o.value && { borderColor: C.accent }]}>
+                  {lang === o.value && <View style={st.radioInner} />}
+                </View>
+              </Pressable>
+            </React.Fragment>
+          ))}
+        </View>
+
+        {/* Honest persist-only notice — runtime i18n is a later item */}
+        <View style={st.noticeCard}>
+          <Icon name="information-circle-outline" size={15} color={C.accentGrn} />
+          <Text style={st.noticeTxt}>언어 변경은 준비 중이에요 — 설정은 저장돼요</Text>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+const st = StyleSheet.create({
+  root: { flex: 1, backgroundColor: C.bg },
+
+  appBar:      { flexDirection: 'row', alignItems: 'center', paddingHorizontal: S.gutter, paddingVertical: 12 },
+  backBtn:     { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
+  appBarTitle: { flex: 1, textAlign: 'center', fontSize: 16, fontWeight: '700', letterSpacing: -0.3, color: C.text },
+
+  groupTitle: { fontSize: 11.5, fontWeight: '700', letterSpacing: 0.6, color: C.faint, textTransform: 'uppercase', paddingTop: S.lg, paddingBottom: S.sm, paddingHorizontal: 4 },
+  groupCard:  { backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: R.xl, paddingHorizontal: S.md },
+  divider:    { height: 1, backgroundColor: C.border, marginHorizontal: 4 },
+
+  row:      { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 13, paddingHorizontal: 4 },
+  rowLabel: { fontSize: 15, fontWeight: '600', letterSpacing: -0.3, color: C.text },
+  rowSub:   { fontSize: 12, color: C.faint, letterSpacing: -0.2, marginTop: 2 },
+
+  radioOuter: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: C.border, alignItems: 'center', justifyContent: 'center' },
+  radioInner: { width: 12, height: 12, borderRadius: 6, backgroundColor: C.accent },
+
+  noticeCard: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: S.md, backgroundColor: C.accentDim, borderWidth: 1, borderColor: C.accent + '44', borderRadius: R.md, padding: 12 },
+  noticeTxt:  { flex: 1, fontSize: 12.5, color: C.accentGrn, letterSpacing: -0.2 },
+});
