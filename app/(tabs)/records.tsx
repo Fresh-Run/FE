@@ -3,6 +3,7 @@ import { router } from 'expo-router';
 import React, { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -17,6 +18,7 @@ import { Icon } from '@/components/ui';
 import { useRuns, type Run } from '@/hooks/use-runs';
 import { distUnit, fmtDate, fmtDist, fmtDuration, fmtPaceIn, fmtWhen, timeTitle } from '@/lib/run-format';
 import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
+import { useQuota } from '@/store/use-quota';
 import { useSettings } from '@/store/use-settings';
 
 // ─── Month utilities ──────────────────────────────────────────────────────────
@@ -221,22 +223,28 @@ function MonthStats({ runs }: { runs: Run[] }) {
   );
 }
 
-// ─── InsightUpsell — always locked (premium is item 14) ───────────────────────
+// ─── InsightUpsell — tier-aware (I1, 2026-07-08) ─────────────────────────────
+// Premium: entry card → 월간 리포트 screen. Free: upsell, tap → 구독 준비 중
+// (6e2ddd7 pattern). The old always-locked card + dead 보기 button predated
+// the quota store.
 
-function InsightUpsell() {
+function InsightUpsell({ premium }: { premium: boolean }) {
+  const onPress = premium
+    ? () => router.push('/monthly-insight' as never)
+    : () => Alert.alert('준비 중', '프리미엄 구독은 다음 업데이트에서 만나볼 수 있어요.');
   return (
-    <View style={st.upsellCard}>
+    <Pressable onPress={onPress} style={({ pressed }) => [st.upsellCard, pressed && { opacity: 0.85 }]}>
       <View style={st.upsellIcon}>
-        <Icon name="lock-closed-outline" size={19} color={C.accentGrn} />
+        <Icon name={premium ? 'sparkles' : 'lock-closed-outline'} size={19} color={C.accentGrn} />
       </View>
       <View style={{ flex: 1, minWidth: 0 }}>
-        <Text style={st.upsellTitle}>AI 월간 분석 잠금 해제</Text>
-        <Text style={st.upsellSub}>프리미엄으로 더 깊은 인사이트를</Text>
+        <Text style={st.upsellTitle}>{premium ? 'AI 월간 분석' : 'AI 월간 분석 잠금 해제'}</Text>
+        <Text style={st.upsellSub}>{premium ? '이번 달 러닝 리포트가 준비됐어요' : '프리미엄으로 더 깊은 인사이트를'}</Text>
       </View>
       <View style={st.upsellBtn}>
         <Text style={st.upsellBtnTxt}>보기</Text>
       </View>
-    </View>
+    </Pressable>
   );
 }
 
@@ -283,6 +291,10 @@ function RunRow({ run }: { run: Run }) {
 export default function RecordsScreen() {
   const insets = useSafeAreaInsets();
   const { runs, loading, error, signedOut, refetch } = useRuns();
+
+  // Tier for the AI 월간 분석 card (I1)
+  const isPremium = useQuota(s => s.isPremium);
+  React.useEffect(() => { useQuota.getState().hydrate(); }, []);
 
   // Refetch on focus so runs saved from the tracking flow appear immediately
   useFocusEffect(useCallback(() => {
@@ -339,7 +351,7 @@ export default function RecordsScreen() {
         </View>
 
         <View style={{ paddingHorizontal: S.gutter, paddingTop: S.lg }}>
-          <InsightUpsell />
+          <InsightUpsell premium={isPremium} />
         </View>
 
         {runs.length === 0 ? (
