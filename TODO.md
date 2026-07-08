@@ -6,7 +6,7 @@ Simulator declined (no Xcode) — everything below verifies outdoors on the real
 
 **PRE-FLIGHT: app points at staging (`https://freshrun-api.fly.dev`, swapped 2026-07-07) — the old 0a–0c LAN dance (uvicorn restart / IP-drift sed / phone-Safari check) is OBSOLETE; staging is reachable from anywhere on cell data.** Only remaining pre-check: one `curl https://freshrun-api.fly.dev/health` before leaving (fly outage ≠ impossible), and confirm 지연's latest "스테이징 반영됨" covers the BE hash the payloads assume.
 
-- **(a) Calibrated walk** — 150–300m known distance, normal pace, phone carried naturally; instrumented build live; capture the `[track]` Metro log block + 3 numbers (real / app-credited / final `accepted=`/`raw=`) → filter-bug diagnosis per the frame below.
+- **(a) Calibrated walk** — 150–300m known distance, normal pace, phone carried naturally; instrumented build live; capture the `[track]` Metro log block + 3 numbers (real / app-credited / final `accepted=`/`raw=`) → filter-bug diagnosis per the frame below. **Additions (owner, 2026-07-08):** (a-1) capture ground truth via a SECOND tracking app running simultaneously (or a measured known-length course) and record app-vs-actual; (a-2) the walk MUST complete the full save flow (not just tracking) so the backend `run_tracks` table records raw-vs-kept point counts — enables LAYER ATTRIBUTION: client GPS filter vs backend filter, each layer's in/out counts compared independently. **CORRECTION (2026-07-08, evidence: 탄생기념런 saved with `has_track: false`): a-2 has an unbuilt dependency — the client never sends `gps_track` (tracker buffers lat/lng only; the runs-api SEAM is unconnected). The gps_track upload slice MUST land before the outing or a-2 silently no-ops again.**
 - **(b) Filter fix** — from (a)'s log: fix the guilty gate(s), raise `MIN_SAVE_KM` 0.01 → 0.05, strip `DEBUG(short-run)`; re-walk to confirm ~100m credits ~100m.
 - **(c) Item-17 코스 러닝 E2E** — feed → preview → 네 뛸게요 (copy) → course pill/map tracking → save; verify `route_id` set on the run and `copy_count` bumped.
 - **(d) PB modal visual** — pre-seed via Swagger BEFORE heading out: fresh account + one short posted run (low baseline) so the real outdoor run triggers `new_records` → modal (confetti, comparison card, +N caption, CTA-dismiss, 공유 준비 중).
@@ -31,7 +31,7 @@ Canvas redesign 2026-07-07 (owner + backend decisions included). **Source of tru
 - **New ask for 지연: `location` field on profiles** — canvas shows "서울 성수동" under the name; no backend source. Interim: `bio` renders there (omit when empty).
 - Run cards are a reduced feed-style subset — canvas shows per-run area/tags; own-runs have no backend source for those. ~~♥ counts/공개 태그~~ **BUILT 2026-07-07** (♥ slice): `kudos_count` footer + likers sheet + visibility caption (공개 게시물/팔로워 공개/비공개), riding `GET /runs` (kudos_count landed BE `0c60601`).
 - **Kudos-sheet scoping note (own-profile build 2026-07-07):** the canvas likers sheet also designs a heart TOGGLE, a self-row with 나 badge + accent ring, and row subtext — all inapplicable own-profile (self-kudos = 400, no subtext source). Those variants apply when the sheet grows into **other-user profile / activity feed** contexts (my_kudos exists there); extract KudosSheet from my-profile.tsx into a shared component at that point.
-- Gear icon routes to the 프로필 tab (판단 call — flag if canvas intends otherwise).
+- ~~Gear icon routes to the 프로필 tab~~ **OBSOLETE 2026-07-08** — gear → 설정 hub (`/settings`) since `cc2839f`, matching the canvas (`settingsHub`).
 - **Optional 지연 ask (follow-list, 2026-07-08):** `FollowUserItem` rows carry no bio/location — the canvas's row sub-line ("주 4회 · 서울 마포구") ships omitted (name-only rows) until a `bio` field lands on the row shape.
 - **Card social counts DEFERRED — batch ask for 지연 (2026-07-07):** add `kudos_count` (+`comment_count` when run-comments ship) to `GET /runs` rows. Probed: `/runs` has no counts; `/feed/activities` has `kudos_count` for own runs but is interleaved + offset-only → unbounded paging = disguised N+1, rejected per rule. When the field lands: ♥+count / 💬+count left-aligned on the card footer, 💬 tap → activity detail (no comment sheet on this screen).
 - **Visibility follow-up — UNBLOCKED (BE `2af3715`, 2026-07-07):** `visibility` now exists on runs and `GET /users/{id}/runs` filters it. Queue: 공개 게시물/팔로워만 corner tag bottom-right per canvas; 비공개 runs excluded from 내 프로필's list (switch its data source to the filtered endpoint or filter client-side) but retained in 기록; section can adopt the 공개 N개 framing.
@@ -54,19 +54,9 @@ The home-header profile avatar (next to the bell) is now pressable → user prof
 - Own-profile vs other-user variant + follower-list screens: check canvas state at recon time; may be partially undesigned.
 - Entry point edit touches `app/(tabs)/index.tsx` header (committed territory).
 
-## ~~PAUSED: crew verification desk-test~~ DONE 2026-07-07 (10-step passed, committed `33c9b54`)
+## ~~PAUSED: crew verification desk-test~~ DONE 2026-07-07 (10-step passed, crew set committed `33c9b54`)
 
-**State:** crew migration work remains **UNCOMMITTED and unverified** — 6 files: `lib/api.ts` (ApiError/apiRequest), `lib/crews-api.ts` (new), `store/join-requests.ts` (new), `hooks/use-crews.ts`, `app/(tabs)/community.tsx`, `app/(community)/crew-detail.tsx`. Entanglement-checked: commits cleanly on its own, independent of item 17 and the tracking instrumentation.
-
-**Test script:** the 10-step phone+Swagger desk-test exists (in chat, 2026-07-06 — covers real-data render, open join, 승인제 신청→승인/거절/취소, badge-fix regression repro, invite-code join, demo5 fixture, failure states). Progress unknown/partial.
-
-**Script expectation updates (2026-07-06 re-verification):** the known-bug caveat is GONE — members POSTing join now 409 "Already a member" (verified), so no phantom-residue warnings apply to members; step 3 (가입됨 badge for test2) is INVALID as written — **test2 is no longer a member**; use demo2/한강질주 (verified member) for the 가입됨/member checks, or re-join test2 first. Pre-flight now mandatory: pull CURRENT member list + request states via API — the seed doc no longer matches reality (test1 = 테스트1).
-
-**⚠️ State chain may be dirty:** a fresh test account may be mid-신청 or already a member on 한강 새벽 러닝 크루 from a partial run. **demo5 must remain the pending fixture** (owner-list screen depends on it).
-
-**Before resuming:** re-check the fresh account's actual state — token as that account → `GET /api/crews/{crewId}/join-requests/me` (and `GET /crews/mine`) — then restart the script from a clean point (탈퇴/신청 취소 as needed).
-
-**Gate: crew files must NOT be committed until this script passes.**
+*(Ghost cleanup 2026-07-08: the stale "UNCOMMITTED" state block that lived here described the pre-verification world — all six crew files committed 2026-07-07. Surviving facts: demo5 remains the pending-request fixture; world-drift rule stands — always pull current member/request state via API before crew probing.)*
 
 ## BENCHED: cold-start lands on 뛰러 가기 (owner call 2026-07-07)
 
@@ -91,10 +81,16 @@ Dev-annoyance, not user-facing-broken — every screen works once past the landi
 - A calibrated outdoor walk: KNOWN measured distance, 150–300m, normal pace, phone carried naturally. Reload the app first so the instrumented build is live. Paste the full `[track]` Metro log block into chat.
 - Capture 3 numbers: real measured distance / what the app screen credited / final `accepted=` and `raw=` from the last log line.
 
+**DRIVE-TEST OBSERVATIONS (2026-07-08 ~21:15 KST, two phones same car, published bundles — no Metro):**
+- test1 phone: 1.72km/6:28 saved; test2 phone (지연): 1.93km/6:50 — **~0.21km (~11%) two-phone divergence in-vehicle**; live distance visibly erratic while driving (expected: driving speed sits at/over the `speed>7` gate, segments drop non-deterministically per phone's fix timing).
+- Both rows `has_track: false` + `title: null` — **published bundles predate the gated gps_track + compose code; "야간 러닝" on the device was the client timeTitle DISPLAY fallback, not a stored title.** Compose-screen absence on published bundles = gate artifact, NOT a bug (committed tracking routes directly to 수고했어요; run-save.tsx is untracked at HEAD).
+- Caveat for the diagnosis frame: in-vehicle data is OUT OF ENVELOPE for the walking-filter diagnosis (stationary/speed gates behave differently at driving speeds) — do not use tonight's numbers as (a) evidence; Friday's calibrated walk stands.
+
 **DIAGNOSIS FRAME** (don't re-derive)
 - `raw ≈ real` but `accepted` tiny → filters are the culprit; the label counts name the guilty gate.
 - `raw` ALSO way short → problem is upstream of the gates (fix delivery/throttling) — fix lives elsewhere.
-- Ranked suspects: (1) `SKIP stationary — ANCHOR MOVED` — the only gate that DESTROYS distance instead of deferring; fires when OS speed flickers < 0.5 m/s mid-walk. (2) A wall of `REJECT accuracy>25` if urban accuracy sits 20–40m. (3) `SKIP jitter` should be harmless (anchor held, distance defers) — log confirms whether deferred segments actually get credited later.
+- Ranked suspects: (1) `SKIP stationary — ANCHOR MOVED` — the only gate that DESTROYS distance instead of deferring; fires when OS speed flickers < 0.5 m/s mid-walk. (2) A wall of `REJECT accuracy>25` if urban accuracy sits 20–40m. (3) `SKIP jitter` should be harmless (anchor held, distance defers) — log confirms whether deferred segments actually get credited later. (4) **NEW, observed live 2026-07-08 (배선확인 walk, fix #13): `REJECT speed>7` discretization artifact** — a walking-pace fix rejected at a computed 8.0 m/s because dM=8.0m over dt=1.0s (integer-second dt + segment distance ≫ instantaneous speed); watch for it clustering at short-dt fixes.
+- **Capture caveat (2026-07-08):** uploaded `GpsPoint` has NO `speed` field — the OS-speed-driven gates (suspects 1 and the speed>7 reject) CANNOT be reconstructed from the server-side track; per-gate blame requires the live `[track]` Metro log (phone-hotspot tether).
 
 **SEQUENCED FOLLOW-UPS** (only AFTER a real 100m+ walk reliably credits ~100m)
 - Raise `MIN_SAVE_KM` 0.01 → 0.05 (50m floor) in `app/(course)/run-result.tsx`.
@@ -105,7 +101,7 @@ Dev-annoyance, not user-facing-broken — every screen works once past the landi
 
 - One-time unfreeze 2026-07-06 (owner design change, canvas to follow): the distance slider is now UNIT-NATIVE — km 1–30 / mi 0.5–20 (mi floor = smallest mi step above the server's gt=0; 20mi=32.19km fits the verified le=100 bound, no widen-ask needed). Payload stays km (`distanceKm` state is km-internal; unit switches preserve physical distance). Form re-frozen after this change.
 
-- `.env.local` `EXPO_PUBLIC_API_URL` is pinned to the Mac's DHCP address (`192.168.219.65`) — first thing to check when generation stops reaching the backend
+- ~~`.env.local` pinned to a LAN IP~~ **OBSOLETE 2026-07-08** — `EXPO_PUBLIC_API_URL` points at staging (`freshrun-api.fly.dev`) since the 07-07 cutover; the LAN-IP-drift failure class is gone
 - 경로 저장 — result screen's notice still promises "다음 업데이트"; saving a generated route is unimplemented
 - Generated route `id` (returned by the backend, already typed on `GeneratedRoute`) → `runs.route_id` linking when run saving lands
 - ~~Feed seeding from `is_public` routes~~ SUPERSEDED 2026-07-05 by feed v1 (home feed on `GET /feed` + `/routes/nearby`)
@@ -148,6 +144,7 @@ Dev-annoyance, not user-facing-broken — every screen works once past the landi
 - ~~`POST /api/runs` path field~~ **LANDED** (BE `3779905`, verified 2026-07-06): `gps_track: Optional[list[GpsPoint]]` where `GpsPoint = {lat, lng, t: epoch ms, acc?: m ("강력 권장"), alt?}` — server pipeline owns validation (filters, splits, anti-cheat; out-of-bbox points silently dropped). **Wiring wants `t` + `acc` retention in the tracker's path buffer** (today we keep lat/lng only) — small `use-run-tracker` change that RIDES THE WALK CHAIN (filter fix first; don't upload known-broken tracks to a validating server). Then `SEAM (path upload)` in `lib/runs-api.ts` connects directly.
 - `RouteResponse` has no `id` — needed for `runs.route_id` linking after generation
 - ~~`OPENWEATHER_API_KEY` missing~~ **RESOLVED 2026-07-06** — key added to backend `.env` (owner), server restarted, `GET /api/weather` verified live with real Seoul data (200, full guide shape incl. `running_index.personalized`). **Weather integration (retire `weather-mock.ts`: home strip, weather-detail, chooser temp) is now fully unblocked** — S/M item, needs plan approval.
+- **지연 ask (soft, 2026-07-08): `GET /runs` pagination** — limit-only today (offset ignored); what's the limit ceiling, and is offset/cursor planned? The Supabase→API migration capped the 기록 tab at `limit=100`; histories beyond that truncate until pagination exists.
 - `PublicRouteResponse` has no `is_bookmarked` flag — feed v1 works around it with one `GET /routes/bookmarked?limit=100` per feed load (stale icons possible past 100 bookmarks); a response flag like `is_liked` would remove the extra call
 - `GET /routes/{id}` is owner-only, even for public routes — blocks id-based course-preview fetch; feed v1 works around it with an in-memory handoff (`store/pending-course.ts`)
 

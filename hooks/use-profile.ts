@@ -1,5 +1,14 @@
+// 프로필 tab data — migrated to the backend API (2026-07-08; was direct
+// Supabase reads, the audit's grandfather exception #2). Signatures and
+// consumer contracts unchanged. Auth stays Supabase (architecture rule).
+//
+// Accepted semantic delta (owner, 2026-07-08): bestPaceSec now comes from
+// /me/stats records.best_pace (1km+ runs only, suspect-flagged excluded) —
+// the legacy min(avg_pace) counted every run of any distance.
+
 import { useCallback, useEffect, useState } from 'react';
 
+import { ApiError, apiFetch } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
 
 export type Profile = {
@@ -12,6 +21,12 @@ export type RunStats = {
   totalRuns: number;
   totalDistKm: number;
   bestPaceSec: number | null;
+};
+
+type ProfileResp = { nickname: string | null; avatar_url: string | null; bio: string | null };
+type StatsResp = {
+  all_time: { run_count: number; total_distance_km: number };
+  records: { best_pace: { value: number } | null };
 };
 
 const FALLBACK_PROFILE: Profile = { nickname: '사용자', avatar_url: null, bio: null };
@@ -40,43 +55,38 @@ export function useProfile() {
         return;
       }
 
-      // Fetch profile row + run stats in parallel.
-      const [profileRes, runsRes] = await Promise.all([
-        supabase
-          .from('profiles')
-          .select('nickname, avatar_url, bio')
-          .eq('user_id', user.id)
-          .single(),
-        supabase
-          .from('runs')
-          .select('distance_km, avg_pace_sec_per_km')
-          .eq('user_id', user.id),
+      // Profile + stats in parallel (same shape as the legacy dual read).
+      const [profileRes, statsRes] = await Promise.allSettled([
+        apiFetch<ProfileResp>('/api/me/profile'),
+        apiFetch<StatsResp>('/api/me/stats'),
       ]);
-
       if (cancelled) return;
 
-      // PGRST116 = no row found — use fallback rather than propagating as error.
-      if (profileRes.error && profileRes.error.code !== 'PGRST116') {
-        setError(profileRes.error.message);
+      // Profile-less 404 → fallback (the legacy PGRST116 semantic); other
+      // profile failures surface as the screen's error state.
+      if (profileRes.status === 'fulfilled') {
+        const p = profileRes.value;
+        setProfile({ nickname: p.nickname ?? '사용자', avatar_url: p.avatar_url, bio: p.bio });
+      } else if (profileRes.reason instanceof ApiError && profileRes.reason.status === 404) {
+        setProfile(FALLBACK_PROFILE);
+      } else {
+        const e = profileRes.reason;
+        setError(e instanceof Error ? e.message : '프로필을 불러올 수 없어요');
         setLoading(false);
         return;
       }
-      const p = profileRes.data;
-      setProfile(p
-        ? { nickname: p.nickname ?? '사용자', avatar_url: p.avatar_url, bio: p.bio }
-        : FALLBACK_PROFILE,
-      );
 
-      // Runs failure is non-fatal: show profile with zeroed stats.
-      const runs = runsRes.data ?? [];
-      const paces = runs
-        .map(r => r.avg_pace_sec_per_km)
-        .filter((v): v is number => v != null);
-      setStats({
-        totalRuns:    runs.length,
-        totalDistKm:  runs.reduce((s, r) => s + (r.distance_km ?? 0), 0),
-        bestPaceSec:  paces.length > 0 ? Math.min(...paces) : null,
-      });
+      // Stats failure is non-fatal: show profile with zeroed stats.
+      if (statsRes.status === 'fulfilled') {
+        const s = statsRes.value;
+        setStats({
+          totalRuns:   s.all_time.run_count,
+          totalDistKm: s.all_time.total_distance_km,
+          bestPaceSec: s.records.best_pace?.value ?? null,
+        });
+      } else {
+        setStats(EMPTY_STATS);
+      }
       setLoading(false);
     })();
 

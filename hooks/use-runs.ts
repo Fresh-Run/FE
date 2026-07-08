@@ -1,5 +1,12 @@
+// Run list + detail — migrated to the backend API (2026-07-08; was direct
+// Supabase reads, the audit's grandfather exception #1). Signatures and
+// consumer contracts unchanged. Auth stays Supabase (architecture rule).
+// History cap: /api/runs takes limit only (offset ignored server-side) —
+// limit=100 covers current scale; pagination ask logged in TODO.
+
 import { useCallback, useEffect, useState } from 'react';
 
+import { ApiError, apiFetch } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
 
 export type Run = {
@@ -11,8 +18,6 @@ export type Run = {
   notes: string | null;
   route_id: string | null;
 };
-
-const RUN_SELECT = 'id, ran_at, distance_km, duration_sec, avg_pace_sec_per_km, notes, route_id';
 
 // ─── useRuns — full list for the signed-in user ───────────────────────────────
 
@@ -39,16 +44,15 @@ export function useRuns() {
         return;
       }
 
-      const { data, error: err } = await supabase
-        .from('runs')
-        .select(RUN_SELECT)
-        .eq('user_id', user.id)
-        .order('ran_at', { ascending: false });
-
-      if (cancelled) return;
-      if (err) { setError(err.message); setLoading(false); return; }
-      setRuns((data ?? []) as Run[]);
-      setLoading(false);
+      try {
+        const rows = await apiFetch<Run[]>('/api/runs?limit=100');
+        if (cancelled) return;
+        setRuns(rows); // server returns 최신순 — same order as the legacy read
+      } catch (e: unknown) {
+        if (!cancelled) setError(e instanceof Error ? e.message : '기록을 불러올 수 없어요');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     })();
 
     return () => { cancelled = true; };
@@ -59,8 +63,8 @@ export function useRuns() {
 }
 
 // ─── useRunDetail — single run by id ─────────────────────────────────────────
-// No auth gate: RLS handles unauthorized access. If the row returns null
-// (PGRST116) or any other error, we surface it as "not found" gracefully.
+// Own-only server-side: not-mine/unknown ids come back 404 → the same
+// graceful "not found" the legacy PGRST116 path produced.
 
 export function useRunDetail(runId: string | null) {
   const [run, setRun]         = useState<Run | null>(null);
@@ -76,21 +80,15 @@ export function useRunDetail(runId: string | null) {
     setError(null);
     setRun(null);
 
-    supabase
-      .from('runs')
-      .select(RUN_SELECT)
-      .eq('id', runId)
-      .single()
-      .then(({ data, error: err }) => {
+    apiFetch<Run>(`/api/runs/${runId}`)
+      .then(row => { if (!cancelled) setRun(row); })
+      .catch((e: unknown) => {
         if (cancelled) return;
-        if (err || !data) {
-          setError(err?.message ?? '기록을 찾을 수 없어요');
-          setLoading(false);
-          return;
-        }
-        setRun(data as Run);
-        setLoading(false);
-      });
+        setError(e instanceof ApiError && e.status === 404
+          ? '기록을 찾을 수 없어요'
+          : e instanceof Error ? e.message : '기록을 찾을 수 없어요');
+      })
+      .finally(() => { if (!cancelled) setLoading(false); });
 
     return () => { cancelled = true; };
   }, [runId, key]);
