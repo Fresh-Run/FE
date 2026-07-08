@@ -21,7 +21,7 @@ import { distUnit, fmtDist } from '@/lib/run-format';
 import type { PublicRoute } from '@/lib/routes-api';
 import { useQuota } from '@/store/use-quota';
 import { useSettings } from '@/store/use-settings';
-import { FR_WEATHER } from '@/lib/weather-mock';
+import { useWeather } from '@/hooks/use-weather';
 import {
   colors as C,
   radius as R,
@@ -45,6 +45,7 @@ function getWeekBounds(): [Date, Date] {
 export default function CreateTabScreen() {
   const insets = useSafeAreaInsets();
   const { placeName, coordinate } = useCurrentLocation();
+  const { weather } = useWeather();
   const { runs, signedOut } = useRuns();
 
   // Tier + weekly AI quota (design: PREMIUM badge for premium users; lock
@@ -150,7 +151,8 @@ export default function CreateTabScreen() {
             <Text style={st.statLabel}>현재 온도</Text>
             <View style={st.tempRow}>
               <Icon name="sunny" size={16} color={C.sun} />
-              <Text style={st.statVal}>{FR_WEATHER.temp}°</Text>
+              {/* Real weather (W1); quiet dashes while loading/offline */}
+              <Text style={st.statVal}>{weather ? `${Math.round(weather.temp_c)}°` : '--°'}</Text>
             </View>
           </View>
         </View>

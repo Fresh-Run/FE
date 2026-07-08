@@ -10,6 +10,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, G } from 'react-native-svg';
 
 import { Icon } from '@/components/ui';
+import { useWeather } from '@/hooks/use-weather';
+import { weatherTone } from '@/lib/weather-api';
 import {
   accentShadow,
   colors as C,
@@ -19,41 +21,8 @@ import {
   type as T,
 } from '@/lib/theme';
 
-// ─── Data contract ────────────────────────────────────────────────────────────
-
-export interface WeatherDetail {
-  temp:             number;   // °C displayed
-  feelsLike:        number;   // °C
-  condition:        string;   // e.g. '맑음'
-  location:         string;   // e.g. '서울 성수동'
-  runningScore:     number;   // 0–100
-  scoreTitle:       string;   // e.g. '최적의 컨디션'
-  scoreDescription: string;
-  humidity:         number;   // %
-  aqi:              { value: number; label: string };
-  pm25:             { value: number; label: string };
-  wind:             number;   // m/s
-  uv:               { value: number; label: string };
-  precipitation:    number;   // %
-  aiAdvice:         string;
-}
-
-const DEFAULT_DATA: WeatherDetail = {
-  temp:             18,
-  feelsLike:        16,
-  condition:        '맑음',
-  location:         '서울 성수동',
-  runningScore:     92,
-  scoreTitle:       '최적의 컨디션',
-  scoreDescription: '기온과 습도가 러닝에 매우 이상적이에요. 가볍게 한 바퀴 돌기 좋은 날입니다.',
-  humidity:         45,
-  aqi:              { value: 28, label: '좋음' },
-  pm25:             { value: 19, label: '보통' },
-  wind:             2.1,
-  uv:               { value: 4,  label: '보통' },
-  precipitation:    10,
-  aiAdvice:         '미세먼지가 적고 바람이 시원해요. 한강변 5km 러닝은 어떠세요?',
-};
+// Data contract: real weather via use-weather (W1, 2026-07-08) — the inline
+// DEFAULT_DATA mock this screen shipped with is retired.
 
 // ─── AI score ring ────────────────────────────────────────────────────────────
 // SVG circle with strokeDasharray / strokeDashoffset for the fill percentage.
@@ -128,49 +97,58 @@ function MetricTile({ iconName, label, value, sub, subColor = C.faint }: MetricT
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
-interface Props {
-  data?: WeatherDetail;
+// Score → title copy (client-derived; same thresholds as weatherTone)
+function scoreTitle(score: number): string {
+  if (score >= 70) return '최적의 컨디션';
+  if (score >= 40) return '무난한 컨디션';
+  return '주의가 필요해요';
 }
+const BADGE_COPY: Record<ReturnType<typeof weatherTone>, string> = {
+  good: '러닝하기 딱 좋아요',
+  ok:   '무난한 러닝 날씨예요',
+  bad:  '오늘은 무리하지 마세요',
+};
 
-export default function WeatherDetailScreen({ data = DEFAULT_DATA }: Props) {
+export default function WeatherDetailScreen() {
   const insets = useSafeAreaInsets();
+  // Real data (W1) — quiet-dashes contract while loading/offline-uncached
+  const { weather: w, placeName } = useWeather();
+
+  const score = w?.running_index.score ?? null;
+  const tone = score != null ? weatherTone(score) : null;
 
   const metrics: MetricTileProps[] = [
     {
       iconName: 'water-outline',
       label:    '습도',
-      value:    `${data.humidity}%`,
+      value:    w ? `${w.humidity_pct}%` : '--%',
     },
     {
       iconName:  'cloud-outline',
       label:     '미세먼지 (AQI)',
-      value:     String(data.aqi.value),
-      sub:       data.aqi.label,
-      subColor:  C.aqi[data.aqi.label],
+      value:     w?.pm10 ? String(Math.round(w.pm10.value)) : '—',
+      sub:       w?.pm10?.grade,
+      subColor:  w?.pm10 ? C.aqi[w.pm10.grade] : undefined,
     },
     {
       iconName:  'cloud-outline',
       label:     '초미세 PM2.5',
-      value:     String(data.pm25.value),
-      sub:       data.pm25.label,
-      subColor:  C.aqi[data.pm25.label],
+      value:     w?.pm25 ? String(Math.round(w.pm25.value)) : '—',
+      sub:       w?.pm25?.grade,
+      subColor:  w?.pm25 ? C.aqi[w.pm25.grade] : undefined,
     },
     {
       iconName:  'reorder-three-outline',
       label:     '바람',
-      value:     String(data.wind),
+      value:     w ? w.wind_ms.toFixed(1) : '—',
       sub:       '㎧',
     },
-    {
-      iconName:  'sunny-outline',
-      label:     '자외선',
-      value:     data.uv.label,
-      sub:       `지수 ${data.uv.value}`,
-    },
+    // 자외선 tile HIDDEN (no server field — soft 지연 ask logged);
+    // 강수확률 repurposed to 강수량 (rain_1h_mm; owner call 2026-07-08)
     {
       iconName: 'rainy-outline',
-      label:    '강수확률',
-      value:    `${data.precipitation}%`,
+      label:    '강수량 (1시간)',
+      value:    w ? (w.rain_1h_mm != null ? `${w.rain_1h_mm}mm` : '없음') : '—',
     },
   ];
 
@@ -194,54 +172,46 @@ export default function WeatherDetailScreen({ data = DEFAULT_DATA }: Props) {
         contentContainerStyle={[styles.scrollContent, { paddingBottom: S.xxl }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Status badge */}
-        <View style={styles.badgeRow}>
-          <View style={styles.badge}>
-            <View style={styles.badgeDot} />
-            <Text style={styles.badgeText}>러닝하기 딱 좋아요</Text>
+        {/* Status badge — tone-derived; hidden until data exists */}
+        {tone && (
+          <View style={styles.badgeRow}>
+            <View style={styles.badge}>
+              <View style={styles.badgeDot} />
+              <Text style={styles.badgeText}>{BADGE_COPY[tone]}</Text>
+            </View>
           </View>
-        </View>
+        )}
 
         {/* Hero — temperature + sun icon */}
         <View style={styles.hero}>
           <View style={styles.heroRow}>
-            <Text style={styles.heroTemp}>{data.temp}°</Text>
+            <Text style={styles.heroTemp}>{w ? `${Math.round(w.temp_c)}°` : '--°'}</Text>
             <Icon name="sunny" size={48} color={C.sun} />
           </View>
           <Text style={styles.heroSub}>
-            {data.condition} · 체감 {data.feelsLike}° · {data.location}
+            {w ? `${w.condition} · 체감 ${Math.round(w.feels_like_c)}°` : '날씨 불러오는 중'} · {placeName ?? '위치 확인 중'}
           </Text>
         </View>
 
-        {/* AI 러닝 지수 card */}
+        {/* AI 러닝 지수 card — comment is the single advice source (the old
+            separate AI 조언 card duplicated it verbatim → removed in W1) */}
         <View style={[styles.aiCard, shadows.md]}>
-          <AiScoreRing score={data.runningScore} />
+          <AiScoreRing score={score ?? 0} />
           <View style={styles.aiRight}>
             <View style={styles.aiLabelRow}>
               <Icon name="sparkles" size={13} color={C.accentGrn} />
-              <Text style={styles.aiLabel}>AI 러닝 지수</Text>
+              <Text style={styles.aiLabel}>AI 러닝 지수{w?.running_index.personalized ? ' · 내 기준' : ''}</Text>
             </View>
-            <Text style={styles.aiTitle}>{data.scoreTitle}</Text>
-            <Text style={styles.aiDesc}>{data.scoreDescription}</Text>
+            <Text style={styles.aiTitle}>{score != null ? scoreTitle(score) : '—'}</Text>
+            <Text style={styles.aiDesc}>{w?.running_index.comment ?? '날씨 데이터를 기다리는 중이에요'}</Text>
           </View>
         </View>
 
-        {/* Metrics 2 × 3 grid */}
+        {/* Metrics grid */}
         <View style={styles.grid}>
           {metrics.map((m) => (
             <MetricTile key={m.label} {...m} />
           ))}
-        </View>
-
-        {/* AI 조언 card */}
-        <View style={styles.adviceCard}>
-          <View style={styles.adviceIcon}>
-            <Icon name="sparkles" size={18} color={C.blue} />
-          </View>
-          <View style={styles.adviceBody}>
-            <Text style={styles.adviceTitle}>AI 조언</Text>
-            <Text style={styles.adviceText}>{data.aiAdvice}</Text>
-          </View>
         </View>
       </ScrollView>
 
