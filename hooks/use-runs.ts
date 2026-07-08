@@ -4,7 +4,7 @@
 // History cap: /api/runs takes limit only (offset ignored server-side) —
 // limit=100 covers current scale; pagination ask logged in TODO.
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { ApiError, apiFetch } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
@@ -27,10 +27,16 @@ export function useRuns() {
   const [error, setError]         = useState<string | null>(null);
   const [signedOut, setSignedOut] = useState(false);
   const [key, setKey]             = useState(0);
+  // SWR-lite (2026-07-08): mirrors `runs` so the effect can tell a true
+  // first load from a focus-refetch without depending on state.
+  const hasDataRef = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
+    // Spinner is reserved for the true no-data case; refetches with data
+    // on screen run silently behind the rendered list (no flash).
+    const firstLoad = !hasDataRef.current;
+    if (firstLoad) setLoading(true);
     setError(null);
     setSignedOut(false);
 
@@ -40,6 +46,7 @@ export function useRuns() {
       if (!user) {
         setSignedOut(true);
         setRuns([]);
+        hasDataRef.current = false;
         setLoading(false);
         return;
       }
@@ -48,8 +55,11 @@ export function useRuns() {
         const rows = await apiFetch<Run[]>('/api/runs?limit=100');
         if (cancelled) return;
         setRuns(rows); // server returns 최신순 — same order as the legacy read
+        hasDataRef.current = rows.length > 0;
       } catch (e: unknown) {
-        if (!cancelled) setError(e instanceof Error ? e.message : '기록을 불러올 수 없어요');
+        // Silent-refetch failure keeps the stale list; error state is for
+        // the no-data case only.
+        if (!cancelled && firstLoad) setError(e instanceof Error ? e.message : '기록을 불러올 수 없어요');
       } finally {
         if (!cancelled) setLoading(false);
       }

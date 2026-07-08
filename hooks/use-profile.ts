@@ -6,7 +6,7 @@
 // /me/stats records.best_pace (1km+ runs only, suspect-flagged excluded) —
 // the legacy min(avg_pace) counted every run of any distance.
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { ApiError, apiFetch } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
@@ -39,10 +39,13 @@ export function useProfile() {
   const [error, setError]         = useState<string | null>(null);
   const [signedOut, setSignedOut] = useState(false);
   const [key, setKey]             = useState(0);
+  // SWR-lite (2026-07-08): true first load vs silent focus-refetch
+  const hasDataRef = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
+    const firstLoad = !hasDataRef.current;
+    if (firstLoad) setLoading(true);
     setError(null);
     setSignedOut(false);
 
@@ -63,20 +66,24 @@ export function useProfile() {
       if (cancelled) return;
 
       // Profile-less 404 → fallback (the legacy PGRST116 semantic); other
-      // profile failures surface as the screen's error state.
+      // profile failures: error state on first load only — a silent-refetch
+      // failure keeps the rendered profile (SWR-lite).
       if (profileRes.status === 'fulfilled') {
         const p = profileRes.value;
         setProfile({ nickname: p.nickname ?? '사용자', avatar_url: p.avatar_url, bio: p.bio });
+        hasDataRef.current = true;
       } else if (profileRes.reason instanceof ApiError && profileRes.reason.status === 404) {
         setProfile(FALLBACK_PROFILE);
-      } else {
+        hasDataRef.current = true;
+      } else if (firstLoad) {
         const e = profileRes.reason;
         setError(e instanceof Error ? e.message : '프로필을 불러올 수 없어요');
         setLoading(false);
         return;
       }
 
-      // Stats failure is non-fatal: show profile with zeroed stats.
+      // Stats failure is non-fatal: zeroed stats on first load; a silent
+      // refetch keeps the previous stats (no flash of zeros).
       if (statsRes.status === 'fulfilled') {
         const s = statsRes.value;
         setStats({
@@ -84,7 +91,7 @@ export function useProfile() {
           totalDistKm: s.all_time.total_distance_km,
           bestPaceSec: s.records.best_pace?.value ?? null,
         });
-      } else {
+      } else if (firstLoad) {
         setStats(EMPTY_STATS);
       }
       setLoading(false);
