@@ -19,6 +19,7 @@ import { avatarBg } from '@/lib/fr-hash';
 import { distUnit, fmtDist, fmtPaceIn, type Units } from '@/lib/run-format';
 import type { RunSettings } from '@/lib/settings-api';
 import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
+import { useQuota } from '@/store/use-quota';
 import { useSettings } from '@/store/use-settings';
 import { useStore } from '@/store/use-store';
 
@@ -126,7 +127,7 @@ function SettingGroup({ title, children }: { title: string; children: React.Reac
 
 // ─── IdentityCard ─────────────────────────────────────────────────────────────
 
-function IdentityCard({ profile, stats, units, onEdit }: { profile: Profile; stats: RunStats; units: Units; onEdit: () => void }) {
+function IdentityCard({ profile, stats, units, premium, onEdit }: { profile: Profile; stats: RunStats; units: Units; premium: boolean; onEdit: () => void }) {
   const dist     = fmtDist(stats.totalDistKm, units, 1);
   const runs     = String(stats.totalRuns);
   const bestPace = stats.bestPaceSec != null ? fmtPaceIn(stats.bestPaceSec, units) : '--';
@@ -148,7 +149,16 @@ function IdentityCard({ profile, stats, units, onEdit }: { profile: Profile; sta
           </View>
         </View>
         <View style={{ flex: 1, minWidth: 0 }}>
-          <Text style={st.identityName} numberOfLines={1}>{profile.nickname}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
+            <Text style={st.identityName} numberOfLines={1}>{profile.nickname}</Text>
+            {/* Canvas: crown badge on the premium variant */}
+            {premium && (
+              <View style={st.crownBadge}>
+                <Icon name="flash" size={10} color="#fff" />
+                <Text style={st.crownBadgeTxt}>PREMIUM</Text>
+              </View>
+            )}
+          </View>
           <Text style={st.identityHint}>탭하여 개인 정보 편집</Text>
         </View>
         <Icon name="chevron-forward" size={18} color={C.faint} />
@@ -169,9 +179,15 @@ function IdentityCard({ profile, stats, units, onEdit }: { profile: Profile; sta
 
 // ─── PremiumBanner ────────────────────────────────────────────────────────────
 
+// Lite-only upsell (canvas: hidden on the premium variant). Destination is
+// the future 구독 screen (FrSubscription exists on canvas; TODO(PR-2)) —
+// honest 준비 중 until it builds.
 function PremiumBanner() {
   return (
-    <Pressable style={st.premiumBanner}>
+    <Pressable
+      onPress={() => Alert.alert('준비 중', '프리미엄 구독은 다음 업데이트에서 만나볼 수 있어요.')}
+      style={({ pressed }) => [st.premiumBanner, pressed && { opacity: 0.85 }]}
+    >
       <Icon name="trophy-outline" size={22} color={C.accent} />
       <View style={{ flex: 1 }}>
         <Text style={st.premiumTitle}>FreshRun Premium</Text>
@@ -198,6 +214,11 @@ export default function ProfileScreen() {
   const hydrate       = useSettings(s => s.hydrate);
   const setRunSetting = useSettings(s => s.setRunSetting);
   useEffect(() => { hydrate(); }, [hydrate]);
+
+  // Tier — Lite/Premium visual variants (canvas FrProfile); quota store is
+  // the flag source (per-user cached, last-known-tier retention)
+  const isPremium = useQuota(s => s.isPremium);
+  useEffect(() => { useQuota.getState().hydrate(); }, []);
 
   async function toggleRun(key: keyof RunSettings, value: boolean) {
     const ok = await setRunSetting(key, value); // optimistic; rolls back on failure
@@ -271,30 +292,41 @@ export default function ProfileScreen() {
             profile={profile}
             stats={stats}
             units={units}
+            premium={isPremium}
             onEdit={() => router.push({ pathname: '/personal-info' as any, params: { nickname: profile.nickname } })}
           />
         </View>
 
-        {/* Premium upsell */}
-        <View style={{ paddingHorizontal: S.gutter, paddingTop: S.md }}>
-          <PremiumBanner />
-        </View>
+        {/* Premium upsell — lite only (canvas premium variant hides it) */}
+        {!isPremium && (
+          <View style={{ paddingHorizontal: S.gutter, paddingTop: S.md }}>
+            <PremiumBanner />
+          </View>
+        )}
 
-        {/* 러닝 & AI */}
+        {/* 러닝 & AI — locked for lite; premium gets chevrons + 준비 중 taps
+            (destinations are design-ahead: FrAICoursePrefs/FrAudioCoach have
+            no code screens yet — parity-noted interim) */}
         <SettingGroup title="러닝 & AI">
           <SettingRow
             icon={<Icon name="sparkles-outline" size={19} color="#3D8BFF" />}
             iconBg="#3D8BFF18"
             label="AI 코스 선호도"
             badge="Premium"
-            locked
+            locked={!isPremium}
+            onPress={isPremium
+              ? () => Alert.alert('준비 중', 'AI 코스 선호도 설정은 다음 업데이트에서 지원돼요.')
+              : undefined}
           />
           <SettingRow
             icon={<Icon name="volume-high-outline" size={19} color={C.accentGrn} />}
             iconBg={C.accentDim}
             label="오디오 코치 설정"
             badge="Premium"
-            locked
+            locked={!isPremium}
+            onPress={isPremium
+              ? () => Alert.alert('준비 중', '오디오 코치는 다음 업데이트에서 지원돼요.')
+              : undefined}
           />
         </SettingGroup>
 
@@ -376,7 +408,9 @@ const st = StyleSheet.create({
   // Identity card
   identityCard:   { backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: R.xl, padding: S.lg },
   identityRow:    { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  identityName:   { fontSize: 19, fontWeight: '700', letterSpacing: -0.5, color: C.text },
+  identityName:   { fontSize: 19, fontWeight: '700', letterSpacing: -0.5, color: C.text, flexShrink: 1 },
+  crownBadge:     { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: C.accentGrn, borderRadius: R.pill, paddingLeft: 6, paddingRight: 8, paddingVertical: 3, flexShrink: 0 },
+  crownBadgeTxt:  { fontSize: 9, fontWeight: '800', letterSpacing: 0.5, color: '#fff' },
   identityHint:   { fontSize: 12.5, color: C.faint, letterSpacing: -0.2, marginTop: 3 },
   editBadge:      { position: 'absolute', bottom: -2, right: -2, width: 24, height: 24, borderRadius: 12, backgroundColor: C.accent, borderWidth: 2.5, borderColor: C.surface, alignItems: 'center', justifyContent: 'center' },
 
