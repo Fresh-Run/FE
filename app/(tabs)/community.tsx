@@ -28,14 +28,11 @@ import {
   useMyCrews,
   type Crew,
 } from '@/hooks/use-crews';
+import { useCurrentLocation } from '@/hooks/use-current-location';
 import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
+import { getCrewFilter, type CrewLocationFilter } from '@/store/crew-filter';
 import { useJoinRequests } from '@/store/join-requests';
 import { useQuota } from '@/store/use-quota';
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-const LEVELS = ['전체', '무관', '입문', '중급', '고급'] as const;
-type Level = typeof LEVELS[number];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -62,20 +59,27 @@ function CommTabs({ active, onChange }: { active: string; onChange: (v: string) 
   );
 }
 
-// ─── Level filter chips ───────────────────────────────────────────────────────
+// ─── 검색 위치 card (당근식 둘러보기 — level chips removed per canvas) ────────
 
-function LevelChips({ active, onChange }: { active: Level; onChange: (v: Level) => void }) {
+function LocationCard({ filter, placeName, onPress }: {
+  filter: CrewLocationFilter;
+  placeName: string | null;
+  onPress: () => void;
+}) {
+  const label = filter.mode === 'current'
+    ? `현재 위치 · ${placeName ?? '위치 확인 중'}`
+    : `${filter.sido}${filter.sigungu ? ` · ${filter.sigungu}` : ''}`;
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={st.chipsWrap}>
-      {LEVELS.map(lv => {
-        const on = active === lv;
-        return (
-          <Pressable key={lv} onPress={() => onChange(lv)} style={[st.chip, on && st.chipActive]}>
-            <Text style={[st.chipTxt, { color: on ? C.accentGrn : C.sub }]}>{lv}</Text>
-          </Pressable>
-        );
-      })}
-    </ScrollView>
+    <Pressable onPress={onPress} style={({ pressed }) => [st.locCard, shadows.sm, pressed && { opacity: 0.8 }]}>
+      <View style={st.locIcon}>
+        <Icon name={filter.mode === 'current' ? 'locate' : 'location'} size={16} color={C.accentGrn} />
+      </View>
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text style={st.locLabel}>검색 위치</Text>
+        <Text style={st.locValue} numberOfLines={1}>{label}</Text>
+      </View>
+      <Icon name="chevron-forward" size={16} color={C.faint} />
+    </Pressable>
   );
 }
 
@@ -145,6 +149,17 @@ function BrowseCrewCard({
             {crew.member_count}{crew.max_members !== null ? `/${crew.max_members}` : ''}명 · {crew.area ?? ''}
           </Text>
         </View>
+        {/* 당근식 location line — distance only in lat/lng mode; location-
+            less crews fall back to region/area text alone */}
+        {(crew.sigungu || crew.distance_km != null) && (
+          <View style={st.cardMeta}>
+            <Icon name="location-outline" size={12} color={C.accentGrn} />
+            <Text style={st.cardLocTxt} numberOfLines={1}>
+              {crew.sigungu ?? crew.area ?? ''}
+              {crew.distance_km != null ? ` · ${crew.distance_km.toFixed(1)}km` : ''}
+            </Text>
+          </View>
+        )}
         {(tags.length > 0 || crew.level !== '무관') && (
           <View style={st.tagsRow}>
             {crew.level !== '무관' && <View style={st.tag}><Text style={st.tagTxt}>{crew.level}</Text></View>}
@@ -214,9 +229,18 @@ function MyCrewCard({ crew, onPress }: { crew: Crew; onPress: () => void }) {
 // ─── Discover tab ─────────────────────────────────────────────────────────────
 
 function DiscoverTab() {
-  const [level, setLevel]     = useState<Level>('전체');
   const [showFull, setShowFull] = useState(false);
-  const { crews, loading, error, refetch } = useBrowseCrews();
+  // Location filter — set by the region picker (module store), read on focus
+  const [locFilter, setLocFilter] = useState<CrewLocationFilter>(getCrewFilter());
+  const { coordinate, placeName } = useCurrentLocation();
+
+  // 당근식 params: current mode sends lat/lng once resolved (parameterless
+  // until then = 기존 동작); region mode sends sido/sigungu
+  const { crews, loading, error, refetch } = useBrowseCrews(
+    locFilter.mode === 'current'
+      ? { lat: coordinate?.lat, lng: coordinate?.lng, includeFull: showFull }
+      : { sido: locFilter.sido, sigungu: locFilter.sigungu, includeFull: showFull },
+  );
   // 신청됨 state lives in the shared store (written here on 202/409, corrected
   // authoritatively by crew-detail visits) — fixes the stale-badge bug.
   const pendingMap = useJoinRequests(s => s.pendingByCrewId);
@@ -226,19 +250,20 @@ function DiscoverTab() {
   const { crews: myCrewList } = useMyCrews();
   const memberIds = new Set(myCrewList.map(c => c.id));
 
-  // Refetch whenever the community tab regains focus (e.g. back from crew-detail)
+  // Refetch on focus (back from crew-detail or the region picker) — also
+  // pick up the picker's selection from the module store
   useFocusEffect(useCallback(() => {
+    setLocFilter(getCrewFilter());
     refetch();
   }, [refetch]));
 
   if (loading) return <LoadingState />;
   if (error)   return <ErrorState message={error} onRetry={refetch} />;
 
-  const visible = crews.filter(c => {
-    if (level !== '전체' && c.level !== level) return false;
-    if (!showFull && isFull(c)) return false;
-    return true;
-  });
+  // Full-crew exclusion is server-side now (include_full param); the level
+  // filter left with the chips (canvas). List = server order (distance-
+  // ascending when lat/lng were sent).
+  const visible = crews;
 
   async function handleJoin(crew: Crew) {
     try {
@@ -272,7 +297,11 @@ function DiscoverTab() {
       )}
       ListHeaderComponent={
         <View>
-          <LevelChips active={level} onChange={setLevel} />
+          <LocationCard
+            filter={locFilter}
+            placeName={placeName}
+            onPress={() => router.push('/region-picker' as never)}
+          />
           <View style={st.toggleRow}>
             <Text style={st.toggleCount}>{visible.length}개 크루</Text>
             <Pressable onPress={() => setShowFull(v => !v)} style={st.toggleBtn}>
@@ -582,11 +611,12 @@ const st = StyleSheet.create({
   tabTxt:       { fontSize: 15, fontWeight: '700', letterSpacing: -0.3 },
   tabUnderline: { position: 'absolute', bottom: -1, left: 0, right: 0, height: 2.5, borderRadius: 99, backgroundColor: C.accent },
 
-  // Level chips
-  chipsWrap: { paddingHorizontal: S.gutter, paddingTop: 14, paddingBottom: 2, gap: 8 },
-  chip:      { height: 34, paddingHorizontal: 15, borderRadius: R.pill, backgroundColor: C.surface, borderWidth: 1.5, borderColor: C.border, alignItems: 'center', justifyContent: 'center' },
-  chipActive:{ backgroundColor: C.accentDim, borderColor: C.accent },
-  chipTxt:   { fontSize: 13, fontWeight: '700', letterSpacing: -0.2 },
+  // 검색 위치 card (replaced the level chips, per canvas)
+  locCard:  { flexDirection: 'row', alignItems: 'center', gap: 11, marginTop: 14, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 16, padding: 12 },
+  locIcon:  { width: 34, height: 34, borderRadius: 10, backgroundColor: C.accentDim, alignItems: 'center', justifyContent: 'center' },
+  locLabel: { fontSize: 10.5, fontWeight: '600', color: C.faint, letterSpacing: -0.1 },
+  locValue: { fontSize: 14, fontWeight: '700', color: C.text, letterSpacing: -0.3, marginTop: 2 },
+  cardLocTxt: { fontSize: 12, fontWeight: '600', color: C.accentGrn, letterSpacing: -0.2 },
 
   // Full toggle row
   toggleRow:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 2, paddingTop: 14, paddingBottom: 4 },

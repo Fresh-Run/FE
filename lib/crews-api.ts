@@ -25,6 +25,12 @@ export type Crew = {
   join_policy: 'open' | 'approval';
   member_count: number;
   owner_nickname: string | null;
+  // 당근식 둘러보기 fields (BE update, probed 2026-07-09) — null on
+  // location-less crews; distance_km only when lat+lng were queried
+  sido: string | null;
+  sigungu: string | null;
+  tags: string[];
+  distance_km: number | null;
   myRole?: 'owner' | 'member';
 };
 
@@ -58,6 +64,12 @@ type ServerCrew = {
   color: string | null;
   member_count: number;
   owner_nickname: string | null;
+  sido?: string | null;
+  sigungu?: string | null;
+  lat?: number | null;
+  lng?: number | null;
+  tags?: string[];
+  distance_km?: number | null;
 };
 
 type ServerMember = {
@@ -85,6 +97,10 @@ export function mapCrew(row: ServerCrew, myRole?: 'owner' | 'member'): Crew {
     join_policy: (row.join_policy as 'open' | 'approval') ?? 'open',
     member_count: row.member_count,
     owner_nickname: row.owner_nickname ?? null,
+    sido:        row.sido ?? null,
+    sigungu:     row.sigungu ?? null,
+    tags:        row.tags ?? [],
+    distance_km: row.distance_km ?? null,
     myRole,
   };
 }
@@ -125,8 +141,28 @@ export async function createCrew(input: CrewCreateInput): Promise<Crew> {
 
 // ─── Reads ────────────────────────────────────────────────────────────────────
 
-export async function listCrews(): Promise<ServerCrew[]> {
-  return apiFetch<ServerCrew[]>('/api/crews');
+/** 당근식 둘러보기 params: lat+lng (both) → distance_km + 거리 오름차순;
+    sido/sigungu → 행정구역 filter; include_full=false(default) excludes
+    full crews. Parameterless = 기존 동작. */
+export type ListCrewsParams = {
+  sido?: string;
+  sigungu?: string;
+  lat?: number;
+  lng?: number;
+  includeFull?: boolean;
+};
+
+export async function listCrews(params: ListCrewsParams = {}): Promise<ServerCrew[]> {
+  const q = new URLSearchParams();
+  if (params.sido) q.set('sido', params.sido);
+  if (params.sigungu) q.set('sigungu', params.sigungu);
+  if (params.lat != null && params.lng != null) {
+    q.set('lat', String(params.lat));
+    q.set('lng', String(params.lng));
+  }
+  if (params.includeFull) q.set('include_full', 'true');
+  const qs = q.toString();
+  return apiFetch<ServerCrew[]>(`/api/crews${qs ? `?${qs}` : ''}`);
 }
 
 export async function listMyCrews(): Promise<ServerCrew[]> {

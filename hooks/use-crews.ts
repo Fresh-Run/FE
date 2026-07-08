@@ -3,7 +3,7 @@
 // API guide's architecture rule. Types and mutation functions re-export
 // from crews-api so screen imports stay unchanged.
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import {
   getCrew,
@@ -15,6 +15,7 @@ import {
   type Crew,
   type CrewMember,
   type JoinRequestStatus,
+  type ListCrewsParams,
 } from '@/lib/crews-api';
 import { supabase } from '@/lib/supabase';
 import { useJoinRequests } from '@/store/join-requests';
@@ -34,24 +35,35 @@ export {
 
 // ─── useBrowseCrews — public crew list for the discover tab ──────────────────
 
-export function useBrowseCrews() {
+export function useBrowseCrews(params: ListCrewsParams = {}) {
   const [crews, setCrews]     = useState<Crew[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState<string | null>(null);
   const [key, setKey]         = useState(0);
+  // SWR-lite: spinner on first load only; param/focus refetches run silently
+  const hasDataRef = useRef(false);
+
+  // Primitive deps — object identity churn must not refetch
+  const { sido, sigungu, lat, lng, includeFull } = params;
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
+    if (!hasDataRef.current) setLoading(true);
     setError(null);
 
-    listCrews()
-      .then(rows => { if (!cancelled) setCrews(rows.map(r => mapCrew(r))); })
-      .catch((e: unknown) => { if (!cancelled) setError(e instanceof Error ? e.message : '크루를 불러올 수 없어요'); })
+    listCrews({ sido, sigungu, lat, lng, includeFull })
+      .then(rows => {
+        if (cancelled) return;
+        setCrews(rows.map(r => mapCrew(r)));
+        hasDataRef.current = true;
+      })
+      .catch((e: unknown) => {
+        if (!cancelled && !hasDataRef.current) setError(e instanceof Error ? e.message : '크루를 불러올 수 없어요');
+      })
       .finally(() => { if (!cancelled) setLoading(false); });
 
     return () => { cancelled = true; };
-  }, [key]);
+  }, [key, sido, sigungu, lat, lng, includeFull]);
 
   const refetch = useCallback(() => setKey(k => k + 1), []);
   return { crews, loading, error, refetch };
