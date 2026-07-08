@@ -12,6 +12,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { MiniMap } from '@/components/mini-map';
+import { RealMap } from '@/components/real-map';
 import { Icon } from '@/components/ui';
 import { useCurrentLocation } from '@/hooks/use-current-location';
 import { useRuns } from '@/hooks/use-runs';
@@ -43,7 +44,7 @@ function getWeekBounds(): [Date, Date] {
 
 export default function CreateTabScreen() {
   const insets = useSafeAreaInsets();
-  const { placeName } = useCurrentLocation();
+  const { placeName, coordinate } = useCurrentLocation();
   const { runs, signedOut } = useRuns();
 
   // Tier + weekly AI quota (design: PREMIUM badge for premium users; lock
@@ -154,9 +155,14 @@ export default function CreateTabScreen() {
           </View>
         </View>
 
-        {/* ── Location map card (inset, rounded, dark) ─────────────── */}
+        {/* ── Location map card — real Apple map centered on the user
+               (slice 1); stylized fallback while location resolves ──── */}
         <View style={[st.mapCard, shadows.sm]}>
-          <MiniMap seed="chooser-map" height={164} borderRadius={R.xl} />
+          {coordinate ? (
+            <RealMap height={164} borderRadius={R.xl} center={coordinate} />
+          ) : (
+            <MiniMap seed="chooser-map" height={164} borderRadius={R.xl} />
+          )}
           <View style={st.locationPill}>
             <Icon name="location" size={13} color={C.accentGrn} />
             <Text style={st.locationTxt} numberOfLines={1}>

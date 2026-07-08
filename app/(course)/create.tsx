@@ -27,6 +27,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { MiniMap } from '@/components/mini-map';
+import { RealMap } from '@/components/real-map';
 import { Icon } from '@/components/ui';
 import { useCurrentLocation } from '@/hooks/use-current-location';
 import { KM_PER_MI } from '@/lib/run-format';
@@ -225,9 +226,14 @@ export default function CreateScreen() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 100 }}
         >
-          {/* ── Map hero — real route geometry, stylized background ── */}
+          {/* ── Map hero — real route geometry on Apple Maps (slice 1);
+                 MiniMap stays as the no-geometry fallback ── */}
           <View style={[st.hero, { height: HERO_H + insets.top }]}>
-            <MiniMap seed={route.summary} height={HERO_H + insets.top} borderRadius={0} polyline={route.polyline} />
+            {route.polyline && route.polyline.length >= 2 ? (
+              <RealMap height={HERO_H + insets.top} polyline={route.polyline} />
+            ) : (
+              <MiniMap seed={route.summary} height={HERO_H + insets.top} borderRadius={0} polyline={route.polyline} />
+            )}
             <LinearGradient
               colors={['rgba(8,12,4,0.0)', 'rgba(8,12,4,0.78)']}
               style={StyleSheet.absoluteFillObject}
