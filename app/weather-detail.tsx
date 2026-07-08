@@ -249,7 +249,9 @@ export default function WeatherDetailScreen({ data = DEFAULT_DATA }: Props) {
       <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, S.lg) + S.sm }]}>
         <Pressable
           style={({ pressed }) => [styles.cta, accentShadow(C.accent), { opacity: pressed ? 0.88 : 1 }]}
-          onPress={() => router.push('/(course)')}
+          // Direct target — this used to push the (course) GROUP ROOT, which
+          // resolved through the deleted index shim's Redirect to the chooser
+          onPress={() => router.push('/(tabs)/create' as any)}
         >
           <Icon name="play-circle" size={20} color={C.accentText} />
           <Text style={styles.ctaLabel}>러닝 시작하기</Text>

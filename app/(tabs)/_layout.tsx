@@ -6,7 +6,6 @@ import { FreshTabBar } from '@/components/fresh-tab-bar';
 export default function TabLayout() {
   return (
     <Tabs
-      initialRouteName="index"
       tabBar={(props) => <FreshTabBar {...props} />}
       screenOptions={{ headerShown: false }}
     >
