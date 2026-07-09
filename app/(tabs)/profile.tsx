@@ -304,20 +304,16 @@ export default function ProfileScreen() {
           </View>
         )}
 
-        {/* 러닝 & AI — locked for lite; 오디오 코치 stays design-ahead
-            (FrAudioCoach has no code screen yet — parity-noted interim) */}
+        {/* 러닝 & AI — AI 코스 선호도 is 전 티어 (지연 결정 ⓐ, BE ab2841f /
+            guide line 270: settings UI open to all, 차등은 쿼터로); 오디오
+            코치 stays premium (coach-script 403 premium_required, guide line
+            65) and design-ahead (FrAudioCoach has no code screen yet) */}
         <SettingGroup title="러닝 & AI">
-          {/* Premium lock kept pending 지연's gating answer — server applies
-              ai_course 전 티어 공통 (free PATCH probed 200, 2026-07-09) */}
           <SettingRow
             icon={<Icon name="sparkles-outline" size={19} color="#3D8BFF" />}
             iconBg="#3D8BFF18"
             label="AI 코스 선호도"
-            badge="Premium"
-            locked={!isPremium}
-            onPress={isPremium
-              ? () => router.push('/ai-course-prefs' as any)
-              : undefined}
+            onPress={() => router.push('/ai-course-prefs' as any)}
           />
           <SettingRow
             icon={<Icon name="volume-high-outline" size={19} color={C.accentGrn} />}
