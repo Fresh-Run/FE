@@ -9,17 +9,17 @@
  * run kudos toggle. Photos ride the response as signed URLs (1h — used
  * directly, never cached, 계약). MediaCarousel's photo path wakes here.
  *
- * Entry params seed the first paint (nickname/kudos state) because the
- * sanitized RunResponse carries no nickname and no my_kudos — my_kudos on
- * the detail response is a logged 지연-ask; until then the seed is the
- * viewer's truth from the list row they tapped.
+ * Entry params seed the first paint (nickname/kudos state — the sanitized
+ * RunResponse carries no nickname). ♥ adopts the detail response's my_kudos
+ * (BE 111a446) once the fetch lands, unless the user already toggled —
+ * the seed is only the instant-paint value and may be stale.
  *
  * Parity note (TODO.md): the canvas 이 코스 달리기 CTA is omitted —
  * sanitized route_id is null unless the linked course is public, and the
  * public single-route GET is a standing 지연-ask; graduates when it lands.
  */
 import { router, useLocalSearchParams } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -94,10 +94,17 @@ export default function RunPostScreen() {
 
   const { run, loading, error } = useRunDetail(params.runId ?? null);
 
-  // ♥ — seeded from the entry row (sanitized detail has no my_kudos —
-  // 지연-ask logged); count prefers server truth once the run loads
+  // ♥ — entry-row seed paints instantly; server my_kudos (BE 111a446) wins
+  // once the fetch lands, unless the user already toggled mid-flight
   const [liked, setLiked] = useState(params.myKudos === '1');
   const [likeDelta, setLikeDelta] = useState(0);
+  const touchedKudos = useRef(false);
+  useEffect(() => {
+    if (run?.my_kudos != null && !touchedKudos.current) {
+      setLiked(run.my_kudos);
+      setLikeDelta(0); // server count is the authoritative base
+    }
+  }, [run?.my_kudos]);
   const baseCount = run?.kudos_count ?? (Number(params.kudosCount) || 0);
   const likeCount = Math.max(0, baseCount + likeDelta);
 
@@ -128,6 +135,7 @@ export default function RunPostScreen() {
 
   function toggleKudos() {
     if (!run) return;
+    touchedKudos.current = true;
     const next = !liked;
     setLiked(next);
     setLikeDelta(d => d + (next ? 1 : -1));

@@ -25,6 +25,8 @@ export type Run = {
   has_track?: boolean;
   kudos_count?: number;
   comment_count?: number;
+  /** Viewer's kudos state (BE 111a446, 피드와 동일 계산; own runs always false) */
+  my_kudos?: boolean;
   /** Signed URLs, 1h expiry — use response values directly, NEVER cache (계약). Detail responses only. */
   photos?: string[] | null;
   /** First-photo thumb (signed) on list rows */
