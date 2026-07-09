@@ -18,6 +18,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useTabBarInset } from '@/components/fresh-tab-bar';
 import { MiniMap } from '@/components/mini-map';
 import { Icon } from '@/components/ui';
 import {
@@ -229,6 +230,7 @@ function MyCrewCard({ crew, onPress }: { crew: Crew; onPress: () => void }) {
 // ─── Discover tab ─────────────────────────────────────────────────────────────
 
 function DiscoverTab() {
+  const tabBarInset = useTabBarInset();
   const [showFull, setShowFull] = useState(false);
   // Location filter — set by the region picker (module store), read on focus
   const [locFilter, setLocFilter] = useState<CrewLocationFilter>(getCrewFilter());
@@ -316,7 +318,7 @@ function DiscoverTab() {
         </View>
       }
       ListEmptyComponent={<EmptyState text="조건에 맞는 크루가 없어요" />}
-      contentContainerStyle={{ paddingHorizontal: S.gutter, paddingBottom: 36 }}
+      contentContainerStyle={{ paddingHorizontal: S.gutter, paddingBottom: tabBarInset }}
       ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
       showsVerticalScrollIndicator={false}
     />
@@ -457,6 +459,7 @@ const ics = StyleSheet.create({
 // ─── My crews tab ─────────────────────────────────────────────────────────────
 
 function MyCrewsTab() {
+  const tabBarInset = useTabBarInset();
   const { crews, loading, error, signedOut, refetch } = useMyCrews();
   const [codeSheetOpen, setCodeSheetOpen] = useState(false);
 
@@ -485,7 +488,7 @@ function MyCrewsTab() {
     router.push({ pathname: '/(community)/crew-detail' as any, params: { crewId: c.id } });
 
   return (
-    <ScrollView contentContainerStyle={{ paddingBottom: 36 }} showsVerticalScrollIndicator={false}>
+    <ScrollView contentContainerStyle={{ paddingBottom: tabBarInset }} showsVerticalScrollIndicator={false}>
       {/* Owned crews — dashed create-placeholder is the empty state */}
       <View style={{ paddingHorizontal: S.gutter, paddingTop: S.xl }}>
         <View style={st.sectionHead}>

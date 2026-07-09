@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useTabBarInset } from '@/components/fresh-tab-bar';
 import { Icon } from '@/components/ui';
 import { useProfile, type Profile, type RunStats } from '@/hooks/use-profile';
 import { avatarBg } from '@/lib/fr-hash';
@@ -204,6 +205,7 @@ const APP_VERSION = Constants.expoConfig?.version ?? '1.0.0';
 
 export default function ProfileScreen() {
   const insets  = useSafeAreaInsets();
+  const tabBarInset = useTabBarInset();
   const signOut = useStore(s => s.signOut);
   const { profile, stats, loading, error, signedOut, refetch } = useProfile();
 
@@ -282,7 +284,7 @@ export default function ProfileScreen() {
     <View style={[st.root, { paddingTop: insets.top }]}>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 110 }}
+        contentContainerStyle={{ paddingBottom: tabBarInset }}
       >
         <Text style={[st.screenTitle, st.headerPad]}>프로필</Text>
 

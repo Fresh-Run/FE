@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useTabBarInset } from '@/components/fresh-tab-bar';
 import { MiniMap } from '@/components/mini-map';
 import { RealMap } from '@/components/real-map';
 import { Icon } from '@/components/ui';
@@ -44,6 +45,7 @@ function getWeekBounds(): [Date, Date] {
 
 export default function CreateTabScreen() {
   const insets = useSafeAreaInsets();
+  const tabBarInset = useTabBarInset();
   const { placeName, coordinate } = useCurrentLocation();
   const { weather } = useWeather();
   const { runs, signedOut } = useRuns();
@@ -87,7 +89,7 @@ export default function CreateTabScreen() {
     <View style={[st.root, { paddingTop: insets.top }]}>
       <ScrollView
         style={st.scroll}
-        contentContainerStyle={st.content}
+        contentContainerStyle={[st.content, { paddingBottom: tabBarInset }]}
         showsVerticalScrollIndicator={false}
       >
         {/* ── Title ─────────────────────────────────────────────────── */}
@@ -200,7 +202,7 @@ export default function CreateTabScreen() {
 const st = StyleSheet.create({
   root:    { flex: 1, backgroundColor: C.bg },
   scroll:  { flex: 1 },
-  content: { paddingHorizontal: S.gutter, paddingBottom: 110 },
+  content: { paddingHorizontal: S.gutter },
 
   // Title
   title:    { fontSize: 26, fontWeight: '800', letterSpacing: -0.8, color: C.text, marginTop: S.xl, marginBottom: 6 },

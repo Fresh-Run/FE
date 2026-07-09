@@ -197,7 +197,7 @@ Dev-annoyance, not user-facing-broken — every screen works once past the landi
 
 ## 타인 프로필 + tappable names — BUILT 2026-07-08 (slice a), riders recorded
 
-- **Riders in item-17-gated `index.tsx` (commit with the walk gate): TWO, not one** — owner message said "lone (b) rider" (course comments) but feed-card authors live in the same gated file; both wired via `openProfile`, both ride. Everything else (likers sheet, follow-list, notification actors + user_followed graduation, crew members, 저장된 코스 owners) is committed-territory.
+- **Riders in item-17-gated `index.tsx` (commit with the walk gate): THREE** — ① course-comments openProfile, ② feed-card author openProfile, ③ **tab-bar inset (T2, owner-approved 2026-07-10): the home feed FlatList's `paddingBottom: 8` → `useTabBarInset()`** (import from `@/components/fresh-tab-bar`; the other four tabs landed in the committed T1 slice — 홈 is the worst clipper, ~108pt under the pill on notched devices, until this rider lands). Everything else (likers sheet, follow-list, notification actors + user_followed graduation, crew members, 저장된 코스 owners) is committed-territory.
 - **Parity/interim notes:** 활동 count = `public_run_count` with the 공개 N개 framing explaining it; visibility caption omitted on other-user cards (server sends `visibility: null` on others' rows — **지연 ask: populate it for viewable rows**); 💬 omitted (graduates with the thread slice on BOTH profile surfaces); location line + card tags omitted (standing no-backend fields).
 - user_followed notification rows now navigate (chevron appeared automatically via deepLink).
 

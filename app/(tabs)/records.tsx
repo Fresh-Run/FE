@@ -13,6 +13,7 @@ import {
 import Svg, { Defs, LinearGradient, Path, Stop } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useTabBarInset } from '@/components/fresh-tab-bar';
 import { MiniMap } from '@/components/mini-map';
 import { Icon } from '@/components/ui';
 import { useRuns, type Run } from '@/hooks/use-runs';
@@ -290,6 +291,7 @@ function RunRow({ run }: { run: Run }) {
 
 export default function RecordsScreen() {
   const insets = useSafeAreaInsets();
+  const tabBarInset = useTabBarInset();
   const { runs, loading, error, signedOut, refetch } = useRuns();
 
   // Tier for the AI 월간 분석 card (I1)
@@ -342,7 +344,7 @@ export default function RecordsScreen() {
     <View style={[st.root, { paddingTop: insets.top }]}>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 110 }}
+        contentContainerStyle={{ paddingBottom: tabBarInset }}
       >
         <Text style={[st.screenTitle, st.headerPad]}>기록</Text>
 

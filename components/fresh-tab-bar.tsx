@@ -15,6 +15,21 @@ type TabDef = {
   center?: boolean;
 };
 
+// Pill geometry — single source of truth for the bar's screen footprint.
+// The wrapper is position:absolute (floating look), so the navigator never
+// insets content; tab screens self-compensate via useTabBarInset().
+const PILL_HEIGHT = 66;
+const PAD_TOP = 8;
+const PAD_BOTTOM_BASE = 8; // + insets.bottom at runtime
+const BREATHING = 12; // owner call 2026-07-10, pending 지연's taste vote
+
+/** Recommended contentContainerStyle.paddingBottom for every tab screen's
+    scroll container: full bar occlusion + breathing room. */
+export function useTabBarInset(): number {
+  const insets = useSafeAreaInsets();
+  return PILL_HEIGHT + PAD_TOP + PAD_BOTTOM_BASE + insets.bottom + BREATHING;
+}
+
 const TABS: TabDef[] = [
   { route: 'index',     iconOutline: 'home-outline',   iconFilled: 'home',   label: '홈' },
   { route: 'community', iconOutline: 'people-outline', iconFilled: 'people', label: '커뮤니티' },
@@ -42,7 +57,7 @@ export function FreshTabBar({ state, navigation }: BottomTabBarProps) {
 
   return (
     <View
-      style={[styles.wrapper, { paddingBottom: insets.bottom + 8 }]}
+      style={[styles.wrapper, { paddingBottom: insets.bottom + PAD_BOTTOM_BASE }]}
       pointerEvents="box-none"
     >
       <View style={[styles.pill, shadows.md]}>
@@ -102,12 +117,12 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     paddingHorizontal: 16,
-    paddingTop: 8,
+    paddingTop: PAD_TOP,
     backgroundColor: 'transparent',
   },
   pill: {
-    height: 66,
-    borderRadius: 33,
+    height: PILL_HEIGHT,
+    borderRadius: PILL_HEIGHT / 2,
     borderWidth: 1,
     borderColor: C.border,
     backgroundColor: C.surface,
