@@ -1,25 +1,38 @@
 /**
- * 출발지 선택 — map-tap start-point picker for AI course generation (C1).
- * Owner call 2026-07-10: map-tap on react-native-maps (zero keys) instead of
- * the canvas FrLocationPicker admin drill-down — coordinates are what the API
- * wants, and this avoids the Apple forward-geocode quality risk + a nationwide
- * 동 dataset (parity note in TODO.md). Label via the same Apple reverse-geocode
- * path use-current-location already uses.
+ * 출발지 선택 — start-point picker for AI course generation (C1 + S1).
+ * Two entry paths: map-tap (owner call 2026-07-10, coordinates directly) and
+ * address/place search (S1) via GET /api/places — the backend's Kakao Local
+ * keyword proxy. Search bias follows the MAP CENTER (not user GPS): the
+ * endpoint requires lat/lng and radius_m ≤ 20km, so panning toward a city
+ * then searching is how cross-region lookup works.
  *
  * Server validates Korea bounds (lat 33–39, lng 124–132) — out-of-bounds taps
- * disable the confirm CTA instead of letting generation 422.
+ * disable the confirm CTA instead of letting generation 422. Kakao results
+ * are Korea-only inherently; the guard stays as a belt.
  */
 import * as Location from 'expo-location';
 import { router, useLocalSearchParams } from 'expo-router';
-import React, { useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  Keyboard,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/ui';
 import { SEOUL_FALLBACK } from '@/hooks/use-current-location';
+import { searchPlaces, type Place } from '@/lib/places-api';
 import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
 import { useStartPoint } from '@/store/start-point';
+
+const SEARCH_DEBOUNCE_MS = 400;
+const SEARCH_MIN_CHARS = 2;
 
 const KOREA_BOUNDS = { latMin: 33, latMax: 39, lngMin: 124, lngMax: 132 };
 const inKorea = (lat: number, lng: number) =>
@@ -38,7 +51,51 @@ export default function StartPickerScreen() {
   // Monotonic id so a slow reverse-geocode can't overwrite a newer tap's label
   const geocodeSeq = useRef(0);
 
+  // ── Address search (S1) ────────────────────────────────────────────────────
+  const [query, setQuery]     = useState('');
+  // null = list hidden; [] = completed search with no hits (empty state)
+  const [results, setResults] = useState<Place[] | null>(null);
+  const searchSeq = useRef(0);
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Bias center follows the visible map, not user GPS — pan then search
+  const centerRef = useRef({ lat: initLat, lng: initLng });
+  const mapRef = useRef<MapView>(null);
+
+  useEffect(() => {
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    const q = query.trim();
+    if (q.length < SEARCH_MIN_CHARS) {
+      searchSeq.current++; // invalidate any in-flight search
+      setResults(null);
+      return;
+    }
+    const seq = ++searchSeq.current;
+    debounceTimer.current = setTimeout(() => {
+      searchPlaces(q, centerRef.current.lat, centerRef.current.lng)
+        .then(rows => { if (searchSeq.current === seq) setResults(rows); })
+        // Silent-fail to the empty state — search is auxiliary, map-tap always works
+        .catch(() => { if (searchSeq.current === seq) setResults([]); });
+    }, SEARCH_DEBOUNCE_MS);
+    return () => { if (debounceTimer.current) clearTimeout(debounceTimer.current); };
+  }, [query]);
+
+  function pickResult(place: Place) {
+    geocodeSeq.current++; // a pending map-tap reverse-geocode must not overwrite
+    setPicked(place.coordinate);
+    setLabel(place.name);  // Kakao place name beats a reverse-geocoded label
+    setResults(null);
+    Keyboard.dismiss();
+    mapRef.current?.animateToRegion({
+      latitude: place.coordinate.lat,
+      longitude: place.coordinate.lng,
+      latitudeDelta: 0.01,
+      longitudeDelta: 0.01,
+    }, 350);
+  }
+
   function onMapPress(lat: number, lng: number) {
+    setResults(null);
+    Keyboard.dismiss();
     setPicked({ lat, lng });
     setLabel(null);
     const seq = ++geocodeSeq.current;
@@ -64,6 +121,7 @@ export default function StartPickerScreen() {
   return (
     <View style={st.root}>
       <MapView
+        ref={mapRef}
         style={StyleSheet.absoluteFillObject}
         initialRegion={{
           latitude: initLat,
@@ -74,6 +132,9 @@ export default function StartPickerScreen() {
         onPress={e => {
           const { latitude, longitude } = e.nativeEvent.coordinate;
           onMapPress(latitude, longitude);
+        }}
+        onRegionChangeComplete={r => {
+          centerRef.current = { lat: r.latitude, lng: r.longitude };
         }}
         showsUserLocation
         showsPointsOfInterest={false}
@@ -86,16 +147,56 @@ export default function StartPickerScreen() {
         )}
       </MapView>
 
-      {/* App bar (overlay) */}
+      {/* App bar (overlay): back + search field (S1) */}
       <View style={[st.appBar, { paddingTop: insets.top + 6 }]}>
         <Pressable onPress={() => router.back()} hitSlop={12} style={[st.backBtn, shadows.sm]}>
           <Icon name="arrow-back" size={20} color={C.text} />
         </Pressable>
-        <View style={[st.titleBadge, shadows.sm]}>
-          <Text style={st.titleTxt}>출발지 선택</Text>
+        <View style={[st.searchField, shadows.sm]}>
+          <Icon name="search" size={16} color={C.faint} />
+          <TextInput
+            value={query}
+            onChangeText={setQuery}
+            placeholder="장소·주소 검색"
+            placeholderTextColor={C.faint}
+            style={st.searchInput}
+            autoCorrect={false}
+            returnKeyType="search"
+          />
+          {query.length > 0 && (
+            <Pressable onPress={() => { setQuery(''); setResults(null); }} hitSlop={8}>
+              <Icon name="close-circle" size={16} color={C.faint} />
+            </Pressable>
+          )}
         </View>
-        <View style={{ width: 40 }} />
       </View>
+
+      {/* Search results card (S1) */}
+      {results !== null && (
+        <View style={[st.resultsCard, shadows.md, { top: insets.top + 58 }]}>
+          {results.length === 0 ? (
+            <Text style={st.resultsEmpty}>검색 결과가 없어요</Text>
+          ) : (
+            <ScrollView keyboardShouldPersistTaps="handled" style={{ maxHeight: 264 }}>
+              {results.map((p, i) => (
+                <Pressable
+                  key={`${p.name}-${i}`}
+                  onPress={() => pickResult(p)}
+                  style={({ pressed }) => [st.resultRow, pressed && { opacity: 0.6 }, i > 0 && st.resultRowBorder]}
+                >
+                  <Icon name="location-outline" size={16} color={C.accentGrn} />
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text style={st.resultName} numberOfLines={1}>{p.name}</Text>
+                    <Text style={st.resultSub} numberOfLines={1}>
+                      {[p.category, p.address].filter(Boolean).join(' · ') || '—'}
+                    </Text>
+                  </View>
+                </Pressable>
+              ))}
+            </ScrollView>
+          )}
+        </View>
+      )}
 
       {/* Bottom card */}
       <View style={[st.bottomCard, shadows.md, { paddingBottom: Math.max(insets.bottom, S.md) + S.sm }]}>
@@ -127,10 +228,18 @@ export default function StartPickerScreen() {
 const st = StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
 
-  appBar:   { position: 'absolute', top: 0, left: 0, right: 0, flexDirection: 'row', alignItems: 'center', paddingHorizontal: S.gutter },
+  appBar:   { position: 'absolute', top: 0, left: 0, right: 0, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: S.gutter },
   backBtn:  { width: 40, height: 40, borderRadius: 20, backgroundColor: C.surface, alignItems: 'center', justifyContent: 'center' },
-  titleBadge: { flex: 1, marginHorizontal: 10, alignSelf: 'center', alignItems: 'center', backgroundColor: C.surface, borderRadius: R.pill, paddingVertical: 9 },
-  titleTxt:   { fontSize: 14.5, fontWeight: '700', letterSpacing: -0.3, color: C.text },
+
+  // Search (S1)
+  searchField: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, height: 42, backgroundColor: C.surface, borderRadius: R.pill, paddingHorizontal: 14 },
+  searchInput: { flex: 1, fontSize: 14.5, color: C.text, letterSpacing: -0.3, paddingVertical: 0 },
+  resultsCard:     { position: 'absolute', left: S.gutter, right: S.gutter, backgroundColor: C.surface, borderRadius: R.lg, borderWidth: 1, borderColor: C.border, overflow: 'hidden' },
+  resultsEmpty:    { textAlign: 'center', paddingVertical: 18, fontSize: 13.5, color: C.faint, letterSpacing: -0.2 },
+  resultRow:       { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14, paddingVertical: 11 },
+  resultRowBorder: { borderTopWidth: 1, borderTopColor: C.border },
+  resultName:      { fontSize: 14.5, fontWeight: '600', color: C.text, letterSpacing: -0.3 },
+  resultSub:       { fontSize: 12, color: C.faint, letterSpacing: -0.2, marginTop: 2 },
 
   pickedMarker: { width: 18, height: 18, borderRadius: 9, backgroundColor: C.accentGrn, borderWidth: 4, borderColor: '#fff' },
 
