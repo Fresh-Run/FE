@@ -82,6 +82,16 @@ function RunCard({ run, units, onKudos, onOpen }: {
           <Icon name={run.my_kudos ? 'heart' : 'heart-outline'} size={18} color={run.my_kudos ? C.danger : C.sub} />
           <Text style={[st.kudosCount, run.my_kudos && { color: C.danger }]}>{run.kudos_count}</Text>
         </Pressable>
+        {/* 💬 read-only count — tap opens the post, same as the card body */}
+        <Pressable
+          onPress={onOpen}
+          disabled={!onOpen}
+          hitSlop={8}
+          style={({ pressed }) => [st.kudosBtn, { marginLeft: 14 }, pressed && !!onOpen && { opacity: 0.6 }]}
+        >
+          <Icon name="chatbubble-outline" size={17} color={C.sub} />
+          <Text style={st.kudosCount}>{run.comment_count}</Text>
+        </Pressable>
       </View>
     </Pressable>
   );

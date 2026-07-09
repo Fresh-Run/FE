@@ -89,12 +89,19 @@ function RunCard({ run, name, units, onKudos }: { run: MyRun; name: string; unit
         </View>
       </View>
       {/* Footer — ♥ + count are ONE tap target → likers sheet (own cards
-          can't toggle: self-kudos = 400). No 💬 until run comments ship. */}
+          can't toggle: self-kudos = 400). 💬 is display-only: own runs have
+          no post screen (card tap → activity analysis covers it). */}
       <View style={st.cardFooter}>
-        <Pressable onPress={onKudos} hitSlop={8} style={({ pressed }) => [st.kudosBtn, pressed && { opacity: 0.6 }]}>
-          <Icon name="heart-outline" size={18} color={C.sub} />
-          <Text style={st.kudosCount}>{run.kudos_count}</Text>
-        </Pressable>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <Pressable onPress={onKudos} hitSlop={8} style={({ pressed }) => [st.kudosBtn, pressed && { opacity: 0.6 }]}>
+            <Icon name="heart-outline" size={18} color={C.sub} />
+            <Text style={st.kudosCount}>{run.kudos_count}</Text>
+          </Pressable>
+          <View style={[st.kudosBtn, { marginLeft: 14 }]}>
+            <Icon name="chatbubble-outline" size={17} color={C.sub} />
+            <Text style={st.kudosCount}>{run.comment_count}</Text>
+          </View>
+        </View>
         <Text style={st.visCaption}>{VIS_CAPTION[run.visibility]}</Text>
       </View>
     </Pressable>

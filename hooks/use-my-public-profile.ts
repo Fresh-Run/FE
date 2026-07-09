@@ -24,6 +24,7 @@ export type MyRun = {
   duration_sec: number;
   avg_pace_sec_per_km: number | null;
   kudos_count: number;
+  comment_count: number;
   // Never null on own list — legacy rows are 'followers' server-side (지연 확인)
   visibility: 'public' | 'followers' | 'private';
 };
