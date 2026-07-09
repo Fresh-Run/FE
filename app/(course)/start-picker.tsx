@@ -2,9 +2,9 @@
  * 출발지 선택 — start-point picker for AI course generation (C1 + S1).
  * Two entry paths: map-tap (owner call 2026-07-10, coordinates directly) and
  * address/place search (S1) via GET /api/places — the backend's Kakao Local
- * keyword proxy. Search bias follows the MAP CENTER (not user GPS): the
- * endpoint requires lat/lng and radius_m ≤ 20km, so panning toward a city
- * then searching is how cross-region lookup works.
+ * keyword proxy. Search is NATIONWIDE (BE 61d7656 two-mode contract: no
+ * coords → 전국 정확도순) — the old pan-then-search map-center bias retired
+ * with it; the center ref survives only to scale the jump animation.
  *
  * Server validates Korea bounds (lat 33–39, lng 124–132) — out-of-bounds taps
  * disable the confirm CTA instead of letting generation 422. Kakao results
@@ -57,7 +57,8 @@ export default function StartPickerScreen() {
   const [results, setResults] = useState<Place[] | null>(null);
   const searchSeq = useRef(0);
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Bias center follows the visible map, not user GPS — pan then search
+  // Visible-map center — used only to scale the result-jump animation
+  // (nationwide results can be a cross-country hop from the current view)
   const centerRef = useRef({ lat: initLat, lng: initLng });
   const mapRef = useRef<MapView>(null);
 
@@ -71,7 +72,7 @@ export default function StartPickerScreen() {
     }
     const seq = ++searchSeq.current;
     debounceTimer.current = setTimeout(() => {
-      searchPlaces(q, centerRef.current.lat, centerRef.current.lng)
+      searchPlaces(q) // nationwide mode — no coords, relevance-sorted
         .then(rows => { if (searchSeq.current === seq) setResults(rows); })
         // Silent-fail to the empty state — search is auxiliary, map-tap always works
         .catch(() => { if (searchSeq.current === seq) setResults([]); });
@@ -85,12 +86,18 @@ export default function StartPickerScreen() {
     setLabel(place.name);  // Kakao place name beats a reverse-geocoded label
     setResults(null);
     Keyboard.dismiss();
+    // Cross-country hops (nationwide results) get a slower flight so the
+    // context change reads; nearby picks keep the snappy 350ms.
+    const jumpDeg = Math.max(
+      Math.abs(place.coordinate.lat - centerRef.current.lat),
+      Math.abs(place.coordinate.lng - centerRef.current.lng),
+    );
     mapRef.current?.animateToRegion({
       latitude: place.coordinate.lat,
       longitude: place.coordinate.lng,
       latitudeDelta: 0.01,
       longitudeDelta: 0.01,
-    }, 350);
+    }, jumpDeg > 0.5 ? 900 : 350); // 0.5° ≈ 50km
   }
 
   function onMapPress(lat: number, lng: number) {
