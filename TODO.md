@@ -6,7 +6,7 @@ Simulator declined (no Xcode) — everything below verifies outdoors on the real
 
 **PRE-FLIGHT: app points at staging (`https://freshrun-api.fly.dev`, swapped 2026-07-07) — the old 0a–0c LAN dance (uvicorn restart / IP-drift sed / phone-Safari check) is OBSOLETE; staging is reachable from anywhere on cell data.** Only remaining pre-check: one `curl https://freshrun-api.fly.dev/health` before leaving (fly outage ≠ impossible), and confirm 지연's latest "스테이징 반영됨" covers the BE hash the payloads assume.
 
-- **(a) Calibrated walk** — 150–300m known distance, normal pace, phone carried naturally; instrumented build live; capture the `[track]` Metro log block + 3 numbers (real / app-credited / final `accepted=`/`raw=`) → filter-bug diagnosis per the frame below. **Additions (owner, 2026-07-08):** (a-1) capture ground truth via a SECOND tracking app running simultaneously (or a measured known-length course) and record app-vs-actual; (a-2) the walk MUST complete the full save flow (not just tracking) so the backend `run_tracks` table records raw-vs-kept point counts — enables LAYER ATTRIBUTION: client GPS filter vs backend filter, each layer's in/out counts compared independently. **CORRECTION (2026-07-08, evidence: 탄생기념런 saved with `has_track: false`): a-2 has an unbuilt dependency — the client never sends `gps_track` (tracker buffers lat/lng only; the runs-api SEAM is unconnected). The gps_track upload slice MUST land before the outing or a-2 silently no-ops again.**
+- **(a) Calibrated walk** — 150–300m known distance, normal pace, phone carried naturally; instrumented build live; capture the `[track]` Metro log block + 3 numbers (real / app-credited / final `accepted=`/`raw=`) → filter-bug diagnosis per the frame below. **Additions (owner, 2026-07-08):** (a-1) capture ground truth via a SECOND tracking app running simultaneously (or a measured known-length course) and record app-vs-actual; (a-2) the walk MUST complete the full save flow (not just tracking) so raw-vs-kept point counts exist server-side — enables LAYER ATTRIBUTION: client GPS filter vs backend filter, each layer's in/out counts compared independently. **CORRECTION (2026-07-08, evidence: 탄생기념런 saved with `has_track: false`): a-2 has an unbuilt dependency — the client never sends `gps_track`. → RESOLVED same day: the gps_track upload slice is BUILT + device-verified (배선확인2 `has_track: true`).** **RETRACTION (2026-07-08 audit): the planned "지연 pulls run_tracks counts" ask is UNNECESSARY — `GET /runs/{id}/track` (guide line 110, live-probed: 200 on own tracked run) returns `{polyline, server_distance_km, elev_gain_m, point_count_raw/kept}` — raw/kept is SELF-SERVICE for the outing debrief.**
 - **(b) Filter fix** — from (a)'s log: fix the guilty gate(s), raise `MIN_SAVE_KM` 0.01 → 0.05, strip `DEBUG(short-run)`; re-walk to confirm ~100m credits ~100m.
 - **(c) Item-17 코스 러닝 E2E** — feed → preview → 네 뛸게요 (copy) → course pill/map tracking → save; verify `route_id` set on the run and `copy_count` bumped.
 - **(d) PB modal visual** — pre-seed via Swagger BEFORE heading out: fresh account + one short posted run (low baseline) so the real outdoor run triggers `new_records` → modal (confetti, comparison card, +N caption, CTA-dismiss, 공유 준비 중).
@@ -15,6 +15,8 @@ Simulator declined (no Xcode) — everything below verifies outdoors on the real
 - **(f) 러닝 저장 outdoor half** — map card VISIBLE with the real path; save with typed title + 팔로워만 → `GET /runs` shows title/notes/visibility; 수고했어요 renders the saved title; PB modal + feedback intact post-save. *(Indoor half VERIFIED 2026-07-07, 6/6: compose routing, crash-recovery both paths, too-short gating, ‹-discard-confirm, sheet, old screen unreachable. Build style-matched to canvas screenshots; timeTitle 새벽 04:00–06:59 shipped.)*
 
 **Commit boundaries after the session:** PB modal + item-17 set (9 files incl. `components/pb-celebration.tsx`) commit together; `use-run-tracker.ts` commits after the (b) DEBUG strip. Then the tree is clean.
+
+**Skeleton rider (gated, rides this commit — logged 2026-07-09):** home greeting + 수고했어요 fallback `displayName ?? '러너'` → skeleton (shimmer bar + neutral avatar circle) on true first-load. The data-side fix (use-store per-user name cache + /me/profile sync) shipped separately; this rider is the residual first-frame polish. Identity-stable rule: correct name or visibly-nothing, never a wrong name.
 
 **Xcode/simulator: declined for now** — revisit when dev builds become necessary (HealthKit, IAP, Maestro E2E).
 
@@ -100,6 +102,11 @@ Dev-annoyance, not user-facing-broken — every screen works once past the landi
 ## Frozen — AI 맞춤 코스 path (keep working; no changes without unfreezing)
 
 - One-time unfreeze 2026-07-06 (owner design change, canvas to follow): the distance slider is now UNIT-NATIVE — km 1–30 / mi 0.5–20 (mi floor = smallest mi step above the server's gt=0; 20mi=32.19km fits the verified le=100 bound, no widen-ask needed). Payload stays km (`distanceKm` state is km-internal; unit switches preserve physical distance). Form re-frozen after this change.
+- One-time unfreeze 2026-07-09 (owner-approved P2, AI 코스 선호도 slice): the distance slider's INITIAL value now seeds from `settings.ai_course.default_distance_km` (clamped to the active unit's slider range; 초기화 resets to the seed, not hardcoded 5). Rationale: the form always sends `target_distance_km`, so body-beats-설정 priority would otherwise make the 추천 거리 pref dead weight. Form re-frozen after this change.
+- One-time unfreeze 2026-07-10 (owner-approved C1+C2, create-form canvas parity slice): ① 출발지 section — place label (hook's existing reverse-geocoded `placeName`, previously unrendered) + 변경 → map-tap picker (`app/(course)/start-picker.tsx`, `store/start-point.ts`) + 현재 위치로 재설정; manual point overrides `start` per-request, cleared on form unmount. ② 고급 설정 accordion — 경유지 chips moved inside w/ canvas vocab (편의점/화장실/카페/공원, single-select), 언덕 피하기 seeded-from-settings body override (always sent, never PATCHes settings), 번잡한 길 피하기 → notes-append, read-only 내 기본 설정 footer. 난이도 CUT (no backend field). `RouteInput` gained `avoid_hills` (hooks/use-generate-route.ts). Form re-frozen after this change.
+- **일방통행 activation follow-up (logged 2026-07-10):** `RouteRequest` has `end?: Coordinate` ("omitted = loop") + `prefer_loop` body override — the dead 일방통행 button could go live. Semantics of `prefer_loop:false` without `end` unprobed (upstream was 502ing); needs an end-point picker UX (start-picker is reusable). Own item.
+- **다시 만들기 ↔ `avoid_from_route_id` follow-up (logged 2026-07-10):** regeneration could pass the disliked route's id so the server avoids it ("negative feedback added to location-based avoidance" per OpenAPI). Blocked on the 지연-ask below (field undocumented; feedback endpoint unknown).
+- **Vibes-chip ↔ prefs semantic overlap (follow-up, logged 2026-07-09, owner call ④ = leave as-is):** chips `평탄한 코스`/`오르막 피하기`/`경치 좋은` travel as free-text `notes` while prefs set structured `terrain`/`avoid_hills`/`scenic` — a user with terrain=hill who taps 평탄한 코스 sends the server a contradiction it arbitrates as a hint. Future option: map those three chips to structured per-request overrides (body fields) so chips explicitly beat prefs. Not urgent; touches frozen form territory.
 
 - ~~`.env.local` pinned to a LAN IP~~ **OBSOLETE 2026-07-08** — `EXPO_PUBLIC_API_URL` points at staging (`freshrun-api.fly.dev`) since the 07-07 cutover; the LAN-IP-drift failure class is gone
 - 경로 저장 — result screen's notice still promises "다음 업데이트"; saving a generated route is unimplemented
@@ -126,6 +133,9 @@ Dev-annoyance, not user-facing-broken — every screen works once past the landi
 - ~~지연 ask: run comments~~ **SHE'S SHIPPING IT (announced 2026-07-07):** list/create/delete + `comment_count` batched on run rows, visibility-gated. → see "Blocked on 스테이징 반영됨" below.
 - ~~지연 ask: `DELETE /notifications/{id}`~~ **LANDED 2026-07-07** (204, list 54→53 verified) — swipe-to-delete built same day. She also shipped unrequested `DELETE /notifications` clear-all (probed on demo5: 204, list emptied) — unwired, see design question in the UNBLOCKED section.
 - ~~지연 ask: `crew_announcement` crew_id~~ **SHE'S SHIPPING IT (announced 2026-07-07)** + a full deep-link-id audit across all notification types. Contract per her: OLD rows lack `crew_id` → app degrades those to non-tappable (defensive wiring shipped in the 알림 센터 slice — new rows become tappable automatically). → see "Blocked on 스테이징 반영됨" below.
+- **지연 ask (2026-07-10): `avoid_from_route_id` documentation + feedback endpoint** — `RouteRequest.avoid_from_route_id` exists in OpenAPI ("past route's negative feedback is added to the location-based avoidance") but not in the guide. Questions: how does negative feedback get recorded (is there a route-feedback POST, matching the canvas 좋았어요/별로였어요 flow?), and should the guide document the field? Unblocks the 다시 만들기 follow-up.
+- **지연 flag (2026-07-10): staging generation upstream 502ing** — three consecutive `route_generation_failed` on `POST /routes/generate` (~3–4s each), including a bare `{start, target_distance_km}` body that succeeded 07-09 (which also saw one transient 502). Looks like OpenAI/지도 upstream health, not payload.
+- **지연 question PENDING (asked 2026-07-09, decision ①): ai_course premium gating** — server applies `settings.ai_course` 전 티어 공통 (guide line 266; free-tier PATCH probed 200), but the app's profile row is Premium-locked. Awaiting her intent: gate server-side, or open the row to all tiers? App ships lock-as-is with a pending-marker comment in `profile.tsx` (flip = remove `locked` + gate ternary, two lines).
 
 ## ~~Blocked on 스테이징 반영됨~~ UNBLOCKED 2026-07-07 (deploy announced + probe-verified; shapes captured)
 
@@ -144,6 +154,7 @@ Dev-annoyance, not user-facing-broken — every screen works once past the landi
 - ~~`POST /api/runs` path field~~ **LANDED** (BE `3779905`, verified 2026-07-06): `gps_track: Optional[list[GpsPoint]]` where `GpsPoint = {lat, lng, t: epoch ms, acc?: m ("강력 권장"), alt?}` — server pipeline owns validation (filters, splits, anti-cheat; out-of-bbox points silently dropped). **Wiring wants `t` + `acc` retention in the tracker's path buffer** (today we keep lat/lng only) — small `use-run-tracker` change that RIDES THE WALK CHAIN (filter fix first; don't upload known-broken tracks to a validating server). Then `SEAM (path upload)` in `lib/runs-api.ts` connects directly.
 - `RouteResponse` has no `id` — needed for `runs.route_id` linking after generation
 - ~~`OPENWEATHER_API_KEY` missing~~ **RESOLVED 2026-07-06** — key added to backend `.env` (owner), server restarted, `GET /api/weather` verified live with real Seoul data (200, full guide shape incl. `running_index.personalized`). **Weather integration (retire `weather-mock.ts`: home strip, weather-detail, chooser temp) is now fully unblocked** — S/M item, needs plan approval.
+- **지연 ask (soft, 2026-07-08): UV index on `GET /weather`** — the 날씨 상세 시안 has a 자외선 tile; the endpoint has no UV field (OpenWeather OneCall carries `uvi`). Tile is hidden until it lands (W1 owner call).
 - **지연 ask (soft, 2026-07-08): `GET /runs` pagination** — limit-only today (offset ignored); what's the limit ceiling, and is offset/cursor planned? The Supabase→API migration capped the 기록 tab at `limit=100`; histories beyond that truncate until pagination exists.
 - `PublicRouteResponse` has no `is_bookmarked` flag — feed v1 works around it with one `GET /routes/bookmarked?limit=100` per feed load (stale icons possible past 100 bookmarks); a response flag like `is_liked` would remove the extra call
 - `GET /routes/{id}` is owner-only, even for public routes — blocks id-based course-preview fetch; feed v1 works around it with an in-memory handoff (`store/pending-course.ts`)
@@ -159,6 +170,7 @@ Dev-annoyance, not user-facing-broken — every screen works once past the landi
 - New premium endpoints landed 2026-07-06 (future items): `POST /routes/{id}/coach-script` (오디오 코치, premium, 403 premium_required for free), `GET /me/insights/monthly` (월간 인사이트, premium).
 - **Design decision (owner+backend, 2026-07-07): AI feedback/coach-insight card is REMOVED from the 수고했어요 screen (run-result)** — never build it there. If/when coach-script ships, it lives on activity detail or its own surface, not the completion screen. (Nothing to remove app-side — the card was never built.)
 
+- **F — crew-create location + tags (paired follow-up to the 둘러보기 location filter, logged 2026-07-09):** creation must send `lat/lng/sido/sigungu` (body fields live, optional) + the 13-tag server vocabulary UI (목록 밖 422). **DECAY RISK: until F lands, newly created crews are location-less** — null distance, sorted last, invisible to sido filters — so the 둘러보기 filter's usefulness erodes with every new crew. Pair with the existing crew-create follow-ups; reverse-geocode-to-sido needs the Apple→표준명 normalization table (deferred from the filter slice) or the Kakao Local key (standing ask).
 - Owner-side invite code UI (issue/rotate/share) — **correction 2026-07-07: a bundle design DOES exist** (`FrCrewInvite`, crew-create.jsx:380); earlier "no design" note was wrong. Buildable as its own item; the create-success modal's 초대하기 CTA (준비 중 for now) is its entry point.
 - **첫 챌린지 at crew creation — deferred (owner call 2026-07-07)**: pair with the challenge-display item (crew-detail renders no challenges yet; `POST /crews/{id}/challenges` exists). The design's 첫 챌린지 form block joins that item.
 - Invite-code entry sheet + row are invented UI — canvas design to follow; flag visual mismatches then (user note, 2026-07-05).
@@ -172,6 +184,10 @@ Dev-annoyance, not user-facing-broken — every screen works once past the landi
 
 ## Canvas parity list — design-side corrections owed (code is right; don't re-flag as drift)
 
+- **AI 코스 선호도 stepper cap 32, not 42** — canvas `FrAICoursePrefs` stepper runs 1–42 km, but the backend bound is `default_distance_km` le=32.2 (422 above it). Shipped capped at 32 (schema wins, owner call ② 2026-07-09); canvas max to be corrected.
+- **출발지 picker = map-tap, not admin drill-down** — canvas `FrLocationPicker` (시/도→구/군→동) emits admin names, not the coordinates `start{lat,lng}` needs; forward-geocoding + a nationwide 동 dataset were the cost. Shipped as map-tap on react-native-maps with Apple reverse-geocode label (owner call ① 2026-07-10); canvas picker to be revisited or re-drawn as map-tap.
+- **고급 설정 난이도 3-way CUT** — no backend difficulty field (guide+OpenAPI+probe 2026-07-10); mapping onto `terrain` would alias the prefs 지형 control. Owner ruling: 지형 in AI 코스 선호도 IS the difficulty control now; canvas 고급 설정 to drop 난이도 (accordion hint shipped as "경유지 · 회피").
+- **경유지 키워드 single-select** — canvas allows multi-select but `pitstop_keyword` takes one string ≤50. Shipped single-select (contract-faithful); canvas to be corrected or a multi-keyword field becomes a 지연-ask.
 - **timeTitle 7-bucket** — canvas run-save suggestion fn is 5-bucket; owner KEPT code's 7 buckets (새벽 04:00–06:59 … 야간 21:00–03:59), canvas to be updated (also noted in the 러닝 저장 delta calls above).
 - **햅틱 피드백 sub-label (설정 hub)** — canvas says "목표 달성 시 진동", which mis-describes live behavior (haptics fire on button interactions — hold-stop — not goal events). Shipped as "버튼 조작 시 진동" (owner, 2026-07-07); canvas copy to be corrected.
 - **💬 omission (내 프로필 card footer)** — app-side interim, NOT a canvas correction: canvas footer shows 💬 + count, but run comments don't exist server-side (지연 ask logged). Shipping a dead 💬 would violate the honesty rule; add it (canvas-verbatim) when her comments API lands.
@@ -188,6 +204,30 @@ Dev-annoyance, not user-facing-broken — every screen works once past the landi
 Entry wired as the 뛰러 가기 chooser bottom card (`create.tsx` — the dead placeholder row went live: push + filled/outline icon + first-2-titles sub + count pill, focus-refetched). The header-icon spec was a stale premise (FrGreeting has bell+avatar only — verified on live canvas); good-catch hold, owner reverted to canvas.
 
 Parity notes (app-side interims, canvas refresh candidates): undo snackbar on unsave (no 시안); tag chips dropped (no server tags); region chips derive from summary keywords (no area field).
+
+## ITEM (scheduled, FIRST in the post-gate queue): AI 월간 분석 — slice I1 (decisions locked 2026-07-08)
+
+Endpoint + design both exist (recon 2026-07-08: `GET /me/insights/monthly` live-probed premium/free; canvas `FrMonthlyInsight` fetched). **Full slice, no interim** — the tier-aware 기록-tab card fix rides the build (today the card is tier-blind with a dead 보기 button: premium sees an upsell for what they own, the 6e2ddd7 bug class).
+
+**Locked decisions (owner, 2026-07-08 — don't re-ask at build):**
+- Hero: goal ring REPLACED by 총 거리 + 전월 delta framing (`stats.delta_distance_km`); 월 목표 링 has no backend (goal feature is 후속 per guide).
+- Metric grid: 4-tile recomposition — 러닝 횟수 / 총 시간 / 평균 페이스 / 최장 러닝 (from `stats`); the 시안's 고도/칼로리/심박 tiles have no data.
+- HR-zones + terrain cards DROPPED per guide line 132 (심박존·심박·누적고도·칼로리·지형분석·월목표링 미제공).
+
+**Build requirements:** `lib/insights-api.ts` + `app/monthly-insight.tsx` (month stepper reuses the 기록 tab's month logic; `ai.plan` slot→icon: goal=target, focus=flame, challenge=trending; AI text follows `settings.lang`); **`ai: null` empty state required** (zero-run month); **month 1–12 guard** (422 otherwise); free tier never navigates (records card gates on `isPremium`; 403 `premium_required` handled defensively anyway). Endpoint is premium-gated but UNMETERED (not in the ai_generation quota family); `ai` block server-cached.
+
+**Canvas parity note owed:** `FrMonthlyInsight` needs a refresh pass reflecting the guide-declared gaps — recomposed hero (no ring), 4-tile grid, dropped HR/terrain cards, **and the 07-09 removal: no AI coaching card / 추천 플랜** (owner + backend decision; ai block still served, unrendered).
+
+**→ I1 BUILT 2026-07-09 (pre-outing, sequencing override)** with the 07-09 revision applied.
+
+## ITEM (future): AI 월간 분석 — slice I2 (replacement content)
+
+Replaces the removed AI coaching/추천 플랜 section with **꾸준함/패턴 심화** content (owner + backend direction, 2026-07-09; candidate list referenced from the I1 recon: consistency %, streak framing, weekday/time-of-day pattern insights computed from the existing `pattern` block — no new backend needed unless the deep-dive wants more). Design pass required before build (no 시안 for the replacement). Do NOT render the ai block here either — it stays unrendered per the 07-09 decision unless explicitly reversed.
+
+## Real maps — slice 2+ notes (slice 1 committed `950a30e`)
+
+- **RETRACTION (2026-07-08 audit): the maps-recon "no endpoint returns a run's stored track" claim was WRONG** — `GET /runs/{id}/track` has existed since BE `3779905` (07-06, guide line 110; own-only, 404 trackless/foreign, gate on `has_track`). The recon's evidence was app-code greps + row shapes only; the guide/OpenAPI check was skipped (disclosed to owner + 지연 — API had no bug). **Consequence: run-card + activity-detail real maps are UNBLOCKED for tracked runs** — a future slice fetches the track polyline per run (`has_track` pre-check; trackless legacy runs keep the stylized fallback). No 지연 ask needed.
+- Slice 2 (gated, rides/follows item-17 commit): feed cards + detail sheet (perf work: card-mode + windowing), preview hero, run-save/saved/result. Slice 3: tracking live map (own item, post-outing).
 
 ## T2 — 다크 렌더링 sweep (named, sized — approved for TODO 2026-07-06)
 

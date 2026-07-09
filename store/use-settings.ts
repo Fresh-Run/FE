@@ -10,6 +10,7 @@ import {
   DEFAULT_SETTINGS,
   getSettings,
   patchSettings,
+  type AiCourseSettings,
   type RunSettings,
   type UserSettings,
 } from '@/lib/settings-api';
@@ -44,6 +45,10 @@ type SettingsStore = {
   setTheme: (theme: UserSettings['theme']) => Promise<boolean>;
   /** Optimistic lang write; persist-only — runtime i18n is a later item. */
   setLang: (lang: UserSettings['lang']) => Promise<boolean>;
+  /** Optimistic ai_course partial write; resolves false (and rolls back) on
+      failure. Consumed server-side by POST /routes/generate when the request
+      body omits a field (guide: body > 내 설정 > 서버 기본값). */
+  setAiCourse: (patch: Partial<AiCourseSettings>) => Promise<boolean>;
 };
 
 let hydrating = false;
@@ -145,6 +150,23 @@ export const useSettings = create<SettingsStore>((set, get) => ({
     cache(next);
     try {
       const server = await patchSettings({ lang });
+      set({ settings: server, synced: true });
+      cache(server);
+      return true;
+    } catch {
+      set({ settings: prev }); // rollback
+      cache(prev);
+      return false;
+    }
+  },
+
+  setAiCourse: async (patch) => {
+    const prev = get().settings;
+    const next = { ...prev, ai_course: { ...prev.ai_course, ...patch } };
+    set({ settings: next }); // optimistic
+    cache(next);
+    try {
+      const server = await patchSettings({ ai_course: patch });
       set({ settings: server, synced: true });
       cache(server);
       return true;

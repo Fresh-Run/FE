@@ -304,10 +304,11 @@ export default function ProfileScreen() {
           </View>
         )}
 
-        {/* 러닝 & AI — locked for lite; premium gets chevrons + 준비 중 taps
-            (destinations are design-ahead: FrAICoursePrefs/FrAudioCoach have
-            no code screens yet — parity-noted interim) */}
+        {/* 러닝 & AI — locked for lite; 오디오 코치 stays design-ahead
+            (FrAudioCoach has no code screen yet — parity-noted interim) */}
         <SettingGroup title="러닝 & AI">
+          {/* Premium lock kept pending 지연's gating answer — server applies
+              ai_course 전 티어 공통 (free PATCH probed 200, 2026-07-09) */}
           <SettingRow
             icon={<Icon name="sparkles-outline" size={19} color="#3D8BFF" />}
             iconBg="#3D8BFF18"
@@ -315,7 +316,7 @@ export default function ProfileScreen() {
             badge="Premium"
             locked={!isPremium}
             onPress={isPremium
-              ? () => Alert.alert('준비 중', 'AI 코스 선호도 설정은 다음 업데이트에서 지원돼요.')
+              ? () => router.push('/ai-course-prefs' as any)
               : undefined}
           />
           <SettingRow

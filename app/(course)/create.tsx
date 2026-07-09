@@ -14,7 +14,7 @@
 import Slider from '@react-native-community/slider';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -31,6 +31,7 @@ import { RealMap } from '@/components/real-map';
 import { Icon } from '@/components/ui';
 import { useCurrentLocation } from '@/hooks/use-current-location';
 import { KM_PER_MI } from '@/lib/run-format';
+import { useStartPoint } from '@/store/start-point';
 import { useSettings } from '@/store/use-settings';
 import {
   useGenerateRoute,
@@ -41,12 +42,20 @@ import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const PITSTOP_OPTIONS = ['편의점', '공원', '카페', '지하철역'] as const;
+// Canvas-aligned vocab (C2, 2026-07-10): 화장실/공원 in, 지하철역 out.
+// Single-select stays — pitstop_keyword takes ONE string ≤50 (canvas
+// multi-select cut per contract; parity note in TODO.md).
+const PITSTOP_OPTIONS = ['편의점', '화장실', '카페', '공원'] as const;
 
 const VIBE_OPTIONS = [
   '한강변', '조용한 골목', '평탄한 코스',
   '오르막 피하기', '경치 좋은', '야경 명소',
 ] as const;
+
+// 고급 설정 footer — labels for the invisible generation defaults
+const TERRAIN_LABEL = { flat: '평지 우선', mixed: '균형', hill: '언덕 훈련' } as const;
+const SURFACE_LABEL = { any: '노면 무관', paved: '포장도로', trail: '트레일' } as const;
+
 type ViewState     = 'form' | 'generating' | 'result';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -78,6 +87,32 @@ function Chip({
         {label}
       </Text>
     </Pressable>
+  );
+}
+
+function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <Pressable
+      onPress={() => onChange(!on)}
+      style={[st.toggleTrack, { backgroundColor: on ? C.accent : C.border }]}
+      hitSlop={6}
+    >
+      <View style={[st.toggleThumb, { transform: [{ translateX: on ? 18 : 0 }] }]} />
+    </Pressable>
+  );
+}
+
+function AdvToggleRow({ label, sub, on, onChange }: {
+  label: string; sub: string; on: boolean; onChange: (v: boolean) => void;
+}) {
+  return (
+    <View style={st.advToggleRow}>
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text style={st.advToggleLabel}>{label}</Text>
+        <Text style={st.advToggleSub}>{sub}</Text>
+      </View>
+      <Toggle on={on} onChange={onChange} />
+    </View>
   );
 }
 
@@ -128,15 +163,41 @@ export default function CreateScreen() {
   // mi steps. Backend bound verified: target_distance_km gt=0 le=100 — 20mi
   // (32.19km) fits, no clamp needed. Unit switches preserve physical distance
   // because only the km value is stored.
-  const [distanceKm, setDistanceKm] = useState(5);
+  // Seed from settings.ai_course.default_distance_km: the server consults it
+  // only when the body omits distance, and this form always sends it — so the
+  // pref lands here as the slider's initial value instead. Clamped to the
+  // active unit's slider range; pre-sync cold start = server default (5.0).
+  const seedKm = useMemo(() => {
+    const { units: u, ai_course } = useSettings.getState().settings;
+    const [lo, hi] = u === 'mi' ? [0.5 * KM_PER_MI, 20 * KM_PER_MI] : [1, 30];
+    return Math.min(hi, Math.max(lo, ai_course.default_distance_km));
+  }, []);
+  const [distanceKm, setDistanceKm] = useState(seedKm);
   const units = useSettings(s => s.settings.units);
   const isMi = units === 'mi';
   const distDisplay = isMi ? distanceKm / KM_PER_MI : distanceKm;
   const [pitstop, setPitstop]       = useState<string | null>(null);
   const [vibes, setVibes]           = useState<string[]>([]);
 
+  // ── 고급 설정 (C2) ──────────────────────────────────────────────────────────
+  // 언덕 피하기 seeds from settings.ai_course and is ALWAYS sent as a body
+  // override (this-request-only; never PATCHes settings). 초기화 → seed.
+  const seedAvoidHills = useMemo(() => useSettings.getState().settings.ai_course.avoid_hills, []);
+  const [avoidHills, setAvoidHills] = useState(seedAvoidHills);
+  // 번잡한 길 피하기 has no structured field — travels as a notes hint
+  // (contract-sanctioned free-form channel, owner call ② 2026-07-10)
+  const [avoidBusy, setAvoidBusy]   = useState(false);
+  const [advOpen, setAdvOpen]       = useState(false);
+  // Live prefs for the read-only defaults footer
+  const aiPrefs = useSettings(s => s.settings.ai_course);
+
   // ── Location — shared hook handles permission + fallback ────────────────────
-  const { status: locationStatus, coordinate: startCoord } = useCurrentLocation();
+  const { status: locationStatus, coordinate: gpsCoord, placeName } = useCurrentLocation();
+  // Manual override from the start-picker (C1); cleared when the form unmounts
+  // so the next session starts back on GPS
+  const manualStart = useStartPoint(s => s.point);
+  useEffect(() => () => useStartPoint.getState().clear(), []);
+  const startCoord = manualStart ? { lat: manualStart.lat, lng: manualStart.lng } : gpsCoord;
 
   // ── Flow state ──────────────────────────────────────────────────────────────
   const [viewState, setViewState] = useState<ViewState>('form');
@@ -161,12 +222,14 @@ export default function CreateScreen() {
     setViewState('generating');
     setGenError(null);
     try {
-      const notes = vibes.length > 0 ? vibes.join(', ') : null;
+      const noteParts = [...vibes, ...(avoidBusy ? ['번잡한 길 피하기'] : [])];
+      const notes = noteParts.length > 0 ? noteParts.join(', ') : null;
       const result = await generate({
         start: startCoord,
         target_distance_km: distanceKm,
         pitstop_keyword: pitstop,
         notes,
+        avoid_hills: avoidHills,
       }, controller.signal);
       if (genCancelledRef.current) return;
       setRoute(result);
@@ -316,7 +379,14 @@ export default function CreateScreen() {
         </Pressable>
         <Text style={st.headerTitle}>코스 설정</Text>
         <Pressable
-          onPress={() => { setDistanceKm(5); setPitstop(null); setVibes([]); }}
+          onPress={() => {
+            setDistanceKm(seedKm);
+            setPitstop(null);
+            setVibes([]);
+            setAvoidHills(seedAvoidHills);
+            setAvoidBusy(false);
+            useStartPoint.getState().clear();
+          }}
           hitSlop={8}
           style={st.resetBtn}
         >
@@ -369,6 +439,42 @@ export default function CreateScreen() {
 
         <View style={st.sectionDivider} />
 
+        {/* ── Section: 출발지 (C1) ──────────────────────────────────── */}
+        <View style={st.section}>
+          <SectionLabel text="출발지" />
+          <View style={st.startRow}>
+            <View style={st.startIcon}>
+              <Icon name="locate" size={16} color={C.accentGrn} />
+            </View>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={st.startLabel} numberOfLines={1}>
+                {manualStart ? manualStart.label
+                  : locationStatus === 'fetching' ? '위치 확인 중...'
+                  : locationStatus === 'denied'   ? '서울 중심 (위치 권한 없음)'
+                  : placeName}
+              </Text>
+              <Text style={st.startSub}>{manualStart ? '직접 선택한 위치' : '현재 위치'}</Text>
+            </View>
+            <Pressable
+              onPress={() => router.push({
+                pathname: '/(course)/start-picker' as never,
+                params: { lat: String(startCoord.lat), lng: String(startCoord.lng) },
+              })}
+              hitSlop={8}
+            >
+              <Text style={st.startChangeTxt}>변경</Text>
+            </Pressable>
+          </View>
+          {manualStart && (
+            <Pressable onPress={() => useStartPoint.getState().clear()} style={st.gpsRestoreBtn} hitSlop={6}>
+              <Icon name="navigate-outline" size={13} color={C.accentGrn} />
+              <Text style={st.gpsRestoreTxt}>현재 위치로 재설정</Text>
+            </Pressable>
+          )}
+        </View>
+
+        <View style={st.sectionDivider} />
+
         {/* ── Section: 경로 유형 ─────────────────────────────────────── */}
         <View style={st.section}>
           <SectionLabel text="경로 유형" />
@@ -386,29 +492,6 @@ export default function CreateScreen() {
                 <Icon name="lock-closed-outline" size={9} color={C.faint} />
               </View>
             </Pressable>
-          </View>
-        </View>
-
-        <View style={st.sectionDivider} />
-
-        {/* ── Section: 경유지 (피스톱) ──────────────────────────────── */}
-        <View style={st.section}>
-          <SectionLabel text="경유지" />
-          <View style={st.chipRow}>
-            {/* 없음 chip — active when nothing is selected */}
-            <Chip
-              label="없음"
-              active={pitstop === null}
-              onPress={() => setPitstop(null)}
-            />
-            {PITSTOP_OPTIONS.map(opt => (
-              <Chip
-                key={opt}
-                label={opt}
-                active={pitstop === opt}
-                onPress={() => setPitstop(prev => prev === opt ? null : opt)}
-              />
-            ))}
           </View>
         </View>
 
@@ -432,18 +515,63 @@ export default function CreateScreen() {
 
         <View style={st.sectionDivider} />
 
-        {/* ── Location status row ────────────────────────────────────── */}
-        <View style={st.locationRow}>
-          {locationStatus === 'fetching' ? (
-            <ActivityIndicator size="small" color={C.faint} />
-          ) : (
-            <View style={[st.locationDot, { backgroundColor: locationStatus === 'granted' ? C.accentGrn : C.faint }]} />
+        {/* ── Section: 고급 설정 accordion (C2) ─────────────────────── */}
+        <View style={st.section}>
+          <Pressable onPress={() => setAdvOpen(o => !o)} style={st.advHeader} hitSlop={4}>
+            <Icon name="options-outline" size={17} color={C.sub} />
+            <Text style={st.advHeaderTxt}>고급 설정</Text>
+            {!advOpen && <Text style={st.advHeaderHint}>경유지 · 회피</Text>}
+            <View style={{ flex: 1 }} />
+            <Icon name={advOpen ? 'chevron-up' : 'chevron-down'} size={17} color={C.faint} />
+          </Pressable>
+          {advOpen && (
+            <View style={st.advBody}>
+              {/* 경유지 키워드 — single-select → pitstop_keyword */}
+              <Text style={st.advSubLabel}>경유지 키워드</Text>
+              <View style={st.chipRow}>
+                <Chip
+                  label="없음"
+                  active={pitstop === null}
+                  onPress={() => setPitstop(null)}
+                />
+                {PITSTOP_OPTIONS.map(opt => (
+                  <Chip
+                    key={opt}
+                    label={opt}
+                    active={pitstop === opt}
+                    onPress={() => setPitstop(prev => prev === opt ? null : opt)}
+                  />
+                ))}
+              </View>
+
+              {/* 회피 — per-request avoid_hills override + notes-append hint */}
+              <AdvToggleRow
+                label="언덕 피하기"
+                sub={`내 설정 기본값: ${seedAvoidHills ? '켬' : '끔'}`}
+                on={avoidHills}
+                onChange={setAvoidHills}
+              />
+              <AdvToggleRow
+                label="번잡한 길 피하기"
+                sub="사람 많은 길을 피해서 추천"
+                on={avoidBusy}
+                onChange={setAvoidBusy}
+              />
+
+              {/* Read-only prefs visibility (owner scope addition 2026-07-10) */}
+              <View style={st.advFooter}>
+                <Text style={st.advFooterTxt}>
+                  내 기본 설정: {[
+                    TERRAIN_LABEL[aiPrefs.terrain],
+                    SURFACE_LABEL[aiPrefs.surface],
+                    aiPrefs.scenic ? '경치 우선' : null,
+                    aiPrefs.prefer_loop ? '순환 선호' : null,
+                  ].filter(Boolean).join(' · ')}
+                </Text>
+                <Text style={st.advFooterSub}>프로필 › AI 코스 선호도에서 변경할 수 있어요</Text>
+              </View>
+            </View>
           )}
-          <Text style={st.locationTxt}>
-            {locationStatus === 'fetching'  && '위치 확인 중...'}
-            {locationStatus === 'granted'   && '현재 위치에서 시작'}
-            {locationStatus === 'denied'    && '서울 중심으로 시작 (위치 권한 없음)'}
-          </Text>
         </View>
       </ScrollView>
 
@@ -510,10 +638,29 @@ const st = StyleSheet.create({
   chipTxtActive: { color: C.accentGrn },
   chipTxtLocked: { color: C.faint },
 
-  // Location row
-  locationRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: S.gutter, paddingVertical: S.lg },
-  locationDot: { width: 8, height: 8, borderRadius: 4 },
-  locationTxt: { fontSize: 13, color: C.faint, letterSpacing: -0.2 },
+  // 출발지 row (C1)
+  startRow:       { flexDirection: 'row', alignItems: 'center', gap: 11, backgroundColor: C.surfaceAlt, borderWidth: 1, borderColor: C.border, borderRadius: R.md, paddingHorizontal: 13, paddingVertical: 11 },
+  startIcon:      { width: 34, height: 34, borderRadius: 17, backgroundColor: C.accentDim, alignItems: 'center', justifyContent: 'center' },
+  startLabel:     { fontSize: 14.5, fontWeight: '700', color: C.text, letterSpacing: -0.3 },
+  startSub:       { fontSize: 11.5, color: C.faint, letterSpacing: -0.2, marginTop: 2 },
+  startChangeTxt: { fontSize: 12.5, fontWeight: '700', color: C.sub, letterSpacing: -0.2, padding: 4 },
+  gpsRestoreBtn:  { flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start', marginTop: 10, paddingHorizontal: 2 },
+  gpsRestoreTxt:  { fontSize: 12.5, fontWeight: '700', color: C.accentGrn, letterSpacing: -0.2 },
+
+  // 고급 설정 accordion (C2)
+  advHeader:     { flexDirection: 'row', alignItems: 'center', gap: 9 },
+  advHeaderTxt:  { fontSize: 14.5, fontWeight: '700', color: C.text, letterSpacing: -0.3 },
+  advHeaderHint: { fontSize: 12, color: C.faint, letterSpacing: -0.2 },
+  advBody:       { paddingTop: S.md },
+  advSubLabel:   { fontSize: 12, fontWeight: '700', color: C.faint, letterSpacing: -0.2, marginBottom: S.sm },
+  advToggleRow:   { flexDirection: 'row', alignItems: 'center', gap: 12, paddingTop: S.lg },
+  advToggleLabel: { fontSize: 14.5, fontWeight: '600', color: C.text, letterSpacing: -0.3 },
+  advToggleSub:   { fontSize: 12, color: C.faint, letterSpacing: -0.2, marginTop: 3 },
+  toggleTrack:    { width: 46, height: 28, borderRadius: 14, padding: 3, justifyContent: 'center' },
+  toggleThumb:    { width: 22, height: 22, borderRadius: 11, backgroundColor: '#fff' },
+  advFooter:    { marginTop: S.lg, backgroundColor: C.surfaceAlt, borderRadius: R.md, padding: 12 },
+  advFooterTxt: { fontSize: 12.5, color: C.sub, letterSpacing: -0.2, lineHeight: 18 },
+  advFooterSub: { fontSize: 11.5, color: C.faint, letterSpacing: -0.2, marginTop: 4 },
 
   // Form footer
   formFooter: { position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: S.gutter, paddingTop: S.md, backgroundColor: C.bg, borderTopWidth: 1, borderTopColor: C.border },

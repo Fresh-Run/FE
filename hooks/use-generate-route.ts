@@ -24,10 +24,13 @@ export type GeneratedRoute = {
 };
 
 export type RouteInput = {
-  start: Coordinate;         // device GPS or Seoul fallback
+  start: Coordinate;         // device GPS, Seoul fallback, or manual pick (C1)
   target_distance_km: number;
   pitstop_keyword: string | null;
-  notes: string | null;      // joined vibe chip labels
+  notes: string | null;      // joined vibe chip labels (+ 회피 hints, C2)
+  // Per-request override of settings.ai_course.avoid_hills — the guide's
+  // body > 내 설정 priority; false counts as an explicit value server-side.
+  avoid_hills: boolean;
   // end: omitted → backend treats as loop
   // avoid_from_route_id: not yet surfaced in the creation UI
 };
@@ -67,6 +70,7 @@ async function generate(input: RouteInput, signal?: AbortSignal): Promise<Genera
         target_distance_km: input.target_distance_km,
         pitstop_keyword: input.pitstop_keyword,
         notes: input.notes,
+        avoid_hills: input.avoid_hills,
       }),
       signal: controller.signal,
     });
