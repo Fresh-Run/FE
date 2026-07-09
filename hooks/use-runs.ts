@@ -17,6 +17,18 @@ export type Run = {
   avg_pace_sec_per_km: number | null;
   notes: string | null;
   route_id: string | null;
+  // ── R3' additions (BE 4cd5685: 타인 공개범위 내 정제 응답) ──────────────
+  /** null on OTHERS' runs (sanitized) — never render for non-own rows */
+  visibility?: 'public' | 'followers' | 'private' | null;
+  user_id?: string;
+  title?: string | null;
+  has_track?: boolean;
+  kudos_count?: number;
+  comment_count?: number;
+  /** Signed URLs, 1h expiry — use response values directly, NEVER cache (계약). Detail responses only. */
+  photos?: string[] | null;
+  /** First-photo thumb (signed) on list rows */
+  photo_thumb?: string | null;
 };
 
 // ─── useRuns — full list for the signed-in user ───────────────────────────────

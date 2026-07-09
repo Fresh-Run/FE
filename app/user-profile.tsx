@@ -42,14 +42,16 @@ function Avatar({ name, size, ring = C.border }: { name: string; size: number; r
 }
 
 // Run card — other-user variant: ♥ is a real toggle (my_kudos), no 💬,
-// no visibility caption (approved deltas).
-function RunCard({ run, units, onKudos }: {
+// no visibility caption (approved deltas). Card tap → 러닝 포스트 (R3',
+// BE 4cd5685 opened non-owner run detail) with entry-payload seeds.
+function RunCard({ run, units, onKudos, onOpen }: {
   run: UserRun;
   units: ReturnType<typeof useSettings.getState>['settings']['units'];
   onKudos: () => void;
+  onOpen?: () => void;
 }) {
   return (
-    <View style={[st.card, shadows.sm]}>
+    <Pressable onPress={onOpen} disabled={!onOpen} style={({ pressed }) => [st.card, shadows.sm, pressed && !!onOpen && { opacity: 0.85 }]}>
       <View style={st.cardHead}>
         <Avatar name={run.nickname} size={36} />
         <View style={{ flex: 1, minWidth: 0 }}>
@@ -81,7 +83,7 @@ function RunCard({ run, units, onKudos }: {
           <Text style={[st.kudosCount, run.my_kudos && { color: C.danger }]}>{run.kudos_count}</Text>
         </Pressable>
       </View>
-    </View>
+    </Pressable>
   );
 }
 
@@ -204,7 +206,22 @@ export default function UserProfileScreen() {
               : item;
             return (
               <View style={{ paddingHorizontal: S.gutter }}>
-                <RunCard run={shown} units={units} onKudos={() => toggleKudos(item)} />
+                <RunCard
+                  run={shown}
+                  units={units}
+                  onKudos={() => toggleKudos(item)}
+                  // Own rows keep no tap here (내 프로필/기록 → activity is
+                  // the own-run analysis path); others → 러닝 포스트
+                  onOpen={!shown.is_mine ? () => router.push({
+                    pathname: '/run-post' as never,
+                    params: {
+                      runId: shown.run_id,
+                      nickname: shown.nickname,
+                      myKudos: shown.my_kudos ? '1' : '0',
+                      kudosCount: String(shown.kudos_count),
+                    },
+                  }) : undefined}
+                />
               </View>
             );
           }}
