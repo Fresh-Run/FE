@@ -1,6 +1,6 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -11,19 +11,29 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { MiniMap } from '@/components/mini-map';
+import { MediaCarousel } from '@/components/media-carousel';
+import { PaceElevChart, SplitsTable } from '@/components/run-splits';
 import { Icon } from '@/components/ui';
+// MiniMap fallback now lives inside MediaCarousel (no polyline → seed map)
 import { useRunDetail } from '@/hooks/use-runs';
+import { getRunTrack } from '@/lib/run-social-api';
 import { distUnit, fmtDist, fmtDuration, fmtPaceIn, fmtWhen, timeTitle } from '@/lib/run-format';
 import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
+import { useLocalProfile } from '@/store/use-local-profile';
 import { useSettings } from '@/store/use-settings';
+import type { Coordinate } from '@/types';
+
+// ACSM flat-running approximation: ~1.036 kcal per kg per km. Shown only
+// with a USER-CONFIRMED weight (owner rule: never guess off the default),
+// always labeled 추정.
+const KCAL_PER_KG_KM = 1.036;
 
 // ─── Stat tile ────────────────────────────────────────────────────────────────
 
 function StatTile({
-  icon, label, value, unit, accent = false,
+  icon, label, value, unit, accent = false, hint,
 }: {
-  icon: string; label: string; value: string; unit?: string; accent?: boolean;
+  icon: string; label: string; value: string; unit?: string; accent?: boolean; hint?: string;
 }) {
   return (
     <View style={[st.tile, shadows.sm]}>
@@ -35,6 +45,7 @@ function StatTile({
         {value}
         {unit ? <Text style={st.tileUnit}> {unit}</Text> : null}
       </Text>
+      {hint ? <Text style={st.tileHint}>{hint}</Text> : null}
     </View>
   );
 }
@@ -48,6 +59,22 @@ export default function ActivityScreen() {
   const { runId } = useLocalSearchParams<{ runId: string }>();
   const { run, loading, error, refetch } = useRunDetail(runId ?? null);
   const units = useSettings(s => s.settings.units);
+
+  // kcal 추정 — only with a user-confirmed local weight (saved flag)
+  const lpFields = useLocalProfile(s => s.fields);
+  const lpSaved  = useLocalProfile(s => s.saved);
+  useEffect(() => { useLocalProfile.getState().hydrate(); }, []);
+
+  // Real track hero — fetched when the run reports has_track
+  const [track, setTrack] = useState<Coordinate[] | null>(null);
+  useEffect(() => {
+    if (!run?.has_track || !run.id) return;
+    let cancelled = false;
+    getRunTrack(run.id)
+      .then(t => { if (!cancelled) setTrack(t.polyline); })
+      .catch(() => { /* fetch failure → seed MiniMap fallback stands */ });
+    return () => { cancelled = true; };
+  }, [run?.has_track, run?.id]);
 
   // ── Loading ────────────────────────────────────────────────────────────────
   if (loading) {
@@ -84,21 +111,36 @@ export default function ActivityScreen() {
   const when  = fmtWhen(run.ran_at);
   const title = run.title ?? timeTitle(run.ran_at);
 
+  const splits = run.splits ?? [];
+  const kcal = lpSaved && lpFields.weightKg > 0
+    ? String(Math.round(KCAL_PER_KG_KM * lpFields.weightKg * run.distance_km))
+    : null;
+
   return (
     <View style={st.root}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 48 }}
       >
-        {/* ── Full-bleed MiniMap hero ────────────────────────────────────── */}
+        {/* ── Hero — real track (+ photos) via MediaCarousel; trackless runs
+               keep the seed-stylized fallback inside the carousel ── */}
         <View style={[st.hero, { height: HERO_H + insets.top }]}>
-          <MiniMap seed={run.id} height={HERO_H + insets.top} borderRadius={0} />
+          <MediaCarousel
+            polyline={track}
+            seed={run.id}
+            photos={run.photos ?? []}
+            height={HERO_H + insets.top}
+          />
           <LinearGradient
             colors={['rgba(8,12,4,0.0)', 'rgba(8,12,4,0.72)']}
             style={StyleSheet.absoluteFillObject}
+            pointerEvents="none"
           />
-          {/* Back button sits in safe area */}
-          <View style={[StyleSheet.absoluteFillObject, { paddingTop: insets.top + S.sm }]}>
+          {/* Back button sits in safe area; box-none keeps carousel swipes alive */}
+          <View
+            style={[StyleSheet.absoluteFillObject, { paddingTop: insets.top + S.sm }]}
+            pointerEvents="box-none"
+          >
             <Pressable
               onPress={() => router.back()}
               hitSlop={12}
@@ -121,12 +163,37 @@ export default function ActivityScreen() {
           {/* Title */}
           <Text style={st.titleTxt}>{title}</Text>
 
-          {/* Stat tiles */}
+          {/* Stat grid 2×2 (canvas FrActivityDetail) */}
           <View style={st.tileRow}>
-            <StatTile icon="location-outline"    label="거리"      value={dist}  unit={distUnit(units)} accent />
-            <StatTile icon="time-outline"        label="시간"      value={dur} />
-            <StatTile icon="speedometer-outline" label="평균 페이스" value={pace} />
+            <StatTile icon="location-outline" label="거리" value={dist} unit={distUnit(units)} accent />
+            <StatTile icon="time-outline"     label="시간" value={dur} />
           </View>
+          <View style={[st.tileRow, { marginTop: 10 }]}>
+            <StatTile icon="speedometer-outline" label="평균 페이스" value={pace} />
+            <StatTile
+              icon="flame-outline"
+              label="소모 칼로리 (추정)"
+              value={kcal ?? '—'}
+              unit={kcal ? 'kcal' : undefined}
+              hint={kcal ? undefined : '체중 입력 시 표시'}
+            />
+          </View>
+
+          {/* 구간 기록 — hidden entirely on splitless (sub-km/trackless) runs */}
+          {splits.length > 0 && (
+            <>
+              <Text style={st.sectionTitle}>구간 기록</Text>
+              <SplitsTable splits={splits} units={units} />
+            </>
+          )}
+
+          {/* 페이스 & 고도 — needs at least two splits to chart */}
+          {splits.length >= 2 && (
+            <>
+              <Text style={st.sectionTitle}>페이스 & 고도 분석</Text>
+              <PaceElevChart splits={splits} />
+            </>
+          )}
 
           {/* Notes — only when present */}
           {run.notes ? (
@@ -168,6 +235,9 @@ const st = StyleSheet.create({
   tileLabel: { fontSize: 11, fontWeight: '600', letterSpacing: 0.2, color: C.faint, textTransform: 'uppercase' },
   tileValue: { fontSize: 18, fontWeight: '700', letterSpacing: -0.5, color: C.text },
   tileUnit:  { fontSize: 11, fontWeight: '600', color: C.faint },
+  tileHint:  { fontSize: 10.5, color: C.faint, letterSpacing: -0.2, marginTop: 3 },
+
+  sectionTitle: { fontSize: 15, fontWeight: '700', letterSpacing: -0.4, color: C.text, marginTop: S.xl },
 
   // Notes
   notesCard:   { marginTop: S.lg, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: R.lg, padding: S.md },

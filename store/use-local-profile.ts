@@ -31,6 +31,10 @@ const DEFAULTS: LocalProfile = {
 type LocalProfileStore = {
   fields: LocalProfile;
   hydrated: boolean;
+  /** true only when the user has SAVED the personal-info form at least once —
+      the discriminator between a user-confirmed weight and the untouched
+      default (never guess kcal off a default weight — owner rule 2026-07-11) */
+  saved: boolean;
   hydrate: () => Promise<void>;
   save: (fields: LocalProfile) => Promise<void>;
 };
@@ -38,18 +42,19 @@ type LocalProfileStore = {
 export const useLocalProfile = create<LocalProfileStore>((set, get) => ({
   fields: DEFAULTS,
   hydrated: false,
+  saved: false,
 
   hydrate: async () => {
     if (get().hydrated) return;
     try {
       const raw = await AsyncStorage.getItem(CACHE_KEY);
-      if (raw) set({ fields: { ...DEFAULTS, ...JSON.parse(raw) } });
+      if (raw) set({ fields: { ...DEFAULTS, ...JSON.parse(raw) }, saved: true });
     } catch { /* unreadable cache — defaults stand */ }
     set({ hydrated: true });
   },
 
   save: async (fields) => {
-    set({ fields });
+    set({ fields, saved: true });
     try { await AsyncStorage.setItem(CACHE_KEY, JSON.stringify(fields)); } catch { /* best-effort */ }
   },
 }));

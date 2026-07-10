@@ -195,6 +195,12 @@ Dev-annoyance, not user-facing-broken — every screen works once past the landi
 
 ## Canvas parity list — design-side corrections owed (code is right; don't re-flag as drift)
 
+- **활동 상세 향후 섹션 (owner ledger, 2026-07-11 — deferred pending backend/roadmap, revisit when conditions met):**
+  ① **지역명 라인** — needs a server-side coord→region field on runs (same family as crew-F reverse-geocoding; 지연-ask drafted, HELD until that conversation).
+  ② **심박 존** — blocked on the Apple Health integration roadmap item → HR upload path → zones; design as a watch-users-only bonus section per the standing partial-feature concern.
+  ③④ **AI 인사이트 / 회복 조언** — same category as the killed monthly-AI prose; if revived, computed/rules-based (NOT generated) per the 07-09 owner+backend decision. Pending a design conversation with 지연.
+  **Canvas parity:** FrActivityDetail owes a refresh either direction — queued for the next Claude Design session.
+- **활동 상세 enrichment (2026-07-11) cuts from the FrActivityDetail canvas** — line-132 treatment, not faked: HR zones (no heart-rate source), AI Performance Insight (no per-run endpoint; consistent with the 수고했어요 AI-card kill), 회복 조언 (no source), area line (no field), 기록 저장하기 CTA (obsolete pre-save-flow concept). Share button slot empty pending the 러닝 공유 카드 item (BE a4074af scope). kcal = ACSM 추정 from user-confirmed local weight only (owner rule: no default-weight guess → "—" + 체중 입력 시 표시). Splits table Km column keeps km buckets in mi mode (server-defined buckets; only pace converts — approved adaptation).
 - **러닝 포스트 (R3') adaptations from the FrRunPost canvas** — 이 코스 달리기 CTA omitted: sanitized `route_id` is null unless the linked course is public, and the public single-route GET remains a standing 지연-ask — CTA graduates when it lands. Tags omitted (no server field). Comment delete omitted (no canvas affordance). Own-run cards don't enter this screen (activity.tsx stays the own-run analysis view).
 - **코스 포스트 (R1) adaptations from the FrRunPost canvas** — app bar "코스" not "러닝" (data is a course until R3); stat tiles 거리/예상 시간/달린 횟수 (course has no run pace — canvas tiles are run stats); tag chips omitted (no server field); comment delete omitted (endpoint exists, canvas shows no affordance). All revisit when the run-post-true version (R3) lands.
 - **AI 코스 선호도 stepper cap 32, not 42** — canvas `FrAICoursePrefs` stepper runs 1–42 km, but the backend bound is `default_distance_km` le=32.2 (422 above it). Shipped capped at 32 (schema wins, owner call ② 2026-07-09); canvas max to be corrected.

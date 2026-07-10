@@ -9,6 +9,13 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ApiError, apiFetch } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
 
+export type RunSplit = {
+  km: number;             // cumulative km mark (1.0, 2.0, …; partial = total)
+  sec: number;            // this split's duration
+  elev_gain_m: number | null;
+  partial: boolean;       // last split under a full km
+};
+
 export type Run = {
   id: string;
   ran_at: string;
@@ -27,6 +34,8 @@ export type Run = {
   comment_count?: number;
   /** Viewer's kudos state (BE 111a446, 피드와 동일 계산; own runs always false) */
   my_kudos?: boolean;
+  /** Per-km splits on GPS runs (probed shape 2026-07-11); [] on sub-km/trackless */
+  splits?: RunSplit[];
   /** Signed URLs, 1h expiry — use response values directly, NEVER cache (계약). Detail responses only. */
   photos?: string[] | null;
   /** First-photo thumb (signed) on list rows */
