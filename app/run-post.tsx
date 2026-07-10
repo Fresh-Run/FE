@@ -1,7 +1,13 @@
 /**
- * 러닝 포스트 — social run detail for OTHERS' runs (R3', canvas: FrRunPost).
- * Own runs keep app/(records)/activity.tsx (analysis view) — contexts split
- * by ownership at the entry point (user-profile RunCard, !is_mine).
+ * 러닝 포스트 — social run detail (R3', canvas: FrRunPost).
+ * Two modes at the entry point:
+ *  - others' runs (user-profile RunCard, !is_mine): kudos toggle + comments.
+ *  - OWN runs (`own=1` — 내 프로필 💬 target, owner directive 2026-07-12):
+ *    author reads/replies to comments on their own run; ♥ is count-only →
+ *    likers sheet (self-kudos is a server 400, no toggle); header inert
+ *    (self-navigation loop). Card body stays → 활동 상세 (analysis view).
+ * A mode flag, not a sibling: the skeleton (hero/stats/comments/composer)
+ * is identical — a sibling would duplicate the screen to vary ~30 lines.
  *
  * Data: GET /runs/{id} (BE 4cd5685 — 타인 공개범위 내 정제 응답; this screen
  * never renders the sanitized fields notes/verification/visibility) +
@@ -34,6 +40,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { KudosSheet } from '@/components/kudos-sheet';
 import { MediaCarousel } from '@/components/media-carousel';
 import { Icon } from '@/components/ui';
 import { avatarBg } from '@/lib/fr-hash';
@@ -89,7 +96,9 @@ export default function RunPostScreen() {
     nickname?: string;
     myKudos?: string;   // '1' | '0' — viewer's state from the tapped row
     kudosCount?: string;
+    own?: string;       // '1' = own-run social mode (♥ count-only → likers sheet)
   }>();
+  const isOwn = params.own === '1';
   const units = useSettings(s => s.settings.units);
 
   const { run, loading, error } = useRunDetail(params.runId ?? null);
@@ -118,6 +127,9 @@ export default function RunPostScreen() {
       .catch(() => { /* trackless/expired scope — hero falls back to MiniMap */ });
     return () => { cancelled = true; };
   }, [run?.has_track, run?.id]);
+
+  // Likers sheet (own mode — ♥ is count-only)
+  const [likersOpen, setLikersOpen] = useState(false);
 
   // Comments
   const [comments, setComments]   = useState<RunComment[] | null>(null);
@@ -180,10 +192,12 @@ export default function RunPostScreen() {
       ) : (
         <>
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 16 }} keyboardShouldPersistTaps="handled">
-            {/* Author header — nickname from entry seed (sanitized detail has none) */}
+            {/* Author header — nickname from entry seed (sanitized detail has
+                none); inert on own runs (self-navigation loop) */}
             <Pressable
-              onPress={() => run.user_id && openProfile(run.user_id, nickname)}
-              style={({ pressed }) => [st.authorRow, pressed && { opacity: 0.7 }]}
+              onPress={() => !isOwn && run.user_id && openProfile(run.user_id, nickname)}
+              disabled={isOwn}
+              style={({ pressed }) => [st.authorRow, pressed && !isOwn && { opacity: 0.7 }]}
             >
               <InitialAvatar name={nickname} size={42} />
               <View style={{ flex: 1, minWidth: 0 }}>
@@ -211,11 +225,33 @@ export default function RunPostScreen() {
                 />
               </View>
 
-              {/* ♥ kudos */}
-              <Pressable onPress={toggleKudos} style={({ pressed }) => [st.kudosBtn, liked && st.kudosBtnActive, pressed && { opacity: 0.8 }]}>
-                <Icon name={liked ? 'heart' : 'heart-outline'} size={18} color={liked ? C.danger : C.sub} />
-                <Text style={[st.kudosTxt, liked && { color: C.danger }]}>{likeCount}</Text>
-              </Pressable>
+              {/* 분석 보기 — own mode: analysis stays one tap from social
+                  (활동 상세's 내 프로필 entry moved here, owner correction) */}
+              {isOwn && (
+                <Pressable
+                  onPress={() => router.push({ pathname: '/(records)/activity' as never, params: { runId: run.id } })}
+                  hitSlop={6}
+                  style={({ pressed }) => [st.analysisLink, pressed && { opacity: 0.6 }]}
+                >
+                  <Icon name="stats-chart-outline" size={13} color={C.accentGrn} />
+                  <Text style={st.analysisLinkTxt}>분석 보기</Text>
+                  <Icon name="chevron-forward" size={12} color={C.accentGrn} />
+                </Pressable>
+              )}
+
+              {/* ♥ kudos — own mode: count-only → likers sheet (self-kudos
+                  is a server 400); others: optimistic toggle */}
+              {isOwn ? (
+                <Pressable onPress={() => setLikersOpen(true)} style={({ pressed }) => [st.kudosBtn, pressed && { opacity: 0.8 }]}>
+                  <Icon name="heart-outline" size={18} color={C.sub} />
+                  <Text style={st.kudosTxt}>{likeCount}</Text>
+                </Pressable>
+              ) : (
+                <Pressable onPress={toggleKudos} style={({ pressed }) => [st.kudosBtn, liked && st.kudosBtnActive, pressed && { opacity: 0.8 }]}>
+                  <Icon name={liked ? 'heart' : 'heart-outline'} size={18} color={liked ? C.danger : C.sub} />
+                  <Text style={[st.kudosTxt, liked && { color: C.danger }]}>{likeCount}</Text>
+                </Pressable>
+              )}
 
               {/* Comments */}
               <Text style={st.commentsHead}>댓글 {commentCount}</Text>
@@ -242,6 +278,11 @@ export default function RunPostScreen() {
               )}
             </View>
           </ScrollView>
+
+          {/* Likers sheet (own mode) */}
+          {likersOpen && run && (
+            <KudosSheet runId={run.id} kudosCount={likeCount} onClose={() => setLikersOpen(false)} />
+          )}
 
           {/* Composer */}
           <View style={[st.composer, { paddingBottom: Math.max(insets.bottom, S.sm) + 6 }]}>
@@ -293,6 +334,9 @@ const st = StyleSheet.create({
   statVal:   { fontSize: 15.5, fontWeight: '700', color: C.text, letterSpacing: -0.4 },
   statUnit:  { fontSize: 11, fontWeight: '600', color: C.faint },
   statLabel: { fontSize: 11, color: C.faint, marginTop: 3 },
+
+  analysisLink:    { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', marginTop: 10, paddingVertical: 2 },
+  analysisLinkTxt: { fontSize: 13, fontWeight: '700', color: C.accentGrn, letterSpacing: -0.2 },
 
   kudosBtn:       { height: 46, borderRadius: R.md, borderWidth: 1, borderColor: C.border, backgroundColor: C.surface, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, marginTop: 12 },
   kudosBtnActive: { borderColor: C.danger, backgroundColor: '#EF444414' },

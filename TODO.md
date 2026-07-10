@@ -24,6 +24,15 @@ Original payload spec (for reference):
 
 **Xcode/simulator: declined for now** — revisit when dev builds become necessary (HealthKit, IAP, Maestro E2E).
 
+## ITEM (approved 2026-07-11, FIRST post-gate build alongside R2'/maps-2 per owner priority at the time): 크루 관리 + 챌린지 — M1 → M2+M2b → M3
+
+Recon complete 2026-07-11 (all probes world-restored; canvas = community-screen.jsx components — Crew Manager View.html page is exploration, not consulted). **Do NOT start before the gate sequence completes** (confirmation walk → mega verification pass → item-17 commit → publish).
+
+- **M1 — 공지 (L):** crew-detail 공지 list + detail (RSVP 3-state voting + going_members roster) + owner composer (title/body/optional run_at·place·rsvp_closes_at — **KST-offset ISO mandatory**, naive datetime = 422 "타임존이 필요합니다" probed) + owner edit/delete. Graduates the crew_announcement deep-link from crew-detail to the 공지 detail. Server fans out member notifications on create (no separate send endpoint). **Approved adaptations: canvas 2-option poll → server 3-state (going/not_going/maybe); 공지 max-6/auto-expire = CLIENT-side display pending 지연's ② answer.**
+- **M2 — 챌린지 배너 + 생성 (M):** FrActiveChallengeRow on crew detail from GET /challenges/current (probed: 200 null when none → owner sees 생성 CTA); owner form (title/goal_km/starts_at/ends_at, tz-required) w/ 409 "진행 중인 챌린지" handling + "GPS 기록만 집계" caption (guide 206: verified-only, visibility-independent, membership = participation). **M2b:** ranking section (FrCrewRankRow + GET /ranking — 이번 주 KST, me flag).
+- **M3 — owner tools (S):** kick from member list (DELETE members/{target_id}, owner-only, self-kick 400, confirm dialog) + FrCrewAdmin hub shape minus the 운영진 row.
+- **Blocked on 지연-ask ① (운영진 role — batched ask SENT 2026-07-11 w/ effort guesses):** all 운영진 surfaces (FrCrewManage/FrCrewPerms); when roles land the client change is role-gate checks on M1–M3. Ask ② = 공지 6-cap server-vs-client; ask ③ = 공개 mega-challenge resource (roadmap, design conversation first — FrOpenChallengeCard CUT until then). Also cut: live 크루 러닝 세션 (no model; challenge aggregation is automatic from verified runs). Invite backlog (0f06506) = separate track, no overlap.
+
 ## ITEM (queued, post-item-17-commit): 러닝 저장 + 수고했어요 redesign implementation
 
 Canvas redesign 2026-07-07 (owner + backend decisions included). **Source of truth = the LIVE canvas (FreshRun App.html) as of 2026-07-07 — re-read both screens at planning time, do NOT build from this note.** Decisions that aren't obvious from pixels:
@@ -195,6 +204,7 @@ Dev-annoyance, not user-facing-broken — every screen works once past the landi
 
 ## Canvas parity list — design-side corrections owed (code is right; don't re-flag as drift)
 
+- ~~OPEN DESIGN ITEM — own-run social visibility~~ **BUILT 2026-07-12 (owner directive; corrected same night — supersedes the interim 💬-target shape)** — final shape: 내 프로필 run cards open the own-run SOCIAL view (run-post `own=1`) with the **ENTIRE card** as the target (💬 display-only, falls through); **활동 상세's home is the 기록 tab** (rows unchanged), reachable from social via the **분석 보기 link** by the stats block. Own mode: inert self header, comments+composer live (author-reply POST probed 200), ♥ count-only → likers sheet (self-kudos 400, no toggle). KudosSheet extracted to `components/kudos-sheet.tsx` (graduation condition met — second consumer). 타인 프로필 flow untouched.
 - **활동 상세 향후 섹션 (owner ledger, 2026-07-11 — deferred pending backend/roadmap, revisit when conditions met):**
   ① **지역명 라인** — needs a server-side coord→region field on runs (same family as crew-F reverse-geocoding; 지연-ask drafted, HELD until that conversation).
   ② **심박 존** — blocked on the Apple Health integration roadmap item → HR upload path → zones; design as a watch-users-only bonus section per the standing partial-feature concern.

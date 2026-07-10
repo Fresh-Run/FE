@@ -20,7 +20,6 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
-  Modal,
   Pressable,
   StyleSheet,
   Text,
@@ -28,13 +27,12 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { KudosSheet } from '@/components/kudos-sheet';
 import { MiniMap } from '@/components/mini-map';
 import { Icon } from '@/components/ui';
 import { useMyPublicProfile, type MyRun } from '@/hooks/use-my-public-profile';
 import { avatarBg } from '@/lib/fr-hash';
-import { getRunKudos, type RunKudoser } from '@/lib/kudos-api';
-import { openProfile } from '@/lib/profile-nav';
-import { distUnit, fmtAgo, fmtDist, fmtDuration, fmtPaceIn, fmtWhen, paceUnit, timeTitle } from '@/lib/run-format';
+import { distUnit, fmtDist, fmtDuration, fmtPaceIn, fmtWhen, paceUnit, timeTitle } from '@/lib/run-format';
 import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
 import { useSettings } from '@/store/use-settings';
 
@@ -59,8 +57,14 @@ const VIS_CAPTION: Record<MyRun['visibility'], string> = {
 // for own runs; honest subset, tap → activity detail)
 function RunCard({ run, name, units, onKudos }: { run: MyRun; name: string; units: ReturnType<typeof useSettings.getState>['settings']['units']; onKudos: () => void }) {
   return (
+    // Whole card → own-run SOCIAL view (owner correction 2026-07-12); the
+    // 활동 상세 analysis screen's home is the 기록 tab — social links to it
+    // via 분석 보기 inside run-post.
     <Pressable
-      onPress={() => router.push({ pathname: '/(records)/activity' as any, params: { runId: run.id } })}
+      onPress={() => router.push({
+        pathname: '/run-post' as never,
+        params: { runId: run.id, own: '1', nickname: name, kudosCount: String(run.kudos_count) },
+      })}
       style={[st.card, shadows.sm]}
     >
       <View style={st.cardHead}>
@@ -97,6 +101,7 @@ function RunCard({ run, name, units, onKudos }: { run: MyRun; name: string; unit
             <Icon name="heart-outline" size={18} color={C.sub} />
             <Text style={st.kudosCount}>{run.kudos_count}</Text>
           </Pressable>
+          {/* 💬 display-only — taps fall through to the card (→ social view) */}
           <View style={[st.kudosBtn, { marginLeft: 14 }]}>
             <Icon name="chatbubble-outline" size={17} color={C.sub} />
             <Text style={st.kudosCount}>{run.comment_count}</Text>
@@ -108,71 +113,9 @@ function RunCard({ run, name, units, onKudos }: { run: MyRun; name: string; unit
   );
 }
 
-// Likers bottom sheet (canvas: FrMyProfile likers sheet). Rows are the
-// follow-list card style minus the pill: name + relative time (no subtext —
-// no backend source). The canvas 나-badge/accent-ring self-row and heart
-// toggle belong to future other-user/feed contexts (TODO scoping note).
-function KudosSheet({ run, onClose }: { run: MyRun; onClose: () => void }) {
-  const [rows, setRows]       = React.useState<RunKudoser[] | null>(null);
-  const [failed, setFailed]   = React.useState(false);
-  const [attempt, setAttempt] = React.useState(0);
-
-  React.useEffect(() => {
-    let cancelled = false;
-    setFailed(false);
-    getRunKudos(run.id)
-      .then(list => { if (!cancelled) setRows(list); })
-      .catch(() => { if (!cancelled) setFailed(true); });
-    return () => { cancelled = true; };
-  }, [run.id, attempt]);
-
-  return (
-    <Modal visible transparent animationType="slide" onRequestClose={onClose}>
-      <View style={st.sheetRoot}>
-        <Pressable style={st.sheetBackdrop} onPress={onClose} />
-        <View style={st.sheet}>
-          <View style={st.sheetHead}>
-            <View style={st.grabBar} />
-            <Text style={st.sheetTitle}>좋아요 {run.kudos_count}개</Text>
-          </View>
-          {failed ? (
-            <View style={st.sheetState}>
-              <Text style={st.stateTxt}>목록을 불러올 수 없어요</Text>
-              <Pressable onPress={() => { setRows(null); setAttempt(a => a + 1); }} style={st.retryBtn}>
-                <Text style={st.retryTxt}>다시 시도</Text>
-              </Pressable>
-            </View>
-          ) : rows === null ? (
-            <View style={st.sheetState}><ActivityIndicator color={C.accent} /></View>
-          ) : (
-            <FlatList
-              data={rows}
-              keyExtractor={k => k.user_id}
-              renderItem={({ item }) => (
-                <View style={[st.likerRow, shadows.sm]}>
-                  {/* Row body → profile (canvas tappable-name zone; self-case
-                      can't occur here — own runs reject self-kudos) */}
-                  <Pressable
-                    onPress={() => openProfile(item.user_id, item.nickname)}
-                    style={({ pressed }) => [st.likerBody, pressed && { opacity: 0.7 }]}
-                  >
-                    <Avatar name={item.nickname} size={44} ring={C.border} />
-                    <Text style={st.likerName} numberOfLines={1}>{item.nickname}</Text>
-                  </Pressable>
-                  <Text style={st.likerWhen}>{fmtAgo(item.created_at)}</Text>
-                </View>
-              )}
-              ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
-              ListEmptyComponent={<Text style={[st.stateTxt, { textAlign: 'center' }]}>아직 좋아요가 없어요</Text>}
-              contentContainerStyle={{ padding: 20, paddingTop: 14, paddingBottom: 28 }}
-              showsVerticalScrollIndicator={false}
-            />
-          )}
-        </View>
-      </View>
-    </Modal>
-  );
-}
+// Likers sheet extracted to components/kudos-sheet.tsx (2026-07-12 — the
+// own-run social view became its second consumer, per the original scoping
+// note's graduation condition).
 
 export default function MyProfileScreen() {
   const insets = useSafeAreaInsets();
@@ -288,7 +231,7 @@ export default function MyProfileScreen() {
         />
       )}
 
-      {kudosRun && <KudosSheet run={kudosRun} onClose={() => setKudosRun(null)} />}
+      {kudosRun && <KudosSheet runId={kudosRun.id} kudosCount={kudosRun.kudos_count} onClose={() => setKudosRun(null)} />}
     </View>
   );
 }
@@ -337,17 +280,7 @@ const st = StyleSheet.create({
   visCaption: { fontSize: 11.5, color: C.faint, letterSpacing: -0.2 },
 
   // Likers sheet (canvas: grab bar, centered title, 68% max height)
-  sheetRoot:     { flex: 1, justifyContent: 'flex-end' },
-  sheetBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.45)' },
-  sheet:         { backgroundColor: C.bg, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '68%' },
-  sheetHead:     { paddingTop: 12, paddingBottom: 12, paddingHorizontal: 20, borderBottomWidth: 1, borderBottomColor: C.border },
-  grabBar:       { width: 38, height: 5, borderRadius: 99, backgroundColor: C.border, alignSelf: 'center', marginBottom: 12 },
-  sheetTitle:    { fontSize: 16, fontWeight: '700', letterSpacing: -0.4, color: C.text, textAlign: 'center' },
-  sheetState:    { alignItems: 'center', gap: 12, paddingVertical: 40 },
-  likerRow:      { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 16, paddingVertical: 11, paddingHorizontal: 13 },
-  likerBody:     { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 12 },
-  likerName:     { flex: 1, minWidth: 0, fontSize: 15, fontWeight: '700', color: C.text, letterSpacing: -0.3 },
-  likerWhen:     { fontSize: 11.5, color: C.faint, letterSpacing: -0.2, flexShrink: 0 },
+  // (likers-sheet styles moved to components/kudos-sheet.tsx)
 
   centered: { alignItems: 'center', gap: 12, paddingVertical: 60 },
   stateTxt: { fontSize: 14, fontWeight: '600', color: C.faint, letterSpacing: -0.2 },
