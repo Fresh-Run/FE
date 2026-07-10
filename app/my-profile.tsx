@@ -72,7 +72,7 @@ function RunCard({ run, name, units, onKudos }: { run: MyRun; name: string; unit
       </View>
       <MiniMap seed={run.id} height={150} />
       <View style={st.cardBody}>
-        <Text style={st.cardTitle}>{timeTitle(run.ran_at)}</Text>
+        <Text style={st.cardTitle}>{run.title ?? timeTitle(run.ran_at)}</Text>
         <View style={st.statsRow}>
           {([
             [fmtDist(run.distance_km, units, 1), distUnit(units), '거리'],

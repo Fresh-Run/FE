@@ -272,7 +272,7 @@ function RunRow({ run }: { run: Run }) {
       </View>
       <View style={{ flex: 1, minWidth: 0 }}>
         <View style={st.runRowTop}>
-          <Text style={st.runTitle} numberOfLines={1}>{timeTitle(run.ran_at)}</Text>
+          <Text style={st.runTitle} numberOfLines={1}>{run.title ?? timeTitle(run.ran_at)}</Text>
           <Text style={st.runDate}>{fmtDate(run.ran_at)}</Text>
         </View>
         <Text style={st.runWhen} numberOfLines={1}>{fmtWhen(run.ran_at)}</Text>

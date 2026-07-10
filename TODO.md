@@ -1,8 +1,12 @@
 # TODO
 
-## THE OUTDOOR SESSION — five payloads, one outing (owner-sequenced 2026-07-07)
+## THE OUTDOOR SESSION — RAN 2026-07-11 (debrief complete; scorecard below)
 
-Simulator declined (no Xcode) — everything below verifies outdoors on the real device, in this order. **(a)+(b) must complete before (c)/(d)/(e) can trust their distances** — the walk portion comes first.
+**Session verdict**: (a) **CALIBRATION CLOSED** — Strava ground truth 0.20km vs 215.3m accepted on 교정워크; **filter EXONERATED at running scale** (90%+ raw credited at walk pace, 98% at run pace, ANCHOR-MOVED fired zero times across both logged segments); historical under-credit = warm-up/short-run regime. One convicted defect: short-dt speed>7 discretization (4 firings) → **fixed in cargo**. (b) **APPLIED to the gate cargo 2026-07-11**: speed-gate dt≥1.5s guard w/ OS-speed fallback, `MIN_SAVE_KM` 0.05 in run-result + run-save, full `DEBUG(short-run)` strip, + sanctioned `[savetrack]` temp log in runs-api (교정워크 saved **trackless** with no client conditional explaining it — all three save paths forward gpsTrack; next occurrence gets convicted; strip after). (c) PASS on `route_id` (793378b4 linked); copy_count bump unverifiable client-side (run stores the private copy's id). (d) PASS — PB modal witnessed, 330→297 = exactly 10.0% caption ✓; **re-confirm items (not blockers): 성과 공유하기 준비 중 + 기록 자세히 보기 routing untested**. (e) **DEFERRED → mini-run after the use-profile fix** (bug ① blocked testrun's 단위 setting). (f) PASS — real path on the save map card ✓, typed titles/팔로워만 server-side ✓; 기록/activity stylized maps = known riders (activity enrichment + maps slice 2). Anti-cheat observed live: 코스링크 0.22→0.18 replace + flag.
+
+**지연 soft note (drafted, send with next batch):** "코스링크 run(3c6bed7a)에서 서버 숫자 둘이 안 맞아요 — run row는 `distance_km: 0.18`(replaced, `is_flagged: true`, reported 0.22)인데 `GET /runs/{id}/track`은 `server_distance_km: 0.0`을 줘요 (raw 26/kept 24, 4-pt simplified polyline). 어느 쪽이 진실인지 — flag 계산과 track 응답이 다른 파이프라인을 타는 것 같아요. 급하지 않음."
+
+Original payload spec (for reference):
 
 **PRE-FLIGHT: app points at staging (`https://freshrun-api.fly.dev`, swapped 2026-07-07) — the old 0a–0c LAN dance (uvicorn restart / IP-drift sed / phone-Safari check) is OBSOLETE; staging is reachable from anywhere on cell data.** Only remaining pre-check: one `curl https://freshrun-api.fly.dev/health` before leaving (fly outage ≠ impossible), and confirm 지연's latest "스테이징 반영됨" covers the BE hash the payloads assume.
 
@@ -14,7 +18,7 @@ Simulator declined (no Xcode) — everything below verifies outdoors on the real
 - **러닝 저장 delta calls (owner, 2026-07-08):** 7-bucket `timeTitle` KEPT — canvas will be updated to match code (don't re-flag as drift); title cap 30 applied; custom centered discard modal applied; confirm-on-back KEPT (documented deviation, no-silent-loss).
 - **(f) 러닝 저장 outdoor half** — map card VISIBLE with the real path; save with typed title + 팔로워만 → `GET /runs` shows title/notes/visibility; 수고했어요 renders the saved title; PB modal + feedback intact post-save. *(Indoor half VERIFIED 2026-07-07, 6/6: compose routing, crash-recovery both paths, too-short gating, ‹-discard-confirm, sheet, old screen unreachable. Build style-matched to canvas screenshots; timeTitle 새벽 04:00–06:59 shipped.)*
 
-**Commit boundaries after the session:** PB modal + item-17 set (9 files incl. `components/pb-celebration.tsx`) commit together; `use-run-tracker.ts` commits after the (b) DEBUG strip. Then the tree is clean.
+**Commit boundaries after the session:** PB modal + item-17 set (9 files incl. `components/pb-celebration.tsx`) commit together; `use-run-tracker.ts` **(b) strip+fix DONE 2026-07-11 — ready to commit with the set**. Riders ①–④ + skeleton ride the same commit. Then the tree is clean except the `[savetrack]` temp line (sanctioned, strips after the trackless mystery closes).
 
 **Skeleton rider (gated, rides this commit — logged 2026-07-09):** home greeting + 수고했어요 fallback `displayName ?? '러너'` → skeleton (shimmer bar + neutral avatar circle) on true first-load. The data-side fix (use-store per-user name cache + /me/profile sync) shipped separately; this rider is the residual first-frame polish. Identity-stable rule: correct name or visibly-nothing, never a wrong name.
 
@@ -70,9 +74,11 @@ Dev-annoyance, not user-facing-broken — every screen works once past the landi
 
 **Strip/commit bookkeeping:** DEBUG(nav) lines follow the tracker-instrumentation convention — do NOT commit; strip with the eventual fix. Files carrying them: gated set (`(tabs)/index.tsx`, `(course)/tracking.tsx`, `pending-run-recovery.tsx` — strip rides item-17) + newly-dirty committed-territory files (`app/_layout.tsx`, `(tabs)/create.tsx`, `(course)/create.tsx`, `(course)/index.tsx`) + the fix-1 revert (`(tabs)/_layout.tsx`). None of these commit until the bug item resumes.
 
-## PAUSED: tracking-filter under-credit bug (2026-07-06)
+## ~~PAUSED: tracking-filter under-credit bug~~ CLOSED 2026-07-11 (outing debrief)
 
-**Symptom:** 100+ real meters walked outdoors → filtered distance < 10m → "너무 짧은 러닝은 저장되지 않아요". The GPS filters are eating real distance.
+**Verdict**: filter exonerated — 교정워크 credited 215.3m vs Strava 0.20km ground truth; suspect #4 (short-dt speed>7 discretization) was the only live defect (fixed in cargo, OS-speed fallback under dt 1.5s); suspects #1–#3 fired zero-or-correctly in the tethered log. Historical sub-10m credits = GPS warm-up/short-run regime, not gate bugs. DEBUG instrumentation stripped same day. Archive below for reference:
+
+**Original symptom:** 100+ real meters walked outdoors → filtered distance < 10m → "너무 짧은 러닝은 저장되지 않아요". The GPS filters are eating real distance.
 
 **STATUS**
 - Instrumentation is LIVE in `hooks/use-run-tracker.ts`, marked `DEBUG(short-run)`: every GPS fix prints one Metro line with its decision label (`ACCEPT` / `REJECT accuracy>25` / `REJECT speed>7` / `SKIP stationary — ANCHOR MOVED` / `SKIP jitter<5 — anchor held`) plus a running `accepted=` vs `raw=` tally (raw = naive sum over all fixes, gates ignored).

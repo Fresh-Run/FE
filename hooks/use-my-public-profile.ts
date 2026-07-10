@@ -20,6 +20,7 @@ export type MyPublicProfile = {
 export type MyRun = {
   id: string;
   ran_at: string;
+  title: string | null;
   distance_km: number;
   duration_sec: number;
   avg_pace_sec_per_km: number | null;

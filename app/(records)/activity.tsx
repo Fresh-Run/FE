@@ -82,7 +82,7 @@ export default function ActivityScreen() {
   const dur   = fmtDuration(run.duration_sec);
   const pace  = run.avg_pace_sec_per_km != null ? fmtPaceIn(run.avg_pace_sec_per_km, units) : '--';
   const when  = fmtWhen(run.ran_at);
-  const title = timeTitle(run.ran_at);
+  const title = run.title ?? timeTitle(run.ran_at);
 
   return (
     <View style={st.root}>

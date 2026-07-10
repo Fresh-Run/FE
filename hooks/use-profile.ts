@@ -60,17 +60,19 @@ export function useProfile() {
 
       // Profile + stats in parallel (same shape as the legacy dual read).
       const [profileRes, statsRes] = await Promise.allSettled([
-        apiFetch<ProfileResp>('/api/me/profile'),
+        apiFetch<ProfileResp | null>('/api/me/profile'),
         apiFetch<StatsResp>('/api/me/stats'),
       ]);
       if (cancelled) return;
 
-      // Profile-less 404 → fallback (the legacy PGRST116 semantic); other
-      // profile failures: error state on first load only — a silent-refetch
-      // failure keeps the rendered profile (SWR-lite).
+      // Profile-less accounts come back TWO ways: 404 (rejection branch) OR
+      // 200 with a null body (fulfilled — field bug ① 2026-07-11: testrun's
+      // 프로필 tab crashed on p.nickname of null). Both land on the fallback.
       if (profileRes.status === 'fulfilled') {
         const p = profileRes.value;
-        setProfile({ nickname: p.nickname ?? '사용자', avatar_url: p.avatar_url, bio: p.bio });
+        setProfile(p
+          ? { nickname: p.nickname ?? '사용자', avatar_url: p.avatar_url, bio: p.bio }
+          : FALLBACK_PROFILE);
         hasDataRef.current = true;
       } else if (profileRes.reason instanceof ApiError && profileRes.reason.status === 404) {
         setProfile(FALLBACK_PROFILE);
