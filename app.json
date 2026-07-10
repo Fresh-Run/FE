@@ -14,6 +14,7 @@
       "bundleIdentifier": "com.freshrun.app"
     },
     "android": {
+      "package": "com.freshrun.app",
       "adaptiveIcon": {
         "backgroundColor": "#006e1c",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
