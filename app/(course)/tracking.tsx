@@ -16,7 +16,7 @@
 import * as Haptics from 'expo-haptics';
 import { useKeepAwake } from 'expo-keep-awake';
 import { router, useNavigation } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   Animated,
@@ -27,11 +27,12 @@ import {
   Text,
   View,
 } from 'react-native';
+import MapView, { Polyline } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
 
-import { MiniMap } from '@/components/mini-map';
 import { Icon } from '@/components/ui';
+import { useCurrentLocation } from '@/hooks/use-current-location';
 import { useRunTracker } from '@/hooks/use-run-tracker';
 import { clearActiveCourse, getActiveCourse } from '@/store/active-course';
 import { setPendingRun } from '@/store/pending-run';
@@ -212,8 +213,74 @@ export default function TrackingScreen() {
   useEffect(() => { useSettings.getState().hydrate(); }, []);
   const {
     state, countdownValue, elapsedSec, distanceKm, paceSecPerKm, moving, kcal,
-    start, togglePause, stop,
+    start, togglePause, stop, livePath, lastFixAgeSec,
   } = useRunTracker();
+
+  // ── T-A: real map (consumer of the tracker's read-only surface ONLY) ──
+  const { coordinate: hereCoord } = useCurrentLocation();
+  const mapRef = useRef<MapView>(null);
+  // Follow-camera suspension: any user pan pauses following for 8s; the
+  // re-center button ends the suspension immediately.
+  const lastUserPanRef = useRef(0);
+  const recenterShownRef = useRef(false);
+  const [recenterVisible, setRecenterVisible] = useState(false);
+
+  // Re-draw the live polyline only when a fix was actually ACCEPTED
+  // (length change) — the 500ms metrics tick alone never re-creates it.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const drawnPath = useMemo(() => livePath.map(p => ({ latitude: p.lat, longitude: p.lng })), [livePath.length]);
+
+  const courseCoords = useMemo(
+    () => (course?.polyline ?? []).map(p => ({ latitude: p.lat, longitude: p.lng })),
+    [course],
+  );
+
+  // Camera follow on path growth (running only, not while user-panned)
+  useEffect(() => {
+    if (state !== 'running' || drawnPath.length === 0) return;
+    if (Date.now() - lastUserPanRef.current < 8000) return;
+    mapRef.current?.animateCamera({ center: drawnPath[drawnPath.length - 1] }, { duration: 500 });
+  }, [drawnPath.length, state, drawnPath]);
+
+  // Idle: center on the resolved current location once (free-run mode —
+  // course mode fits to the course bounds in onMapReady instead)
+  const idleCenteredRef = useRef(false);
+  useEffect(() => {
+    if (state !== 'idle' || course || !hereCoord || idleCenteredRef.current) return;
+    idleCenteredRef.current = true;
+    mapRef.current?.animateCamera({ center: { latitude: hereCoord.lat, longitude: hereCoord.lng } }, { duration: 300 });
+  }, [state, course, hereCoord]);
+
+  const onMapReady = () => {
+    if (courseCoords.length > 1) {
+      mapRef.current?.fitToCoordinates(courseCoords, {
+        edgePadding: { top: 90, right: 50, bottom: 50, left: 50 },
+        animated: false,
+      });
+    }
+  };
+
+  const onUserPan = () => {
+    lastUserPanRef.current = Date.now();
+    if (!recenterShownRef.current) {
+      recenterShownRef.current = true;
+      setRecenterVisible(true);
+    }
+  };
+  const recenter = () => {
+    lastUserPanRef.current = 0;
+    recenterShownRef.current = false;
+    setRecenterVisible(false);
+    const target = drawnPath.length > 0
+      ? drawnPath[drawnPath.length - 1]
+      : hereCoord ? { latitude: hereCoord.lat, longitude: hereCoord.lng } : null;
+    if (target) mapRef.current?.animateCamera({ center: target }, { duration: 400 });
+  };
+
+  // GPS-lost chip: >15s without a raw fix while running. Honest caveat
+  // (walk-verifiable): distanceInterval suppresses fixes at rest, so a long
+  // mid-run standstill can also light it — quiet copy on purpose.
+  const gpsLost = state === 'running' && lastFixAgeSec != null && lastFixAgeSec > 15;
 
   // Once countdown starts there is no exit except hold-stop: kill the back
   // gesture and swallow any remove attempt (incl. Android hardware back).
@@ -264,14 +331,43 @@ export default function TrackingScreen() {
 
   return (
     <View style={st.root}>
-      {/* ── Map area (MiniMap placeholder — real GPS map is a later item) ── */}
+      {/* ── Map area — REAL Apple map (T-A): blue dot via showsUserLocation
+             (no second location stream — rides the tracker's hot GPS),
+             live track polyline from the tracker's read-only livePath,
+             course overlay in course mode. ── */}
       <View style={{ height: MAP_H }}>
-        <MiniMap
-          seed={course?.id ?? 'me-live-track'}
-          height={MAP_H}
-          borderRadius={0}
-          polyline={course?.polyline ?? undefined}
-        />
+        <MapView
+          ref={mapRef}
+          style={{ width: '100%', height: MAP_H }}
+          initialRegion={{
+            latitude: courseCoords[0]?.latitude ?? hereCoord?.lat ?? 37.5665,
+            longitude: courseCoords[0]?.longitude ?? hereCoord?.lng ?? 126.978,
+            latitudeDelta: 0.006,
+            longitudeDelta: 0.006,
+          }}
+          onMapReady={onMapReady}
+          onPanDrag={onUserPan}
+          showsUserLocation
+          showsMyLocationButton={false}
+          showsCompass={false}
+          toolbarEnabled={false}
+        >
+          {/* Course shape (dim neutral) UNDER the live track (accent) */}
+          {courseCoords.length > 1 && (
+            <Polyline coordinates={courseCoords} strokeColor="rgba(110,120,132,0.75)" strokeWidth={4} />
+          )}
+          {drawnPath.length > 1 && (
+            <Polyline coordinates={drawnPath} strokeColor={C.accent} strokeWidth={5} />
+          )}
+        </MapView>
+
+        {/* Re-center — appears after a user pan suspends the follow camera */}
+        {recenterVisible && (
+          <Pressable onPress={recenter} style={st.recenterBtn} hitSlop={6}>
+            <Icon name="locate" size={18} color={C.text} />
+          </Pressable>
+        )}
+
         {/* Course title pill (bundle: tracking-screen.jsx course mode) */}
         {course && (
           <View pointerEvents="none" style={[st.coursePillWrap, { top: insets.top + 8 }]}>
@@ -292,8 +388,14 @@ export default function TrackingScreen() {
           </Pressable>
         )}
         {(state === 'running' || state === 'paused') && (
-          <View style={{ position: 'absolute', top: insets.top + 8, right: 14 }}>
+          <View style={{ position: 'absolute', top: insets.top + 8, right: 14, alignItems: 'flex-end', gap: 6 }}>
             <StatusBadge paused={state === 'paused'} />
+            {gpsLost && (
+              <View style={st.gpsChip}>
+                <Icon name="cellular-outline" size={11} color={C.sun} />
+                <Text style={st.gpsChipTxt}>GPS 신호 약함</Text>
+              </View>
+            )}
           </View>
         )}
       </View>
@@ -379,6 +481,9 @@ const st = StyleSheet.create({
 
   // Close (idle only)
   closeBtn: { position: 'absolute', left: 14, width: 40, height: 40, borderRadius: R.pill, backgroundColor: 'rgba(0,0,0,0.45)', alignItems: 'center', justifyContent: 'center' },
+  recenterBtn: { position: 'absolute', right: 14, bottom: 36, width: 40, height: 40, borderRadius: R.pill, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, alignItems: 'center', justifyContent: 'center', ...shadows.sm },
+  gpsChip:    { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(0,0,0,0.45)', borderRadius: R.pill, paddingHorizontal: 10, paddingVertical: 5 },
+  gpsChipTxt: { fontSize: 11, fontWeight: '700', color: '#fff', letterSpacing: -0.2 },
 
   // Course title pill (course mode)
   coursePillWrap: { position: 'absolute', left: 0, right: 0, alignItems: 'center' },

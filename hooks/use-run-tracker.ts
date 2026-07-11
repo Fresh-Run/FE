@@ -71,6 +71,10 @@ export function useRunTracker() {
   // (layer attribution). pathRef stays the filtered on-screen source.
   const rawTrackRef  = useRef<GpsPoint[]>([]);
   const windowRef    = useRef<{ t: number; cumM: number }[]>([]);
+  // T-A read-only surface: last RAW callback timestamp (any received fix,
+  // before all gates) — feeds the map's GPS-lost chip. A mirror write only;
+  // no gate/accumulator behavior depends on it.
+  const lastFixTsRef = useRef(0);
 
   // Interval only drives re-renders while running; values come from the refs.
   const [, setTick] = useState(0);
@@ -89,6 +93,7 @@ export function useRunTracker() {
     const { latitude: lat, longitude: lng, accuracy, speed, altitude } = loc.coords;
     const t = loc.timestamp;
     const cur = { lat, lng };
+    lastFixTsRef.current = t; // T-A mirror (see decl) — before any gate
 
     // Raw track capture — BEFORE any gate (incl. the accuracy reject below):
     // the server filter must see everything the client filter saw.
@@ -277,5 +282,15 @@ export function useRunTracker() {
     start,
     togglePause,
     stop,
+    // ── T-A read-only map surface (owner-approved boundary: the map is a
+    // CONSUMER — these two exports are the ENTIRE tracker surface for it) ──
+    /** Filtered on-screen track (the same array the save snapshot copies).
+        READ-ONLY — consumers must never mutate. Mutated in place by the fix
+        pipeline; re-draws should key on .length. */
+    livePath: pathRef.current as readonly Coordinate[],
+    /** Seconds since the last RAW watch callback (pre-gate); null = none yet.
+        Note: distanceInterval suppresses callbacks while standing still, so
+        age also grows at rest — render the GPS-lost chip only while running. */
+    lastFixAgeSec: lastFixTsRef.current ? Math.floor((now - lastFixTsRef.current) / 1000) : null,
   };
 }
