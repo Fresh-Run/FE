@@ -214,6 +214,20 @@ export async function kickMember(crewId: string, userId: string): Promise<void> 
   await apiFetch<void>(`/api/crews/${crewId}/members/${userId}`, { method: 'DELETE' });
 }
 
+// ─── Ranking (M2b) — 이번 주 KST 거리순; verified GPS runs only ───────────────
+
+export type CrewRankingEntry = {
+  rank: number;
+  user_id: string;
+  nickname: string | null;
+  distance_km: number;
+  me: boolean;
+};
+
+export async function getCrewRanking(crewId: string): Promise<CrewRankingEntry[]> {
+  return apiFetch<CrewRankingEntry[]>(`/api/crews/${crewId}/ranking`);
+}
+
 // ─── Join requests (approval crews) ──────────────────────────────────────────
 
 /** null = no request on record (guide: 404 means "가입 신청" is available). */

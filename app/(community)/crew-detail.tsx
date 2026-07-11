@@ -29,6 +29,8 @@ import {
 } from '@/hooks/use-crews';
 import { avatarBg } from '@/lib/fr-hash';
 import { listAnnouncements, type Announcement } from '@/lib/announcements-api';
+import { getCurrentChallenge, type Challenge } from '@/lib/challenges-api';
+import { getCrewRanking, type CrewRankingEntry } from '@/lib/crews-api';
 import { openProfile } from '@/lib/profile-nav';
 import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
 
@@ -185,6 +187,21 @@ export default function CrewDetailScreen() {
     return () => { cancelled = true; };
   }, [crewId, isMember]));
 
+  // ── 챌린지 + 랭킹 (M2/M2b) — members only ───────────────────────────────────
+  const [challenge, setChallenge] = useState<Challenge | null | undefined>(undefined); // undefined = loading
+  const [ranking, setRanking]     = useState<CrewRankingEntry[] | null>(null);
+  useFocusEffect(useCallback(() => {
+    if (!crewId || !isMember) { setChallenge(undefined); setRanking(null); return; }
+    let cancelled = false;
+    getCurrentChallenge(crewId)
+      .then(ch => { if (!cancelled) setChallenge(ch); })
+      .catch(() => { if (!cancelled) setChallenge(null); });
+    getCrewRanking(crewId)
+      .then(rows => { if (!cancelled) setRanking(rows); })
+      .catch(() => { if (!cancelled) setRanking([]); });
+    return () => { cancelled = true; };
+  }, [crewId, isMember]));
+
   async function handleJoin() {
     if (!crew) return;
     setBusy(true);
@@ -333,6 +350,77 @@ export default function CrewDetailScreen() {
                 </View>
               ))}
               {crew.active_time && <Text style={st.metaTime}>{crew.active_time}</Text>}
+            </View>
+          </View>
+        )}
+
+        {/* ── 챌린지 (M2) — members only; FrActiveChallengeRow ─────────── */}
+        {isMember && challenge !== undefined && (
+          <View style={{ paddingHorizontal: S.gutter, paddingTop: S.xl }}>
+            <View style={st.sectionHead}>
+              <Text style={st.sectionTitle}>챌린지</Text>
+            </View>
+            {challenge === null ? (
+              canManage ? (
+                <Pressable
+                  onPress={() => router.push({
+                    pathname: '/(community)/challenge-create' as never,
+                    params: { crewId: crew.id },
+                  })}
+                  style={({ pressed }) => [st.emptyBox, pressed && { opacity: 0.8 }]}
+                >
+                  <Text style={st.emptyTxt}>챌린지를 만들어 크루의 목표를 세워보세요 →</Text>
+                </Pressable>
+              ) : null
+            ) : (
+              <View style={[st.chCard, shadows.sm]}>
+                <View style={st.chHead}>
+                  <Text style={st.chTitle} numberOfLines={1}>{challenge.title}</Text>
+                  <View style={[st.chPct, challenge.is_completed && { backgroundColor: '#E8B53D' }]}>
+                    <Text style={st.chPctTxt}>
+                      {challenge.is_completed ? '달성!' : `${Math.round(challenge.progress_pct)}%`}
+                    </Text>
+                  </View>
+                </View>
+                <View style={st.chBarTrack}>
+                  <View style={[st.chBar, { width: `${Math.min(100, Math.max(2, challenge.progress_pct))}%` as `${number}%` }]} />
+                </View>
+                <View style={st.chMetaRow}>
+                  <Text style={st.chMeta}>
+                    {challenge.achieved_km.toFixed(1)} / {challenge.goal_km} km
+                  </Text>
+                  <Text style={st.chMeta}>
+                    {challenge.is_active
+                      ? `${Math.max(0, Math.ceil((new Date(challenge.ends_at).getTime() - Date.now()) / 86400000))}일 남음`
+                      : new Date(challenge.starts_at).getTime() > Date.now() ? '시작 예정' : '종료'}
+                  </Text>
+                </View>
+                <Text style={st.chCaption}>GPS 기록만 집계돼요</Text>
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* ── 랭킹 (M2b) — 이번 주 거리순; server aggregation ───────────── */}
+        {isMember && ranking !== null && ranking.length > 0 && (
+          <View style={{ paddingHorizontal: S.gutter, paddingTop: S.xl }}>
+            <View style={st.sectionHead}>
+              <Text style={st.sectionTitle}>이번 주 랭킹</Text>
+              <Text style={st.memberCount}>GPS 기록 기준</Text>
+            </View>
+            <View style={[st.rankList, shadows.sm]}>
+              {ranking.slice(0, 6).map((r, i) => (
+                <React.Fragment key={r.user_id}>
+                  {i > 0 && <View style={st.divider} />}
+                  <View style={[st.rankRow, r.me && st.rankRowMe]}>
+                    <Text style={[st.rankNum, r.rank <= 3 && { color: C.accentGrn }]}>{r.rank}</Text>
+                    <Text style={[st.rankName, r.me && { fontWeight: '700' }]} numberOfLines={1}>
+                      {r.nickname ?? '러너'}{r.me ? ' (나)' : ''}
+                    </Text>
+                    <Text style={st.rankKm}>{r.distance_km.toFixed(1)} km</Text>
+                  </View>
+                </React.Fragment>
+              ))}
             </View>
           </View>
         )}
@@ -499,6 +587,26 @@ const st = StyleSheet.create({
 
   // Empty / error states
   emptyBox: { backgroundColor: C.surfaceAlt, borderWidth: 1, borderColor: C.border, borderRadius: R.lg, padding: 20, alignItems: 'center' },
+
+  // 챌린지 (M2)
+  chCard:     { backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: R.xl, padding: 15 },
+  chHead:     { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  chTitle:    { flex: 1, minWidth: 0, fontSize: 14.5, fontWeight: '700', color: C.text, letterSpacing: -0.3 },
+  chPct:      { backgroundColor: C.accent, borderRadius: 8, paddingHorizontal: 9, paddingVertical: 4 },
+  chPctTxt:   { fontSize: 11.5, fontWeight: '800', color: C.accentText, letterSpacing: -0.2 },
+  chBarTrack: { height: 8, borderRadius: 4, backgroundColor: C.surfaceAlt, marginTop: 12, overflow: 'hidden' },
+  chBar:      { height: '100%', borderRadius: 4, backgroundColor: C.accent },
+  chMetaRow:  { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 },
+  chMeta:     { fontSize: 12.5, fontWeight: '600', color: C.sub, letterSpacing: -0.2 },
+  chCaption:  { fontSize: 11, color: C.faint, letterSpacing: -0.2, marginTop: 6 },
+
+  // 랭킹 (M2b)
+  rankList:  { backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: R.xl, overflow: 'hidden' },
+  rankRow:   { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 11, paddingHorizontal: 14 },
+  rankRowMe: { backgroundColor: C.accentDim },
+  rankNum:   { width: 20, fontSize: 13.5, fontWeight: '800', color: C.faint, fontVariant: ['tabular-nums'] },
+  rankName:  { flex: 1, minWidth: 0, fontSize: 14, fontWeight: '600', color: C.text, letterSpacing: -0.3 },
+  rankKm:    { fontSize: 13.5, fontWeight: '700', color: C.sub, fontVariant: ['tabular-nums'] },
 
   // 공지 preview (M1)
   annMoreTxt: { fontSize: 12.5, fontWeight: '700', color: C.accentGrn, letterSpacing: -0.2 },
