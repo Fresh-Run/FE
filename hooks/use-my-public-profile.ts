@@ -26,6 +26,7 @@ export type MyRun = {
   avg_pace_sec_per_km: number | null;
   kudos_count: number;
   comment_count: number;
+  polyline_thumb: { lat: number; lng: number }[] | null; // BE 6baa192, ≤36pt
   // Never null on own list — legacy rows are 'followers' server-side (지연 확인)
   visibility: 'public' | 'followers' | 'private';
 };

@@ -268,7 +268,9 @@ function RunRow({ run }: { run: Run }) {
       style={({ pressed }) => [st.runRow, shadows.sm, pressed && { opacity: 0.75 }]}
     >
       <View style={st.mapThumb}>
-        <MiniMap seed={run.id} height={62} borderRadius={14} />
+        {/* Route-shaped mini when a thumb exists (ledger ruling: actual
+            geometry in the stylized language); seed art on trackless */}
+        <MiniMap seed={run.id} height={62} borderRadius={14} polyline={run.polyline_thumb ?? undefined} />
       </View>
       <View style={{ flex: 1, minWidth: 0 }}>
         <View style={st.runRowTop}>

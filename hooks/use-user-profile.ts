@@ -32,6 +32,7 @@ export type UserRun = {
   my_kudos: boolean;
   comment_count: number;
   is_mine: boolean;
+  polyline_thumb: { lat: number; lng: number }[] | null; // BE 6baa192, ≤36pt
 };
 
 export function useUserProfile(uid: string | null) {

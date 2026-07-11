@@ -10,7 +10,7 @@
  */
 import { useFocusEffect } from '@react-navigation/native';
 import { router, useLocalSearchParams } from 'expo-router';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -23,6 +23,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { MiniMap } from '@/components/mini-map';
+import { RealMap } from '@/components/real-map';
 import { Icon } from '@/components/ui';
 import { apiFetch } from '@/lib/api';
 import { avatarBg } from '@/lib/fr-hash';
@@ -44,9 +45,10 @@ function Avatar({ name, size, ring = C.border }: { name: string; size: number; r
 // Run card — other-user variant: ♥ is a real toggle (my_kudos), no 💬,
 // no visibility caption (approved deltas). Card tap → 러닝 포스트 (R3',
 // BE 4cd5685 opened non-owner run detail) with entry-payload seeds.
-function RunCard({ run, units, onKudos, onOpen }: {
+function RunCard({ run, units, mapLive, onKudos, onOpen }: {
   run: UserRun;
   units: ReturnType<typeof useSettings.getState>['settings']['units'];
+  mapLive: boolean;
   onKudos: () => void;
   onOpen?: () => void;
 }) {
@@ -59,7 +61,13 @@ function RunCard({ run, units, onKudos, onOpen }: {
           <Text style={st.cardDate}>{fmtWhen(run.ran_at)}</Text>
         </View>
       </View>
-      <MiniMap seed={run.run_id} height={200} />
+      {/* polyline_thumb slice: viewable + thumb → real map; off-screen /
+          trackless → route-shaped or seed SVG (ledger rulings) */}
+      {mapLive && run.polyline_thumb && run.polyline_thumb.length >= 2 ? (
+        <RealMap height={200} polyline={run.polyline_thumb} />
+      ) : (
+        <MiniMap seed={run.run_id} height={200} polyline={run.polyline_thumb ?? undefined} />
+      )}
       <View style={st.cardBody}>
         <Text style={st.cardTitle}>{run.title ?? timeTitle(run.ran_at)}</Text>
         <View style={st.statsRow}>
@@ -110,6 +118,15 @@ export default function UserProfileScreen() {
   useFocusEffect(useCallback(() => { refetch(); }, [refetch]));
 
   const isFollowing = followOverlay ?? profile?.is_following ?? false;
+
+  // polyline_thumb slice — feed viewability pattern (stable refs, 25%)
+  const [liveIds, setLiveIds] = useState<Set<string>>(new Set());
+  const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 25 }).current;
+  const onViewableItemsChanged = useRef(
+    ({ viewableItems }: { viewableItems: { key: string }[] }) => {
+      setLiveIds(new Set(viewableItems.map(v => v.key)));
+    },
+  ).current;
 
   function toggleFollow() {
     if (!profile) return;
@@ -208,6 +225,8 @@ export default function UserProfileScreen() {
         <FlatList
           data={runs}
           keyExtractor={r => r.run_id}
+          viewabilityConfig={viewabilityConfig}
+          onViewableItemsChanged={onViewableItemsChanged}
           ListHeaderComponent={header}
           renderItem={({ item }) => {
             const ov = kudosOverlay[item.run_id];
@@ -219,6 +238,7 @@ export default function UserProfileScreen() {
                 <RunCard
                   run={shown}
                   units={units}
+                  mapLive={liveIds.has(item.run_id)}
                   onKudos={() => toggleKudos(item)}
                   // Own rows keep no tap here (내 프로필/기록 → activity is
                   // the own-run analysis path); others → 러닝 포스트

@@ -29,6 +29,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { KudosSheet } from '@/components/kudos-sheet';
 import { MiniMap } from '@/components/mini-map';
+import { RealMap } from '@/components/real-map';
 import { Icon } from '@/components/ui';
 import { useMyPublicProfile, type MyRun } from '@/hooks/use-my-public-profile';
 import { avatarBg } from '@/lib/fr-hash';
@@ -55,7 +56,7 @@ const VIS_CAPTION: Record<MyRun['visibility'], string> = {
 
 // Reduced feed-style run card (canvas shows area/tags — no backend source
 // for own runs; honest subset, tap → activity detail)
-function RunCard({ run, name, units, onKudos }: { run: MyRun; name: string; units: ReturnType<typeof useSettings.getState>['settings']['units']; onKudos: () => void }) {
+function RunCard({ run, name, units, mapLive, onKudos }: { run: MyRun; name: string; units: ReturnType<typeof useSettings.getState>['settings']['units']; mapLive: boolean; onKudos: () => void }) {
   return (
     // Whole card → own-run SOCIAL view (owner correction 2026-07-12); the
     // 활동 상세 analysis screen's home is the 기록 tab — social links to it
@@ -74,7 +75,14 @@ function RunCard({ run, name, units, onKudos }: { run: MyRun; name: string; unit
           <Text style={st.cardDate}>{fmtWhen(run.ran_at)}</Text>
         </View>
       </View>
-      <MiniMap seed={run.id} height={150} />
+      {/* polyline_thumb slice: viewable + thumb → real map (card-mode, same
+          perf pattern as the feed); off-screen/trackless → route-shaped or
+          seed SVG per the ledger rulings */}
+      {mapLive && run.polyline_thumb && run.polyline_thumb.length >= 2 ? (
+        <RealMap height={150} polyline={run.polyline_thumb} />
+      ) : (
+        <MiniMap seed={run.id} height={150} polyline={run.polyline_thumb ?? undefined} />
+      )}
       <View style={st.cardBody}>
         <Text style={st.cardTitle}>{run.title ?? timeTitle(run.ran_at)}</Text>
         <View style={st.statsRow}>
@@ -122,6 +130,16 @@ export default function MyProfileScreen() {
   const units = useSettings(s => s.settings.units);
   const { profile, runs, loading, error, refetch } = useMyPublicProfile();
   const [kudosRun, setKudosRun] = React.useState<MyRun | null>(null);
+
+  // polyline_thumb slice — real-map-only-for-viewable-cells (feed pattern:
+  // stable refs, 25% threshold; off-screen cells keep the SVG)
+  const [liveIds, setLiveIds] = React.useState<Set<string>>(new Set());
+  const viewabilityConfig = React.useRef({ itemVisiblePercentThreshold: 25 }).current;
+  const onViewableItemsChanged = React.useRef(
+    ({ viewableItems }: { viewableItems: { key: string }[] }) => {
+      setLiveIds(new Set(viewableItems.map(v => v.key)));
+    },
+  ).current;
 
   // Refetch on focus — 프로필 편집 renames must show on return
   useFocusEffect(useCallback(() => { refetch(); }, [refetch]));
@@ -213,10 +231,12 @@ export default function MyProfileScreen() {
         <FlatList
           data={runs}
           keyExtractor={r => r.id}
+          viewabilityConfig={viewabilityConfig}
+          onViewableItemsChanged={onViewableItemsChanged}
           ListHeaderComponent={header}
           renderItem={({ item }) => (
             <View style={{ paddingHorizontal: S.gutter }}>
-              <RunCard run={item} name={profile.nickname} units={units} onKudos={() => setKudosRun(item)} />
+              <RunCard run={item} name={profile.nickname} units={units} mapLive={liveIds.has(item.id)} onKudos={() => setKudosRun(item)} />
             </View>
           )}
           ItemSeparatorComponent={() => <View style={{ height: 14 }} />}

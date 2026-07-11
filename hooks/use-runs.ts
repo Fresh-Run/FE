@@ -40,6 +40,8 @@ export type Run = {
   photos?: string[] | null;
   /** First-photo thumb (signed) on list rows */
   photo_thumb?: string | null;
+  /** ≤36-pt simplified track on list rows (BE 6baa192; null = trackless) */
+  polyline_thumb?: { lat: number; lng: number }[] | null;
 };
 
 // ─── useRuns — full list for the signed-in user ───────────────────────────────
