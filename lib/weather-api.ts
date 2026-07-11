@@ -37,3 +37,16 @@ export function weatherTone(score: number): WeatherTone {
   if (score >= 40) return 'ok';
   return 'bad';
 }
+
+/** OpenWeather condition_code → Ionicons name + tint (W2, home strip).
+    Code families per OpenWeather docs: 2xx thunder, 3xx drizzle, 5xx rain,
+    6xx snow, 7xx atmosphere, 800 clear, 80x clouds. */
+export function weatherIcon(code: number): { name: string; color: string } {
+  if (code >= 200 && code < 300) return { name: 'thunderstorm', color: '#8A7BD8' };
+  if (code >= 300 && code < 600) return { name: 'rainy',        color: '#3BA7FF' };
+  if (code >= 600 && code < 700) return { name: 'snow',         color: '#9DB2C8' };
+  if (code >= 700 && code < 800) return { name: 'cloud-outline', color: '#9DA6B4' }; // mist/fog/haze
+  if (code === 800)              return { name: 'sunny',        color: '#E8A23D' };
+  if (code <= 802)               return { name: 'partly-sunny', color: '#E8A23D' };
+  return { name: 'cloudy', color: '#9DA6B4' }; // 803–804 broken/overcast
+}

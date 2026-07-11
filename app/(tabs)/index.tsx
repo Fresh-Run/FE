@@ -43,16 +43,10 @@ import { useQuota } from '@/store/use-quota';
 import { useSettings } from '@/store/use-settings';
 import { useStore } from '@/store/use-store';
 import type { Coordinate } from '@/types';
-import { FR_WEATHER, type WTone } from '@/lib/weather-mock';
+import { useWeather } from '@/hooks/use-weather';
+import { weatherIcon, weatherTone, type WeatherTone } from '@/lib/weather-api';
 
 // ─── Constants / helpers ──────────────────────────────────────────────────────
-
-const FR_AQI_COLOR: Record<string, string> = {
-  '좋음':    '#3BA7FF',
-  '보통':    '#2FA866',
-  '나쁨':    '#E8922E',
-  '매우나쁨': '#D8463C',
-};
 
 const EST_PACE_SEC_PER_KM = 320; // same assumption as courseStats
 
@@ -82,7 +76,7 @@ function haversineKm(a: Coordinate, b: Coordinate): number {
   return 2 * R * Math.asin(Math.sqrt(s));
 }
 
-function verdictColor(tone: WTone): string {
+function verdictColor(tone: WeatherTone): string {
   if (tone === 'good') return C.accent;
   if (tone === 'ok')   return C.sun;
   return C.danger;
@@ -159,30 +153,44 @@ const gst = StyleSheet.create({
 // ─── Weather strip ────────────────────────────────────────────────────────────
 
 function WeatherStrip({ onPress }: { onPress: () => void }) {
-  const w = FR_WEATHER;
-  const vc = verdictColor(w.verdict.tone);
+  // W2: live data — the SAME useWeather the detail screen consumes (shared
+  // cache + TTL: one fetch serves both, numbers always agree). Quiet-dashes
+  // contract while loading/offline-uncached (matches the detail screen; no
+  // mock flash, layout stays stable). Permission denied = Seoul-fallback
+  // coords inside useCurrentLocation — strip mirrors detail for free.
+  const { weather: w, placeName } = useWeather();
+  const tone = w ? weatherTone(w.running_index.score) : null;
+  const vc = tone ? verdictColor(tone) : null;
+  const icon = w ? weatherIcon(w.condition_code) : { name: 'sunny', color: '#E8A23D' };
   return (
     <Pressable onPress={onPress} style={[wst.strip, shadows.sm]}>
-      <Icon name="sunny" size={26} color="#E8A23D" />
+      <Icon name={icon.name as any} size={26} color={icon.color} />
       <View style={wst.tempGroup}>
-        <RNText style={wst.temp}>{w.temp}°</RNText>
-        <RNText style={wst.area}>{w.area}</RNText>
+        <RNText style={wst.temp}>{w ? `${Math.round(w.temp_c)}°` : '--°'}</RNText>
+        <RNText style={wst.area}>{placeName ?? '위치 확인 중'}</RNText>
       </View>
       <View style={wst.divider} />
       <View style={wst.metrics}>
         <View style={wst.metric}>
           <Icon name="water-outline" size={13} color={C.faint} />
-          <RNText style={wst.metricTxt}>{w.humidity}%</RNText>
+          <RNText style={wst.metricTxt}>{w ? `${w.humidity_pct}%` : '—'}</RNText>
         </View>
-        <View style={wst.metric}>
-          <View style={[wst.aqiDot, { backgroundColor: FR_AQI_COLOR[w.pm10.label] }]} />
-          <RNText style={wst.metricTxt}>미세 {w.pm10.label}</RNText>
+        {/* pm10 is nullable on partial upstream outage — hide, don't fake */}
+        {w?.pm10 ? (
+          <View style={wst.metric}>
+            <View style={[wst.aqiDot, { backgroundColor: C.aqi[w.pm10.grade] ?? C.faint }]} />
+            <RNText style={wst.metricTxt}>미세 {w.pm10.grade}</RNText>
+          </View>
+        ) : null}
+      </View>
+      {/* Verdict chip: server running_index.label (좋음/보통/…), tone from
+          the shared score thresholds — appears only with data */}
+      {w && vc ? (
+        <View style={[wst.verdict, { backgroundColor: vc + '1A' }]}>
+          <View style={[wst.verdictDot, { backgroundColor: vc }]} />
+          <RNText style={wst.verdictTxt}>{w.running_index.label}</RNText>
         </View>
-      </View>
-      <View style={[wst.verdict, { backgroundColor: vc + '1A' }]}>
-        <View style={[wst.verdictDot, { backgroundColor: vc }]} />
-        <RNText style={wst.verdictTxt}>{w.verdict.short}</RNText>
-      </View>
+      ) : null}
       <View style={{ marginLeft: 2 }}>
         <Icon name="chevron-forward" size={16} color={C.faint} />
       </View>
