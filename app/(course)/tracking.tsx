@@ -33,8 +33,10 @@ import Svg, { Circle } from 'react-native-svg';
 import { MiniMap } from '@/components/mini-map';
 import { Icon } from '@/components/ui';
 import { useRunTracker } from '@/hooks/use-run-tracker';
+import { clearActiveCourse, getActiveCourse } from '@/store/active-course';
 import { setPendingRun } from '@/store/pending-run';
-import { fmtPace } from '@/lib/run-format';
+import { useSettings } from '@/store/use-settings';
+import { distUnit, fmtDist, fmtPaceIn, paceUnit } from '@/lib/run-format';
 import { accentShadow, colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
 
 const MAP_H = 330;
@@ -107,17 +109,19 @@ function HoldStop({ onComplete }: { onComplete: () => void }) {
   const [holding, setHolding] = useState(false);
   const progress = useRef(new Animated.Value(0)).current;
   const doneRef = useRef(false);
+  // run.haptics setting gates all haptic feedback here (persisted via profile)
+  const hapticsOn = useSettings(s => s.settings.run.haptics);
 
   const begin = () => {
     doneRef.current = false;
     setHolding(true);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (hapticsOn) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     Animated.timing(progress, { toValue: 1, duration: HOLD_MS, easing: Easing.linear, useNativeDriver: false })
       .start(({ finished }) => {
         if (!finished) return;
         doneRef.current = true;
         setHolding(false);
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        if (hapticsOn) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         onComplete();
       });
   };
@@ -198,6 +202,14 @@ function fmtElapsed(sec: number): string {
 export default function TrackingScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
+  // Course mode ("이 코스 달리기"): map shows the course shape, pill shows its
+  // title, and the finished run links route_id. Absent → free run, as before.
+  const [course] = useState(() => getActiveCourse());
+  useEffect(() => () => clearActiveCourse(), []);
+
+  // Settings (run.haptics gates hold-stop feedback) — hydrate in case the
+  // profile tab was never opened this session.
+  useEffect(() => { useSettings.getState().hydrate(); }, []);
   const {
     state, countdownValue, elapsedSec, distanceKm, paceSecPerKm, moving, kcal,
     start, togglePause, stop,
@@ -223,9 +235,10 @@ export default function TrackingScreen() {
     const snapshot = stop();
     exitingRef.current = true;
     if (!snapshot) { router.back(); return; }
-    setPendingRun(snapshot);
+    // setPendingRun also persists to disk — crash-safe from this moment
+    setPendingRun(course ? { ...snapshot, course: { id: course.id, title: course.title } } : snapshot);
     // replace: back must never land on a dead tracking screen
-    router.replace('/(course)/run-result' as any);
+    router.replace('/(course)/run-save' as any);
   };
 
   const handleStart = async () => {
@@ -245,14 +258,29 @@ export default function TrackingScreen() {
 
   const running = state === 'running';
   const idle    = state === 'idle';
+  const units   = useSettings(s => s.settings.units);
   const coachMsg = !moving ? '출발 준비 완료! 가볍게 시작해볼까요?' : '좋아요! 목표 페이스 유지 중이에요';
-  const paceDisplay = moving ? fmtPace(paceSecPerKm) : "--'--\"";
+  const paceDisplay = moving ? fmtPaceIn(paceSecPerKm, units) : "--'--\"";
 
   return (
     <View style={st.root}>
       {/* ── Map area (MiniMap placeholder — real GPS map is a later item) ── */}
       <View style={{ height: MAP_H }}>
-        <MiniMap seed="me-live-track" height={MAP_H} borderRadius={0} />
+        <MiniMap
+          seed={course?.id ?? 'me-live-track'}
+          height={MAP_H}
+          borderRadius={0}
+          polyline={course?.polyline ?? undefined}
+        />
+        {/* Course title pill (bundle: tracking-screen.jsx course mode) */}
+        {course && (
+          <View pointerEvents="none" style={[st.coursePillWrap, { top: insets.top + 8 }]}>
+            <View style={st.coursePill}>
+              <Icon name="navigate-outline" size={13} color="#7CF03D" />
+              <Text style={st.coursePillTxt} numberOfLines={1}>{course.title}</Text>
+            </View>
+          </View>
+        )}
         {/* X exits only in idle — once countdown starts, hold-stop is the only way out */}
         {idle && (
           <Pressable
@@ -281,9 +309,9 @@ export default function TrackingScreen() {
 
         <View style={st.metricsRow}>
           {([
-            [distanceKm.toFixed(2), 'km',  '거리'],
-            [paceDisplay,           '/km', '현재 페이스'],
-            [String(kcal),          'kcal', '칼로리'],
+            [fmtDist(distanceKm, units, 2), distUnit(units), '거리'],
+            [paceDisplay,                   paceUnit(units), '현재 페이스'],
+            [String(kcal),                  'kcal',          '칼로리'],
           ] as [string, string, string][]).map(([val, unit, label], i) => (
             <View key={i} style={[st.metricCol, i > 0 && st.metricColDivider]}>
               <View style={st.metricValRow}>
@@ -334,6 +362,11 @@ export default function TrackingScreen() {
       </View>
 
       {state === 'countdown' && <CountdownOverlay value={countdownValue} />}
+      {/* TODO(keep-awake): gate on settings.run.keep_screen_on AFTER the
+          tracking-filter bug (TODO.md: PAUSED) is closed — letting the screen
+          sleep mid-run risks iOS GPS throttling, which would confound that
+          investigation. Until then KeepAwake stays always-on during a run,
+          regardless of the persisted toggle. */}
       {(state === 'countdown' || state === 'running' || state === 'paused') && <KeepAwake />}
     </View>
   );
@@ -346,6 +379,11 @@ const st = StyleSheet.create({
 
   // Close (idle only)
   closeBtn: { position: 'absolute', left: 14, width: 40, height: 40, borderRadius: R.pill, backgroundColor: 'rgba(0,0,0,0.45)', alignItems: 'center', justifyContent: 'center' },
+
+  // Course title pill (course mode)
+  coursePillWrap: { position: 'absolute', left: 0, right: 0, alignItems: 'center' },
+  coursePill:     { flexDirection: 'row', alignItems: 'center', gap: 6, maxWidth: '64%', backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: R.pill, paddingHorizontal: 13, paddingVertical: 7 },
+  coursePillTxt:  { fontSize: 12, fontWeight: '700', color: '#fff', letterSpacing: -0.2 },
 
   // Badge
   badge:    { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(0,0,0,0.45)', borderRadius: R.pill, paddingHorizontal: 13, paddingVertical: 7 },

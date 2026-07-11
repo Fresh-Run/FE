@@ -23,11 +23,13 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { MiniMap } from '@/components/mini-map';
+import { PendingRunRecovery } from '@/components/pending-run-recovery';
 import { Icon } from '@/components/ui';
 import { useRouteComments } from '@/hooks/use-comments';
 import { useCurrentLocation } from '@/hooks/use-current-location';
 import { useFeed, useNearbyRoutes } from '@/hooks/use-feed';
 import { avatarBg } from '@/lib/fr-hash';
+import { openProfile } from '@/lib/profile-nav';
 import {
   bookmarkRoute,
   likeRoute,
@@ -38,6 +40,7 @@ import {
 import { distUnit, fmtAgo, fmtDist, fmtDuration, fmtPaceIn, paceUnit, type Units } from '@/lib/run-format';
 import { colors as C, shadows, spacing as S } from '@/lib/theme';
 import { setPendingCourse } from '@/store/pending-course';
+import { setPendingPost } from '@/store/pending-post';
 import { useQuota } from '@/store/use-quota';
 import { useSettings } from '@/store/use-settings';
 import { useStore } from '@/store/use-store';
@@ -236,11 +239,14 @@ function FeedCard({
   const d = courseDisplay(item, units);
   return (
     <View style={[fct.card, shadows.sm]}>
-      {/* Header */}
+      {/* Header — author zone → profile (routing-rule RIDER: commits with
+          the item-17 walk gate) */}
       <View style={fct.header}>
-        <Avatar name={d.name} size={36} />
+        <Pressable onPress={() => openProfile(item.owner_id, item.owner_nickname)} disabled={!item.owner_id} hitSlop={6}>
+          <Avatar name={d.name} size={36} />
+        </Pressable>
         <View style={{ flex: 1, minWidth: 0 }}>
-          <RNText style={fct.name}>{d.name}</RNText>
+          <RNText style={fct.name} onPress={item.owner_id ? () => openProfile(item.owner_id, item.owner_nickname) : undefined}>{d.name}</RNText>
           <View style={fct.subRow}>
             <Icon name="location-outline" size={11} color={C.faint} />
             <RNText style={fct.sub} numberOfLines={1}>
@@ -451,11 +457,15 @@ function CourseDetailSheet({
               {loading && <ActivityIndicator size="small" color={C.faint} style={{ paddingVertical: 10 }} />}
               {!loading && error && <RNText style={[rdt.emptyTxt, { color: C.danger }]}>{error}</RNText>}
               {!loading && !error && comments.length === 0 && <RNText style={rdt.emptyTxt}>첫 댓글을 남겨보세요.</RNText>}
+              {/* Comment author zones → profile (routing-rule RIDER: commits
+                  with the item-17 walk gate) */}
               {comments.map((c) => (
                 <View key={c.id} style={rdt.comment}>
-                  <Avatar name={c.authorName} size={30} />
+                  <Pressable onPress={() => openProfile(c.authorId, c.authorName)} disabled={!c.authorId} hitSlop={6}>
+                    <Avatar name={c.authorName} size={30} />
+                  </Pressable>
                   <View style={{ flex: 1, minWidth: 0 }}>
-                    <RNText style={rdt.cName}>{c.authorName}</RNText>
+                    <RNText style={rdt.cName} onPress={c.authorId ? () => openProfile(c.authorId, c.authorName) : undefined}>{c.authorName}</RNText>
                     <RNText style={rdt.cText}>{c.body}</RNText>
                   </View>
                 </View>
@@ -622,6 +632,8 @@ export default function HomeScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: C.bg }}>
+      {/* Cold-start recovery of an unsaved run (crash safety, 러닝 저장 item) */}
+      <PendingRunRecovery />
       <FlatList
         data={list}
         keyExtractor={(r) => r.id}
@@ -657,7 +669,11 @@ export default function HomeScreen() {
                 awayKm={awayKm}
                 onLike={() => toggleLike(item)}
                 onSave={() => toggleSave(item)}
-                onOpen={() => setOpenItem(item)}
+                // Rider ④ (owner directive 2026-07-10): card tap → 코스 포스트
+                // full screen (canvas FrRunPost), superseding the comment
+                // sheet below — the sheet + cmtOv are now unreachable; delete
+                // them in the item-17 gate commit cleanup.
+                onOpen={() => { setPendingPost(item); router.push('/(course)/course-post' as any); }}
                 onRun={() => runCourse(item)}
               />
             </View>

@@ -5,6 +5,7 @@
 import * as Location from 'expo-location';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import type { GpsPoint } from '@/lib/runs-api';
 import type { Coordinate } from '@/types';
 
 export type TrackerState = 'idle' | 'countdown' | 'running' | 'paused' | 'ended';
@@ -15,6 +16,8 @@ export type RunSnapshot = {
   avgPaceSecPerKm: number | null;
   kcal: number;
   path: Coordinate[];
+  /** RAW received fixes (gates not applied) — uploaded as gps_track. */
+  gpsTrack: GpsPoint[];
   endedAt: number;
 };
 
@@ -63,6 +66,10 @@ export function useRunTracker() {
   const anchorRef    = useRef<{ lat: number; lng: number; t: number } | null>(null);
   const distanceMRef = useRef(0);
   const pathRef      = useRef<Coordinate[]>([]); // for slice 3 save + live polyline
+  // RAW received fixes while running, gates NOT applied (owner decision
+  // 2026-07-08) — uploaded as gps_track so the server filters independently
+  // (layer attribution). pathRef stays the filtered on-screen source.
+  const rawTrackRef  = useRef<GpsPoint[]>([]);
   const windowRef    = useRef<{ t: number; cumM: number }[]>([]);
 
   // Interval only drives re-renders while running; values come from the refs.
@@ -74,12 +81,31 @@ export function useRunTracker() {
   }, [state]);
 
   // ── Fix pipeline ────────────────────────────────────────────────────────────
+  // Gate audit (2026-07-11 outing, tethered log): accuracy/jitter/stationary/
+  // anchor gates EXONERATED — 90%+ of raw credited at walk pace, 98% at run
+  // pace, ANCHOR-MOVED destroyer fired zero times. The one convicted defect
+  // (short-dt speed rejects) is fixed below.
   const onFix = useCallback((loc: Location.LocationObject) => {
-    const { latitude: lat, longitude: lng, accuracy, speed } = loc.coords;
+    const { latitude: lat, longitude: lng, accuracy, speed, altitude } = loc.coords;
     const t = loc.timestamp;
-    if (accuracy == null || accuracy > MAX_ACCURACY_M) return; // bad fix — ignore
-
     const cur = { lat, lng };
+
+    // Raw track capture — BEFORE any gate (incl. the accuracy reject below):
+    // the server filter must see everything the client filter saw.
+    if (stateRef.current === 'running') {
+      rawTrackRef.current.push({
+        // iOS timestamps carry fractional ms; the contract's t is integer
+        // epoch ms (422 int_from_float otherwise — convicted 2026-07-08)
+        lat, lng, t: Math.round(t),
+        ...(accuracy != null ? { acc: Math.round(accuracy * 10) / 10 } : {}),
+        ...(altitude != null ? { alt: Math.round(altitude * 10) / 10 } : {}),
+      });
+    }
+
+    if (accuracy == null || accuracy > MAX_ACCURACY_M) {
+      return; // bad fix — ignore
+    }
+
     const st = stateRef.current;
 
     // Countdown (GPS warm-up) and pause: keep the anchor fresh so the first
@@ -88,7 +114,9 @@ export function useRunTracker() {
       anchorRef.current = { ...cur, t };
       return;
     }
-    if (st !== 'running') return;
+    if (st !== 'running') {
+      return;
+    }
 
     const anchor = anchorRef.current;
     if (!anchor) {
@@ -106,12 +134,23 @@ export function useRunTracker() {
 
     const dM = haversineM(anchor, cur);
     const dtSec = (t - anchor.t) / 1000;
-    if (dtSec <= 0) return;
-    if (dM / dtSec > MAX_SPEED_MPS) return; // glitch (also drops teleport-y
-                                            // background gaps; plausible gaps
-                                            // bridge as one straight segment)
-    if (dM < MIN_SEGMENT_M) return;         // jitter floor — anchor stays put,
-                                            // slow progress still adds up
+    if (dtSec <= 0) {
+      return;
+    }
+    if (dM / dtSec > MAX_SPEED_MPS) {
+      // Short-dt discretization artifact (convicted on the 2026-07-11 outing:
+      // walking fixes rejected at a computed 8 m/s over dt≈1s — integer-second
+      // dt inflates v while dM spans a longer real interval). The computed
+      // speed is only trustworthy over a stable window; under 1.5s the OS
+      // speed is the honest signal — reject only when IT also says glitch.
+      if (dtSec >= 1.5 || (speed != null && speed > MAX_SPEED_MPS)) {
+        return; // glitch (also drops teleport-y background gaps)
+      }
+      // else: short-dt over-computed speed with a sane OS speed — real motion
+    }
+    if (dM < MIN_SEGMENT_M) {
+      return; // jitter floor — anchor stays put, slow progress still adds up
+    }
 
     distanceMRef.current += dM;
     anchorRef.current = { ...cur, t };
@@ -206,6 +245,7 @@ export function useRunTracker() {
       avgPaceSecPerKm: finalKm >= 0.05 && finalSec > 0 ? Math.round(finalSec / finalKm) : null,
       kcal: Math.round(finalKm * 62),
       path: [...pathRef.current],
+      gpsTrack: [...rawTrackRef.current],
       endedAt: Date.now(),
     };
   }, []);

@@ -10,16 +10,18 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { MiniMap } from '@/components/mini-map';
 import { Icon } from '@/components/ui';
-import { fmtWhen } from '@/lib/run-format';
+import { distUnit, fmtDist, fmtWhen } from '@/lib/run-format';
+import { useSettings } from '@/store/use-settings';
 import { accentShadow, colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
 import { clearPendingRun, getPendingRun } from '@/store/pending-run';
 
 export default function RunSavedScreen() {
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{
-    runId?: string; liked?: string; ranAt?: string; dist?: string; durSec?: string;
+    runId?: string; liked?: string; ranAt?: string; dist?: string; durSec?: string; title?: string;
   }>();
   const [pending] = useState(() => getPendingRun());
+  const units = useSettings(s => s.settings.units);
   useEffect(() => () => clearPendingRun(), []);
 
   const liked = params.liked === '1';
@@ -53,7 +55,9 @@ export default function RunSavedScreen() {
             <MiniMap seed="run-saved" height={72} borderRadius={14} polyline={pending?.path} />
           </View>
           <View style={{ flex: 1, minWidth: 0 }}>
-            <Text style={st.cardTitle} numberOfLines={1}>자유 러닝 {dist.toFixed(2)}km</Text>
+            <Text style={st.cardTitle} numberOfLines={1}>
+              {params.title || `자유 러닝 ${fmtDist(dist, units, 2)}${distUnit(units)}`}
+            </Text>
             <View style={st.cardMeta}>
               <Icon name="time-outline" size={12} color={C.faint} />
               <Text style={st.cardMetaTxt} numberOfLines={1}>{when} · {durMin}분</Text>

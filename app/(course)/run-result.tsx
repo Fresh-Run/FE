@@ -27,23 +27,26 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { MiniMap } from '@/components/mini-map';
+import { PbCelebration } from '@/components/pb-celebration';
 import { Icon } from '@/components/ui';
-import { fmtDuration, fmtPace } from '@/lib/run-format';
+import { distUnit, fmtDist, fmtDuration, fmtPaceIn, paceUnit } from '@/lib/run-format';
 import {
   NEGATIVE_TAGS,
   POSITIVE_TAGS,
   saveRun,
   submitFeedback,
+  type NewRecord,
   type SavedRun,
 } from '@/lib/runs-api';
 import { accentShadow, colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
-import { clearPendingRun, getPendingRun } from '@/store/pending-run';
+import { clearPendingRun, getPendingRun, getSavedResult } from '@/store/pending-run';
+import { useSettings } from '@/store/use-settings';
 import { useStore } from '@/store/use-store';
 
 type Verdict = 'good' | 'bad';
 type SaveState = 'saving' | 'saved' | 'error' | 'skipped';
 
-const MIN_SAVE_KM = 0.01; // contract requires distance_km > 0; sub-10m runs don't save
+const MIN_SAVE_KM = 0.05; // 50m floor (owner spec, 2026-07-11 outing) — GPS noise can fake sub-50m "runs"; contract requires distance_km > 0
 
 export default function RunResultScreen() {
   const insets = useSafeAreaInsets();
@@ -51,13 +54,22 @@ export default function RunResultScreen() {
   const displayName = useStore(s => s.displayName) ?? '러너';
 
   const [run] = useState(() => getPendingRun());
-  const tooShort = !run || run.distanceKm < MIN_SAVE_KM;
+  // 러닝 저장 (compose) now owns the POST — normal flow arrives pre-saved.
+  const [preSaved] = useState(() => getSavedResult());
+  const units = useSettings(s => s.settings.units);
+  const tooShort = !run || run.distanceKm < MIN_SAVE_KM; // gate stays km-internal
 
-  // ── Save-on-entry ───────────────────────────────────────────────────────────
-  const [saveState, setSaveState] = useState<SaveState>(tooShort ? 'skipped' : 'saving');
+  // ── Save state (legacy save-on-entry kept as a safety net only) ─────────────
+  const [saveState, setSaveState] = useState<SaveState>(
+    preSaved ? 'saved' : tooShort ? 'skipped' : 'saving',
+  );
   const [saveError, setSaveError] = useState<string | null>(null);
-  const savedRunRef = useRef<SavedRun | null>(null);
+  const savedRunRef = useRef<SavedRun | null>(preSaved);
   const inFlightRef = useRef(false);
+  // PB celebration — from the compose screen's save response (or legacy path)
+  const [pbRecords, setPbRecords] = useState<NewRecord[] | null>(
+    preSaved?.new_records && preSaved.new_records.length > 0 ? preSaved.new_records : null,
+  );
 
   const doSave = useCallback(async () => {
     if (!run || tooShort) return;
@@ -71,9 +83,12 @@ export default function RunResultScreen() {
         distanceKm: run.distanceKm,
         durationSec: run.elapsedSec,
         avgPaceSecPerKm: run.avgPaceSecPerKm,
+        routeId: run.course?.id ?? null,
+        gpsTrack: run.gpsTrack,
       });
       savedRunRef.current = saved;
       setSaveState('saved');
+      if (saved.new_records && saved.new_records.length > 0) setPbRecords(saved.new_records);
     } catch (e: unknown) {
       setSaveError(e instanceof Error ? e.message : '저장에 실패했어요');
       setSaveState('error');
@@ -113,6 +128,7 @@ export default function RunResultScreen() {
           ranAt: saved.ran_at,
           dist: String(run?.distanceKm ?? 0),
           durSec: String(run?.elapsedSec ?? 0),
+          title: run?.course?.title ?? '',
         },
       });
     }
@@ -177,14 +193,16 @@ export default function RunResultScreen() {
 
         <View style={{ paddingHorizontal: S.gutter }}>
           <Text style={st.title}>수고했어요, {displayName}님</Text>
-          <Text style={st.subtitle}>자유 러닝 · {run.distanceKm.toFixed(2)}km</Text>
+          <Text style={st.subtitle} numberOfLines={1}>
+            {preSaved?.title ?? (run.course ? run.course.title : `자유 러닝 · ${fmtDist(run.distanceKm, units, 2)}${distUnit(units)}`)}
+          </Text>
 
           {/* ── Stats ── */}
           <View style={st.statsRow}>
             {([
-              [run.distanceKm.toFixed(2), 'km', '거리'],
+              [fmtDist(run.distanceKm, units, 2), distUnit(units), '거리'],
               [fmtDuration(run.elapsedSec), '', '시간'],
-              [run.avgPaceSecPerKm != null ? fmtPace(run.avgPaceSecPerKm) : "--'--\"", '/km', '페이스'],
+              [run.avgPaceSecPerKm != null ? fmtPaceIn(run.avgPaceSecPerKm, units) : "--'--\"", paceUnit(units), '페이스'],
               [String(run.kcal), 'kcal', '칼로리'],
             ] as [string, string, string][]).map(([val, unit, label], i) => (
               <View key={i} style={st.statTile}>
@@ -297,6 +315,9 @@ export default function RunResultScreen() {
           </Pressable>
         )}
       </View>
+
+      {/* PB celebration — CTA-only dismissal, reveals run-result beneath */}
+      <PbCelebration records={pbRecords} units={units} onClose={() => setPbRecords(null)} />
     </View>
   );
 }

@@ -99,9 +99,12 @@ export function courseStats(item: CourseStatsInput) {
   };
 }
 
+// Canvas verdict 2026-07-07: 야간 owns deep night (canvas renders 야간 at
+// 03:23); 새벽 is the early-dawn slot 04:00–06:59.
 export function timeTitle(isoStr: string): string {
   const h = new Date(isoStr).getHours();
-  if (h >= 4  && h < 10) return '아침 러닝';
+  if (h >= 4  && h < 7)  return '새벽 러닝';
+  if (h >= 7  && h < 10) return '아침 러닝';
   if (h >= 10 && h < 12) return '오전 러닝';
   if (h >= 12 && h < 14) return '점심 러닝';
   if (h >= 14 && h < 18) return '오후 러닝';

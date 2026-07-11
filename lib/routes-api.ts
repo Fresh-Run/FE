@@ -65,6 +65,23 @@ export function unbookmarkRoute(id: string): Promise<void> {
   return apiFetch<void>(`/api/routes/${id}/bookmark`, { method: 'DELETE' });
 }
 
+// My private copy of a route (StoredRoute) — subset we consume.
+export type CopiedRoute = {
+  id: string;
+  summary: string;
+  total_distance_km: number;
+  estimated_duration_min: number | null;
+  polyline: Coordinate[] | null;
+  is_public: boolean;
+  copied_from: string | null;
+};
+
+/** "이 코스 달리기" — copies a public route into my account; the copy's id
+    is what runs.route_id links to (route reads are owner-only). */
+export function copyRoute(id: string): Promise<CopiedRoute> {
+  return apiFetch<CopiedRoute>(`/api/routes/${id}/copy`, { method: 'POST' });
+}
+
 export function getRouteComments(routeId: string): Promise<RouteComment[]> {
   return apiFetch<RouteComment[]>(`/api/routes/${routeId}/comments`);
 }

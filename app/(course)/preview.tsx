@@ -10,6 +10,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   Pressable,
   ScrollView,
@@ -22,7 +23,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MiniMap } from '@/components/mini-map';
 import { Icon } from '@/components/ui';
 import { avatarBg } from '@/lib/fr-hash';
-import { courseStats, fmtDuration, fmtPace, type CourseStatsInput } from '@/lib/run-format';
+import { copyRoute } from '@/lib/routes-api';
+import { courseStats, distUnit, fmtDist, fmtDuration, fmtPace, fmtPaceIn, paceUnit, type CourseStatsInput } from '@/lib/run-format';
+import { useSettings } from '@/store/use-settings';
+import { setActiveCourse } from '@/store/active-course';
 import { clearPendingCourse, getPendingCourse } from '@/store/pending-course';
 import {
   accentShadow,
@@ -52,7 +56,15 @@ export default function CoursePreviewScreen() {
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ item?: string }>();
   const [pending] = useState(() => getPendingCourse());
+  const units = useSettings(s => s.settings.units);
   useEffect(() => () => clearPendingCourse(), []);
+
+  // Unit-aware pace: only computable for the feed-handoff path (we have raw
+  // minutes+km). The legacy param path carries preformatted km strings — shown
+  // as-is (documented skip; that path is dead since the feed handoff).
+  const paceSecPerKm = pending && pending.estimated_duration_min != null && pending.total_distance_km > 0
+    ? Math.round((pending.estimated_duration_min * 60) / pending.total_distance_km)
+    : null;
 
   const s = useMemo(() => {
     if (pending) {
@@ -70,9 +82,31 @@ export default function CoursePreviewScreen() {
     return courseStats(parseItem(params.item));
   }, [pending, params.item]);
 
-  const confirmRun = () => {
-    // TODO(tracking): pop + push live tracking with this course once it exists.
-    Alert.alert('준비 중', '러닝 추적은 다음 업데이트에서 지원됩니다.');
+  const [starting, setStarting] = useState(false);
+
+  const confirmRun = async () => {
+    if (starting) return;
+    // Legacy param-only path (no feed handoff) has no route id to copy/link.
+    if (!pending) {
+      Alert.alert('준비 중', '이 코스는 아직 달리기를 지원하지 않아요.');
+      return;
+    }
+    setStarting(true);
+    try {
+      // "이 코스 달리기" = copy into my account; the copy's id links runs.route_id
+      const copy = await copyRoute(pending.id);
+      setActiveCourse({
+        id: copy.id,
+        title: copy.summary,
+        distanceKm: copy.total_distance_km,
+        polyline: copy.polyline ?? pending.polyline ?? null,
+      });
+      // replace: back from tracking-idle should land on the feed, not here
+      router.replace('/(course)/tracking' as any);
+    } catch (e: unknown) {
+      Alert.alert('시작할 수 없어요', e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요');
+      setStarting(false);
+    }
   };
 
   return (
@@ -119,9 +153,11 @@ export default function CoursePreviewScreen() {
           </View>
           <View style={st.statsRow}>
             {([
-              ['resize-outline',      s.dist.toFixed(1), 'km',  '거리'],
-              ['time-outline',        s.dur,             '',    '예상 시간'],
-              ['speedometer-outline', s.pace,            '/km', '페이스'],
+              ['resize-outline',      fmtDist(s.dist, units, 1), distUnit(units), '거리'],
+              ['time-outline',        s.dur,                     '',              '예상 시간'],
+              paceSecPerKm != null
+                ? ['speedometer-outline', fmtPaceIn(paceSecPerKm, units), paceUnit(units), '페이스']
+                : ['speedometer-outline', s.pace,                         '/km',           '페이스'],
             ] as [string, string, string, string][]).map(([icon, val, unit, label], i) => (
               <View key={i} style={[st.statTile, shadows.sm]}>
                 <Icon name={icon} size={17} color={C.sub} />
@@ -152,10 +188,17 @@ export default function CoursePreviewScreen() {
         <Text style={st.confirmTxt}>이 코스로 뛰시겠습니까?</Text>
         <Pressable
           onPress={confirmRun}
-          style={({ pressed }) => [st.runBtn, accentShadow(C.accent), { opacity: pressed ? 0.9 : 1 }]}
+          disabled={starting}
+          style={({ pressed }) => [st.runBtn, accentShadow(C.accent), { opacity: pressed || starting ? 0.9 : 1 }]}
         >
-          <Icon name="play" size={19} color={C.accentText} />
-          <Text style={st.runTxt}>네, 뛸게요</Text>
+          {starting
+            ? <ActivityIndicator size="small" color={C.accentText} />
+            : (
+              <>
+                <Icon name="play" size={19} color={C.accentText} />
+                <Text style={st.runTxt}>네, 뛸게요</Text>
+              </>
+            )}
         </Pressable>
         <Pressable onPress={() => router.back()} style={({ pressed }) => [st.cancelBtn, { opacity: pressed ? 0.7 : 1 }]}>
           <Text style={st.cancelTxt}>취소</Text>
