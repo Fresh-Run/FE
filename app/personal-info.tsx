@@ -7,13 +7,16 @@
  *   이메일      → display-only (Supabase Auth identity; accepted deviation)
  *   출생 연도/체중/키/성별 → device-local (store/use-local-profile) until
  *   지연's schema fields land — TODO(S2) swaps the storage target only.
- * Avatar pencil → 준비 중 (no upload endpoint yet).
+ * Avatar pencil → LIVE (onboarding-gate slice shipped the upload cycle):
+ *   picker → uploadAvatar 3-step → PATCH avatar_url → store write-through.
  */
+import * as ImagePicker from 'expo-image-picker';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -25,8 +28,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/ui';
 import { ApiError } from '@/lib/api';
+import { uploadAvatar } from '@/lib/avatar-api';
 import { avatarBg } from '@/lib/fr-hash';
-import { updateNickname } from '@/lib/profile-api';
+import { updateNickname, updateProfile } from '@/lib/profile-api';
 import { accentShadow, colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
 import { useLocalProfile, type Gender } from '@/store/use-local-profile';
 import { useStore } from '@/store/use-store';
@@ -124,6 +128,8 @@ export default function PersonalInfoScreen() {
   const params = useLocalSearchParams<{ nickname?: string }>();
   const session = useStore(s => s.session);
   const setDisplayName = useStore(s => s.setDisplayName);
+  const photoUrl = useStore(s => s.photoUrl);
+  const setPhotoUrl = useStore(s => s.setPhotoUrl);
 
   const email = session?.user.email ?? '—';
   const originalName = params.nickname ?? '';
@@ -152,9 +158,35 @@ export default function PersonalInfoScreen() {
   }, [hydrated, local]);
 
   const [saving, setSaving] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  // Stale-URL grace: failed photo load falls back to initials, not a broken image
+  const [brokenUrl, setBrokenUrl] = useState<string | null>(null);
   const [savedFlash, setSavedFlash] = useState(false);
   const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => { if (flashTimer.current) clearTimeout(flashTimer.current); }, []);
+
+  async function changePhoto() {
+    if (uploadingPhoto) return;
+    const res = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: 'images',
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    if (res.canceled || !res.assets[0]) return;
+    setUploadingPhoto(true);
+    try {
+      const url = await uploadAvatar(res.assets[0].uri);
+      // nickname is required on every ProfileUpdate (422 without) — carry
+      // the SERVER's current name, not the unsaved field edit
+      await updateProfile({ nickname: originalName, avatar_url: url });
+      setPhotoUrl(url); // write-through: 홈/프로필 paint it immediately
+    } catch (e: unknown) {
+      Alert.alert('사진 업로드 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요');
+    } finally {
+      setUploadingPhoto(false);
+    }
+  }
 
   async function handleSave() {
     if (saving) return;
@@ -206,17 +238,26 @@ export default function PersonalInfoScreen() {
         contentContainerStyle={{ paddingBottom: 120 }}
         keyboardShouldPersistTaps="handled"
       >
-        {/* ── Avatar + pencil ── */}
+        {/* ── Avatar + pencil (live upload — onboarding-gate slice) ── */}
         <View style={st.avatarWrap}>
           <View style={{ position: 'relative' }}>
-            <View style={[st.avatar, { backgroundColor: avatarBg(name || '러너') }]}>
-              <Text style={st.avatarTxt}>{(name.trim() || '러').trim()[0].toUpperCase()}</Text>
-            </View>
-            <Pressable
-              onPress={() => Alert.alert('준비 중', '프로필 사진 변경은 다음 업데이트에서 지원돼요.')}
-              hitSlop={8}
-              style={st.pencilBadge}
-            >
+            {photoUrl && photoUrl !== brokenUrl ? (
+              <Image
+                source={{ uri: photoUrl }}
+                onError={() => setBrokenUrl(photoUrl)}
+                style={st.avatar}
+              />
+            ) : (
+              <View style={[st.avatar, { backgroundColor: avatarBg(name || '러너'), alignItems: 'center', justifyContent: 'center' }]}>
+                <Text style={st.avatarTxt}>{(name.trim() || '러').trim()[0].toUpperCase()}</Text>
+              </View>
+            )}
+            {uploadingPhoto && (
+              <View style={[st.avatar, st.avatarBusy]}>
+                <ActivityIndicator color="#fff" />
+              </View>
+            )}
+            <Pressable onPress={changePhoto} hitSlop={8} style={st.pencilBadge}>
               <Icon name="pencil" size={13} color={C.accentText} />
             </Pressable>
           </View>
@@ -286,7 +327,8 @@ const st = StyleSheet.create({
   appBarTitle: { flex: 1, textAlign: 'center', fontSize: 16, fontWeight: '700', letterSpacing: -0.3, color: C.text },
 
   avatarWrap:  { alignItems: 'center', paddingTop: 14, paddingBottom: 4 },
-  avatar:      { width: 84, height: 84, borderRadius: 42, alignItems: 'center', justifyContent: 'center', borderWidth: 2.5, borderColor: C.accent },
+  avatar:      { width: 84, height: 84, borderRadius: 42, borderWidth: 2.5, borderColor: C.accent },
+  avatarBusy:  { position: 'absolute', top: 0, left: 0, backgroundColor: 'rgba(0,0,0,0.45)', alignItems: 'center', justifyContent: 'center' },
   avatarTxt:   { fontSize: 34, fontWeight: '700', color: '#fff', letterSpacing: -0.5 },
   pencilBadge: { position: 'absolute', bottom: 0, right: 0, width: 28, height: 28, borderRadius: 14, backgroundColor: C.accent, borderWidth: 2.5, borderColor: C.bg, alignItems: 'center', justifyContent: 'center' },
 

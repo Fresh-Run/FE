@@ -15,11 +15,12 @@
  */
 import { useFocusEffect } from '@react-navigation/native';
 import { router } from 'expo-router';
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   FlatList,
+  Image,
   Pressable,
   StyleSheet,
   Text,
@@ -37,7 +38,20 @@ import { distUnit, fmtDist, fmtDuration, fmtPaceIn, fmtWhen, paceUnit, timeTitle
 import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
 import { useSettings } from '@/store/use-settings';
 
-function Avatar({ name, size, ring = C.accent }: { name: string; size: number; ring?: string }) {
+function Avatar({ name, size, ring = C.accent, photoUrl }: { name: string; size: number; ring?: string; photoUrl?: string | null }) {
+  // Uploaded photo wins over initials (minimum-visibility surface; the
+  // app-wide avatar_url sweep is the ledgered follow-up).
+  // Stale-URL grace: load failure falls back to initials, never a broken image.
+  const [brokenUrl, setBrokenUrl] = useState<string | null>(null);
+  if (photoUrl && photoUrl !== brokenUrl) {
+    return (
+      <Image
+        source={{ uri: photoUrl }}
+        onError={() => setBrokenUrl(photoUrl)}
+        style={{ width: size, height: size, borderRadius: size / 2, borderWidth: 2, borderColor: ring }}
+      />
+    );
+  }
   return (
     <View style={[st.avatar, { width: size, height: size, borderRadius: size / 2, backgroundColor: avatarBg(name), borderColor: ring }]}>
       <Text style={{ fontWeight: '700', fontSize: Math.round(size * 0.38), color: '#fff' }}>
@@ -148,7 +162,7 @@ export default function MyProfileScreen() {
     <View>
       {/* Identity */}
       <View style={st.identity}>
-        <Avatar name={profile.nickname} size={76} />
+        <Avatar name={profile.nickname} size={76} photoUrl={profile.avatarUrl} />
         <View style={{ flex: 1, minWidth: 0 }}>
           <Text style={st.name} numberOfLines={1}>{profile.nickname}</Text>
           {profile.bio ? (

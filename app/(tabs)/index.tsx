@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  Image,
   Pressable,
   RefreshControl,
   StyleSheet,
@@ -95,7 +96,22 @@ function formatDate(): string {
 
 // ─── Avatar ───────────────────────────────────────────────────────────────────
 
-function Avatar({ name, size = 38, ring = false }: { name: string; size?: number; ring?: boolean }) {
+function Avatar({ name, size = 38, ring = false, photoUrl }: { name: string; size?: number; ring?: boolean; photoUrl?: string | null }) {
+  // Stale-URL grace: a photo that fails to load (deleted/expired storage
+  // object, dead cache) falls back to initials — never a broken image.
+  const [brokenUrl, setBrokenUrl] = useState<string | null>(null);
+  if (photoUrl && photoUrl !== brokenUrl) {
+    return (
+      <Image
+        source={{ uri: photoUrl }}
+        onError={() => setBrokenUrl(photoUrl)}
+        style={[
+          { width: size, height: size, borderRadius: size / 2, flexShrink: 0 },
+          ring && { borderWidth: 2, borderColor: C.border },
+        ]}
+      />
+    );
+  }
   return (
     <View style={[
       { width: size, height: size, borderRadius: size / 2, backgroundColor: avatarBg(name), flexShrink: 0, alignItems: 'center', justifyContent: 'center' },
@@ -110,7 +126,7 @@ function Avatar({ name, size = 38, ring = false }: { name: string; size?: number
 
 // ─── Greeting header ──────────────────────────────────────────────────────────
 
-function Greeting({ name, onBell }: { name: string; onBell: () => void }) {
+function Greeting({ name, photoUrl, onBell }: { name: string; photoUrl: string | null; onBell: () => void }) {
   return (
     <View style={gst.row}>
       <View style={{ minWidth: 0, flex: 1 }}>
@@ -124,7 +140,7 @@ function Greeting({ name, onBell }: { name: string; onBell: () => void }) {
         </Pressable>
         {/* Avatar → 내 프로필 (social profile; canvas 2026-07-07) */}
         <Pressable onPress={() => router.push('/my-profile' as any)} hitSlop={6}>
-          <Avatar name={name} size={38} ring />
+          <Avatar name={name} size={38} ring photoUrl={photoUrl} />
         </Pressable>
       </View>
     </View>
@@ -415,6 +431,7 @@ const lst = StyleSheet.create({
 export default function HomeScreen() {
   const insets      = useSafeAreaInsets();
   const displayName = useStore((s) => s.displayName);
+  const photoUrl    = useStore((s) => s.photoUrl);
   const signOut     = useStore((s) => s.signOut);
   const premium     = useQuota((s) => s.isPremium);
   useEffect(() => { useQuota.getState().hydrate(); }, []);
@@ -478,7 +495,7 @@ export default function HomeScreen() {
   const header = useMemo(() => (
     <View>
       <View style={{ paddingTop: insets.top + 12, paddingHorizontal: S.gutter }}>
-        <Greeting name={name} onBell={() => router.push('/notifications' as any)} />
+        <Greeting name={name} photoUrl={photoUrl} onBell={() => router.push('/notifications' as any)} />
       </View>
       <View style={{ paddingTop: 14, paddingHorizontal: S.gutter }}>
         <WeatherStrip onPress={() => router.push('/weather-detail')} />
@@ -487,7 +504,7 @@ export default function HomeScreen() {
         <FeedTabs tab={tab} setTab={setTab} />
       </View>
     </View>
-  ), [insets.top, name, tab]);
+  ), [insets.top, name, photoUrl, tab]);
 
   return (
     <View style={{ flex: 1, backgroundColor: C.bg }}>

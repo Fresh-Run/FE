@@ -16,6 +16,7 @@ export const unstable_settings = {
 function AuthGuard() {
   const session        = useStore((s) => s.session);
   const sessionLoading = useStore((s) => s.sessionLoading);
+  const profileMissing = useStore((s) => s.profileMissing);
   const hydrate        = useStore((s) => s.hydrate);
   const segments       = useSegments();
 
@@ -25,16 +26,26 @@ function AuthGuard() {
   useEffect(() => {
     if (sessionLoading) return;
 
-    const inAuthGroup = segments[0] === '(auth)';
+    const inAuthGroup    = segments[0] === '(auth)';
+    const inOnboarding   = inAuthGroup && segments[1] === 'onboarding-name';
 
     if (!session && !inAuthGroup) {
       // Logged out but trying to access a protected route → send to welcome.
       router.replace('/(auth)/welcome');
-    } else if (session && inAuthGroup) {
+    } else if (session && profileMissing === true && !inOnboarding) {
+      // 온보딩 게이트 (plan A, 2026-07-13): the server has no profile row —
+      // fresh signups AND legacy profile-less accounts (every write 404s
+      // until the row exists). Hard gate: nickname required to proceed.
+      // profileMissing null (offline/unknown) fails OPEN — no lockout.
+      router.replace('/(auth)/onboarding-name');
+    } else if (session && inAuthGroup && !inOnboarding) {
       // Already logged in but landed on an auth screen → send to tabs.
       router.replace('/(tabs)');
+    } else if (session && inOnboarding && profileMissing === false) {
+      // Gate satisfied (profile created or already existed) → release.
+      router.replace('/(tabs)');
     }
-  }, [session, sessionLoading, segments]);
+  }, [session, sessionLoading, profileMissing, segments]);
 
   return null;
 }

@@ -1,10 +1,11 @@
 import { useFocusEffect } from '@react-navigation/native';
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -26,8 +27,24 @@ import { useStore } from '@/store/use-store';
 
 // ─── Avatar ───────────────────────────────────────────────────────────────────
 
-function Avatar({ name, size = 40, ring = false }: { name: string; size?: number; ring?: boolean }) {
+function Avatar({ name, size = 40, ring = false, photoUrl }: { name: string; size?: number; ring?: boolean; photoUrl?: string | null }) {
   const initial = name.trim()[0]?.toUpperCase() ?? '?';
+  // Uploaded photo wins over initials (onboarding gate slice, 2026-07-13 —
+  // minimum-visibility surfaces; the full avatar_url sweep is a follow-up).
+  // Stale-URL grace: load failure falls back to initials, never a broken image.
+  const [brokenUrl, setBrokenUrl] = useState<string | null>(null);
+  if (photoUrl && photoUrl !== brokenUrl) {
+    return (
+      <Image
+        source={{ uri: photoUrl }}
+        onError={() => setBrokenUrl(photoUrl)}
+        style={[
+          { width: size, height: size, borderRadius: size / 2 },
+          ring && { borderWidth: 2.5, borderColor: C.accent },
+        ]}
+      />
+    );
+  }
   return (
     <View style={[
       { width: size, height: size, borderRadius: size / 2, backgroundColor: avatarBg(name), alignItems: 'center', justifyContent: 'center' },
@@ -144,7 +161,7 @@ function IdentityCard({ profile, stats, units, premium, onEdit }: { profile: Pro
       {/* Avatar + name row → 개인 정보 edit screen */}
       <Pressable onPress={onEdit} style={({ pressed }) => [st.identityRow, pressed && { opacity: 0.7 }]}>
         <View style={{ position: 'relative' }}>
-          <Avatar name={profile.nickname} size={62} ring />
+          <Avatar name={profile.nickname} size={62} ring photoUrl={profile.avatar_url} />
           <View style={st.editBadge}>
             <Icon name="pencil-outline" size={11} color={C.accentText} />
           </View>
