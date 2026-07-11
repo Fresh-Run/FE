@@ -260,7 +260,7 @@ function FeedCard({
           the item-17 walk gate) */}
       <View style={fct.header}>
         <Pressable onPress={() => openProfile(item.owner_id, item.owner_nickname)} disabled={!item.owner_id} hitSlop={6}>
-          <Avatar name={d.name} size={36} />
+          <Avatar name={d.name} size={36} photoUrl={item.owner_avatar_url} />
         </Pressable>
         <View style={{ flex: 1, minWidth: 0 }}>
           <RNText style={fct.name} onPress={item.owner_id ? () => openProfile(item.owner_id, item.owner_nickname) : undefined}>{d.name}</RNText>

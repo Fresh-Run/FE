@@ -11,6 +11,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -33,6 +34,20 @@ import { avatarBg } from '@/lib/fr-hash';
 import { fmtWhen } from '@/lib/run-format';
 import { supabase } from '@/lib/supabase';
 import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
+
+// avatar wire-up (BE 5009cbe): author photo wins over initials; load
+// failure falls back to initials — never a broken image.
+function AuthorAvatar({ name, photoUrl, size }: { name: string; photoUrl?: string | null; size: number }) {
+  const [brokenUrl, setBrokenUrl] = useState<string | null>(null);
+  if (photoUrl && photoUrl !== brokenUrl) {
+    return <Image source={{ uri: photoUrl }} onError={() => setBrokenUrl(photoUrl)} style={{ width: size, height: size, borderRadius: size / 2 }} />;
+  }
+  return (
+    <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: avatarBg(name), alignItems: 'center', justifyContent: 'center' }}>
+      <Text style={{ fontSize: size * 0.5, fontWeight: '700', color: '#fff' }}>{name[0]}</Text>
+    </View>
+  );
+}
 
 const RSVP_OPTS: { value: RsvpStatus; label: string }[] = [
   { value: 'going',     label: '참석' },
@@ -137,7 +152,10 @@ export default function AnnouncementDetailScreen() {
       ) : (
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: S.gutter, paddingBottom: 40 }}>
           <Text style={st.title}>{ann.title}</Text>
-          <Text style={st.meta}>{ann.author_nickname ?? '크루장'} · {fmtWhen(ann.created_at)}</Text>
+          <View style={st.metaRow}>
+            <AuthorAvatar name={ann.author_nickname ?? '크루장'} photoUrl={ann.author_avatar_url} size={20} />
+            <Text style={st.meta}>{ann.author_nickname ?? '크루장'} · {fmtWhen(ann.created_at)}</Text>
+          </View>
           <Text style={st.body}>{ann.body}</Text>
 
           {/* 러닝 일정 — only when scheduled */}
@@ -222,7 +240,8 @@ const st = StyleSheet.create({
   stateTxt: { textAlign: 'center', paddingTop: 60, fontSize: 14, color: C.faint },
 
   title: { fontSize: 20, fontWeight: '700', color: C.text, letterSpacing: -0.5 },
-  meta:  { fontSize: 12, color: C.faint, letterSpacing: -0.2, marginTop: 6 },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 },
+  meta:  { fontSize: 12, color: C.faint, letterSpacing: -0.2 },
   body:  { fontSize: 14.5, color: C.sub, letterSpacing: -0.2, lineHeight: 22, marginTop: 14 },
 
   scheduleCard: { marginTop: 20, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: R.xl, padding: 14, gap: 10 },

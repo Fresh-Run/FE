@@ -22,6 +22,7 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  Image,
   Pressable,
   StyleSheet,
   Text,
@@ -142,10 +143,16 @@ function deepLink(n: AppNotification): (() => void) | null {
 
 // ─── Row ──────────────────────────────────────────────────────────────────────
 
-function NotifIcon({ meta, actor }: { meta: Meta; actor: string }) {
+function NotifIcon({ meta, actor, photoUrl }: { meta: Meta; actor: string; photoUrl?: string | null }) {
+  // avatar wire-up (BE 5009cbe): actor photo wins over initials; load
+  // failure falls back to initials — never a broken image.
+  const [brokenUrl, setBrokenUrl] = useState<string | null>(null);
   if (meta.icon === 'avatar') {
+    if (photoUrl && photoUrl !== brokenUrl) {
+      return <Image source={{ uri: photoUrl }} onError={() => setBrokenUrl(photoUrl)} style={st.avatar} />;
+    }
     return (
-      <View style={[st.avatar, { backgroundColor: avatarBg(actor) }]}>
+      <View style={[st.avatar, { backgroundColor: avatarBg(actor), alignItems: 'center', justifyContent: 'center' }]}>
         <Text style={st.avatarTxt}>{actor.trim()[0]?.toUpperCase() ?? '?'}</Text>
       </View>
     );
@@ -185,10 +192,10 @@ function NotifRow({ n, onPress, onDelete }: { n: AppNotification; onPress: () =>
           its own deep-link. Actorless rows stay plain. */}
       {n.actor_id && !meta.actorless ? (
         <Pressable onPress={() => openProfile(n.actor_id, n.actor_nickname)} hitSlop={6}>
-          <NotifIcon meta={meta} actor={actor} />
+          <NotifIcon meta={meta} actor={actor} photoUrl={n.actor_avatar_url} />
         </Pressable>
       ) : (
-        <NotifIcon meta={meta} actor={actor} />
+        <NotifIcon meta={meta} actor={actor} photoUrl={n.actor_avatar_url} />
       )}
       <View style={{ flex: 1, minWidth: 0 }}>
         <View style={st.rowHead}>

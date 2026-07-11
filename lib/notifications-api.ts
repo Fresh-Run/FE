@@ -21,6 +21,7 @@ export type AppNotification = {
   type: string;
   actor_id: string | null;
   actor_nickname: string | null;
+  actor_avatar_url: string | null; // BE 5009cbe (avatar wire-up)
   target_type: string | null;
   target_id: string | null;
   // Landed 2026-07-07 (staging-probed): crew_announcement rows carry the crew

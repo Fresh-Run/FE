@@ -15,6 +15,7 @@ export type Announcement = {
   crew_id: string;
   author_id: string;
   author_nickname: string | null;
+  author_avatar_url: string | null; // BE 5009cbe (avatar wire-up; 탈퇴 = null/null)
   title: string;
   body: string;
   run_at: string | null;

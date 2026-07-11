@@ -39,7 +39,7 @@ export type CrewMember = {
   role: 'owner' | 'admin' | 'member'; // admin: BE f68a48f v1
   joined_at: string;
   nickname: string;
-  avatar_url: string | null; // not in CrewMemberResponse yet — initials avatar
+  avatar_url: string | null; // served since BE 5009cbe (avatar wire-up)
 };
 
 export type JoinRequestStatus = 'pending' | 'approved' | 'rejected';
@@ -75,6 +75,7 @@ type ServerCrew = {
 type ServerMember = {
   user_id: string;
   nickname: string | null;
+  avatar_url: string | null; // BE 5009cbe (avatar wire-up)
   role: string;
   joined_at: string;
 };
@@ -111,7 +112,7 @@ function mapMember(row: ServerMember): CrewMember {
     role:       (row.role as 'owner' | 'admin' | 'member') ?? 'member',
     joined_at:  row.joined_at,
     nickname:   row.nickname ?? '러너',
-    avatar_url: null,
+    avatar_url: row.avatar_url ?? null,
   };
 }
 
@@ -220,6 +221,7 @@ export type CrewRankingEntry = {
   rank: number;
   user_id: string;
   nickname: string | null;
+  avatar_url: string | null; // BE 5009cbe (avatar wire-up)
   distance_km: number;
   me: boolean;
 };

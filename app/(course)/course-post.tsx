@@ -19,6 +19,7 @@ import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -55,8 +56,20 @@ function fmtEstMin(min: number | null): string {
   return m === 0 ? `약 ${h}시간` : `약 ${h}시간 ${m}분`;
 }
 
-function InitialAvatar({ name, size }: { name: string | null; size: number }) {
+function InitialAvatar({ name, size, photoUrl }: { name: string | null; size: number; photoUrl?: string | null }) {
   const n = name?.trim() || '러너';
+  // avatar wire-up (BE 5009cbe): photo wins over initials; load failure
+  // falls back to initials — never a broken image.
+  const [brokenUrl, setBrokenUrl] = useState<string | null>(null);
+  if (photoUrl && photoUrl !== brokenUrl) {
+    return (
+      <Image
+        source={{ uri: photoUrl }}
+        onError={() => setBrokenUrl(photoUrl)}
+        style={{ width: size, height: size, borderRadius: size / 2 }}
+      />
+    );
+  }
   return (
     <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: avatarBg(n), alignItems: 'center', justifyContent: 'center' }}>
       <Text style={{ fontSize: size * 0.42, fontWeight: '700', color: '#fff' }}>{n[0]}</Text>
@@ -164,7 +177,7 @@ export default function CoursePostScreen() {
           onPress={() => openProfile(route.owner_id, route.owner_nickname)}
           style={({ pressed }) => [st.authorRow, pressed && { opacity: 0.7 }]}
         >
-          <InitialAvatar name={route.owner_nickname} size={42} />
+          <InitialAvatar name={route.owner_nickname} size={42} photoUrl={route.owner_avatar_url} />
           <View style={{ flex: 1, minWidth: 0 }}>
             <Text style={st.authorName} numberOfLines={1}>{route.owner_nickname ?? '러너'}</Text>
             <Text style={st.authorSub}>{fmtWhen(route.created_at)}</Text>
@@ -209,7 +222,7 @@ export default function CoursePostScreen() {
               {comments.map(cm => (
                 <View key={cm.id} style={st.commentRow}>
                   <Pressable onPress={() => openProfile(cm.user_id, cm.nickname)} hitSlop={6}>
-                    <InitialAvatar name={cm.nickname} size={30} />
+                    <InitialAvatar name={cm.nickname} size={30} photoUrl={cm.avatar_url} />
                   </Pressable>
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <Pressable onPress={() => openProfile(cm.user_id, cm.nickname)} hitSlop={4}>

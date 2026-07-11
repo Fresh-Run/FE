@@ -17,6 +17,7 @@ export type PublicRoute = {
   polyline: Coordinate[] | null;
   is_mine: boolean;
   owner_nickname: string | null;
+  owner_avatar_url: string | null; // BE 5009cbe+4b22103 (avatar wire-up)
   copy_count: number;
   like_count: number;
   is_liked: boolean;
@@ -28,6 +29,7 @@ export type RouteComment = {
   route_id: string;
   user_id: string;
   nickname: string | null;
+  avatar_url: string | null; // BE 5009cbe (avatar wire-up)
   content: string;
   created_at: string;
 };

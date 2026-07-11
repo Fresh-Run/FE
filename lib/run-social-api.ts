@@ -14,6 +14,7 @@ export type RunComment = {
   run_id: string;
   user_id: string;
   nickname: string | null;
+  avatar_url: string | null; // BE 5009cbe (avatar wire-up)
   content: string;
   created_at: string;
 };

@@ -283,7 +283,7 @@ export default function RunPostScreen() {
                   {comments.map(cm => (
                     <View key={cm.id} style={st.commentRow}>
                       <Pressable onPress={() => openProfile(cm.user_id, cm.nickname)} hitSlop={6}>
-                        <InitialAvatar name={cm.nickname} size={30} />
+                        <InitialAvatar name={cm.nickname} size={30} photoUrl={cm.avatar_url} />
                       </Pressable>
                       <View style={{ flex: 1, minWidth: 0 }}>
                         <Pressable onPress={() => openProfile(cm.user_id, cm.nickname)} hitSlop={4}>

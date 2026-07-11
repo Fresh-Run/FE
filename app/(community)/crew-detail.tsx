@@ -9,6 +9,7 @@ import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -42,7 +43,19 @@ function isFull(crew: Crew): boolean {
 
 // ─── Avatar ───────────────────────────────────────────────────────────────────
 
-function Avatar({ name, size = 40 }: { name: string; size?: number }) {
+function Avatar({ name, size = 40, photoUrl }: { name: string; size?: number; photoUrl?: string | null }) {
+  // avatar wire-up (BE 5009cbe): photo wins over initials; load failure
+  // falls back to initials — never a broken image.
+  const [brokenUrl, setBrokenUrl] = useState<string | null>(null);
+  if (photoUrl && photoUrl !== brokenUrl) {
+    return (
+      <Image
+        source={{ uri: photoUrl }}
+        onError={() => setBrokenUrl(photoUrl)}
+        style={{ width: size, height: size, borderRadius: size / 2, flexShrink: 0 }}
+      />
+    );
+  }
   return (
     <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: avatarBg(name), alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
       <Text style={{ fontWeight: '700', fontSize: Math.round(size * 0.42), color: '#fff', letterSpacing: -0.3 }}>
@@ -63,7 +76,7 @@ function MemberRow({ member, index }: { member: CrewMember; index: number }) {
       style={({ pressed }) => [st.memberRow, isOwner && st.memberRowOwner, pressed && { opacity: 0.7 }]}
     >
       <Text style={st.memberRank}>{index + 1}</Text>
-      <Avatar name={member.nickname} size={40} />
+      <Avatar name={member.nickname} size={40} photoUrl={member.avatar_url} />
       <View style={{ flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
         <Text style={st.memberName} numberOfLines={1}>{member.nickname}</Text>
         {isOwner && (
@@ -414,6 +427,7 @@ export default function CrewDetailScreen() {
                   {i > 0 && <View style={st.divider} />}
                   <View style={[st.rankRow, r.me && st.rankRowMe]}>
                     <Text style={[st.rankNum, r.rank <= 3 && { color: C.accentGrn }]}>{r.rank}</Text>
+                    <Avatar name={r.nickname ?? '러너'} size={26} photoUrl={r.avatar_url} />
                     <Text style={[st.rankName, r.me && { fontWeight: '700' }]} numberOfLines={1}>
                       {r.nickname ?? '러너'}{r.me ? ' (나)' : ''}
                     </Text>

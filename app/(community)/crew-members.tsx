@@ -14,6 +14,7 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  Image,
   Pressable,
   StyleSheet,
   Text,
@@ -27,6 +28,24 @@ import { avatarBg } from '@/lib/fr-hash';
 import { openProfile } from '@/lib/profile-nav';
 import { supabase } from '@/lib/supabase';
 import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
+
+// avatar wire-up (BE 5009cbe): photo wins over initials; load failure
+// falls back to initials — never a broken image.
+function MemberAvatar({ name, photoUrl, style, txtStyle }: {
+  name: string | null; photoUrl?: string | null;
+  style: object; txtStyle: object;
+}) {
+  const [brokenUrl, setBrokenUrl] = useState<string | null>(null);
+  if (photoUrl && photoUrl !== brokenUrl) {
+    return <Image source={{ uri: photoUrl }} onError={() => setBrokenUrl(photoUrl)} style={style} />;
+  }
+  const n = name || '러너';
+  return (
+    <View style={[style, { backgroundColor: avatarBg(n), alignItems: 'center', justifyContent: 'center' }]}>
+      <Text style={txtStyle}>{n[0]}</Text>
+    </View>
+  );
+}
 
 const ROLE_BADGE: Record<CrewMember['role'], { label: string; bg: string; fg: string }> = {
   owner:  { label: '크루장', bg: '#E8B53D', fg: '#0D1A06' },
@@ -142,9 +161,7 @@ export default function CrewMembersScreen() {
                   onPress={() => openProfile(m.user_id, m.nickname)}
                   style={({ pressed }) => [st.rowBody, pressed && { opacity: 0.7 }]}
                 >
-                  <View style={[st.avatar, { backgroundColor: avatarBg(m.nickname || '러너') }]}>
-                    <Text style={st.avatarTxt}>{(m.nickname || '러')[0]}</Text>
-                  </View>
+                  <MemberAvatar name={m.nickname} photoUrl={m.avatar_url} style={st.avatar} txtStyle={st.avatarTxt} />
                   <Text style={st.name} numberOfLines={1}>{m.nickname}</Text>
                   {m.role !== 'member' && (
                     <View style={[st.badge, { backgroundColor: badge.bg }]}>

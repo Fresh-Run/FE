@@ -18,6 +18,7 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -66,6 +67,10 @@ function CourseRow({ route, onOpen, onUnsave }: { route: PublicRoute; onOpen: ()
     name:  route.owner_nickname ?? undefined,
   });
   const owner = route.owner_nickname ?? '러너';
+  // avatar wire-up (BE 5009cbe): photo wins; load failure → initials
+  const [brokenUrl, setBrokenUrl] = useState<string | null>(null);
+  const photoUrl = route.owner_avatar_url;
+  const showPhoto = !!photoUrl && photoUrl !== brokenUrl;
   return (
     <Pressable onPress={onOpen} style={({ pressed }) => [st.row, shadows.sm, pressed && { opacity: 0.8 }]}>
       <View style={{ width: 82 }}>
@@ -88,9 +93,13 @@ function CourseRow({ route, onOpen, onUnsave }: { route: PublicRoute; onOpen: ()
           hitSlop={6}
           style={({ pressed }) => [st.ownerLine, pressed && { opacity: 0.7 }]}
         >
-          <View style={[st.ownerAvatar, { backgroundColor: avatarBg(owner) }]}>
-            <Text style={st.ownerAvatarTxt}>{owner.trim()[0]?.toUpperCase() ?? '?'}</Text>
-          </View>
+          {showPhoto ? (
+            <Image source={{ uri: photoUrl }} onError={() => setBrokenUrl(photoUrl)} style={st.ownerAvatar} />
+          ) : (
+            <View style={[st.ownerAvatar, { backgroundColor: avatarBg(owner), alignItems: 'center', justifyContent: 'center' }]}>
+              <Text style={st.ownerAvatarTxt}>{owner.trim()[0]?.toUpperCase() ?? '?'}</Text>
+            </View>
+          )}
           <Text style={st.ownerTxt} numberOfLines={1}>{owner} 코스</Text>
         </Pressable>
       </View>
