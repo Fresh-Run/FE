@@ -4,7 +4,8 @@
  */
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
-import React, { useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
+import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -27,6 +28,7 @@ import {
   type CrewMember,
 } from '@/hooks/use-crews';
 import { avatarBg } from '@/lib/fr-hash';
+import { listAnnouncements, type Announcement } from '@/lib/announcements-api';
 import { openProfile } from '@/lib/profile-nav';
 import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
 
@@ -88,7 +90,7 @@ function CtaButton({
     );
   }
 
-  if (crew.myRole === 'member') {
+  if (crew.myRole === 'member' || crew.myRole === 'admin') {
     return (
       <Pressable
         onPress={onLeave}
@@ -169,6 +171,19 @@ export default function CrewDetailScreen() {
 
   const [busy, setBusy]       = useState(false);
   const [mutErr, setMutErr]   = useState<string | null>(null);
+
+  // ── 공지 preview (M1) — members only (server 403s outside) ──────────────────
+  const isMember = crew?.myRole != null;
+  const canManage = crew?.myRole === 'owner' || crew?.myRole === 'admin';
+  const [annPreview, setAnnPreview] = useState<Announcement[] | null>(null);
+  useFocusEffect(useCallback(() => {
+    if (!crewId || !isMember) { setAnnPreview(null); return; }
+    let cancelled = false;
+    listAnnouncements(crewId, 2)
+      .then(rows => { if (!cancelled) setAnnPreview(rows); })
+      .catch(() => { if (!cancelled) setAnnPreview([]); });
+    return () => { cancelled = true; };
+  }, [crewId, isMember]));
 
   async function handleJoin() {
     if (!crew) return;
@@ -322,6 +337,62 @@ export default function CrewDetailScreen() {
           </View>
         )}
 
+        {/* ── 공지 (M1) — members only ─────────────────────────────────── */}
+        {isMember && (
+          <View style={{ paddingHorizontal: S.gutter, paddingTop: S.xl }}>
+            <View style={st.sectionHead}>
+              <Text style={st.sectionTitle}>공지</Text>
+              <Pressable
+                onPress={() => router.push({
+                  pathname: '/(community)/announcements' as never,
+                  params: { crewId: crew.id, canManage: canManage ? '1' : '0' },
+                })}
+                hitSlop={8}
+              >
+                <Text style={st.annMoreTxt}>전체 보기</Text>
+              </Pressable>
+            </View>
+
+            {annPreview === null ? (
+              <View style={st.emptyBox}><ActivityIndicator size="small" color={C.faint} /></View>
+            ) : annPreview.length === 0 ? (
+              <Pressable
+                onPress={canManage ? () => router.push({
+                  pathname: '/(community)/announcement-compose' as never,
+                  params: { crewId: crew.id },
+                }) : undefined}
+                style={st.emptyBox}
+              >
+                <Text style={st.emptyTxt}>
+                  {canManage ? '공지를 올려 크루원에게 소식을 전해보세요 →' : '아직 공지가 없어요'}
+                </Text>
+              </Pressable>
+            ) : (
+              <View style={[st.annList, shadows.sm]}>
+                {annPreview.map((a, i) => (
+                  <React.Fragment key={a.id}>
+                    {i > 0 && <View style={st.divider} />}
+                    <Pressable
+                      onPress={() => router.push({
+                        pathname: '/(community)/announcement-detail' as never,
+                        params: { crewId: crew.id, announcementId: a.id },
+                      })}
+                      style={({ pressed }) => [st.annRow, pressed && { opacity: 0.7 }]}
+                    >
+                      <Icon name="megaphone-outline" size={16} color={C.accentGrn} />
+                      <View style={{ flex: 1, minWidth: 0 }}>
+                        <Text style={st.annTitle} numberOfLines={1}>{a.title}</Text>
+                        {a.run_at ? <Text style={st.annSub}>참석 {a.rsvp.going} · 러닝 일정 있음</Text> : null}
+                      </View>
+                      <Icon name="chevron-forward" size={15} color={C.faint} />
+                    </Pressable>
+                  </React.Fragment>
+                ))}
+              </View>
+            )}
+          </View>
+        )}
+
         {/* ── Member list ──────────────────────────────────────────────── */}
         <View style={{ paddingHorizontal: S.gutter, paddingTop: S.xl }}>
           <View style={st.sectionHead}>
@@ -416,6 +487,13 @@ const st = StyleSheet.create({
 
   // Empty / error states
   emptyBox: { backgroundColor: C.surfaceAlt, borderWidth: 1, borderColor: C.border, borderRadius: R.lg, padding: 20, alignItems: 'center' },
+
+  // 공지 preview (M1)
+  annMoreTxt: { fontSize: 12.5, fontWeight: '700', color: C.accentGrn, letterSpacing: -0.2 },
+  annList:    { backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: R.xl, overflow: 'hidden' },
+  annRow:     { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 13, paddingHorizontal: 14 },
+  annTitle:   { fontSize: 14, fontWeight: '600', color: C.text, letterSpacing: -0.3 },
+  annSub:     { fontSize: 11.5, color: C.faint, letterSpacing: -0.2, marginTop: 2 },
   emptyTxt: { fontSize: 14, color: C.faint, letterSpacing: -0.2, fontWeight: '600' },
   errTxt:   { fontSize: 14, color: C.faint, letterSpacing: -0.2, fontWeight: '600', textAlign: 'center' },
   retryBtn: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: R.md, backgroundColor: C.surfaceAlt, borderWidth: 1, borderColor: C.border },

@@ -122,12 +122,17 @@ function deepLink(n: AppNotification): (() => void) | null {
       if (!n.target_id) return null;
       return () => openProfile(n.target_id, n.actor_nickname);
     case 'crew_announcement': {
-      // Staging-probed 2026-07-07: new rows carry payload.crew_id; old rows
-      // have payload:null and an ANNOUNCEMENT-id target_id — the announced
-      // "target_id fallback" is contradicted by staging, so old rows stay
-      // inert (navigating with an announcement id would break crew-detail).
+      // GRADUATED (M1, 2026-07-13): routes to the real 공지 detail —
+      // payload.crew_id + target_id(=공지 id), per the guide's deep-link
+      // table. Old rows (payload:null, pre-07-08) stay inert as before.
       const crewId = n.payload?.crew_id;
       if (!crewId) return null;
+      if (n.target_id) {
+        return () => router.push({
+          pathname: '/(community)/announcement-detail' as any,
+          params: { crewId, announcementId: n.target_id },
+        });
+      }
       return () => router.push({ pathname: '/(community)/crew-detail' as any, params: { crewId } });
     }
     default:

@@ -31,12 +31,12 @@ export type Crew = {
   sigungu: string | null;
   tags: string[];
   distance_km: number | null;
-  myRole?: 'owner' | 'member';
+  myRole?: 'owner' | 'admin' | 'member';
 };
 
 export type CrewMember = {
   user_id: string;
-  role: 'owner' | 'member';
+  role: 'owner' | 'admin' | 'member'; // admin: BE f68a48f v1
   joined_at: string;
   nickname: string;
   avatar_url: string | null; // not in CrewMemberResponse yet — initials avatar
@@ -79,7 +79,7 @@ type ServerMember = {
   joined_at: string;
 };
 
-export function mapCrew(row: ServerCrew, myRole?: 'owner' | 'member'): Crew {
+export function mapCrew(row: ServerCrew, myRole?: 'owner' | 'admin' | 'member'): Crew {
   return {
     id:          row.id,
     owner_id:    row.owner_id,
@@ -108,7 +108,7 @@ export function mapCrew(row: ServerCrew, myRole?: 'owner' | 'member'): Crew {
 function mapMember(row: ServerMember): CrewMember {
   return {
     user_id:    row.user_id,
-    role:       (row.role as 'owner' | 'member') ?? 'member',
+    role:       (row.role as 'owner' | 'admin' | 'member') ?? 'member',
     joined_at:  row.joined_at,
     nickname:   row.nickname ?? '러너',
     avatar_url: null,

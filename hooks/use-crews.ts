@@ -143,9 +143,11 @@ export function useCrewDetail(crewId: string | null) {
         if (cancelled) return;
 
         const userId = user?.id ?? null;
-        const myRole = userId && crewRow.owner_id === userId
-          ? 'owner' as const
-          : memberRows.some(m => m.user_id === userId) ? 'member' as const : undefined;
+        // Server role is truth (3-valued since BE f68a48f admin v1);
+        // owner_id check stays as the fallback for consistency.
+        const serverRole = memberRows.find(m => m.user_id === userId)?.role;
+        const myRole = serverRole
+          ?? (userId && crewRow.owner_id === userId ? 'owner' as const : undefined);
 
         setCrew(mapCrew(crewRow, myRole));
         setMembers(memberRows);
