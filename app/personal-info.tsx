@@ -27,6 +27,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { AvatarCrop, type CropSource } from '@/components/avatar-crop';
 import { Icon } from '@/components/ui';
 import { ApiError } from '@/lib/api';
 import { uploadAvatar } from '@/lib/avatar-api';
@@ -160,6 +161,11 @@ export default function PersonalInfoScreen() {
 
   const [saving, setSaving] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  // Perceptual absorption for the pre-present gap (busy ring on the avatar
+  // from tap until the picker covers the screen; cleared on resolve)
+  const [openingPicker, setOpeningPicker] = useState(false);
+  // 사진 위치 조정 step between pick and upload (components/avatar-crop)
+  const [cropSrc, setCropSrc] = useState<CropSource | null>(null);
   // Stale-URL grace: failed photo load falls back to initials, not a broken image
   const [brokenUrl, setBrokenUrl] = useState<string | null>(null);
   const [savedFlash, setSavedFlash] = useState(false);
@@ -168,16 +174,37 @@ export default function PersonalInfoScreen() {
 
   async function changePhoto() {
     if (uploadingPhoto) return;
-    const res = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: 'images',
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
-    });
+    // Guarded picker call (지연 bug ②): a rejected presentation (e.g. modal
+    // still dismissing) must surface, never be a silent unhandled rejection.
+    // NO allowsEditing (perf fix): allowsEditing=true forces the legacy
+    // UIImagePickerController (ImagePickerModule.swift:94) — the ~4s present
+    // on-device. Without it we get PHPicker: out-of-process, permissionless,
+    // fast. Avatars render circle-masked everywhere so the crop loss is
+    // cosmetic; real crop returns with R2's ImageManipulator if wanted.
+    let res: ImagePicker.ImagePickerResult;
+    setOpeningPicker(true);
+    try {
+      res = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: 'images',
+        quality: 0.8,
+      });
+    } catch {
+      Alert.alert('사진 선택 실패', '사진 선택 화면을 열지 못했어요. 다시 시도해 주세요.');
+      return;
+    } finally {
+      setOpeningPicker(false);
+    }
     if (res.canceled || !res.assets[0]) return;
+    // → 사진 위치 조정 (crop restoration, owner veto 2026-07-14): the user
+    // frames the circle; upload happens on 확인 with the cropped square
+    const a = res.assets[0];
+    setCropSrc({ uri: a.uri, width: a.width, height: a.height });
+  }
+
+  async function uploadCropped(uri: string) {
     setUploadingPhoto(true);
     try {
-      const url = await uploadAvatar(res.assets[0].uri);
+      const url = await uploadAvatar(uri);
       // nickname is required on every ProfileUpdate (422 without) — carry
       // the SERVER's current name, not the unsaved field edit
       await updateProfile({ nickname: originalName, avatar_url: url });
@@ -211,15 +238,33 @@ export default function PersonalInfoScreen() {
   // sheet: deterministic slide-up on both platforms. No photo → straight to
   // the picker (no sheet for a one-option menu).
   const [chooserOpen, setChooserOpen] = useState(false);
+  // Seed avatars (DiceBear, from demo seeding) are NOT user uploads — no
+  // management sheet: tap = picker, upload replaces the seed. 삭제 is not
+  // offered because there's nothing restorable: probed 2026-07-14, the
+  // null-PATCH cannot bring a seed back (server keeps no memory of it) —
+  // one-way door, 지연 note ledgered. Rendering keeps payload truth.
+  const isSeedAvatar = !!photoUrl && photoUrl.includes('api.dicebear.com');
   function onAvatarPress() {
-    if (!photoUrl) { changePhoto(); return; }
+    if (!photoUrl || isSeedAvatar) { changePhoto(); return; }
     setChooserOpen(true);
   }
+  // 지연 bug ② fix: the old fixed 420ms timer measured from the setState
+  // call, not from dismissal — the picker VC could present while the Modal
+  // was mid-dismiss and iOS rejected it (silently, pre-guard). Now the
+  // pending action runs ONCE on the Modal's real onDismiss (iOS dismissal-
+  // complete callback), with a 700ms fallback timer for the transparent-
+  // Modal onDismiss flakiness history; the ref-null makes whichever fires
+  // first the only run.
+  const pendingAction = useRef<(() => void) | null>(null);
+  function runPendingOnce() {
+    const a = pendingAction.current;
+    pendingAction.current = null;
+    a?.();
+  }
   function chooseThenRun(action: () => void) {
+    pendingAction.current = action;
     setChooserOpen(false);
-    // Let the sheet's slide-out finish before presenting the native picker
-    // VC (iOS rejects a present-over-dismissing-modal race)
-    setTimeout(action, 420);
+    setTimeout(runPendingOnce, 700);
   }
 
   async function handleSave() {
@@ -289,9 +334,10 @@ export default function PersonalInfoScreen() {
                 </View>
               )}
             </Pressable>
-            {uploadingPhoto && (
+            {(uploadingPhoto || openingPicker) && (
               <View style={[st.avatar, st.avatarBusy]} pointerEvents="none">
                 <ActivityIndicator color="#fff" />
+                {openingPicker && <Text style={st.avatarBusyTxt}>사진 불러오는 중</Text>}
               </View>
             )}
             <Pressable onPress={onAvatarPress} hitSlop={8} style={st.pencilBadge}>
@@ -353,7 +399,7 @@ export default function PersonalInfoScreen() {
 
       {/* ── 프로필 사진 chooser — in-app bottom sheet (kudos-sheet language;
           replaced ActionSheetIOS, which alert-rendered in Expo Go) ── */}
-      <Modal visible={chooserOpen} transparent animationType="slide" onRequestClose={() => setChooserOpen(false)}>
+      <Modal visible={chooserOpen} transparent animationType="slide" onDismiss={runPendingOnce} onRequestClose={() => setChooserOpen(false)}>
         <View style={st.sheetRoot}>
           <Pressable style={st.sheetBackdrop} onPress={() => setChooserOpen(false)} />
           <View style={[st.sheet, { paddingBottom: Math.max(insets.bottom, 12) + 8 }]}>
@@ -375,6 +421,15 @@ export default function PersonalInfoScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* 사진 위치 조정 — crop step between pick and upload; 다시 선택
+          relaunches the picker AFTER real dismissal (handled inside) */}
+      <AvatarCrop
+        src={cropSrc}
+        onClose={() => setCropSrc(null)}
+        onConfirm={(uri) => { setCropSrc(null); uploadCropped(uri); }}
+        onRetake={changePhoto}
+      />
     </View>
   );
 }
@@ -401,7 +456,8 @@ const st = StyleSheet.create({
 
   avatarWrap:  { alignItems: 'center', paddingTop: 14, paddingBottom: 4 },
   avatar:      { width: 84, height: 84, borderRadius: 42, borderWidth: 2.5, borderColor: C.accent },
-  avatarBusy:  { position: 'absolute', top: 0, left: 0, backgroundColor: 'rgba(0,0,0,0.45)', alignItems: 'center', justifyContent: 'center' },
+  avatarBusy:  { position: 'absolute', top: 0, left: 0, backgroundColor: 'rgba(0,0,0,0.45)', alignItems: 'center', justifyContent: 'center', gap: 3 },
+  avatarBusyTxt: { fontSize: 8.5, fontWeight: '600', color: '#fff', letterSpacing: -0.2 },
   avatarTxt:   { fontSize: 34, fontWeight: '700', color: '#fff', letterSpacing: -0.5 },
   pencilBadge: { position: 'absolute', bottom: 0, right: 0, width: 28, height: 28, borderRadius: 14, backgroundColor: C.accent, borderWidth: 2.5, borderColor: C.bg, alignItems: 'center', justifyContent: 'center' },
 

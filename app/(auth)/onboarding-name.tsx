@@ -19,6 +19,7 @@ import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Image,
   Keyboard,
   Pressable,
@@ -28,6 +29,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { AvatarCrop, type CropSource } from '@/components/avatar-crop';
 import { Button, Icon, Input, Text } from '@/components/ui';
 import { useTheme } from '@/contexts/theme';
 import { ApiError } from '@/lib/api';
@@ -76,14 +78,27 @@ export default function OnboardingScreen() {
     setStep(2);
   }
 
+  // 사진 위치 조정 step between pick and preview (components/avatar-crop)
+  const [cropSrc, setCropSrc] = useState<CropSource | null>(null);
+
   async function pickPhoto() {
-    const res = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: 'images',
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
-    });
-    if (!res.canceled && res.assets[0]) setPhotoUri(res.assets[0].uri);
+    // NO allowsEditing (perf fix, same as 개인 정보): allowsEditing=true
+    // forces the legacy UIImagePickerController (~4s present); without it
+    // PHPicker presents fast, permissionless. Framing happens in our own
+    // 사진 위치 조정 step (crop restoration, owner veto 2026-07-14).
+    // Guarded: presentation failure surfaces instead of silently rejecting.
+    try {
+      const res = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: 'images',
+        quality: 0.8,
+      });
+      if (!res.canceled && res.assets[0]) {
+        const a = res.assets[0];
+        setCropSrc({ uri: a.uri, width: a.width, height: a.height });
+      }
+    } catch {
+      Alert.alert('사진 선택 실패', '사진 선택 화면을 열지 못했어요. 다시 시도해 주세요.');
+    }
   }
 
   const h = Number(heightCm), w = Number(weightKg);
@@ -268,6 +283,14 @@ export default function OnboardingScreen() {
             </>
           )}
         </View>
+
+        {/* 사진 위치 조정 — cropped square becomes the preview + upload source */}
+        <AvatarCrop
+          src={cropSrc}
+          onClose={() => setCropSrc(null)}
+          onConfirm={(uri) => { setCropSrc(null); setPhotoUri(uri); }}
+          onRetake={pickPhoto}
+        />
       </SafeAreaView>
     </TouchableWithoutFeedback>
   );
