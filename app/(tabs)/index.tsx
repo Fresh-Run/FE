@@ -6,26 +6,23 @@
  */
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   FlatList,
-  Modal,
   Pressable,
   RefreshControl,
-  ScrollView,
   StyleSheet,
   Text as RNText,
-  TextInput,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { MiniMap } from '@/components/mini-map';
+import { RealMap } from '@/components/real-map';
 import { PendingRunRecovery } from '@/components/pending-run-recovery';
 import { Icon } from '@/components/ui';
-import { useRouteComments } from '@/hooks/use-comments';
 import { useCurrentLocation } from '@/hooks/use-current-location';
 import { useFeed, useNearbyRoutes } from '@/hooks/use-feed';
 import { avatarBg } from '@/lib/fr-hash';
@@ -228,11 +225,15 @@ const ftt = StyleSheet.create({
 // ─── Feed card (Layout B — full-bleed hero map) ───────────────────────────────
 
 function FeedCard({
-  item, liked, likeCount, commentCount, saved, awayKm,
+  item, liked, likeCount, commentCount, saved, awayKm, mapLive,
   onLike, onSave, onOpen, onRun,
 }: {
   item: PublicRoute; liked: boolean; likeCount: number; commentCount: number;
   saved: boolean; awayKm: number | null;
+  /** Viewability gate (maps slice 2): real Apple map only while the cell is
+      on screen — off-screen cells keep the cheap SVG so a 20-card feed never
+      hosts more than the ~3 viewable MapViews at once. */
+  mapLive: boolean;
   onLike: () => void; onSave: () => void; onOpen: () => void; onRun: () => void;
 }) {
   const units = useSettings(s => s.settings.units);
@@ -264,7 +265,12 @@ function FeedCard({
 
       {/* Hero map — real course geometry */}
       <Pressable onPress={onOpen}>
-        <MiniMap seed={item.id} height={172} polyline={item.polyline ?? undefined} />
+        {mapLive && item.polyline && item.polyline.length >= 2 ? (
+          <RealMap height={172} polyline={item.polyline} />
+        ) : (
+          // Off-screen placeholder + the permanent no-geometry fallback
+          <MiniMap seed={item.id} height={172} polyline={item.polyline ?? undefined} />
+        )}
       </Pressable>
 
       {/* Title + stats (예상 — courses carry no run stats) */}
@@ -372,162 +378,6 @@ const abt = StyleSheet.create({
   subTxt:   { fontSize: 13.5, fontWeight: '600', color: 'rgba(255,255,255,0.92)', letterSpacing: -0.2 },
 });
 
-// ─── Course detail bottom sheet ───────────────────────────────────────────────
-
-function CourseDetailSheet({
-  item, liked, likeCount, onLike, onRun, onClose, onCommentPosted,
-}: {
-  item: PublicRoute | null; liked: boolean; likeCount: number;
-  onLike: () => void; onRun: () => void; onClose: () => void;
-  onCommentPosted: (routeId: string) => void;
-}) {
-  const insets = useSafeAreaInsets();
-  const [draft, setDraft] = useState('');
-  const units = useSettings(s => s.settings.units);
-  const { comments, loading, posting, error, post } = useRouteComments(item?.id ?? null);
-  const d = item ? courseDisplay(item, units) : null;
-
-  useEffect(() => { setDraft(''); }, [item?.id]);
-
-  const send = async () => {
-    const t = draft.trim();
-    if (!t || !item) return;
-    const ok = await post(t);
-    if (ok) {
-      setDraft('');
-      onCommentPosted(item.id);
-    }
-  };
-
-  return (
-    <Modal visible={!!item} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={rdt.overlay} onPress={onClose}>
-        <Pressable style={[rdt.sheet, { paddingBottom: Math.max(insets.bottom, S.md) }]} onPress={() => {}}>
-          <View style={rdt.handleRow}><View style={rdt.handle} /></View>
-
-          {item && d && (
-            <ScrollView style={{ flex: 1 }} contentContainerStyle={rdt.scrollContent} keyboardShouldPersistTaps="handled">
-              {/* Owner header */}
-              <View style={rdt.userRow}>
-                <Avatar name={d.name} size={42} />
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <RNText style={rdt.userName}>{d.name}</RNText>
-                  <RNText style={rdt.userSub}>{d.ago}</RNText>
-                </View>
-                <Pressable onPress={onClose} style={rdt.closeBtn}>
-                  <Icon name="close" size={17} color={C.sub} />
-                </Pressable>
-              </View>
-
-              <MiniMap seed={item.id} height={188} borderRadius={18} polyline={item.polyline ?? undefined} />
-
-              <RNText style={rdt.title}>{item.summary}</RNText>
-
-              {/* Stats tiles */}
-              <View style={rdt.statsRow}>
-                {([
-                  [`${fmtDist(item.total_distance_km, units, 1)} ${distUnit(units)}`, '거리'],
-                  [d.dur,                                                             '예상 시간'],
-                  [`${d.pace} ${paceUnit(units)}`,                                    '예상 페이스'],
-                ] as [string, string][]).map(([v, l], i) => (
-                  <View key={i} style={rdt.statTile}>
-                    <RNText style={rdt.statVal}>{v}</RNText>
-                    <RNText style={rdt.statLbl}>{l}</RNText>
-                  </View>
-                ))}
-              </View>
-
-              {/* Actions */}
-              <View style={rdt.actionRow}>
-                <Pressable
-                  onPress={onLike}
-                  style={[rdt.likeBtn, { borderColor: liked ? C.danger : C.border, backgroundColor: liked ? C.danger + '14' : C.surface }]}
-                >
-                  <Icon name={liked ? 'heart' : 'heart-outline'} size={18} color={liked ? C.danger : C.sub} />
-                  <RNText style={[rdt.likeTxt, { color: liked ? C.danger : C.sub }]}>{likeCount}</RNText>
-                </Pressable>
-                <Pressable onPress={onRun} style={rdt.runBtn}>
-                  <Icon name="navigate-outline" size={17} color={C.accentText} />
-                  <RNText style={rdt.runBtnTxt}>이 코스 달리기</RNText>
-                </Pressable>
-              </View>
-
-              {/* Comments */}
-              <RNText style={rdt.commentsHdr}>댓글 {comments.length}</RNText>
-              {loading && <ActivityIndicator size="small" color={C.faint} style={{ paddingVertical: 10 }} />}
-              {!loading && error && <RNText style={[rdt.emptyTxt, { color: C.danger }]}>{error}</RNText>}
-              {!loading && !error && comments.length === 0 && <RNText style={rdt.emptyTxt}>첫 댓글을 남겨보세요.</RNText>}
-              {/* Comment author zones → profile (routing-rule RIDER: commits
-                  with the item-17 walk gate) */}
-              {comments.map((c) => (
-                <View key={c.id} style={rdt.comment}>
-                  <Pressable onPress={() => openProfile(c.authorId, c.authorName)} disabled={!c.authorId} hitSlop={6}>
-                    <Avatar name={c.authorName} size={30} />
-                  </Pressable>
-                  <View style={{ flex: 1, minWidth: 0 }}>
-                    <RNText style={rdt.cName} onPress={c.authorId ? () => openProfile(c.authorId, c.authorName) : undefined}>{c.authorName}</RNText>
-                    <RNText style={rdt.cText}>{c.body}</RNText>
-                  </View>
-                </View>
-              ))}
-            </ScrollView>
-          )}
-
-          {/* Comment input footer */}
-          <View style={rdt.inputRow}>
-            <TextInput
-              value={draft}
-              onChangeText={setDraft}
-              onSubmitEditing={send}
-              placeholder="댓글 달기..."
-              placeholderTextColor={C.faint}
-              returnKeyType="send"
-              editable={!posting}
-              style={rdt.input}
-            />
-            <Pressable onPress={send} disabled={!draft.trim() || posting} style={[rdt.sendBtn, { backgroundColor: draft.trim() && !posting ? C.accent : C.border }]}>
-              {posting
-                ? <ActivityIndicator size="small" color={C.faint} />
-                : <RNText style={[rdt.sendTxt, { color: draft.trim() ? C.accentText : C.faint }]}>게시</RNText>}
-            </Pressable>
-          </View>
-        </Pressable>
-      </Pressable>
-    </Modal>
-  );
-}
-
-const rdt = StyleSheet.create({
-  overlay:     { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.42)' },
-  sheet:       { backgroundColor: C.bg, borderTopLeftRadius: 26, borderTopRightRadius: 26, maxHeight: '88%' },
-  handleRow:   { alignItems: 'center', paddingTop: 10, paddingBottom: 2 },
-  handle:      { width: 38, height: 5, borderRadius: 99, backgroundColor: C.border },
-  scrollContent:{ paddingHorizontal: S.gutter, paddingTop: S.sm, paddingBottom: S.lg },
-  userRow:     { flexDirection: 'row', alignItems: 'center', gap: 10, paddingBottom: 14 },
-  userName:    { fontSize: 15, fontWeight: '700', color: C.text, letterSpacing: -0.3 },
-  userSub:     { fontSize: 12, color: C.faint, letterSpacing: -0.2, marginTop: 2 },
-  closeBtn:    { width: 34, height: 34, borderRadius: 999, borderWidth: 1, borderColor: C.border, backgroundColor: C.surface, alignItems: 'center', justifyContent: 'center' },
-  title:       { fontSize: 18, fontWeight: '700', color: C.text, letterSpacing: -0.5, marginTop: 14 },
-  statsRow:    { flexDirection: 'row', gap: 10, marginTop: 14 },
-  statTile:    { flex: 1, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 14, paddingVertical: 12, paddingHorizontal: 10, alignItems: 'center' },
-  statVal:     { fontSize: 16.5, fontWeight: '700', color: C.text, letterSpacing: -0.4 },
-  statLbl:     { fontSize: 11, color: C.faint, marginTop: 3 },
-  actionRow:   { flexDirection: 'row', gap: 10, marginTop: 12 },
-  likeBtn:     { flex: 1, height: 46, borderRadius: 13, borderWidth: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7 },
-  likeTxt:     { fontSize: 13.5, fontWeight: '700', letterSpacing: -0.2 },
-  runBtn:      { flex: 2, height: 46, borderRadius: 13, backgroundColor: C.accent, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, shadowColor: C.accent, shadowOpacity: 0.34, shadowRadius: 14, shadowOffset: { width: 0, height: 5 }, elevation: 6 },
-  runBtnTxt:   { fontSize: 14, fontWeight: '700', color: C.accentText, letterSpacing: -0.3 },
-  commentsHdr: { fontSize: 13.5, fontWeight: '700', color: C.text, letterSpacing: -0.3, marginTop: 22, marginBottom: 4 },
-  emptyTxt:    { fontSize: 13, color: C.faint, letterSpacing: -0.2, paddingVertical: 8 },
-  comment:     { flexDirection: 'row', gap: 9, marginTop: 14 },
-  cName:       { fontSize: 12.5, fontWeight: '700', color: C.text, letterSpacing: -0.2 },
-  cText:       { fontSize: 13.5, color: C.sub, letterSpacing: -0.2, lineHeight: 19, marginTop: 2 },
-  inputRow:    { flexDirection: 'row', alignItems: 'center', gap: 9, paddingHorizontal: S.gutter, paddingTop: 12, paddingBottom: 12, borderTopWidth: 1, borderTopColor: C.border, backgroundColor: C.surface },
-  input:       { flex: 1, height: 42, borderRadius: 999, borderWidth: 1.5, borderColor: C.border, paddingHorizontal: 16, fontSize: 14, letterSpacing: -0.2, backgroundColor: C.surfaceAlt, color: C.text },
-  sendBtn:     { height: 42, paddingHorizontal: 16, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
-  sendTxt:     { fontSize: 13.5, fontWeight: '700', letterSpacing: -0.2 },
-});
-
 // ─── List states ──────────────────────────────────────────────────────────────
 
 function ListState({ icon, title, sub }: { icon: string; title: string; sub?: string }) {
@@ -570,16 +420,26 @@ export default function HomeScreen() {
   useEffect(() => { useQuota.getState().hydrate(); }, []);
 
   const [tab, setTab]           = useState('친구');
-  const [openItem, setOpenItem] = useState<PublicRoute | null>(null);
 
   const feed = useFeed();
   const { coordinate } = useCurrentLocation();
   const nearby = useNearbyRoutes(tab === '전체' ? coordinate : null);
 
-  // Optimistic overlays (shared by both tabs + the sheet), rolled back on error
+  // Maps slice 2 — real-map-only-for-viewable-cells. Stable refs (FlatList
+  // forbids changing these props mid-list); 25% visibility flips a cell live.
+  const [liveIds, setLiveIds] = useState<Set<string>>(new Set());
+  const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 25 }).current;
+  const onViewableItemsChanged = useRef(
+    ({ viewableItems }: { viewableItems: { key: string }[] }) => {
+      setLiveIds(new Set(viewableItems.map(v => v.key)));
+    },
+  ).current;
+
+  // Optimistic overlays (shared by both tabs), rolled back on error.
+  // (The old comment sheet + its cmtOv override were deleted 2026-07-12 —
+  // the logged gate-cleanup debt; 코스 포스트 owns comments now.)
   const [likeOv, setLikeOv] = useState<Record<string, { liked: boolean; count: number }>>({});
   const [saveOv, setSaveOv] = useState<Record<string, boolean>>({});
-  const [cmtOv, setCmtOv]   = useState<Record<string, number>>({});
 
   const effLiked = useCallback(
     (r: PublicRoute) => likeOv[r.id] ?? { liked: r.is_liked, count: r.like_count },
@@ -606,7 +466,6 @@ export default function HomeScreen() {
   }, [saveOv, feed.bookmarkedIds]);
 
   const runCourse = useCallback((r: PublicRoute) => {
-    setOpenItem(null);
     setPendingCourse(r);
     router.push('/(course)/preview' as any);
   }, []);
@@ -638,6 +497,8 @@ export default function HomeScreen() {
         data={list}
         keyExtractor={(r) => r.id}
         showsVerticalScrollIndicator={false}
+        viewabilityConfig={viewabilityConfig}
+        onViewableItemsChanged={onViewableItemsChanged}
         ListHeaderComponent={header}
         refreshControl={
           <RefreshControl
@@ -664,15 +525,13 @@ export default function HomeScreen() {
                 item={item}
                 liked={like.liked}
                 likeCount={like.count}
-                commentCount={item.comment_count + (cmtOv[item.id] ?? 0)}
+                commentCount={item.comment_count}
                 saved={effSaved(item)}
                 awayKm={awayKm}
+                mapLive={liveIds.has(item.id)}
                 onLike={() => toggleLike(item)}
                 onSave={() => toggleSave(item)}
-                // Rider ④ (owner directive 2026-07-10): card tap → 코스 포스트
-                // full screen (canvas FrRunPost), superseding the comment
-                // sheet below — the sheet + cmtOv are now unreachable; delete
-                // them in the item-17 gate commit cleanup.
+                // Card tap → 코스 포스트 full screen (canvas FrRunPost)
                 onOpen={() => { setPendingPost(item); router.push('/(course)/course-post' as any); }}
                 onRun={() => runCourse(item)}
               />
@@ -714,16 +573,6 @@ export default function HomeScreen() {
         }
       />
 
-      {/* Course detail bottom sheet — always rendered for smooth animation */}
-      <CourseDetailSheet
-        item={openItem}
-        liked={openItem ? effLiked(openItem).liked : false}
-        likeCount={openItem ? effLiked(openItem).count : 0}
-        onLike={() => openItem && toggleLike(openItem)}
-        onRun={() => openItem && runCourse(openItem)}
-        onClose={() => setOpenItem(null)}
-        onCommentPosted={(id) => setCmtOv(p => ({ ...p, [id]: (p[id] ?? 0) + 1 }))}
-      />
     </View>
   );
 }
