@@ -5,10 +5,11 @@
  * relative time; row tap → profile. The canvas 나-badge/heart-toggle variants
  * stay future feed-context work (original scoping note).
  */
-import React from 'react';
+import React, { useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  Image,
   Modal,
   Pressable,
   StyleSheet,
@@ -22,7 +23,19 @@ import { openProfile } from '@/lib/profile-nav';
 import { fmtAgo } from '@/lib/run-format';
 import { colors as C, shadows } from '@/lib/theme';
 
-function Avatar({ name, size }: { name: string; size: number }) {
+function Avatar({ name, size, photoUrl }: { name: string; size: number; photoUrl?: string | null }) {
+  // avatar_url sweep (2026-07-13): photo wins over initials; load failure
+  // falls back to initials — never a broken image.
+  const [brokenUrl, setBrokenUrl] = useState<string | null>(null);
+  if (photoUrl && photoUrl !== brokenUrl) {
+    return (
+      <Image
+        source={{ uri: photoUrl }}
+        onError={() => setBrokenUrl(photoUrl)}
+        style={{ width: size, height: size, borderRadius: size / 2, borderWidth: 2, borderColor: C.border }}
+      />
+    );
+  }
   return (
     <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: avatarBg(name), borderWidth: 2, borderColor: C.border, alignItems: 'center', justifyContent: 'center' }}>
       <Text style={{ fontWeight: '700', fontSize: Math.round(size * 0.38), color: '#fff' }}>
@@ -78,7 +91,7 @@ export function KudosSheet({ runId, kudosCount, onClose }: {
                     onPress={() => openProfile(item.user_id, item.nickname)}
                     style={({ pressed }) => [st.likerBody, pressed && { opacity: 0.7 }]}
                   >
-                    <Avatar name={item.nickname} size={44} />
+                    <Avatar name={item.nickname} size={44} photoUrl={item.avatar_url} />
                     <Text style={st.likerName} numberOfLines={1}>{item.nickname}</Text>
                   </Pressable>
                   <Text style={st.likerWhen}>{fmtAgo(item.created_at)}</Text>

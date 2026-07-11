@@ -70,7 +70,7 @@ const VIS_CAPTION: Record<MyRun['visibility'], string> = {
 
 // Reduced feed-style run card (canvas shows area/tags — no backend source
 // for own runs; honest subset, tap → activity detail)
-function RunCard({ run, name, units, mapLive, onKudos }: { run: MyRun; name: string; units: ReturnType<typeof useSettings.getState>['settings']['units']; mapLive: boolean; onKudos: () => void }) {
+function RunCard({ run, name, photoUrl, units, mapLive, onKudos }: { run: MyRun; name: string; photoUrl?: string | null; units: ReturnType<typeof useSettings.getState>['settings']['units']; mapLive: boolean; onKudos: () => void }) {
   return (
     // Whole card → own-run SOCIAL view (owner correction 2026-07-12); the
     // 활동 상세 analysis screen's home is the 기록 tab — social links to it
@@ -83,7 +83,7 @@ function RunCard({ run, name, units, mapLive, onKudos }: { run: MyRun; name: str
       style={[st.card, shadows.sm]}
     >
       <View style={st.cardHead}>
-        <Avatar name={name} size={36} />
+        <Avatar name={name} size={36} photoUrl={photoUrl} />
         <View style={{ flex: 1, minWidth: 0 }}>
           <Text style={st.cardName}>{name}</Text>
           <Text style={st.cardDate}>{fmtWhen(run.ran_at)}</Text>
@@ -250,7 +250,7 @@ export default function MyProfileScreen() {
           ListHeaderComponent={header}
           renderItem={({ item }) => (
             <View style={{ paddingHorizontal: S.gutter }}>
-              <RunCard run={item} name={profile.nickname} units={units} mapLive={liveIds.has(item.id)} onKudos={() => setKudosRun(item)} />
+              <RunCard run={item} name={profile.nickname} photoUrl={profile.avatarUrl} units={units} mapLive={liveIds.has(item.id)} onKudos={() => setKudosRun(item)} />
             </View>
           )}
           ItemSeparatorComponent={() => <View style={{ height: 14 }} />}

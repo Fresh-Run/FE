@@ -23,6 +23,7 @@ export type UserRun = {
   run_id: string;
   user_id: string;
   nickname: string;
+  avatar_url: string | null; // served (probed 2026-07-13, avatar sweep)
   ran_at: string;
   title: string | null;
   distance_km: number;

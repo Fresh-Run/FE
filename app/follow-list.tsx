@@ -13,6 +13,7 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  Image,
   Pressable,
   StyleSheet,
   Text,
@@ -30,7 +31,19 @@ import { useStore } from '@/store/use-store';
 
 type Tab = 'following' | 'followers';
 
-function Avatar({ name, size }: { name: string; size: number }) {
+function Avatar({ name, size, photoUrl }: { name: string; size: number; photoUrl?: string | null }) {
+  // avatar_url sweep (2026-07-13): photo wins over initials; load failure
+  // falls back to initials — never a broken image.
+  const [brokenUrl, setBrokenUrl] = useState<string | null>(null);
+  if (photoUrl && photoUrl !== brokenUrl) {
+    return (
+      <Image
+        source={{ uri: photoUrl }}
+        onError={() => setBrokenUrl(photoUrl)}
+        style={{ width: size, height: size, borderRadius: size / 2, borderWidth: 1, borderColor: C.border }}
+      />
+    );
+  }
   return (
     <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: avatarBg(name), alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: C.border }}>
       <Text style={{ fontWeight: '700', fontSize: Math.round(size * 0.4), color: '#fff' }}>
@@ -124,7 +137,7 @@ export default function FollowListScreen() {
                   onPress={() => openProfile(item.user_id, item.nickname)}
                   style={({ pressed }) => [st.rowBody, pressed && { opacity: 0.7 }]}
                 >
-                  <Avatar name={item.nickname ?? '러너'} size={44} />
+                  <Avatar name={item.nickname ?? '러너'} size={44} photoUrl={item.avatar_url} />
                   <Text style={st.rowName} numberOfLines={1}>{item.nickname ?? '러너'}</Text>
                 </Pressable>
                 <Pressable

@@ -15,6 +15,7 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  Image,
   Pressable,
   StyleSheet,
   Text,
@@ -32,7 +33,19 @@ import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
 import { useUserProfile, type UserRun } from '@/hooks/use-user-profile';
 import { useSettings } from '@/store/use-settings';
 
-function Avatar({ name, size, ring = C.border }: { name: string; size: number; ring?: string }) {
+function Avatar({ name, size, ring = C.border, photoUrl }: { name: string; size: number; ring?: string; photoUrl?: string | null }) {
+  // avatar_url sweep (2026-07-13): photo wins over initials; load failure
+  // falls back to initials — never a broken image.
+  const [brokenUrl, setBrokenUrl] = useState<string | null>(null);
+  if (photoUrl && photoUrl !== brokenUrl) {
+    return (
+      <Image
+        source={{ uri: photoUrl }}
+        onError={() => setBrokenUrl(photoUrl)}
+        style={[st.avatar, { width: size, height: size, borderRadius: size / 2, borderColor: ring }]}
+      />
+    );
+  }
   return (
     <View style={[st.avatar, { width: size, height: size, borderRadius: size / 2, backgroundColor: avatarBg(name), borderColor: ring }]}>
       <Text style={{ fontWeight: '700', fontSize: Math.round(size * 0.38), color: '#fff' }}>
@@ -55,7 +68,7 @@ function RunCard({ run, units, mapLive, onKudos, onOpen }: {
   return (
     <Pressable onPress={onOpen} disabled={!onOpen} style={({ pressed }) => [st.card, shadows.sm, pressed && !!onOpen && { opacity: 0.85 }]}>
       <View style={st.cardHead}>
-        <Avatar name={run.nickname} size={36} />
+        <Avatar name={run.nickname} size={36} photoUrl={run.avatar_url} />
         <View style={{ flex: 1, minWidth: 0 }}>
           <Text style={st.cardName}>{run.nickname}</Text>
           <Text style={st.cardDate}>{fmtWhen(run.ran_at)}</Text>
@@ -154,7 +167,7 @@ export default function UserProfileScreen() {
     <View>
       {/* Identity — border ring (own profile keeps the accent ring) */}
       <View style={st.identity}>
-        <Avatar name={profile.nickname} size={76} />
+        <Avatar name={profile.nickname} size={76} photoUrl={profile.avatar_url} />
         <View style={{ flex: 1, minWidth: 0 }}>
           <Text style={st.name} numberOfLines={1}>{profile.nickname}</Text>
           {profile.bio ? <Text style={st.bioTxt} numberOfLines={1}>{profile.bio}</Text> : null}
@@ -247,6 +260,7 @@ export default function UserProfileScreen() {
                     params: {
                       runId: shown.run_id,
                       nickname: shown.nickname,
+                      avatarUrl: shown.avatar_url ?? '',
                       myKudos: shown.my_kudos ? '1' : '0',
                       kudosCount: String(shown.kudos_count),
                     },

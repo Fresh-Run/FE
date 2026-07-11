@@ -29,6 +29,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -65,12 +66,25 @@ import {
 import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
 import { useRunDetail } from '@/hooks/use-runs';
 import { useSettings } from '@/store/use-settings';
+import { useStore } from '@/store/use-store';
 import type { Coordinate } from '@/types';
 
 const HERO_H = 210;
 
-function InitialAvatar({ name, size }: { name: string | null; size: number }) {
+function InitialAvatar({ name, size, photoUrl }: { name: string | null; size: number; photoUrl?: string | null }) {
   const n = name?.trim() || '러너';
+  // avatar_url sweep (2026-07-13): photo wins over initials; load failure
+  // falls back to initials — never a broken image.
+  const [brokenUrl, setBrokenUrl] = useState<string | null>(null);
+  if (photoUrl && photoUrl !== brokenUrl) {
+    return (
+      <Image
+        source={{ uri: photoUrl }}
+        onError={() => setBrokenUrl(photoUrl)}
+        style={{ width: size, height: size, borderRadius: size / 2 }}
+      />
+    );
+  }
   return (
     <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: avatarBg(n), alignItems: 'center', justifyContent: 'center' }}>
       <Text style={{ fontSize: size * 0.42, fontWeight: '700', color: '#fff' }}>{n[0]}</Text>
@@ -94,6 +108,7 @@ export default function RunPostScreen() {
   const params = useLocalSearchParams<{
     runId: string;
     nickname?: string;
+    avatarUrl?: string; // entry seed, same channel as nickname ('' = none)
     myKudos?: string;   // '1' | '0' — viewer's state from the tapped row
     kudosCount?: string;
     own?: string;       // '1' = own-run social mode (♥ count-only → likers sheet)
@@ -173,6 +188,10 @@ export default function RunPostScreen() {
   }
 
   const nickname = params.nickname ?? '러너';
+  // Author photo: own runs read the store (always fresh); others use the
+  // entry seed from the tapped row (sanitized detail carries no identity)
+  const ownPhotoUrl = useStore(s => s.photoUrl);
+  const authorPhotoUrl = isOwn ? ownPhotoUrl : (params.avatarUrl || null);
   const commentCount = comments?.length ?? run?.comment_count ?? 0;
 
   return (
@@ -199,7 +218,7 @@ export default function RunPostScreen() {
               disabled={isOwn}
               style={({ pressed }) => [st.authorRow, pressed && !isOwn && { opacity: 0.7 }]}
             >
-              <InitialAvatar name={nickname} size={42} />
+              <InitialAvatar name={nickname} size={42} photoUrl={authorPhotoUrl} />
               <View style={{ flex: 1, minWidth: 0 }}>
                 <Text style={st.authorName} numberOfLines={1}>{nickname}</Text>
                 <Text style={st.authorSub}>{fmtWhen(run.ran_at)}</Text>
