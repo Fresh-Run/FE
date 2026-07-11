@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useTabBarInset } from '@/components/fresh-tab-bar';
 import { MiniMap } from '@/components/mini-map';
+import { MonthPicker } from '@/components/month-picker';
 import { Icon } from '@/components/ui';
 import { useRuns, type Run } from '@/hooks/use-runs';
 import { distUnit, fmtDate, fmtDist, fmtDuration, fmtPaceIn, fmtWhen, timeTitle } from '@/lib/run-format';
@@ -85,6 +86,8 @@ function MonthStats({ runs }: { runs: Run[] }) {
   const units = useSettings(s => s.settings.units);
   const months = useMemo(() => getDistinctMonths(runs), [runs]);
   const [idx, setIdx] = useState(0);
+  // 월 picker (canvas FrMonthPicker) — the month label is the trigger
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   // Clamp idx in case runs change and the months list shrinks.
   const safeIdx = months.length > 0 ? Math.min(idx, months.length - 1) : 0;
@@ -161,7 +164,10 @@ function MonthStats({ runs }: { runs: Run[] }) {
         >
           <Icon name="chevron-back" size={18} color={C.text} />
         </Pressable>
-        <Text style={st.monthLabel}>{cur.year}년 {cur.month}월</Text>
+        <Pressable onPress={() => setPickerOpen(true)} hitSlop={8} style={st.monthLabelBtn}>
+          <Text style={st.monthLabel}>{cur.year}년 {cur.month}월</Text>
+          <Icon name="chevron-down" size={15} color={C.sub} />
+        </Pressable>
         <Pressable
           onPress={() => setIdx(i => Math.max(0, i - 1))}
           disabled={safeIdx <= 0}
@@ -171,6 +177,18 @@ function MonthStats({ runs }: { runs: Run[] }) {
           <Icon name="chevron-forward" size={18} color={C.text} />
         </Pressable>
       </View>
+
+      <MonthPicker
+        visible={pickerOpen}
+        year={cur.year}
+        month={cur.month}
+        isEnabled={(y, m) => months.some(e => e.year === y && e.month === m)}
+        onSelect={(y, m) => {
+          const j = months.findIndex(e => e.year === y && e.month === m);
+          if (j >= 0) setIdx(j);
+        }}
+        onClose={() => setPickerOpen(false)}
+      />
 
       {/* Hero card: big distance number + weekly sparkline */}
       <View style={[st.heroCard, shadows.md]}>
@@ -392,6 +410,7 @@ const st = StyleSheet.create({
   monthBtn:   { width: 34, height: 34, borderRadius: R.pill, borderWidth: 1, borderColor: C.border, backgroundColor: C.surface, alignItems: 'center', justifyContent: 'center' },
   btnDisabled:{ opacity: 0.3 },
   monthLabel: { fontSize: 16, fontWeight: '800', letterSpacing: -0.4, color: C.text },
+  monthLabelBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 6, paddingVertical: 4 },
 
   // Hero card
   heroCard:  { backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: R.xl, padding: S.lg, overflow: 'hidden' },

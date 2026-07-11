@@ -145,9 +145,11 @@ export default function WeatherDetailScreen() {
     },
     // 자외선 — LIVE (uv landed on the payload, probed 2026-07-14; 기상청
     // 5단계, C.uv map). Contract: null on partial outage → tile hidden.
+    // Label says daily-max per 지연's ⓐ ruling: /data/2.5/uvi returns the
+    // day's solar-noon UV, not a current reading (the night-9.8 finding).
     ...(w && !w.uv ? [] : [{
       iconName:  'sunny-outline',
-      label:     '자외선',
+      label:     '오늘 최고 자외선',
       value:     w?.uv ? String(w.uv.value) : '—',
       sub:       w?.uv?.grade,
       subColor:  w?.uv ? C.uv[w.uv.grade] : undefined,

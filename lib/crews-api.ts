@@ -230,6 +230,23 @@ export async function getCrewRanking(crewId: string): Promise<CrewRankingEntry[]
   return apiFetch<CrewRankingEntry[]>(`/api/crews/${crewId}/ranking`);
 }
 
+// ─── My join requests (Stage B, guide §197) ──────────────────────────────────
+
+export type MyJoinRequest = {
+  crew_id: string;
+  crew_name: string;
+  status: JoinRequestStatus;
+  created_at: string;
+  decided_at: string | null;
+};
+
+/** ALL my join requests across crews, newest first (probed 2026-07-14).
+    Badge consumers must filter status === 'pending' — approved/rejected
+    rows are history, not open requests. */
+export function getMyJoinRequests(): Promise<MyJoinRequest[]> {
+  return apiFetch<MyJoinRequest[]>('/api/me/join-requests?limit=50');
+}
+
 // ─── Join requests (approval crews) ──────────────────────────────────────────
 
 /** null = no request on record (guide: 404 means "가입 신청" is available). */

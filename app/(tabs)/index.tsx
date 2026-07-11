@@ -4,6 +4,7 @@
  * for 전체) with real likes / bookmarks / comments per docs/API_GUIDE.md.
  * Cards show estimates (예상 시간/페이스) — courses carry no run stats.
  */
+import { useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -27,6 +28,7 @@ import { Icon } from '@/components/ui';
 import { useCurrentLocation } from '@/hooks/use-current-location';
 import { useFeed, useNearbyRoutes } from '@/hooks/use-feed';
 import { avatarBg } from '@/lib/fr-hash';
+import { getUnreadCount } from '@/lib/notifications-api';
 import { openProfile } from '@/lib/profile-nav';
 import {
   bookmarkRoute,
@@ -120,7 +122,7 @@ function Avatar({ name, size = 38, ring = false, photoUrl }: { name: string; siz
 
 // ─── Greeting header ──────────────────────────────────────────────────────────
 
-function Greeting({ name, photoUrl, onBell }: { name: string; photoUrl: string | null; onBell: () => void }) {
+function Greeting({ name, photoUrl, showBellDot, onBell }: { name: string; photoUrl: string | null; showBellDot: boolean; onBell: () => void }) {
   return (
     <View style={gst.row}>
       <View style={{ minWidth: 0, flex: 1 }}>
@@ -130,7 +132,9 @@ function Greeting({ name, photoUrl, onBell }: { name: string; photoUrl: string |
       <View style={gst.actions}>
         <Pressable onPress={onBell} style={[gst.bellBtn, shadows.sm]}>
           <Icon name="notifications-outline" size={20} color={C.text} />
-          <View style={gst.notifDot} />
+          {/* Truthful dot (S-cluster batch 2): real unread count on focus —
+              the item-17-era hardcoded dot is retired */}
+          {showBellDot && <View style={gst.notifDot} />}
         </Pressable>
         {/* Avatar → 내 프로필 (social profile; canvas 2026-07-07) */}
         <Pressable onPress={() => router.push('/my-profile' as any)} hitSlop={6}>
@@ -444,6 +448,14 @@ export default function HomeScreen() {
   const premium     = useQuota((s) => s.isPremium);
   useEffect(() => { useQuota.getState().hydrate(); }, []);
 
+  // Bell dot = real unread count (GET /notifications/unread-count), refreshed
+  // on every home focus (back from the notifications screen clears it).
+  // Silent failure keeps the last known state — ambient, never an error.
+  const [unread, setUnread] = useState(0);
+  useFocusEffect(useCallback(() => {
+    getUnreadCount().then(r => setUnread(r.count)).catch(() => {});
+  }, []));
+
   const [tab, setTab]           = useState('친구');
 
   const feed = useFeed();
@@ -503,7 +515,7 @@ export default function HomeScreen() {
   const header = useMemo(() => (
     <View>
       <View style={{ paddingTop: insets.top + 12, paddingHorizontal: S.gutter }}>
-        <Greeting name={name} photoUrl={photoUrl} onBell={() => router.push('/notifications' as any)} />
+        <Greeting name={name} photoUrl={photoUrl} showBellDot={unread > 0} onBell={() => router.push('/notifications' as any)} />
       </View>
       <View style={{ paddingTop: 14, paddingHorizontal: S.gutter }}>
         <WeatherStrip onPress={() => router.push('/weather-detail')} />
@@ -512,7 +524,7 @@ export default function HomeScreen() {
         <FeedTabs tab={tab} setTab={setTab} />
       </View>
     </View>
-  ), [insets.top, name, photoUrl, tab]);
+  ), [insets.top, name, photoUrl, unread, tab]);
 
   return (
     <View style={{ flex: 1, backgroundColor: C.bg }}>

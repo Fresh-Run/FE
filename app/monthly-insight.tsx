@@ -26,6 +26,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { MonthPicker } from '@/components/month-picker';
 import { Icon } from '@/components/ui';
 import { ApiError } from '@/lib/api';
 import { getMonthlyInsight, type MonthlyInsight } from '@/lib/insights-api';
@@ -77,6 +78,7 @@ export default function MonthlyInsightScreen() {
   const [data, setData] = useState<MonthlyInsight | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   const isCurrentMonth = ym.year === now.getFullYear() && ym.month === now.getMonth() + 1;
 
@@ -128,12 +130,16 @@ export default function MonthlyInsightScreen() {
         </Pressable>
       </View>
 
-      {/* Month stepper (기록-tab control shape; forward capped at current) */}
+      {/* Month stepper (기록-tab control shape; forward capped at current);
+          label = 기간 선택 picker trigger (canvas FrMonthPicker) */}
       <View style={st.stepperRow}>
         <Pressable onPress={() => step(-1)} style={st.stepBtn}>
           <Icon name="chevron-back" size={18} color={C.text} />
         </Pressable>
-        <Text style={st.stepperLabel}>{ym.year} · {ym.month}월</Text>
+        <Pressable onPress={() => setPickerOpen(true)} hitSlop={8} style={st.stepperLabelBtn}>
+          <Text style={st.stepperLabel}>{ym.year} · {ym.month}월</Text>
+          <Icon name="chevron-down" size={15} color={C.sub} />
+        </Pressable>
         <Pressable
           onPress={() => step(1)}
           disabled={isCurrentMonth}
@@ -144,6 +150,18 @@ export default function MonthlyInsightScreen() {
           </View>
         </Pressable>
       </View>
+
+      <MonthPicker
+        visible={pickerOpen}
+        year={ym.year}
+        month={ym.month}
+        // Report fetches per-month server-side — any non-future month is
+        // selectable (empty months render the existing empty state)
+        isEnabled={(y, m) =>
+          y < now.getFullYear() || (y === now.getFullYear() && m <= now.getMonth() + 1)}
+        onSelect={(y, m) => setYm({ year: y, month: m })}
+        onClose={() => setPickerOpen(false)}
+      />
 
       {loading ? (
         <View style={st.centered}><ActivityIndicator size="large" color={C.accent} /></View>
@@ -291,6 +309,7 @@ const st = StyleSheet.create({
   stepperRow:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: S.gutter, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: C.border },
   stepBtn:      { width: 34, height: 34, borderRadius: 17, borderWidth: 1, borderColor: C.border, backgroundColor: C.surface, alignItems: 'center', justifyContent: 'center' },
   stepperLabel: { fontSize: 16, fontWeight: '800', color: C.text, letterSpacing: -0.4 },
+  stepperLabelBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 6, paddingVertical: 4 },
 
   hero:       { backgroundColor: C.text, borderRadius: 22, padding: 20, overflow: 'hidden' },
   heroCircle: { position: 'absolute', top: -40, right: -40, width: 150, height: 150, borderRadius: 75, backgroundColor: C.accent, opacity: 0.16 },

@@ -30,6 +30,7 @@ import {
   type Crew,
 } from '@/hooks/use-crews';
 import { useCurrentLocation } from '@/hooks/use-current-location';
+import { getMyJoinRequests } from '@/lib/crews-api';
 import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
 import { getCrewFilter, type CrewLocationFilter } from '@/store/crew-filter';
 import { useJoinRequests } from '@/store/join-requests';
@@ -247,10 +248,18 @@ function DiscoverTab() {
   // authoritatively by crew-detail visits) — fixes the stale-badge bug.
   const pendingMap = useJoinRequests(s => s.pendingByCrewId);
   const setPending = useJoinRequests(s => s.setPending);
-  // Crews I already belong to render a non-pressable 가입됨 badge — members
-  // can't file join requests from our UI (backend currently allows it: bug).
   const { crews: myCrewList } = useMyCrews();
   const memberIds = new Set(myCrewList.map(c => c.id));
+
+  // Stage B (S-cluster batch 2): GET /me/join-requests shipped — hydrate the
+  // shared store once per browse mount so 신청중 badges survive relaunch
+  // (pending only; approved/rejected rows are not requests anymore).
+  useEffect(() => {
+    getMyJoinRequests()
+      .then(rows => useJoinRequests.getState().hydrate(
+        rows.filter(r => r.status === 'pending').map(r => r.crew_id)))
+      .catch(() => { /* offline — in-session optimistic state stands */ });
+  }, []);
 
   // Refetch on focus (back from crew-detail or the region picker) — also
   // pick up the picker's selection from the module store
@@ -262,10 +271,12 @@ function DiscoverTab() {
   if (loading) return <LoadingState />;
   if (error)   return <ErrorState message={error} onRetry={refetch} />;
 
-  // Full-crew exclusion is server-side now (include_full param); the level
-  // filter left with the chips (canvas). List = server order (distance-
-  // ascending when lat/lng were sent).
-  const visible = crews;
+  // Full-crew exclusion is server-side (include_full param); joined-crew
+  // exclusion is CLIENT-side (owner ruling ⑥, batch 2) — the browse payload
+  // carries no joined field (probed 2026-07-14), so the useMyCrews set we
+  // already fetch is the source. The at-scale server param stays a docketed
+  // ask. List = server order (distance-ascending when lat/lng were sent).
+  const visible = crews.filter(c => !memberIds.has(c.id));
 
   async function handleJoin(crew: Crew) {
     try {
