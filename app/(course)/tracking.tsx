@@ -25,9 +25,16 @@ import {
   Pressable,
   StyleSheet,
   Text,
+  useWindowDimensions,
   View,
 } from 'react-native';
+import BottomSheet, { BottomSheetView } from '@gorhom/bottom-sheet';
+import { Gesture, GestureDetector, GestureHandlerRootView, type GestureType } from 'react-native-gesture-handler';
 import MapView, { Polyline } from 'react-native-maps';
+import Reanimated, {
+  useAnimatedStyle,
+  useSharedValue,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
 
@@ -40,7 +47,9 @@ import { useSettings } from '@/store/use-settings';
 import { distUnit, fmtDist, fmtPaceIn, paceUnit } from '@/lib/run-format';
 import { accentShadow, colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
 
-const MAP_H = 330;
+const MAP_H = 330;                    // expanded-detent map viewport (canvas)
+const SHEET_TOP = MAP_H - 22;         // sheet's expanded top edge (canvas -22 overlap)
+const COMPACT_VISIBLE = 100;          // compact detent: handle + strip
 
 // ─── Status badge (blinking dot while running) ────────────────────────────────
 
@@ -103,35 +112,53 @@ function Waveform({ active }: { active: boolean }) {
 // ─── Press-and-hold stop (ring fills over HOLD_MS) ───────────────────────────
 
 const HOLD_MS = 1100;
-const HOLD_SZ = 72, HOLD_R = 33, HOLD_CIRC = 2 * Math.PI * HOLD_R;
+const HOLD_DRIFT_MAX = 34; // finger drift allowance while HOLDING (owner: 20px must survive)
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
-function HoldStop({ onComplete }: { onComplete: () => void }) {
+// size prop (T-B): 72 = expanded controls row, 44 = compact strip — the ring
+// geometry scales; the 1100ms hold semantics never change.
+//
+// Gesture semantics (owner ruling, T-B final): the hold is an RNGH LongPress
+// (minDuration = the hold itself, maxDistance = drift allowance). The sheet's
+// pan (now @gorhom/bottom-sheet's content pan) waits for it via the sheet's
+// `waitFor` — HOLDING with ≤34px drift keeps the sheet pan blocked and ends
+// the run; DELIBERATE travel beyond 34px FAILS the hold, freeing the pan
+// mid-gesture → sheet drags. No dead-zones.
+function HoldStop({ onComplete, size = 72, showLabel = true, gestureRef }: {
+  onComplete: () => void; size?: number; showLabel?: boolean;
+  /** Exposes this hold to the sheet's waitFor (Gesture.withRef). */
+  gestureRef?: React.MutableRefObject<GestureType | undefined>;
+}) {
+  const HOLD_SZ = size, HOLD_R = size / 2 - 3, HOLD_CIRC = 2 * Math.PI * HOLD_R;
   const [holding, setHolding] = useState(false);
   const progress = useRef(new Animated.Value(0)).current;
-  const doneRef = useRef(false);
   // run.haptics setting gates all haptic feedback here (persisted via profile)
   const hapticsOn = useSettings(s => s.settings.run.haptics);
 
   const begin = () => {
-    doneRef.current = false;
     setHolding(true);
     if (hapticsOn) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    Animated.timing(progress, { toValue: 1, duration: HOLD_MS, easing: Easing.linear, useNativeDriver: false })
-      .start(({ finished }) => {
-        if (!finished) return;
-        doneRef.current = true;
-        setHolding(false);
-        if (hapticsOn) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        onComplete();
-      });
+    Animated.timing(progress, { toValue: 1, duration: HOLD_MS, easing: Easing.linear, useNativeDriver: false }).start();
   };
-
+  const complete = () => {
+    setHolding(false);
+    if (hapticsOn) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    onComplete();
+  };
   const cancel = () => {
-    if (doneRef.current) return;
     setHolding(false);
     Animated.timing(progress, { toValue: 0, duration: 250, easing: Easing.out(Easing.ease), useNativeDriver: false }).start();
   };
+
+  let hold = Gesture.LongPress()
+    .minDuration(HOLD_MS)          // activation = the hold completing
+    .maxDistance(HOLD_DRIFT_MAX)   // beyond this the hold FAILS → sheet pan freed
+    .shouldCancelWhenOutside(false) // drift may leave the small ring — maxDistance governs
+    .runOnJS(true)
+    .onBegin(begin)
+    .onStart(complete)
+    .onFinalize((_e, success) => { if (!success) cancel(); });
+  if (gestureRef) hold = hold.withRef(gestureRef);
 
   const dashOffset = progress.interpolate({ inputRange: [0, 1], outputRange: [HOLD_CIRC, 0] });
 
@@ -146,17 +173,24 @@ function HoldStop({ onComplete }: { onComplete: () => void }) {
             strokeDasharray={`${HOLD_CIRC}`} strokeDashoffset={dashOffset}
           />
         </Svg>
-        <Pressable
-          onPressIn={begin}
-          onPressOut={cancel}
-          style={[st.stopBtn, accentShadow(C.danger), { transform: [{ scale: holding ? 0.86 : 1 }] }]}
-        >
-          <View style={st.stopSquare} />
-        </Pressable>
+        <GestureDetector gesture={hold}>
+          <View
+            style={[
+              st.stopBtn,
+              { width: size - 16, height: size - 16 },
+              accentShadow(C.danger),
+              { transform: [{ scale: holding ? 0.86 : 1 }] },
+            ]}
+          >
+            <View style={[st.stopSquare, { width: Math.round(size * 0.25), height: Math.round(size * 0.25) }]} />
+          </View>
+        </GestureDetector>
       </View>
-      <Text style={[st.holdLabel, { color: holding ? C.danger : C.faint }]}>
-        {holding ? '계속 누르세요…' : '길게 눌러 종료'}
-      </Text>
+      {showLabel && (
+        <Text style={[st.holdLabel, { color: holding ? C.danger : C.faint }]}>
+          {holding ? '계속 누르세요…' : '길게 눌러 종료'}
+        </Text>
+      )}
     </View>
   );
 }
@@ -217,7 +251,7 @@ export default function TrackingScreen() {
   } = useRunTracker();
 
   // ── T-A: real map (consumer of the tracker's read-only surface ONLY) ──
-  const { coordinate: hereCoord } = useCurrentLocation();
+  const { coordinate: hereCoord, status: locStatus } = useCurrentLocation();
   const mapRef = useRef<MapView>(null);
   // Follow-camera suspension: any user pan pauses following for 8s; the
   // re-center button ends the suspension immediately.
@@ -242,14 +276,18 @@ export default function TrackingScreen() {
     mapRef.current?.animateCamera({ center: drawnPath[drawnPath.length - 1] }, { duration: 500 });
   }, [drawnPath.length, state, drawnPath]);
 
-  // Idle: center on the resolved current location once (free-run mode —
-  // course mode fits to the course bounds in onMapReady instead)
-  const idleCenteredRef = useRef(false);
+  // Center on the USER's RESOLVED location (T-B correction ②): the hook's
+  // coordinate is Seoul-fallback-initialized (never null), so truthiness
+  // fired the old center-once on the fallback at mount. status === 'granted'
+  // is the real resolution signal — center once when it lands (free-run;
+  // course mode fits to the course bounds in onMapReady instead).
+  const centeredOnUserRef = useRef(false);
   useEffect(() => {
-    if (state !== 'idle' || course || !hereCoord || idleCenteredRef.current) return;
-    idleCenteredRef.current = true;
-    mapRef.current?.animateCamera({ center: { latitude: hereCoord.lat, longitude: hereCoord.lng } }, { duration: 300 });
-  }, [state, course, hereCoord]);
+    if (course || centeredOnUserRef.current) return;
+    if (locStatus !== 'granted' || !hereCoord) return;
+    centeredOnUserRef.current = true;
+    mapRef.current?.animateCamera({ center: { latitude: hereCoord.lat, longitude: hereCoord.lng } }, { duration: 400 });
+  }, [course, locStatus, hereCoord]);
 
   const onMapReady = () => {
     if (courseCoords.length > 1) {
@@ -281,6 +319,52 @@ export default function TrackingScreen() {
   // (walk-verifiable): distanceInterval suppresses fixes at rest, so a long
   // mid-run standstill can also light it — quiet copy on purpose.
   const gpsLost = state === 'running' && lastFixAgeSec != null && lastFixAgeSec > 15;
+
+  // ── T-B sheet — @gorhom/bottom-sheet (owner escalation after three
+  // hand-rolled iterations shipped broken feel; the 미니플레이어 behavior —
+  // touch anywhere → immediate attach → 1:1 tracking → velocity fling,
+  // both directions — is this library's core job and no longer ours to
+  // hand-validate). Built on the SAME RNGH+Reanimated already in the tree;
+  // pure JS, Expo Go-safe. ──
+  const { height: winH } = useWindowDimensions();
+  const sheetH = winH - SHEET_TOP;
+  const runSnaps = useMemo(() => [COMPACT_VISIBLE, sheetH], [sheetH]);
+  const [detent, setDetent] = useState<'expanded' | 'compact'>('expanded');
+  // Slidable only mid-run; idle needs the start button, countdown is locked
+  const canSlide = state === 'running' || state === 'paused';
+
+  // Hold-stop relation, sheet-side: gorhom's `waitFor` takes ONE GestureRef
+  // (arrays nest un-flattened into requireToFail and get silently dropped —
+  // verified in RNGH source). Each HoldStop owns a real ref; activeHoldRef's
+  // .current is swapped to the detent's hold. RNGH re-resolves relation refs
+  // in a microtask on every detector update, so the swap lands on the next
+  // render after a detent change.
+  const holdRefExpanded = useRef<GestureType | undefined>(undefined);
+  const holdRefCompact = useRef<GestureType | undefined>(undefined);
+  const activeHoldRef = useRef<GestureType | undefined>(undefined);
+  useEffect(() => {
+    activeHoldRef.current = detent === 'compact' ? holdRefCompact.current : holdRefExpanded.current;
+  }, [detent, state]);
+
+  const onSheetChange = (index: number) => {
+    const d = index === 0 ? 'compact' : 'expanded';
+    setDetent(d);
+    activeHoldRef.current = d === 'compact' ? holdRefCompact.current : holdRefExpanded.current;
+  };
+
+  // Lib-driven shared values: crossfade from the animated index (0 = compact,
+  // 1 = expanded); re-center button rides the sheet's top edge position (②).
+  const sheetIndex = useSharedValue(1);
+  const sheetPos = useSharedValue(SHEET_TOP);
+  const expandedFade = useAnimatedStyle(() => ({
+    opacity: Math.max(0, Math.min(1, sheetIndex.value)),
+  }));
+  const compactFade = useAnimatedStyle(() => ({
+    opacity: Math.max(0, Math.min(1, 1 - sheetIndex.value)),
+  }));
+  const recenterRide = useAnimatedStyle(() => ({
+    top: sheetPos.value - 52,
+  }));
 
   // Once countdown starts there is no exit except hold-stop: kill the back
   // gesture and swallow any remove attempt (incl. Android hardware back).
@@ -330,15 +414,16 @@ export default function TrackingScreen() {
   const paceDisplay = moving ? fmtPaceIn(paceSecPerKm, units) : "--'--\"";
 
   return (
-    <View style={st.root}>
-      {/* ── Map area — REAL Apple map (T-A): blue dot via showsUserLocation
-             (no second location stream — rides the tracker's hot GPS),
-             live track polyline from the tracker's read-only livePath,
-             course overlay in course mode. ── */}
-      <View style={{ height: MAP_H }}>
+    <GestureHandlerRootView style={st.root}>
+      {/* ── Map — REAL Apple map (T-A), now FULL-SCREEN behind the sheet
+             (T-B): blue dot via showsUserLocation (no second location
+             stream — rides the tracker's hot GPS), live track polyline from
+             the tracker's read-only livePath, course overlay in course mode.
+             Compact detent reveals it; expanded shows the top MAP_H. ── */}
+      <View style={StyleSheet.absoluteFill}>
         <MapView
           ref={mapRef}
-          style={{ width: '100%', height: MAP_H }}
+          style={StyleSheet.absoluteFill}
           initialRegion={{
             latitude: courseCoords[0]?.latitude ?? hereCoord?.lat ?? 37.5665,
             longitude: courseCoords[0]?.longitude ?? hereCoord?.lng ?? 126.978,
@@ -360,13 +445,6 @@ export default function TrackingScreen() {
             <Polyline coordinates={drawnPath} strokeColor={C.accent} strokeWidth={5} />
           )}
         </MapView>
-
-        {/* Re-center — appears after a user pan suspends the follow camera */}
-        {recenterVisible && (
-          <Pressable onPress={recenter} style={st.recenterBtn} hitSlop={6}>
-            <Icon name="locate" size={18} color={C.text} />
-          </Pressable>
-        )}
 
         {/* Course title pill (bundle: tracking-screen.jsx course mode) */}
         {course && (
@@ -400,68 +478,121 @@ export default function TrackingScreen() {
         )}
       </View>
 
-      {/* ── Metrics panel ─────────────────────────────────────────────────── */}
-      <View style={st.panel}>
-        <View style={st.handleRow}><View style={st.handle} /></View>
+      {/* Re-center — anchored ABOVE the sheet's top edge, right side; rides
+          the sheet via its animatedPosition. A sibling, not a sheet child:
+          iOS drops touches outside a parent's bounds. */}
+      {recenterVisible && (
+        <Reanimated.View style={[st.recenterWrap, recenterRide]}>
+          <Pressable onPress={recenter} style={st.recenterBtn} hitSlop={6}>
+            <Icon name="locate" size={18} color={C.text} />
+          </Pressable>
+        </Reanimated.View>
+      )}
 
-        <View style={{ alignItems: 'center', marginTop: 14 }}>
-          <Text style={st.timeLabel}>경과 시간</Text>
-          <Text style={st.timeValue}>{fmtElapsed(elapsedSec)}</Text>
-        </View>
-
-        <View style={st.metricsRow}>
-          {([
-            [fmtDist(distanceKm, units, 2), distUnit(units), '거리'],
-            [paceDisplay,                   paceUnit(units), '현재 페이스'],
-            [String(kcal),                  'kcal',          '칼로리'],
-          ] as [string, string, string][]).map(([val, unit, label], i) => (
-            <View key={i} style={[st.metricCol, i > 0 && st.metricColDivider]}>
-              <View style={st.metricValRow}>
-                <Text style={st.metricVal}>{val}</Text>
-                <Text style={st.metricUnit}>{unit}</Text>
-              </View>
-              <Text style={st.metricLbl}>{label}</Text>
+      {/* ── Metrics sheet (T-B): @gorhom/bottom-sheet — 미니플레이어 feel is
+             the lib's job (drag anywhere, 1:1 tracking, velocity fling, both
+             directions). idle = content-hugging single detent, locked;
+             run = [compact 100, expanded] with countdown locked. ── */}
+      <BottomSheet
+        key={idle ? 'idle' : 'run'}
+        enableDynamicSizing={idle}
+        {...(!idle ? { snapPoints: runSnaps, index: 1 } : {})}
+        animateOnMount={false}
+        enableOverDrag={false}
+        enableContentPanningGesture={canSlide}
+        enableHandlePanningGesture={canSlide}
+        onChange={onSheetChange}
+        animatedIndex={sheetIndex}
+        animatedPosition={sheetPos}
+        waitFor={activeHoldRef}
+        backgroundStyle={st.sheetBg}
+        handleIndicatorStyle={st.handleIndicator}
+      >
+        <BottomSheetView style={{ paddingBottom: Math.max(insets.bottom, 12) }}>
+        {/* Compact strip — glanceable time/distance + pause + mini hold-stop */}
+        {!idle && (
+          <Reanimated.View
+            pointerEvents={detent === 'compact' ? 'auto' : 'none'}
+            style={[st.compactStrip, compactFade]}
+          >
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={st.compactTime}>{fmtElapsed(elapsedSec)}</Text>
+              <Text style={st.compactDist}>{fmtDist(distanceKm, units, 2)} {distUnit(units)}</Text>
             </View>
-          ))}
-        </View>
-
-        {/* AI audio coach — static card, canned message (no real audio yet) */}
-        <View style={[st.coachCard, shadows.sm]}>
-          <View style={st.coachIcon}>
-            <Icon name="sparkles" size={18} color={C.accentGrn} />
-          </View>
-          <View style={{ flex: 1, minWidth: 0 }}>
-            <Text style={st.coachLabel}>AI 오디오 코치</Text>
-            <Text style={st.coachMsg} numberOfLines={1}>{`"${coachMsg}"`}</Text>
-          </View>
-          <Waveform active={running} />
-        </View>
-
-        <View style={{ flex: 1 }} />
-
-        {/* ── Controls ────────────────────────────────────────────────────── */}
-        {idle ? (
-          <View style={[st.controls, { paddingBottom: Math.max(insets.bottom, 12) + 12 }]}>
-            <Pressable
-              onPress={handleStart}
-              style={({ pressed }) => [st.startBtn, accentShadow(C.accent), { opacity: pressed ? 0.9 : 1 }]}
-            >
-              <Icon name="play" size={22} color={C.accentText} />
-              <Text style={st.startTxt}>러닝 시작</Text>
-            </Pressable>
-          </View>
-        ) : (
-          <View style={[st.controls, st.controlsRow, { paddingBottom: Math.max(insets.bottom, 12) + 12 }]}>
-            <Pressable style={[st.speakerBtn, shadows.sm]}>
-              <Icon name="volume-medium-outline" size={22} color={C.sub} />
-            </Pressable>
-            <Pressable onPress={togglePause} style={[st.pauseBtn, accentShadow(C.accent)]}>
-              <Icon name={running ? 'pause' : 'play'} size={32} color={C.accentText} />
-            </Pressable>
-            <HoldStop onComplete={endRun} />
-          </View>
+            <View style={st.compactCluster}>
+              <Pressable onPress={togglePause} style={[st.compactPauseBtn, accentShadow(C.accent)]}>
+                <Icon name={running ? 'pause' : 'play'} size={20} color={C.accentText} />
+              </Pressable>
+              <HoldStop onComplete={endRun} size={44} showLabel={false} gestureRef={holdRefCompact} />
+            </View>
+          </Reanimated.View>
         )}
-      </View>
+
+        {/* Expanded content — canvas layout; the flex spacer (dead space)
+            is gone: controls sit right under the coach card. In idle the
+            fade is inert (index 0 = the single content-hugging detent). */}
+        <Reanimated.View
+          pointerEvents={detent === 'expanded' ? 'auto' : 'none'}
+          style={[st.expandedWrap, !idle ? expandedFade : null]}
+        >
+          <View style={{ alignItems: 'center', marginTop: 8 }}>
+            <Text style={st.timeLabel}>경과 시간</Text>
+            <Text style={st.timeValue}>{fmtElapsed(elapsedSec)}</Text>
+          </View>
+
+          <View style={st.metricsRow}>
+            {([
+              [fmtDist(distanceKm, units, 2), distUnit(units), '거리'],
+              [paceDisplay,                   paceUnit(units), '현재 페이스'],
+              [String(kcal),                  'kcal',          '칼로리'],
+            ] as [string, string, string][]).map(([val, unit, label], i) => (
+              <View key={i} style={[st.metricCol, i > 0 && st.metricColDivider]}>
+                <View style={st.metricValRow}>
+                  <Text style={st.metricVal}>{val}</Text>
+                  <Text style={st.metricUnit}>{unit}</Text>
+                </View>
+                <Text style={st.metricLbl}>{label}</Text>
+              </View>
+            ))}
+          </View>
+
+          {/* AI audio coach — static card, canned message (no real audio yet) */}
+          <View style={[st.coachCard, shadows.sm]}>
+            <View style={st.coachIcon}>
+              <Icon name="sparkles" size={18} color={C.accentGrn} />
+            </View>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={st.coachLabel}>AI 오디오 코치</Text>
+              <Text style={st.coachMsg} numberOfLines={1}>{`"${coachMsg}"`}</Text>
+            </View>
+            <Waveform active={running} />
+          </View>
+
+          {/* ── Controls — directly under the coach card (dead space died) ── */}
+          {idle ? (
+            <View style={st.controls}>
+              <Pressable
+                onPress={handleStart}
+                style={({ pressed }) => [st.startBtn, accentShadow(C.accent), { opacity: pressed ? 0.9 : 1 }]}
+              >
+                <Icon name="play" size={22} color={C.accentText} />
+                <Text style={st.startTxt}>러닝 시작</Text>
+              </Pressable>
+            </View>
+          ) : (
+            <View style={[st.controls, st.controlsRow]}>
+              <Pressable style={[st.speakerBtn, shadows.sm]}>
+                <Icon name="volume-medium-outline" size={22} color={C.sub} />
+              </Pressable>
+              <Pressable onPress={togglePause} style={[st.pauseBtn, accentShadow(C.accent)]}>
+                <Icon name={running ? 'pause' : 'play'} size={32} color={C.accentText} />
+              </Pressable>
+              <HoldStop onComplete={endRun} gestureRef={holdRefExpanded} />
+            </View>
+          )}
+        </Reanimated.View>
+        </BottomSheetView>
+      </BottomSheet>
 
       {state === 'countdown' && <CountdownOverlay value={countdownValue} />}
       {/* TODO(keep-awake): gate on settings.run.keep_screen_on AFTER the
@@ -470,7 +601,7 @@ export default function TrackingScreen() {
           investigation. Until then KeepAwake stays always-on during a run,
           regardless of the persisted toggle. */}
       {(state === 'countdown' || state === 'running' || state === 'paused') && <KeepAwake />}
-    </View>
+    </GestureHandlerRootView>
   );
 }
 
@@ -481,7 +612,9 @@ const st = StyleSheet.create({
 
   // Close (idle only)
   closeBtn: { position: 'absolute', left: 14, width: 40, height: 40, borderRadius: R.pill, backgroundColor: 'rgba(0,0,0,0.45)', alignItems: 'center', justifyContent: 'center' },
-  recenterBtn: { position: 'absolute', right: 14, bottom: 36, width: 40, height: 40, borderRadius: R.pill, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, alignItems: 'center', justifyContent: 'center', ...shadows.sm },
+  // Anchored just above the sheet's top edge; top driven by animatedPosition
+  recenterWrap: { position: 'absolute', right: 14 },
+  recenterBtn:  { width: 40, height: 40, borderRadius: R.pill, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, alignItems: 'center', justifyContent: 'center', ...shadows.sm },
   gpsChip:    { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(0,0,0,0.45)', borderRadius: R.pill, paddingHorizontal: 10, paddingVertical: 5 },
   gpsChipTxt: { fontSize: 11, fontWeight: '700', color: '#fff', letterSpacing: -0.2 },
 
@@ -495,10 +628,21 @@ const st = StyleSheet.create({
   badgeDot: { width: 7, height: 7, borderRadius: 4 },
   badgeTxt: { fontSize: 12.5, fontWeight: '700', color: '#fff', letterSpacing: -0.2 },
 
-  // Panel
-  panel:     { flex: 1, backgroundColor: C.bg, borderTopLeftRadius: 24, borderTopRightRadius: 24, marginTop: -22, paddingHorizontal: S.gutter, ...shadows.lg },
-  handleRow: { alignItems: 'center', paddingTop: 8 },
-  handle:    { width: 38, height: 5, borderRadius: 99, backgroundColor: C.border },
+  // Sheet (T-B: 2-detent) — no sheet-level padding: the gesture detector's
+  // view spans the full sheet so touch coords are sheet-local for the
+  // anti-theft rect hit-test; content wrappers carry their own gutters.
+  sheetBg:         { backgroundColor: C.bg, borderTopLeftRadius: 24, borderTopRightRadius: 24 },
+  handleIndicator: { width: 38, height: 5, borderRadius: 99, backgroundColor: C.border },
+  expandedWrap: { paddingHorizontal: S.gutter },
+  // Absolute within the sheet content (which starts below the lib handle)
+  compactStrip: {
+    position: 'absolute', top: 0, left: S.gutter, right: S.gutter,
+    flexDirection: 'row', alignItems: 'center', gap: 14, height: 64,
+  },
+  compactCluster: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  compactTime: { fontSize: 26, fontWeight: '700', letterSpacing: -1, color: C.text, fontVariant: ['tabular-nums'] },
+  compactDist: { fontSize: 13, fontWeight: '600', color: C.sub, letterSpacing: -0.2, marginTop: 1, fontVariant: ['tabular-nums'] },
+  compactPauseBtn: { width: 44, height: 44, borderRadius: R.pill, backgroundColor: C.accent, alignItems: 'center', justifyContent: 'center' },
 
   // Primary metric
   timeLabel: { fontSize: 11.5, fontWeight: '600', letterSpacing: 0.6, color: C.faint, textTransform: 'uppercase' },
