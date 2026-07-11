@@ -17,6 +17,7 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -188,6 +189,39 @@ export default function PersonalInfoScreen() {
     }
   }
 
+  async function deletePhoto() {
+    if (uploadingPhoto) return;
+    setUploadingPhoto(true);
+    try {
+      // null = removal (지연 contract 2026-07-13: clears the field AND
+      // deletes the Storage file; "" 422s; omitted field = keep).
+      // Rename-safe: carries the SERVER's current name, not field edits.
+      await updateProfile({ nickname: originalName, avatar_url: null });
+      setPhotoUrl(null); // write-through — initials return everywhere
+    } catch (e: unknown) {
+      Alert.alert('사진 삭제 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요');
+    } finally {
+      setUploadingPhoto(false);
+    }
+  }
+
+  // Photo present → 변경/삭제 chooser as an IN-APP bottom sheet (kudos-sheet
+  // language). ActionSheetIOS rendered a CENTERED alert on-device in this
+  // Expo Go runtime (owner verification 2026-07-13) — replaced with our own
+  // sheet: deterministic slide-up on both platforms. No photo → straight to
+  // the picker (no sheet for a one-option menu).
+  const [chooserOpen, setChooserOpen] = useState(false);
+  function onAvatarPress() {
+    if (!photoUrl) { changePhoto(); return; }
+    setChooserOpen(true);
+  }
+  function chooseThenRun(action: () => void) {
+    setChooserOpen(false);
+    // Let the sheet's slide-out finish before presenting the native picker
+    // VC (iOS rejects a present-over-dismissing-modal race)
+    setTimeout(action, 420);
+  }
+
   async function handleSave() {
     if (saving) return;
     const trimmed = name.trim();
@@ -238,26 +272,29 @@ export default function PersonalInfoScreen() {
         contentContainerStyle={{ paddingBottom: 120 }}
         keyboardShouldPersistTaps="handled"
       >
-        {/* ── Avatar + pencil (live upload — onboarding-gate slice) ── */}
+        {/* ── Avatar + pencil (live upload — onboarding-gate slice; photo
+            present → 변경/삭제 sheet, 지연 null-as-removal contract) ── */}
         <View style={st.avatarWrap}>
           <View style={{ position: 'relative' }}>
-            {photoUrl && photoUrl !== brokenUrl ? (
-              <Image
-                source={{ uri: photoUrl }}
-                onError={() => setBrokenUrl(photoUrl)}
-                style={st.avatar}
-              />
-            ) : (
-              <View style={[st.avatar, { backgroundColor: avatarBg(name || '러너'), alignItems: 'center', justifyContent: 'center' }]}>
-                <Text style={st.avatarTxt}>{(name.trim() || '러').trim()[0].toUpperCase()}</Text>
-              </View>
-            )}
+            <Pressable onPress={onAvatarPress}>
+              {photoUrl && photoUrl !== brokenUrl ? (
+                <Image
+                  source={{ uri: photoUrl }}
+                  onError={() => setBrokenUrl(photoUrl)}
+                  style={st.avatar}
+                />
+              ) : (
+                <View style={[st.avatar, { backgroundColor: avatarBg(name || '러너'), alignItems: 'center', justifyContent: 'center' }]}>
+                  <Text style={st.avatarTxt}>{(name.trim() || '러').trim()[0].toUpperCase()}</Text>
+                </View>
+              )}
+            </Pressable>
             {uploadingPhoto && (
-              <View style={[st.avatar, st.avatarBusy]}>
+              <View style={[st.avatar, st.avatarBusy]} pointerEvents="none">
                 <ActivityIndicator color="#fff" />
               </View>
             )}
-            <Pressable onPress={changePhoto} hitSlop={8} style={st.pencilBadge}>
+            <Pressable onPress={onAvatarPress} hitSlop={8} style={st.pencilBadge}>
               <Icon name="pencil" size={13} color={C.accentText} />
             </Pressable>
           </View>
@@ -313,6 +350,31 @@ export default function PersonalInfoScreen() {
               : <Text style={st.saveTxt}>저장</Text>}
         </Pressable>
       </View>
+
+      {/* ── 프로필 사진 chooser — in-app bottom sheet (kudos-sheet language;
+          replaced ActionSheetIOS, which alert-rendered in Expo Go) ── */}
+      <Modal visible={chooserOpen} transparent animationType="slide" onRequestClose={() => setChooserOpen(false)}>
+        <View style={st.sheetRoot}>
+          <Pressable style={st.sheetBackdrop} onPress={() => setChooserOpen(false)} />
+          <View style={[st.sheet, { paddingBottom: Math.max(insets.bottom, 12) + 8 }]}>
+            <View style={st.grabBar} />
+            <Text style={st.sheetTitle}>프로필 사진</Text>
+            <View style={st.sheetGroup}>
+              <Pressable onPress={() => chooseThenRun(changePhoto)} style={({ pressed }) => [st.sheetRow, pressed && { opacity: 0.6 }]}>
+                <Text style={st.sheetRowTxt}>사진 변경</Text>
+              </Pressable>
+              <View style={st.sheetDivider} />
+              <Pressable onPress={() => chooseThenRun(deletePhoto)} style={({ pressed }) => [st.sheetRow, pressed && { opacity: 0.6 }]}>
+                <Text style={[st.sheetRowTxt, { color: C.danger }]}>사진 삭제</Text>
+              </Pressable>
+            </View>
+            {/* Detached cancel per iOS convention */}
+            <Pressable onPress={() => setChooserOpen(false)} style={({ pressed }) => [st.sheetCancel, pressed && { opacity: 0.6 }]}>
+              <Text style={[st.sheetRowTxt, { fontWeight: '700' }]}>취소</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -325,6 +387,17 @@ const st = StyleSheet.create({
   appBar:      { flexDirection: 'row', alignItems: 'center', paddingHorizontal: S.gutter, paddingVertical: 12 },
   backBtn:     { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
   appBarTitle: { flex: 1, textAlign: 'center', fontSize: 16, fontWeight: '700', letterSpacing: -0.3, color: C.text },
+
+  sheetRoot:     { flex: 1, justifyContent: 'flex-end' },
+  sheetBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.45)' },
+  sheet:         { backgroundColor: C.bg, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: 16, paddingTop: 12 },
+  grabBar:       { width: 38, height: 5, borderRadius: 99, backgroundColor: C.border, alignSelf: 'center', marginBottom: 12 },
+  sheetTitle:    { fontSize: 13, fontWeight: '600', color: C.faint, letterSpacing: -0.2, textAlign: 'center', marginBottom: 10 },
+  sheetGroup:    { backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 16, overflow: 'hidden' },
+  sheetRow:      { paddingVertical: 15, alignItems: 'center' },
+  sheetRowTxt:   { fontSize: 16, fontWeight: '600', letterSpacing: -0.3, color: C.text },
+  sheetDivider:  { height: 1, backgroundColor: C.border },
+  sheetCancel:   { marginTop: 10, paddingVertical: 15, alignItems: 'center', backgroundColor: C.surfaceAlt, borderWidth: 1, borderColor: C.border, borderRadius: 16 },
 
   avatarWrap:  { alignItems: 'center', paddingTop: 14, paddingBottom: 4 },
   avatar:      { width: 84, height: 84, borderRadius: 42, borderWidth: 2.5, borderColor: C.accent },
