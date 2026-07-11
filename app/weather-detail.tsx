@@ -11,7 +11,7 @@ import Svg, { Circle, G } from 'react-native-svg';
 
 import { Icon } from '@/components/ui';
 import { useWeather } from '@/hooks/use-weather';
-import { weatherTone } from '@/lib/weather-api';
+import { weatherIcon, weatherTone } from '@/lib/weather-api';
 import {
   accentShadow,
   colors as C,
@@ -143,7 +143,15 @@ export default function WeatherDetailScreen() {
       value:     w ? w.wind_ms.toFixed(1) : '—',
       sub:       '㎧',
     },
-    // 자외선 tile HIDDEN (no server field — soft 지연 ask logged);
+    // 자외선 — LIVE (uv landed on the payload, probed 2026-07-14; 기상청
+    // 5단계, C.uv map). Contract: null on partial outage → tile hidden.
+    ...(w && !w.uv ? [] : [{
+      iconName:  'sunny-outline',
+      label:     '자외선',
+      value:     w?.uv ? String(w.uv.value) : '—',
+      sub:       w?.uv?.grade,
+      subColor:  w?.uv ? C.uv[w.uv.grade] : undefined,
+    }]),
     // 강수확률 repurposed to 강수량 (rain_1h_mm; owner call 2026-07-08)
     {
       iconName: 'rainy-outline',
@@ -186,7 +194,11 @@ export default function WeatherDetailScreen() {
         <View style={styles.hero}>
           <View style={styles.heroRow}>
             <Text style={styles.heroTemp}>{w ? `${Math.round(w.temp_c)}°` : '--°'}</Text>
-            <Icon name="sunny" size={48} color={C.sun} />
+            {/* Real sky icon — same weatherIcon mapping as the home strip (W2) */}
+            {(() => {
+              const ic = w ? weatherIcon(w.condition_code) : { name: 'sunny', color: C.sun };
+              return <Icon name={ic.name as any} size={48} color={ic.color} />;
+            })()}
           </View>
           <Text style={styles.heroSub}>
             {w ? `${w.condition} · 체감 ${Math.round(w.feels_like_c)}°` : '날씨 불러오는 중'} · {placeName ?? '위치 확인 중'}

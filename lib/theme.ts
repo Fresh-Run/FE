@@ -72,6 +72,16 @@ export const colors = {
     '나쁨':    palette.aqiBad,
     '매우나쁨': palette.aqiVeryBad,
   } as Record<string, string>,
+
+  // UV status map — 기상청 5단계 (BE weather_service _UV_BOUNDS; guide §62).
+  // Conventional UV scale colors: green → yellow → orange → red → purple.
+  uv: {
+    '낮음':    palette.aqiOk,       // green
+    '보통':    palette.amber400,    // yellow
+    '높음':    palette.aqiBad,      // orange
+    '매우높음': palette.aqiVeryBad,  // red
+    '위험':    '#8A4FD8',           // purple (single use — no palette entry)
+  } as Record<string, string>,
 } as const;
 
 // ─── Shadows ─────────────────────────────────────────────────────────────────

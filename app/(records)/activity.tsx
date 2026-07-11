@@ -1,6 +1,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -65,16 +66,25 @@ export default function ActivityScreen() {
   const lpSaved  = useLocalProfile(s => s.saved);
   useEffect(() => { useLocalProfile.getState().hydrate(); }, []);
 
-  // Real track hero — fetched when the run reports has_track
+  // Real track hero — fetched when the run reports has_track.
+  // Retry-on-refocus (SWR-lite, audit finding): a failed fetch marks
+  // trackFailed; the next screen focus re-attempts, so one bad fetch never
+  // leaves a tracked run stylized for the whole visit.
   const [track, setTrack] = useState<Coordinate[] | null>(null);
+  const [trackFailed, setTrackFailed] = useState(false);
+  const [trackAttempt, setTrackAttempt] = useState(0);
   useEffect(() => {
     if (!run?.has_track || !run.id) return;
     let cancelled = false;
+    setTrackFailed(false);
     getRunTrack(run.id)
       .then(t => { if (!cancelled) setTrack(t.polyline); })
-      .catch(() => { /* fetch failure → seed MiniMap fallback stands */ });
+      .catch(() => { if (!cancelled) setTrackFailed(true); }); // seed fallback stands until refocus
     return () => { cancelled = true; };
-  }, [run?.has_track, run?.id]);
+  }, [run?.has_track, run?.id, trackAttempt]);
+  useFocusEffect(useCallback(() => {
+    if (trackFailed) setTrackAttempt(a => a + 1);
+  }, [trackFailed]));
 
   // ── Loading ────────────────────────────────────────────────────────────────
   if (loading) {
@@ -179,6 +189,19 @@ export default function ActivityScreen() {
             />
           </View>
 
+          {/* 조정됨 caption — server ±10% recompute (guide §148: is_flagged
+              → distance_km replaced, original kept in distance_km_reported).
+              Quiet, informational; own-run screen so the field is real. */}
+          {run.is_flagged ? (
+            <View style={st.flaggedRow}>
+              <Icon name="information-circle-outline" size={13} color={C.faint} />
+              <Text style={st.flaggedTxt}>
+                GPS 검증으로 거리가 조정됐어요
+                {run.distance_km_reported != null ? ` (기록값 ${fmtDist(run.distance_km_reported, units, 2)}${distUnit(units)})` : ''}
+              </Text>
+            </View>
+          ) : null}
+
           {/* 구간 기록 — hidden entirely on splitless (sub-km/trackless) runs */}
           {splits.length > 0 && (
             <>
@@ -230,6 +253,8 @@ const st = StyleSheet.create({
 
   // Stat tiles
   tileRow:   { flexDirection: 'row', gap: 10, marginTop: S.lg },
+  flaggedRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 8, paddingHorizontal: 2 },
+  flaggedTxt: { fontSize: 11.5, color: C.faint, letterSpacing: -0.2, flexShrink: 1 },
   tile:      { flex: 1, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: R.lg, padding: 13 },
   tileTop:   { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 7 },
   tileLabel: { fontSize: 11, fontWeight: '600', letterSpacing: 0.2, color: C.faint, textTransform: 'uppercase' },

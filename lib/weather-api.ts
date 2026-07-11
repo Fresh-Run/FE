@@ -17,6 +17,9 @@ export type WeatherResponse = {
   rain_1h_mm: number | null;
   pm25: AqiBlock;
   pm10: AqiBlock;
+  /** 기상청 5단계 grade 낮음/보통/높음/매우높음/위험 (guide §62); null on
+      partial upstream outage → hide the tile */
+  uv: AqiBlock;
   running_index: {
     score: number; // 0–100
     label: string;

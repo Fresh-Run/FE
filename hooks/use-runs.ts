@@ -42,6 +42,11 @@ export type Run = {
   photo_thumb?: string | null;
   /** ≤36-pt simplified track on list rows (BE 6baa192; null = trackless) */
   polyline_thumb?: { lat: number; lng: number }[] | null;
+  /** Server ±10% recompute flag (guide §148): true = distance_km was
+      replaced by the server value (original in distance_km_reported) OR
+      verification=suspect. 타인 응답에선 기본값 — own screens only. */
+  is_flagged?: boolean;
+  distance_km_reported?: number | null;
 };
 
 // ─── useRuns — full list for the signed-in user ───────────────────────────────
