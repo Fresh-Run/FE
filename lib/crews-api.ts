@@ -198,6 +198,22 @@ export async function leaveCrew(id: string): Promise<void> {
   await apiFetch<void>(`/api/crews/${id}/leave`, { method: 'DELETE' });
 }
 
+// ─── Member management (M3, BE f68a48f admin v1) ─────────────────────────────
+
+/** Owner-only, 멱등; target=owner → 422 (ownership moves via transfer only). */
+export async function setMemberRole(crewId: string, userId: string, role: 'admin' | 'member'): Promise<void> {
+  await apiFetch<void>(`/api/crews/${crewId}/members/${userId}/role`, {
+    method: 'PATCH',
+    body: { role },
+  });
+}
+
+/** Kick — owner||admin; admins may kick members only (admin/owner target → 403);
+    self-kick → 400. The UI renders these as disabled affordances. */
+export async function kickMember(crewId: string, userId: string): Promise<void> {
+  await apiFetch<void>(`/api/crews/${crewId}/members/${userId}`, { method: 'DELETE' });
+}
+
 // ─── Join requests (approval crews) ──────────────────────────────────────────
 
 /** null = no request on record (guide: 404 means "가입 신청" is available). */

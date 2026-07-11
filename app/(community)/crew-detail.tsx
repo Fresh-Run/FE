@@ -398,6 +398,18 @@ export default function CrewDetailScreen() {
           <View style={st.sectionHead}>
             <Text style={st.sectionTitle}>크루원</Text>
             <Text style={st.memberCount}>{members.length}명</Text>
+            {canManage && (
+              <Pressable
+                onPress={() => router.push({
+                  pathname: '/(community)/crew-members' as never,
+                  params: { crewId: crew.id },
+                })}
+                hitSlop={8}
+                style={{ marginLeft: 'auto' }}
+              >
+                <Text style={st.annMoreTxt}>관리</Text>
+              </Pressable>
+            )}
           </View>
 
           {members.length === 0 ? (
