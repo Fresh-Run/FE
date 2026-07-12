@@ -1,10 +1,14 @@
 /**
- * 크루 채팅 v1+v1.5 — the room (canvas: crew-chat.jsx FrCrewChat). Renders
- * the 3-type contract (guide §219, probed): text bubbles · system banners
- * (FE-assembled copy from the render key, 공지 deep-link, reactable but
- * delete-proof) · run_share frozen-snapshot cards (카톡 선례 — survive the
- * original's deletion/privating; tap re-evaluates → friendly 404). Unknown
- * future types render content as plain text or hide quietly (v2 guard).
+ * 크루 채팅 v1+v1.5+v3.5 — the room (canvas: crew-chat.jsx FrCrewChat).
+ * Renders the 3-type contract (guide §219, probed): text bubbles · system
+ * banners (FE-assembled copy from the render key, 공지 deep-link, reactable
+ * but delete-proof) · run_share frozen-snapshot cards (카톡 선례 — survive
+ * the original's deletion/privating; tap re-evaluates → friendly 404).
+ * Unknown future types render content as plain text or hide quietly (v2
+ * guard). v3.5 (guide §220): blocked:true rows — server-gutted content/
+ * identity → "가려진 메시지" placeholder BEFORE the type switch (system·
+ * run_share arrive gutted too, probed); reactions tally kept, "+" hidden
+ * (new reacts 404), own-chip removal still 204.
  * Share entry: composer + → own public/followers runs (private ABSENT —
  * hide-first). Transport = POLLING (guide §214: 20s focused-only + refetch
  * on focus/send).
@@ -267,6 +271,11 @@ export default function CrewChatScreen() {
   function ReactionChips({ m }: { m: ChatMessage }) {
     const entries = Object.entries(m.reactions).filter(([, n]) => n > 0);
     if (m.deleted) return null;
+    // v3.5: blocked rows keep the tally (count-distortion rule) but lose the
+    // "+" affordance — new reacts are a server 404 (hide-first precedent).
+    // Existing chips stay tappable: removing my own reaction is 204 (probed);
+    // a doomed add quietly reverts via toggleReact's refreshHead.
+    if (m.blocked && entries.length === 0) return null;
     return (
       <View style={st.reactRow}>
         {entries.map(([e, n]) => {
@@ -282,13 +291,15 @@ export default function CrewChatScreen() {
             </Pressable>
           );
         })}
-        <Pressable
-          onPress={() => setPickerFor(pickerFor === m.id ? null : m.id)}
-          style={st.reactAdd}
-          hitSlop={6}
-        >
-          <Text style={st.reactAddTxt}>+</Text>
-        </Pressable>
+        {!m.blocked && (
+          <Pressable
+            onPress={() => setPickerFor(pickerFor === m.id ? null : m.id)}
+            style={st.reactAdd}
+            hitSlop={6}
+          >
+            <Text style={st.reactAddTxt}>+</Text>
+          </Pressable>
+        )}
       </View>
     );
   }
@@ -312,6 +323,34 @@ export default function CrewChatScreen() {
       );
     }
     const m = row;
+    // ── v3.5 blocked (guide §220, probed): server nulls content·payload·
+    // identity for blocked-relationship senders — system and run_share rows
+    // arrive gutted too (probed), so this check MUST precede the type
+    // switch or the forward-guard eats them. Quiet placeholder in the
+    // deleted-message idiom; identity stays hidden (no profile tap — the
+    // blocked profile is a 404 은닉); manager long-press delete survives
+    // for moderation. Deleted wins below (universal truth for everyone).
+    if (m.blocked && !m.deleted) {
+      const canModDelete = m.type !== 'system' && canManage;
+      return (
+        <View style={st.msgRow}>
+          <Avatar name={null} size={30} initialsRatio={0.4} />
+          <View style={st.msgCol}>
+            <Text style={st.senderLine}>
+              가려진 사용자 <Text style={st.whenTxt}>· {fmtWhen(m.created_at)}</Text>
+            </Text>
+            <Pressable
+              onLongPress={canModDelete ? () => setSheetFor(m) : undefined}
+              delayLongPress={400}
+              style={[st.bubble, st.bubbleOther, st.bubbleDeleted]}
+            >
+              <Text style={st.deletedTxt}>가려진 메시지</Text>
+            </Pressable>
+            <ReactionChips m={m} />
+          </View>
+        </View>
+      );
+    }
     // ── system: centered banner, FE-assembled copy from the render key
     // (guide §219 — copy changes need no server deploy); 공지 deep-link;
     // reactable, delete impossible for everyone (403) ──────────────────

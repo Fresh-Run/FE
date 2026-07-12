@@ -11,6 +11,12 @@
 // run_share (content = caption nullable; payload = 전송 시점 스냅샷 박제 —
 // 원본 삭제·비공개 전환에도 카드 잔존, 카톡 선례; photo_thumb는 경로라
 // 직접 렌더 금지; 카드 탭 → GET /runs 현재 권한 재평가, 404 가능).
+// v3.5 (BE 9c29e7c, probed 2026-07-13): blocked:true = 차단 관계 발신자 —
+// 서버가 content·payload·sender_nickname·sender_avatar_url를 null로 보냄
+// (서버측 은닉, 클라 필터 아님; system·run_share도 동일하게 가려짐 — probed).
+// sender_id는 잔존. 프론트 = "가려진 메시지" 플레이스홀더, 타입 분기보다
+// 먼저 체크. reactions 집계는 유지(왜곡 방지), 새 반응 404(→ quiet no-op),
+// 본인 반응 제거는 204(probed — 철회는 허용).
 
 import { apiFetch } from '@/lib/api';
 
@@ -30,6 +36,8 @@ export type ChatMessage = {
   reactions: Record<string, number>;
   my_reactions: string[];
   deleted: boolean;
+  /** v3.5: true = 차단 관계 발신자, 내용·신원 서버측 null (위 계약 주석) */
+  blocked: boolean;
 };
 
 export type RunSharePayload = {
