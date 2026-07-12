@@ -128,16 +128,10 @@ export default function OnboardingScreen() {
         } catch { /* avatar can be retried from 개인 정보 later */ }
       }
 
-      // Local kcal-store mirror (saved=true lights the 추정 tile)
-      if (weightKg.trim() !== '' && weightValid) {
-        const lp = useLocalProfile.getState();
-        await lp.hydrate();
-        await lp.save({
-          ...lp.fields,
-          weightKg: w,
-          ...(heightCm.trim() !== '' && heightValid ? { heightCm: h } : {}),
-        });
-      }
+      // kcal store: the first PATCH above IS server truth now (S2) — a
+      // forced re-hydrate pulls it into the per-user cache (saved lights
+      // when weight landed); no second PATCH, nothing can block the gate
+      await useLocalProfile.getState().hydrate(true).catch(() => {});
 
       setDisplayName(nickname);
       markProfileCreated(); // guard releases to (tabs)

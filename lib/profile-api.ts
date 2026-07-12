@@ -16,6 +16,11 @@ export type ProfileResponse = {
   tier: string;
   visibility: ProfileVisibility;
   follow_approval: boolean; // v2 팔로우 승인제 (BE 610c7f3)
+  // 신체 정보 (S2 — probed 2026-07-13: never-set = null)
+  birth_year: number | null;
+  weight_kg: number | null;
+  height_cm: number | null;
+  gender: 'female' | 'male' | 'undisclosed' | null;
   created_at: string;
   updated_at: string;
 };

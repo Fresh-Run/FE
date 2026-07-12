@@ -181,7 +181,7 @@ export default function PersonalInfoScreen() {
       const url = await uploadAvatar(uri);
       // nickname is required on every ProfileUpdate (422 without) — carry
       // the SERVER's current name, not the unsaved field edit
-      await updateProfile({ nickname: originalName, avatar_url: url });
+      await updateProfile({ avatar_url: url }); // single-field (partial-PATCH standard)
       setPhotoUrl(url); // write-through: 홈/프로필 paint it immediately
     } catch (e: unknown) {
       Alert.alert('사진 업로드 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요');
@@ -197,7 +197,7 @@ export default function PersonalInfoScreen() {
       // null = removal (지연 contract 2026-07-13: clears the field AND
       // deletes the Storage file; "" 422s; omitted field = keep).
       // Rename-safe: carries the SERVER's current name, not field edits.
-      await updateProfile({ nickname: originalName, avatar_url: null });
+      await updateProfile({ avatar_url: null }); // null-as-removal, single-field (probed)
       setPhotoUrl(null); // write-through — initials return everywhere
     } catch (e: unknown) {
       Alert.alert('사진 삭제 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요');
@@ -260,7 +260,8 @@ export default function PersonalInfoScreen() {
         await updateNickname(trimmed);
         setDisplayName(trimmed); // greeting/comments use the store name
       }
-      // 출생 연도/체중/키/성별 → device-local until S2
+      // 출생 연도/체중/키/성별 → SERVER (S2 swap) + per-user cache; throws
+      // on failure so the 저장 실패 path below stays honest
       await useLocalProfile.getState().save({ birthYear, weightKg, heightCm, gender });
       setSavedFlash(true);
       flashTimer.current = setTimeout(() => setSavedFlash(false), 1600);
