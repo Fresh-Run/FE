@@ -12,6 +12,7 @@ import {
   patchSettings,
   type AiCourseSettings,
   type FeedSettings,
+  type NotifSettings,
   type RunSettings,
   type UserSettings,
 } from '@/lib/settings-api';
@@ -41,6 +42,8 @@ type SettingsStore = {
   setRunSetting: (key: keyof RunSettings, value: boolean) => Promise<boolean>;
   /** Optimistic feed-settings write (v1.5) — same contract as setRunSetting. */
   setFeedSetting: (key: keyof FeedSettings, value: boolean) => Promise<boolean>;
+  /** Optimistic push-notif toggle write — same contract as setRunSetting. */
+  setNotifSetting: (key: keyof NotifSettings, value: boolean) => Promise<boolean>;
   /** Optimistic units write; resolves false (and rolls back) on failure. */
   setUnits: (units: UserSettings['units']) => Promise<boolean>;
   /** Optimistic theme write; resolves false (and rolls back) on failure.
@@ -134,6 +137,23 @@ export const useSettings = create<SettingsStore>((set, get) => ({
     cache(next);
     try {
       const server = await patchSettings({ feed: { [key]: value } });
+      set({ settings: server, synced: true });
+      cache(server);
+      return true;
+    } catch {
+      set({ settings: prev }); // rollback
+      cache(prev);
+      return false;
+    }
+  },
+
+  setNotifSetting: async (key, value) => {
+    const prev = get().settings;
+    const next = { ...prev, notif: { ...prev.notif, [key]: value } };
+    set({ settings: next }); // optimistic
+    cache(next);
+    try {
+      const server = await patchSettings({ notif: { [key]: value } });
       set({ settings: server, synced: true });
       cache(server);
       return true;

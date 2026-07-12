@@ -148,6 +148,12 @@ export default function SettingsScreen() {
             onPress={() => router.push('/notifications' as any)}
           />
           <SettingRow
+            icon={<Icon name="options-outline" size={19} color={C.sub} />}
+            label="알림 설정"
+            value="푸시 카테고리"
+            onPress={() => router.push('/notification-settings' as any)}
+          />
+          <SettingRow
             icon={<Icon name="heart-outline" size={19} color={C.danger} />}
             iconBg="#EF444418"
             label="건강 데이터"

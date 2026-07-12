@@ -284,9 +284,12 @@ export default function NotificationsScreen() {
           <Icon name="chevron-back" size={22} color={C.text} />
         </Pressable>
         <Text style={st.appBarTitle}>알림</Text>
-        {/* ✓ = mark-all-read (canvas affordance) */}
-        <Pressable onPress={onReadAll} hitSlop={12} style={st.appBarBtn}>
+        {/* ✓ = mark-all-read (canvas affordance) · gear → 알림 설정 */}
+        <Pressable onPress={onReadAll} hitSlop={8} style={st.appBarBtn}>
           <Icon name="checkmark-done-outline" size={21} color={C.accentGrn} />
+        </Pressable>
+        <Pressable onPress={() => router.push('/notification-settings' as any)} hitSlop={8} style={st.appBarBtn}>
+          <Icon name="settings-outline" size={19} color={C.text} />
         </Pressable>
       </View>
 

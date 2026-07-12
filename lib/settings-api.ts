@@ -20,6 +20,26 @@ export type AiCourseSettings = {
   surface: 'any' | 'paved' | 'trail';
 };
 
+// 푸시 알림 설정 (BE ff58041, guide §284-299, probed live 2026-07-13):
+// 12 keys camelCase; PUSH-ONLY gate — in-app GET /notifications is always
+// generated regardless (probe: notif.likes OFF, kudos → row still lands).
+// runReminder/weekly/pb/marketing store but have NO sender yet (her note);
+// push delivery itself starts with the native build (push tokens).
+export type NotifSettings = {
+  master: boolean;
+  crewChallenge: boolean;
+  crewNotice: boolean;
+  crewChat: boolean;
+  crewJoin: boolean;
+  likes: boolean;
+  comments: boolean;
+  followers: boolean;
+  runReminder: boolean;
+  weekly: boolean;
+  pb: boolean;
+  marketing: boolean;
+};
+
 // v1.5 피드 설정 (BE 8aedc9c, probed live 2026-07-13): allow_* OFF → others'
 // kudos/comments 403 {likes_disabled|comments_disabled}; auto_publish is
 // client-advisory (drives the run-save draft's default visibility).
@@ -45,6 +65,7 @@ export type UserSettings = {
   ai_course: AiCourseSettings;
   weather: WeatherSettings;
   feed: FeedSettings;
+  notif: NotifSettings;
 };
 
 export type SettingsPatch = {
@@ -55,6 +76,7 @@ export type SettingsPatch = {
   ai_course?: Partial<AiCourseSettings>;
   weather?: Partial<WeatherSettings>;
   feed?: Partial<FeedSettings>;
+  notif?: Partial<NotifSettings>;
 };
 
 // Server defaults (guide §4 설정 기본값 표) — the pre-sync first frame.
@@ -79,6 +101,11 @@ export const DEFAULT_SETTINGS: UserSettings = {
     avoid_rain: false,
   },
   feed: { auto_publish: true, allow_likes: true, allow_comments: true },
+  notif: {
+    master: true, crewChallenge: true, crewNotice: true, crewChat: true,
+    crewJoin: true, likes: true, comments: true, followers: true,
+    runReminder: true, weekly: true, pb: true, marketing: false,
+  },
 };
 
 export function getSettings(): Promise<UserSettings> {
