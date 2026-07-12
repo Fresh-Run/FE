@@ -1,10 +1,13 @@
 /**
- * 크루 채팅 v1 — the room (canvas: crew-chat.jsx FrCrewChat; text + 4-emoji
- * reactions, minimal). Transport = POLLING per the server's design (guide
- * §214: 20~30s while active — this screen polls 20s ONLY while focused,
- * plus refetch-on-focus and after every send). 시스템 메시지·기록 카드 =
- * v1.5: unknown message types render their content as plain text when
- * present, otherwise the row hides — no fake placeholders.
+ * 크루 채팅 v1+v1.5 — the room (canvas: crew-chat.jsx FrCrewChat). Renders
+ * the 3-type contract (guide §219, probed): text bubbles · system banners
+ * (FE-assembled copy from the render key, 공지 deep-link, reactable but
+ * delete-proof) · run_share frozen-snapshot cards (카톡 선례 — survive the
+ * original's deletion/privating; tap re-evaluates → friendly 404). Unknown
+ * future types render content as plain text or hide quietly (v2 guard).
+ * Share entry: composer + → own public/followers runs (private ABSENT —
+ * hide-first). Transport = POLLING (guide §214: 20s focused-only + refetch
+ * on focus/send).
  *
  * Honesty mechanics: optimistic send renders immediately as 전송 중; failure
  * flips to a tappable 전송 실패 · 다시 시도 row (the sacred-flow standard) —
@@ -38,6 +41,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { MiniMap } from '@/components/mini-map';
 import { Icon } from '@/components/ui';
 import {
   CHAT_EMOJIS,
@@ -49,15 +53,20 @@ import {
   reactMessage,
   sendMessage,
   setMute,
+  shareRun,
   unreactMessage,
   type ChatEmoji,
   type ChatMessage,
+  type RunSharePayload,
 } from '@/lib/chat-api';
 import { avatarBg } from '@/lib/fr-hash';
 import { openProfile } from '@/lib/profile-nav';
-import { fmtWhen } from '@/lib/run-format';
+import { apiFetch } from '@/lib/api';
+import { distUnit, fmtDist, fmtDuration, fmtPaceIn, fmtWhen, paceUnit } from '@/lib/run-format';
+import type { SavedRun } from '@/lib/runs-api';
 import { supabase } from '@/lib/supabase';
 import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
+import { useSettings } from '@/store/use-settings';
 
 const POLL_MS = 20_000; // guide §214: 20~30s while the room is active
 
@@ -86,6 +95,7 @@ export default function CrewChatScreen() {
     crewId: string; crewName?: string; memberCount?: string; role?: string;
   }>();
   const canManage = role === 'owner' || role === 'admin';
+  const units = useSettings(st_ => st_.settings.units);
 
   const [messages, setMessages] = useState<ChatMessage[] | null>(null); // newest-first
   const [pending, setPending]   = useState<PendingSend[]>([]);
@@ -94,6 +104,9 @@ export default function CrewChatScreen() {
   const [toast, setToast]       = useState<string | null>(null);
   const [pickerFor, setPickerFor] = useState<string | null>(null);
   const [sheetFor, setSheetFor]   = useState<ChatMessage | null>(null);
+  const [sharePickerOpen, setSharePickerOpen] = useState(false);
+  const [shareRuns, setShareRuns] = useState<SavedRun[] | null>(null);
+  const [sharingId, setSharingId] = useState<string | null>(null);
   const [loadingOlder, setLoadingOlder] = useState(false);
   const [myUid, setMyUid] = useState<string | null>(null);
 
@@ -171,6 +184,33 @@ export default function CrewChatScreen() {
       markRead(crewId).catch(() => {});
     } catch {
       setPending(p => p.map(x => x.tempId === tempId ? { ...x, failed: true } : x));
+    }
+  }
+
+  // ── 기록 카드 공유 (v1.5): + → own eligible runs (public·followers ONLY —
+  // private runs are ABSENT from the picker, hide-first, not disabled) ──
+  async function openSharePicker() {
+    setSharePickerOpen(true);
+    setShareRuns(null);
+    try {
+      const rows = await apiFetch<SavedRun[]>('/api/runs?limit=20');
+      setShareRuns(rows.filter(r => r.visibility !== 'private'));
+    } catch {
+      setShareRuns([]);
+    }
+  }
+
+  async function shareRunToChat(runId: string) {
+    if (!crewId || sharingId) return;
+    setSharingId(runId);
+    try {
+      const msg = await shareRun(crewId, runId); // caption = the follow-up text people type anyway
+      setMessages(prev => prev && !prev.some(m => m.id === msg.id) ? [msg, ...prev] : prev);
+      setSharePickerOpen(false);
+    } catch (e: unknown) {
+      Alert.alert('공유 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요.');
+    } finally {
+      setSharingId(null);
     }
   }
 
@@ -276,11 +316,110 @@ export default function CrewChatScreen() {
       );
     }
     const m = row;
-    // v1.5 space: non-text types show plain content when present, else hide
-    if (m.type !== 'text' && !m.content && !m.deleted) return null;
+    // ── system: centered banner, FE-assembled copy from the render key
+    // (guide §219 — copy changes need no server deploy); 공지 deep-link;
+    // reactable, delete impossible for everyone (403) ──────────────────
+    if (m.type === 'system' && !m.deleted) {
+      const title = typeof m.payload?.title === 'string' ? m.payload.title : null;
+      const annId = typeof m.payload?.announcement_id === 'string' ? m.payload.announcement_id : null;
+      const copy = m.content === 'announcement'
+        ? '새 공지가 올라왔어요'
+        : '크루 소식이 있어요'; // unknown render keys degrade gracefully
+      return (
+        <View style={st.sysWrap}>
+          <Pressable
+            onPress={annId && crewId ? () => router.push({
+              pathname: '/(community)/announcement-detail' as never,
+              params: { crewId, announcementId: annId },
+            }) : undefined}
+            style={({ pressed }) => [st.sysCard, pressed && !!annId && { opacity: 0.8 }]}
+          >
+            <View style={st.sysHead}>
+              <Icon name="megaphone-outline" size={13} color={C.accentGrn} />
+              <Text style={st.sysTag}>공지</Text>
+              <Text style={st.sysWhen}>{fmtWhen(m.created_at)}</Text>
+            </View>
+            <Text style={st.sysTitle} numberOfLines={2}>{title ?? copy}</Text>
+            <Text style={st.sysSub}>{m.sender_nickname ?? '운영진'} · {copy}</Text>
+          </Pressable>
+          <ReactionChips m={m} />
+        </View>
+      );
+    }
     const mine = m.sender_id != null && m.sender_id === myUid;
     const name = m.sender_nickname ?? '러너';
-    const canDelete = !m.deleted && (mine || canManage);
+    // system is delete-proof by contract; run_share/text follow the v1 rule
+    const canDelete = !m.deleted && m.type !== 'system' && (mine || canManage);
+
+    // ── run_share: the frozen-snapshot card (카톡 선례 — survives the
+    // original's deletion/privating; tap re-evaluates → friendly 404) ──
+    if (m.type === 'run_share' && !m.deleted && m.payload) {
+      const rp = m.payload as unknown as RunSharePayload;
+      const line = Array.isArray(rp.polyline_thumb) && rp.polyline_thumb.length >= 2 ? rp.polyline_thumb : null;
+      return (
+        <View style={[st.msgRow, mine && st.msgRowMine]}>
+          {!mine && (
+            <SenderAvatar
+              name={name}
+              photoUrl={m.sender_avatar_url}
+              onPress={m.sender_id ? () => openProfile(m.sender_id!, name) : undefined}
+            />
+          )}
+          <View style={[st.msgCol, mine && { alignItems: 'flex-end' }]}>
+            {!mine && (
+              <Text style={st.senderLine}>
+                {name} <Text style={st.whenTxt}>· {fmtWhen(m.created_at)}</Text>
+              </Text>
+            )}
+            {m.content ? (
+              <View style={[st.bubble, mine ? st.bubbleMine : st.bubbleOther, { marginBottom: 5 }]}>
+                <Text style={[st.bubbleTxt, mine && { color: C.accentText }]}>{m.content}</Text>
+              </View>
+            ) : null}
+            <Pressable
+              onPress={() => router.push({
+                pathname: '/run-post' as never,
+                params: {
+                  runId: rp.run_id,
+                  nickname: name,
+                  avatarUrl: m.sender_avatar_url ?? '',
+                  ...(mine ? { own: '1' } : {}),
+                },
+              })}
+              onLongPress={canDelete ? () => setSheetFor(m) : undefined}
+              delayLongPress={400}
+              style={({ pressed }) => [st.runCard, pressed && { opacity: 0.85 }]}
+            >
+              <MiniMap seed={rp.run_id} height={92} borderRadius={0} polyline={line ?? undefined} />
+              <View style={st.runCardBody}>
+                <Text style={st.runCardTitle} numberOfLines={1}>{rp.title ?? '러닝 기록'}</Text>
+                <View style={st.runCardStats}>
+                  <Text style={st.runCardKm}>{fmtDist(rp.distance_km, units, 2)}{distUnit(units)}</Text>
+                  <Text style={st.runCardStat}>{fmtDuration(rp.duration_sec)}</Text>
+                  {rp.avg_pace_sec_per_km != null && (
+                    <Text style={st.runCardStat}>{fmtPaceIn(rp.avg_pace_sec_per_km, units)}{paceUnit(units)}</Text>
+                  )}
+                </View>
+              </View>
+            </Pressable>
+            <ReactionChips m={m} />
+            {pickerFor === m.id && (
+              <View style={[st.picker, shadows.sm]}>
+                {CHAT_EMOJIS.map(e => (
+                  <Pressable key={e} onPress={() => toggleReact(m, e)} hitSlop={6}>
+                    <Text style={st.pickerEmoji}>{e}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            )}
+          </View>
+        </View>
+      );
+    }
+
+    // ── forward-guard: tomorrow's types render content as plain text or
+    // hide quietly — the renderer must not crash on her v2 contract ──
+    if (m.type !== 'text' && !m.content && !m.deleted) return null;
     const bubble = m.deleted
       ? <Text style={st.deletedTxt}>삭제된 메시지예요</Text>
       : <Text style={[st.bubbleTxt, mine && { color: C.accentText }]}>{m.content}</Text>;
@@ -367,8 +506,11 @@ export default function CrewChatScreen() {
         </View>
       )}
 
-      {/* ── Composer ── */}
+      {/* ── Composer — + shares a run card (v1.5) ── */}
       <View style={[st.composer, { paddingBottom: Math.max(insets.bottom, 10) + 6 }]}>
+        <Pressable onPress={openSharePicker} hitSlop={8} style={st.shareBtn}>
+          <Icon name="add" size={22} color={C.sub} />
+        </Pressable>
         <TextInput
           value={draft}
           onChangeText={v => setDraft(v.slice(0, 2000))}
@@ -385,6 +527,45 @@ export default function CrewChatScreen() {
           <Text style={[st.sendTxt, !draft.trim() && { color: C.faint }]}>전송</Text>
         </Pressable>
       </View>
+
+      {/* ── 기록 공유 picker (own public·followers runs; private absent) ── */}
+      <Modal visible={sharePickerOpen} transparent animationType="slide" onRequestClose={() => setSharePickerOpen(false)}>
+        <Pressable style={st.sheetOverlay} onPress={() => setSharePickerOpen(false)}>
+          <Pressable style={[st.sheet, { maxHeight: '68%', paddingBottom: Math.max(insets.bottom, 12) + 8 }]} onPress={() => {}}>
+            <View style={st.sheetHandleRow}><View style={st.sheetHandle} /></View>
+            <Text style={st.shareTitle}>러닝 기록 공유</Text>
+            {shareRuns === null ? (
+              <ActivityIndicator size="small" color={C.accent} style={{ paddingVertical: 24 }} />
+            ) : shareRuns.length === 0 ? (
+              <Text style={st.shareEmpty}>공유할 수 있는 러닝이 없어요 — 공개/팔로워 러닝만 공유돼요</Text>
+            ) : (
+              <FlatList
+                data={shareRuns}
+                keyExtractor={r => r.id}
+                renderItem={({ item }) => (
+                  <Pressable
+                    onPress={() => shareRunToChat(item.id)}
+                    disabled={!!sharingId}
+                    style={({ pressed }) => [st.shareRow, pressed && { opacity: 0.7 }]}
+                  >
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text style={st.shareRowTitle} numberOfLines={1}>{item.title ?? '러닝'}</Text>
+                      <Text style={st.shareRowSub}>
+                        {fmtWhen(item.ran_at)} · {fmtDist(item.distance_km, units, 2)}{distUnit(units)}
+                      </Text>
+                    </View>
+                    {sharingId === item.id
+                      ? <ActivityIndicator size="small" color={C.faint} />
+                      : <Icon name="paper-plane-outline" size={17} color={C.accentGrn} />}
+                  </Pressable>
+                )}
+                ItemSeparatorComponent={() => <View style={st.sheetDivider} />}
+                showsVerticalScrollIndicator={false}
+              />
+            )}
+          </Pressable>
+        </Pressable>
+      </Modal>
 
       {/* ── Long-press delete sheet ── */}
       <Modal visible={!!sheetFor} transparent animationType="slide" onRequestClose={() => setSheetFor(null)}>
@@ -456,10 +637,36 @@ const st = StyleSheet.create({
   sendBtnOff: { backgroundColor: C.surfaceAlt, borderWidth: 1, borderColor: C.border },
   sendTxt:    { fontSize: 13.5, fontWeight: '700', color: C.accentText, letterSpacing: -0.2 },
 
+  // v1.5 — system banner (canvas notice idiom)
+  sysWrap:  { alignSelf: 'center', width: '92%', alignItems: 'center', marginVertical: 7 },
+  sysCard:  { width: '100%', backgroundColor: C.accentDim, borderWidth: 1, borderColor: C.accent + '44', borderRadius: 14, paddingHorizontal: 13, paddingVertical: 11 },
+  sysHead:  { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  sysTag:   { fontSize: 11, fontWeight: '800', letterSpacing: 0.3, color: C.accentGrn },
+  sysWhen:  { marginLeft: 'auto', fontSize: 10.5, color: C.faint },
+  sysTitle: { fontSize: 13.5, fontWeight: '700', lineHeight: 19, color: C.text, letterSpacing: -0.2, marginTop: 6 },
+  sysSub:   { fontSize: 11.5, color: C.accentGrn, letterSpacing: -0.2, marginTop: 3 },
+
+  // v1.5 — run_share card (canvas run-kind idiom)
+  runCard:      { width: 230, borderRadius: 14, overflow: 'hidden', borderWidth: 1, borderColor: C.border, backgroundColor: C.surface },
+  runCardBody:  { paddingHorizontal: 12, paddingVertical: 9 },
+  runCardTitle: { fontSize: 12.5, fontWeight: '700', color: C.text, letterSpacing: -0.3 },
+  runCardStats: { flexDirection: 'row', gap: 10, marginTop: 4 },
+  runCardKm:    { fontSize: 12, fontWeight: '700', color: C.accentGrn, fontVariant: ['tabular-nums'] },
+  runCardStat:  { fontSize: 12, fontWeight: '600', color: C.sub, fontVariant: ['tabular-nums'] },
+
+  // v1.5 — share entry
+  shareBtn:      { width: 42, height: 42, borderRadius: 21, borderWidth: 1.5, borderColor: C.border, backgroundColor: C.surfaceAlt, alignItems: 'center', justifyContent: 'center' },
+  shareTitle:    { fontSize: 16, fontWeight: '700', color: C.text, letterSpacing: -0.4, paddingVertical: 10, textAlign: 'center' },
+  shareEmpty:    { fontSize: 13, color: C.faint, letterSpacing: -0.2, textAlign: 'center', paddingVertical: 26 },
+  shareRow:      { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 13, paddingHorizontal: 4 },
+  shareRowTitle: { fontSize: 14.5, fontWeight: '600', color: C.text, letterSpacing: -0.3 },
+  shareRowSub:   { fontSize: 12, color: C.faint, letterSpacing: -0.2, marginTop: 2 },
+
   sheetOverlay:   { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.42)' },
   sheet:          { backgroundColor: C.bg, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: S.gutter },
   sheetHandleRow: { alignItems: 'center', paddingTop: 10, paddingBottom: 8 },
   sheetHandle:    { width: 38, height: 5, borderRadius: 99, backgroundColor: C.border },
+  sheetDivider:   { height: 1, backgroundColor: C.border },
   sheetRow:       { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 16, paddingHorizontal: 4 },
   sheetRowTxt:    { fontSize: 15, fontWeight: '600', color: C.text, letterSpacing: -0.3 },
 });
