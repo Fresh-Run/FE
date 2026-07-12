@@ -6,7 +6,10 @@
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "freshrun",
-    "platforms": ["ios", "android"],
+    "platforms": [
+      "ios",
+      "android"
+    ],
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
@@ -24,8 +27,6 @@
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "permissions": [
-        "android.permission.ACCESS_COARSE_LOCATION",
-        "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION"
       ]
@@ -49,6 +50,12 @@
         {
           "locationAlwaysAndWhenInUsePermission": "FreshRun needs your location to map your run route.",
           "locationWhenInUsePermission": "FreshRun needs your location to map your run route."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "FreshRun needs photo access so you can attach photos to runs and set a profile picture."
         }
       ]
     ],

@@ -70,12 +70,19 @@ export default function CreateTabScreen() {
   // 저장된 코스 entry card — live count + recent titles (canvas: FrRunChoice
   // bottom card). Focus-refetch keeps it honest after unsaves elsewhere.
   const [saved, setSaved] = useState<PublicRoute[] | null>(null);
+  const [savedError, setSavedError] = useState(false);
   useFocusEffect(useCallback(() => {
-    getBookmarkedRoutes().then(setSaved).catch(() => {});
+    getBookmarkedRoutes()
+      .then(rows => { setSaved(rows); setSavedError(false); })
+      // Honest failure sub (debt batch 1): the 북마크해보세요 hint on a
+      // FAILED load was a lie — say it failed; every focus retries.
+      .catch(() => setSavedError(true));
   }, []));
-  const savedSub = !saved || saved.length === 0
-    ? '피드에서 마음에 드는 코스를 북마크해보세요'
-    : saved.slice(0, 2).map(r => r.summary).join(', ') || `${saved.length}개 코스`;
+  const savedSub = savedError && !saved
+    ? '불러오지 못했어요 · 다시 열면 재시도돼요'
+    : !saved || saved.length === 0
+      ? '피드에서 마음에 드는 코스를 북마크해보세요'
+      : saved.slice(0, 2).map(r => r.summary).join(', ') || `${saved.length}개 코스`;
 
   const weeklyKm = useMemo(() => {
     if (signedOut) return 0;

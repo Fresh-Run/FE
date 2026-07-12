@@ -6,6 +6,7 @@
  * the members list (server truth) so the notification deep-link path gets
  * full function without param threading.
  */
+import { useFocusEffect } from '@react-navigation/native';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
@@ -78,8 +79,10 @@ export default function AnnouncementDetailScreen() {
   }, [crewId, announcementId]);
   useEffect(() => { load(); }, [load]);
 
-  // Role from server truth — enables 수정/삭제 on the deep-link path too
-  useEffect(() => {
+  // Role from server truth — enables 수정/삭제 on the deep-link path too.
+  // Focus-retry (debt batch 1): a transient failure here silently stripped
+  // the owner's 수정/삭제 for the visit — refocus now re-derives the role.
+  useFocusEffect(useCallback(() => {
     if (!crewId) return;
     let cancelled = false;
     (async () => {
@@ -90,9 +93,9 @@ export default function AnnouncementDetailScreen() {
       if (cancelled) return;
       const role = members.find(m => m.user_id === user?.id)?.role;
       setCanManage(role === 'owner' || role === 'admin');
-    })().catch(() => {});
+    })().catch(() => { /* refocus retries; buttons appear then */ });
     return () => { cancelled = true; };
-  }, [crewId]);
+  }, [crewId]));
 
   async function vote(status: RsvpStatus) {
     if (!ann || voting || !ann.rsvp_open) return;

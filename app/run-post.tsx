@@ -24,8 +24,9 @@
  * sanitized route_id is null unless the linked course is public, and the
  * public single-route GET is a standing 지연-ask; graduates when it lands.
  */
+import { useFocusEffect } from '@react-navigation/native';
 import { router, useLocalSearchParams } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -133,16 +134,26 @@ export default function RunPostScreen() {
   const baseCount = run?.kudos_count ?? (Number(params.kudosCount) || 0);
   const likeCount = Math.max(0, baseCount + likeDelta);
 
-  // Track hero — fetched only when the run reports has_track
+  // Track hero — fetched only when the run reports has_track.
+  // Retry-on-refocus (debt batch 1, the activity.tsx pattern): a transient
+  // failure marks trackFailed; the next focus re-attempts — one bad fetch
+  // no longer costs the whole visit. Expired-scope 404s simply fail again
+  // quietly (the MiniMap fallback stands either way).
   const [track, setTrack] = useState<Coordinate[] | null>(null);
+  const [trackFailed, setTrackFailed] = useState(false);
+  const [trackAttempt, setTrackAttempt] = useState(0);
   useEffect(() => {
     if (!run?.has_track || !run.id) return;
     let cancelled = false;
+    setTrackFailed(false);
     getRunTrack(run.id)
       .then(t => { if (!cancelled) setTrack(t.polyline); })
-      .catch(() => { /* trackless/expired scope — hero falls back to MiniMap */ });
+      .catch(() => { if (!cancelled) setTrackFailed(true); });
     return () => { cancelled = true; };
-  }, [run?.has_track, run?.id]);
+  }, [run?.has_track, run?.id, trackAttempt]);
+  useFocusEffect(useCallback(() => {
+    if (trackFailed) setTrackAttempt(a => a + 1);
+  }, [trackFailed]));
 
   // Likers sheet (own mode — ♥ is count-only)
   const [likersOpen, setLikersOpen] = useState(false);

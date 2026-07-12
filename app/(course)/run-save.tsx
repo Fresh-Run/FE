@@ -128,8 +128,14 @@ export default function RunSaveScreen() {
       exitingRef.current = true;
       router.replace('/(course)/run-result' as any);
     } catch (e: unknown) {
-      Alert.alert('저장 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요');
+      // Failure UI with a real retry (debt batch 1): the run is untouched —
+      // still in memory AND on disk (pending-run crash copy) — so 다시 시도
+      // re-attempts the identical POST with the current typed fields.
       setSaving(false);
+      Alert.alert('저장 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요', [
+        { text: '나중에', style: 'cancel' },
+        { text: '다시 시도', onPress: () => handleSave() },
+      ]);
     }
   }
 

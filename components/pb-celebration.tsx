@@ -6,11 +6,11 @@
  */
 import React, { useEffect, useRef } from 'react';
 import {
-  Alert,
   Animated,
   Easing,
   Modal,
   Pressable,
+  Share,
   StyleSheet,
   Text,
   View,
@@ -178,8 +178,13 @@ export function PbCelebration({
           <Pressable onPress={onClose} style={({ pressed }) => [st.primaryBtn, accentShadow(C.accent), { opacity: pressed ? 0.9 : 1 }]}>
             <Text style={st.primaryTxt}>기록 자세히 보기</Text>
           </Pressable>
+          {/* Text share via RN Share (debt batch 1) — the button was a
+              준비-중 lie; the designed share CARD stays on the design-
+              session docket, this is the honest interim. */}
           <Pressable
-            onPress={() => Alert.alert('준비 중', '성과 공유는 다음 업데이트에서 지원돼요.')}
+            onPress={() => Share.share({
+              message: `FreshRun 새 기록! ${SUBTITLE[main.type]}\n${cur.text}${cur.caption ? ` ${cur.caption}` : ''} (이전 ${prev.text}, ${main.improvement_pct}% 향상)`,
+            }).catch(() => {})}
             style={({ pressed }) => [st.shareBtn, { opacity: pressed ? 0.7 : 1 }]}
           >
             <Icon name="share-outline" size={17} color={C.sub} />
