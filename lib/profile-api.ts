@@ -63,12 +63,11 @@ export function deleteAccount(): Promise<void> {
   return apiFetch<void>('/api/me', { method: 'DELETE' });
 }
 
-/** Onboarding/profile writes — ⚠️ `nickname` is REQUIRED on every
-    ProfileUpdate (probed 422 without it), so all partial updates must carry
-    it. A profile-less account's first PATCH CREATES the row (probed 200 —
-    the onboarding gate's contract). */
+/** Profile writes — partial semantics since BE 8483115: omit = keep,
+    single-field PATCHes valid (probed). `nickname` is required ONLY at
+    first-ever creation (onboarding passes it; her preserved rule). */
 export function updateProfile(input: {
-  nickname: string;
+  nickname?: string;
   weight_kg?: number | null;
   height_cm?: number | null;
   avatar_url?: string | null;

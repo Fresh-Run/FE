@@ -9,7 +9,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import type { GpsPoint, SavedRun } from '@/lib/runs-api';
-import { defaultRunVisibility } from '@/store/feed-prefs';
+import { useSettings } from '@/store/use-settings';
 import type { Coordinate } from '@/types';
 
 const DISK_KEY = '@fr_pending_run';
@@ -53,8 +53,9 @@ function writeDisk() {
 
 export function setPendingRun(run: PendingRun): void {
   pending = run;
-  // 자동 게시 pref (프로필 설정) decides the fresh draft's default 공개 범위
-  draft = { ...EMPTY_DRAFT, visibility: defaultRunVisibility() };
+  // settings.feed.auto_publish (v1.5, server-backed) decides the fresh
+  // draft's default 공개 범위 — OFF → 비공개 start
+  draft = { ...EMPTY_DRAFT, visibility: useSettings.getState().settings.feed.auto_publish ? 'public' : 'private' };
   savedResult = null;
   writeDisk();
 }

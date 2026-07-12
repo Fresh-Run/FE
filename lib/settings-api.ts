@@ -20,6 +20,15 @@ export type AiCourseSettings = {
   surface: 'any' | 'paved' | 'trail';
 };
 
+// v1.5 피드 설정 (BE 8aedc9c, probed live 2026-07-13): allow_* OFF → others'
+// kudos/comments 403 {likes_disabled|comments_disabled}; auto_publish is
+// client-advisory (drives the run-save draft's default visibility).
+export type FeedSettings = {
+  auto_publish: boolean;
+  allow_likes: boolean;
+  allow_comments: boolean;
+};
+
 export type WeatherSettings = {
   avoid_dust: boolean;
   dust_level_pm10: number;
@@ -35,6 +44,7 @@ export type UserSettings = {
   lang: 'ko' | 'en';
   ai_course: AiCourseSettings;
   weather: WeatherSettings;
+  feed: FeedSettings;
 };
 
 export type SettingsPatch = {
@@ -44,6 +54,7 @@ export type SettingsPatch = {
   lang?: UserSettings['lang'];
   ai_course?: Partial<AiCourseSettings>;
   weather?: Partial<WeatherSettings>;
+  feed?: Partial<FeedSettings>;
 };
 
 // Server defaults (guide §4 설정 기본값 표) — the pre-sync first frame.
@@ -67,6 +78,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
     heat_temp_c: 28,
     avoid_rain: false,
   },
+  feed: { auto_publish: true, allow_likes: true, allow_comments: true },
 };
 
 export function getSettings(): Promise<UserSettings> {

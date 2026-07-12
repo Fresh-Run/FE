@@ -59,11 +59,13 @@ function Avatar({ name, size, ring = C.border, photoUrl }: { name: string; size:
 // Run card — other-user variant: ♥ is a real toggle (my_kudos), no 💬,
 // no visibility caption (approved deltas). Card tap → 러닝 포스트 (R3',
 // BE 4cd5685 opened non-owner run detail) with entry-payload seeds.
-function RunCard({ run, units, mapLive, onKudos, onOpen }: {
+function RunCard({ run, units, mapLive, onKudos, kudosOff, onOpen }: {
   run: UserRun;
   units: ReturnType<typeof useSettings.getState>['settings']['units'];
   mapLive: boolean;
   onKudos: () => void;
+  /** v1.5 likes_disabled — hides the press affordance (count-only) */
+  kudosOff?: boolean;
   onOpen?: () => void;
 }) {
   return (
@@ -100,10 +102,18 @@ function RunCard({ run, units, mapLive, onKudos, onOpen }: {
         </View>
       </View>
       <View style={st.cardFooter}>
-        <Pressable onPress={onKudos} hitSlop={8} style={({ pressed }) => [st.kudosBtn, pressed && { opacity: 0.6 }]}>
-          <Icon name={run.my_kudos ? 'heart' : 'heart-outline'} size={18} color={run.my_kudos ? C.danger : C.sub} />
-          <Text style={[st.kudosCount, run.my_kudos && { color: C.danger }]}>{run.kudos_count}</Text>
-        </Pressable>
+        {kudosOff ? (
+          /* count-only — the read-only kudos idiom; no press affordance */
+          <View style={st.kudosBtn}>
+            <Icon name="heart-outline" size={18} color={C.sub} />
+            <Text style={st.kudosCount}>{run.kudos_count}</Text>
+          </View>
+        ) : (
+          <Pressable onPress={onKudos} hitSlop={8} style={({ pressed }) => [st.kudosBtn, pressed && { opacity: 0.6 }]}>
+            <Icon name={run.my_kudos ? 'heart' : 'heart-outline'} size={18} color={run.my_kudos ? C.danger : C.sub} />
+            <Text style={[st.kudosCount, run.my_kudos && { color: C.danger }]}>{run.kudos_count}</Text>
+          </Pressable>
+        )}
         {/* 💬 read-only count — tap opens the post, same as the card body */}
         <Pressable
           onPress={onOpen}
@@ -209,12 +219,27 @@ export default function UserProfileScreen() {
       });
   }
 
+  // v1.5 피드 설정 강제 — HIDE-first (owner bar): affordances must not be
+  // offered on disabled targets. No side-effect-free discovery exists
+  // server-side (probed: enforcement sits BEHIND existence checks — no-op
+  // DELETEs return 204/404 with flags on or off), so until 지연's payload
+  // flags land (URGENT ask), the first 403 is the detector and conversion
+  // is SILENT: all hearts flip to count-only, no message — never explain,
+  // just don't offer. State dies with the screen; the 403 catch stays
+  // permanently as the race safety net behind her future pre-render flags.
+  const [likesOff, setLikesOff] = useState(false);
   function toggleKudos(run: UserRun) {
+    if (likesOff) return;
     const cur = kudosOverlay[run.run_id]?.on ?? run.my_kudos;
     const next = !cur;
     setKudosOverlay(p => ({ ...p, [run.run_id]: { on: next, delta: (next ? 1 : 0) - (run.my_kudos ? 1 : 0) } }));
     apiFetch<void>(`/api/runs/${run.run_id}/kudos`, { method: next ? 'POST' : 'DELETE' })
-      .catch(() => setKudosOverlay(p => ({ ...p, [run.run_id]: { on: run.my_kudos, delta: 0 } })));
+      .catch((e: unknown) => {
+        setKudosOverlay(p => ({ ...p, [run.run_id]: { on: run.my_kudos, delta: 0 } }));
+        if (e instanceof ApiError && e.code === 'likes_disabled') {
+          setLikesOff(true); // silent — the hearts just stop being offered
+        }
+      });
   }
 
   const title = profile?.nickname ?? nickParam ?? '프로필';
@@ -311,6 +336,7 @@ export default function UserProfileScreen() {
                   units={units}
                   mapLive={liveIds.has(item.run_id)}
                   onKudos={() => toggleKudos(item)}
+                  kudosOff={likesOff}
                   // Own rows keep no tap here (내 프로필/기록 → activity is
                   // the own-run analysis path); others → 러닝 포스트
                   onOpen={!shown.is_mine ? () => router.push({

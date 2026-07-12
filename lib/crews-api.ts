@@ -40,6 +40,7 @@ export type CrewMember = {
   joined_at: string;
   nickname: string;
   avatar_url: string | null; // served since BE 5009cbe (avatar wire-up)
+  challenge_km: number;      // BE 7ec4a96 — 현재 챌린지 per-member aggregate
 };
 
 export type JoinRequestStatus = 'pending' | 'approved' | 'rejected';
@@ -78,6 +79,7 @@ type ServerMember = {
   avatar_url: string | null; // BE 5009cbe (avatar wire-up)
   role: string;
   joined_at: string;
+  challenge_km?: number;
 };
 
 export function mapCrew(row: ServerCrew, myRole?: 'owner' | 'admin' | 'member'): Crew {
@@ -112,6 +114,7 @@ function mapMember(row: ServerMember): CrewMember {
     role:       (row.role as 'owner' | 'admin' | 'member') ?? 'member',
     joined_at:  row.joined_at,
     nickname:   row.nickname ?? '러너',
+    challenge_km: row.challenge_km ?? 0,
     avatar_url: row.avatar_url ?? null,
   };
 }

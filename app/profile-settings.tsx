@@ -13,21 +13,21 @@
  * SERVER GAPS (her roadmap): 좋아요/댓글 허용 = v1.5 · 차단 관리 = v3 —
  * still render NOT AT ALL (the line-132 rule); parity notes in TODO.md.
  *
- * Also ships: 러닝 자동 게시 (device-local default save-visibility —
- * store/feed-prefs), 프로필 편집 / 앱 설정 doors, 회원 탈퇴 (the 8bc494e
+ * Also ships: 피드 설정 (v1.5, settings.feed server-backed — 자동 게시 /
+ * 좋아요·댓글 허용), 프로필 편집 / 앱 설정 doors, 회원 탈퇴 (the 8bc494e
  * flow — canvas draws a simple modal; ours keeps the server-mandated
  * crew-owner 409 path). 앱 설정 row = the preserved door for the settings
  * hub, whose ONLY previous entry was the gear this screen now owns.
  */
 import { router } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/ui';
 import { getMyProfile, listFollowRequests, updateProfile, type ProfileVisibility } from '@/lib/profile-api';
 import { colors as C, shadows, spacing as S } from '@/lib/theme';
-import { useFeedPrefs } from '@/store/feed-prefs';
+import { useSettings } from '@/store/use-settings';
 
 const VISIBILITY_OPTS: { value: ProfileVisibility; label: string; sub: string }[] = [
   { value: 'public',    label: '전체 공개', sub: '누구나 내 프로필과 게시한 러닝을 볼 수 있어요' },
@@ -70,13 +70,20 @@ const VIS_TIMEOUT_MS = 10_000; // optimistic-write clock (timeout rider)
 
 export default function ProfileSettingsScreen() {
   const insets = useSafeAreaInsets();
-  const autoPost = useFeedPrefs(s => s.autoPost);
-  const setAutoPost = useFeedPrefs(s => s.setAutoPost);
-  useEffect(() => { useFeedPrefs.getState().hydrate(); }, []);
+  // v1.5: feed prefs are SERVER settings now (settings.feed — the device-
+  // local feed-prefs store died with the migration; hydrate runs it once)
+  const feed = useSettings(st_ => st_.settings.feed);
+  const setFeedSetting = useSettings(st_ => st_.setFeedSetting);
+  useEffect(() => { useSettings.getState().hydrate(); }, []);
+
+  async function toggleFeed(key: 'auto_publish' | 'allow_likes' | 'allow_comments', v: boolean) {
+    const ok = await setFeedSetting(key, v);
+    if (!ok) Alert.alert('변경 실패', '설정을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.');
+  }
 
   // ── 공개 범위 — server truth on mount; default-select public on a failed
   // read (all accounts are backfilled public; NEVER hide the section on a
-  // read miss). nicknameRef rides every PATCH (required by contract).
+  // read miss). Single-field PATCHes since BE 8483115 (⑥ cleanup).
   const [visibility, setVisibility] = useState<ProfileVisibility>('public');
   const [approval, setApproval] = useState(false);
   const [reqCount, setReqCount] = useState(0);
@@ -84,27 +91,22 @@ export default function ProfileSettingsScreen() {
     listFollowRequests().then(rows => setReqCount(rows.length)).catch(() => {});
   }, []);
   const [visBusy, setVisBusy] = useState(false);
-  const nicknameRef = useRef<string | null>(null);
   useEffect(() => {
     getMyProfile()
       .then(p => {
-        nicknameRef.current = p.nickname;
         setVisibility(p.visibility ?? 'public');
         setApproval(p.follow_approval ?? false);
       })
       .catch(() => { /* profile-less/offline — defaults stand, change surfaces the error */ });
   }, []);
 
-  // same fast-fail + reconcile discipline as visibility (the timeout rider)
+  // same fast-fail + reconcile discipline as visibility (the timeout rider);
+  // single-field PATCH per BE 8483115 (partial semantics — ⑥ cleanup)
   async function toggleApproval(v: boolean) {
-    if (!nicknameRef.current) {
-      Alert.alert('저장할 수 없어요', '프로필을 불러오지 못했어요. 잠시 후 다시 열어 주세요.');
-      return;
-    }
     const prev = approval;
     setApproval(v);
     try {
-      await updateProfile({ nickname: nicknameRef.current, follow_approval: v }, VIS_TIMEOUT_MS);
+      await updateProfile({ follow_approval: v }, VIS_TIMEOUT_MS);
     } catch (e: unknown) {
       setApproval(prev);
       getMyProfile(VIS_TIMEOUT_MS)
@@ -121,15 +123,11 @@ export default function ProfileSettingsScreen() {
   // that lands after even that closes on the next screen open (mount read).
   async function pickVisibility(v: ProfileVisibility) {
     if (visBusy || v === visibility) return;
-    if (!nicknameRef.current) {
-      Alert.alert('저장할 수 없어요', '프로필을 불러오지 못했어요. 잠시 후 다시 열어 주세요.');
-      return;
-    }
     const prev = visibility;
     setVisibility(v);
     setVisBusy(true);
     try {
-      await updateProfile({ nickname: nicknameRef.current, visibility: v }, VIS_TIMEOUT_MS);
+      await updateProfile({ visibility: v }, VIS_TIMEOUT_MS);
     } catch (e: unknown) {
       setVisibility(prev); // last known server truth, until the reconcile says otherwise
       getMyProfile(VIS_TIMEOUT_MS)
@@ -179,7 +177,7 @@ export default function ProfileSettingsScreen() {
         </Group>
         <Group
           title="피드"
-          hint="끄면 새 러닝의 공개 범위가 비공개로 시작해요. 저장 화면에서 러닝마다 바꿀 수 있어요."
+          hint="자동 게시를 끄면 새 러닝의 공개 범위가 비공개로 시작해요. 좋아요·댓글을 끄면 다른 러너의 시도가 거절돼요."
         >
           <View style={st.row}>
             <View style={st.rowIcon}><Icon name="megaphone-outline" size={18} color={C.sub} /></View>
@@ -188,8 +186,34 @@ export default function ProfileSettingsScreen() {
               <Text style={st.rowSub}>러닝 저장 시 프로필 피드에 자동 공개</Text>
             </View>
             <Switch
-              value={autoPost}
-              onValueChange={setAutoPost}
+              value={feed.auto_publish}
+              onValueChange={v => toggleFeed('auto_publish', v)}
+              trackColor={{ true: C.accent, false: C.border }}
+              thumbColor="#fff"
+            />
+          </View>
+          <View style={st.row}>
+            <View style={st.rowIcon}><Icon name="heart-outline" size={18} color={C.sub} /></View>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={st.rowLabel}>좋아요 허용</Text>
+              <Text style={st.rowSub}>다른 러너가 내 러닝에 좋아요를 남길 수 있어요</Text>
+            </View>
+            <Switch
+              value={feed.allow_likes}
+              onValueChange={v => toggleFeed('allow_likes', v)}
+              trackColor={{ true: C.accent, false: C.border }}
+              thumbColor="#fff"
+            />
+          </View>
+          <View style={st.row}>
+            <View style={st.rowIcon}><Icon name="chatbubble-outline" size={18} color={C.sub} /></View>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={st.rowLabel}>댓글 허용</Text>
+              <Text style={st.rowSub}>내 러닝에 댓글을 남길 수 있어요</Text>
+            </View>
+            <Switch
+              value={feed.allow_comments}
+              onValueChange={v => toggleFeed('allow_comments', v)}
               trackColor={{ true: C.accent, false: C.border }}
               thumbColor="#fff"
             />

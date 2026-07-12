@@ -1,10 +1,10 @@
 /**
  * 크루원 — full roster per canvas FrCrewMembers (design-wave A), now the
  * member-visible door from crew-detail's 전체 보기 (was manage-hub-only).
- * Rows: avatar · name · 나/크루장/운영진 badges · "이번 주 Nkm" subtitle —
- * distance composed client-side from GET /crews/{id}/ranking (weekly KST,
- * GPS-verified; zero-km members are absent from ranking → 0). Canvas labels
- * this 이번 챌린지; server serves WEEKLY — the copy stays honest (이번 주).
+ * Rows: avatar · name · 나/크루장/운영진 badges · "이번 챌린지 Nkm" —
+ * SERVED per-member since BE 7ec4a96 (challenge_km on the members payload);
+ * the client-side weekly-ranking join (and its honest 이번 주 relabel) died
+ * with it — the canvas label is finally true.
  *
  * Manage actions re-housed per the new design: 내보내기 stays inline
  * (disabled = the 403 made visible, admin targets); owner's 운영진 지정/해제
@@ -27,7 +27,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/ui';
-import { getCrewMembers, getCrewRanking, kickMember, setMemberRole, transferCrew, type CrewMember } from '@/lib/crews-api';
+import { getCrewMembers, kickMember, setMemberRole, transferCrew, type CrewMember } from '@/lib/crews-api';
 import { avatarBg } from '@/lib/fr-hash';
 import { openProfile } from '@/lib/profile-nav';
 import { supabase } from '@/lib/supabase';
@@ -51,34 +51,26 @@ function MemberAvatar({ name, photoUrl, style, txtStyle }: {
   );
 }
 
-type Row = CrewMember & { weekKm: number };
-
 const ROLE_ORDER: Record<CrewMember['role'], number> = { owner: 0, admin: 1, member: 2 };
 
 export default function CrewMembersScreen() {
   const insets = useSafeAreaInsets();
   const { crewId } = useLocalSearchParams<{ crewId: string }>();
 
-  const [rows, setRows]       = useState<Row[] | null>(null);
+  const [rows, setRows]       = useState<CrewMember[] | null>(null);
   const [myUid, setMyUid]     = useState<string | null>(null);
   const [busyUid, setBusyUid] = useState<string | null>(null);
-  const [sheetFor, setSheetFor] = useState<Row | null>(null); // owner's per-member action sheet
+  const [sheetFor, setSheetFor] = useState<CrewMember | null>(null); // owner's per-member action sheet
 
   const load = useCallback(() => {
     if (!crewId) return;
-    // ranking is best-effort garnish — a ranking failure must not blank the roster
-    Promise.all([
-      getCrewMembers(crewId),
-      getCrewRanking(crewId).catch(() => []),
-    ]).then(([members, ranking]) => {
-      const kmByUid = new Map(ranking.map(r => [r.user_id, r.distance_km]));
-      const joined = members.map(m => ({ ...m, weekKm: kmByUid.get(m.user_id) ?? 0 }));
+    getCrewMembers(crewId).then(members => {
       // canvas: distance desc; ties settle by role then name (stable eyeballing)
-      joined.sort((a, b) =>
-        b.weekKm - a.weekKm
+      const sorted = [...members].sort((a, b) =>
+        (b.challenge_km ?? 0) - (a.challenge_km ?? 0)
         || ROLE_ORDER[a.role] - ROLE_ORDER[b.role]
         || (a.nickname ?? '').localeCompare(b.nickname ?? ''));
-      setRows(joined);
+      setRows(sorted);
     }).catch(() => setRows([]));
   }, [crewId]);
   useEffect(() => { load(); }, [load]);
@@ -211,7 +203,7 @@ export default function CrewMembersScreen() {
                       {m.role === 'owner' && <View style={st.ownerBadge}><Text style={st.ownerTxt}>크루장</Text></View>}
                       {m.role === 'admin' && <View style={st.adminBadge}><Text style={st.adminTxt}>운영진</Text></View>}
                     </View>
-                    <Text style={st.kmSub}>이번 주 {m.weekKm.toFixed(1)}km</Text>
+                    <Text style={st.kmSub}>이번 챌린지 {(m.challenge_km ?? 0).toFixed(1)}km</Text>
                   </View>
                 </Pressable>
 

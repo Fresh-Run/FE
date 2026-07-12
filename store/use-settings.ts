@@ -11,6 +11,7 @@ import {
   getSettings,
   patchSettings,
   type AiCourseSettings,
+  type FeedSettings,
   type RunSettings,
   type UserSettings,
 } from '@/lib/settings-api';
@@ -38,6 +39,8 @@ type SettingsStore = {
   reset: () => void;
   /** Optimistic toggle write; resolves false (and rolls back) on failure. */
   setRunSetting: (key: keyof RunSettings, value: boolean) => Promise<boolean>;
+  /** Optimistic feed-settings write (v1.5) — same contract as setRunSetting. */
+  setFeedSetting: (key: keyof FeedSettings, value: boolean) => Promise<boolean>;
   /** Optimistic units write; resolves false (and rolls back) on failure. */
   setUnits: (units: UserSettings['units']) => Promise<boolean>;
   /** Optimistic theme write; resolves false (and rolls back) on failure.
@@ -74,8 +77,23 @@ export const useSettings = create<SettingsStore>((set, get) => ({
       // 2) Server truth
       try {
         const server = await getSettings();
-        set({ settings: server, synced: true });
-        cache(server);
+        // ONE-SHOT feed-prefs migration (v1.5): the legacy device-local
+        // autoPost pref moves to settings.feed.auto_publish. DEVICE WINS —
+        // the server value is a backfill default nobody chose; the device
+        // pref was an explicit choice in our UI. Key deleted either way.
+        let merged = server;
+        try {
+          const legacyRaw = await AsyncStorage.getItem('@fr_feed_prefs');
+          if (legacyRaw != null) {
+            const legacyAutoPost = JSON.parse(legacyRaw).autoPost !== false;
+            if (legacyAutoPost !== server.feed.auto_publish) {
+              merged = await patchSettings({ feed: { auto_publish: legacyAutoPost } });
+            }
+            AsyncStorage.removeItem('@fr_feed_prefs').catch(() => {});
+          }
+        } catch { /* unreadable legacy — server stands */ }
+        set({ settings: merged, synced: true });
+        cache(merged);
       } catch (e) {
         // Profile-less 404: server would return defaults on profile creation
         // anyway — treat current (defaults/cache) as good, don't crash.
@@ -99,6 +117,23 @@ export const useSettings = create<SettingsStore>((set, get) => ({
     cache(next);
     try {
       const server = await patchSettings({ run: { [key]: value } });
+      set({ settings: server, synced: true });
+      cache(server);
+      return true;
+    } catch {
+      set({ settings: prev }); // rollback
+      cache(prev);
+      return false;
+    }
+  },
+
+  setFeedSetting: async (key, value) => {
+    const prev = get().settings;
+    const next = { ...prev, feed: { ...prev.feed, [key]: value } };
+    set({ settings: next }); // optimistic
+    cache(next);
+    try {
+      const server = await patchSettings({ feed: { [key]: value } });
       set({ settings: server, synced: true });
       cache(server);
       return true;

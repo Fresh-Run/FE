@@ -45,6 +45,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { KudosSheet } from '@/components/kudos-sheet';
 import { MediaCarousel } from '@/components/media-carousel';
 import { Icon } from '@/components/ui';
+import { ApiError } from '@/lib/api';
 import { avatarBg } from '@/lib/fr-hash';
 import { openProfile } from '@/lib/profile-nav';
 import {
@@ -172,15 +173,27 @@ export default function RunPostScreen() {
     return () => { cancelled = true; };
   }, [params.runId]);
 
+  // v1.5 피드 설정 강제 — HIDE-first (owner ruling): the allow_* flags don't
+  // ride 타인 payloads yet (probed — 지연 ask ledgered), so the structured
+  // 403 is the detector: first likes_disabled/comments_disabled HIDES the
+  // affordance for the visit (count-only heart / quiet composer line), one
+  // explanatory alert, never repeated. Screen state only — the next
+  // encounter re-tries fresh (a re-enabled target self-corrects, no restart).
+  const [kudosOff, setKudosOff] = useState(false);
+  const [commentsOff, setCommentsOff] = useState(false);
+
   function toggleKudos() {
-    if (!run) return;
+    if (!run || kudosOff) return;
     touchedKudos.current = true;
     const next = !liked;
     setLiked(next);
     setLikeDelta(d => d + (next ? 1 : -1));
-    (next ? kudosRun(run.id) : unkudosRun(run.id)).catch(() => {
+    (next ? kudosRun(run.id) : unkudosRun(run.id)).catch((e: unknown) => {
       setLiked(!next); // rollback
       setLikeDelta(d => d + (next ? -1 : 1));
+      if (e instanceof ApiError && e.code === 'likes_disabled') {
+        setKudosOff(true); // silent conversion — owner bar
+      }
     });
   }
 
@@ -192,8 +205,12 @@ export default function RunPostScreen() {
       const created = await postRunComment(run.id, content);
       setComments(prev => [...(prev ?? []), created]);
       setDraft('');
-    } catch {
-      Alert.alert('댓글 실패', '댓글을 게시하지 못했어요. 잠시 후 다시 시도해 주세요.');
+    } catch (e: unknown) {
+      if (e instanceof ApiError && e.code === 'comments_disabled') {
+        setCommentsOff(true); // silent — composer becomes the quiet line
+      } else {
+        Alert.alert('댓글 실패', '댓글을 게시하지 못했어요. 잠시 후 다시 시도해 주세요.');
+      }
     } finally {
       setPosting(false);
     }
@@ -294,6 +311,13 @@ export default function RunPostScreen() {
                   <Icon name="heart-outline" size={18} color={C.sub} />
                   <Text style={st.kudosTxt}>{likeCount}</Text>
                 </Pressable>
+              ) : kudosOff ? (
+                /* likes_disabled — the read-only own-run idiom: count stays
+                   honest, the press affordance is GONE */
+                <View style={st.kudosBtn}>
+                  <Icon name="heart-outline" size={18} color={C.sub} />
+                  <Text style={st.kudosTxt}>{likeCount}</Text>
+                </View>
               ) : (
                 <Pressable onPress={toggleKudos} style={({ pressed }) => [st.kudosBtn, liked && st.kudosBtnActive, pressed && { opacity: 0.8 }]}>
                   <Icon name={liked ? 'heart' : 'heart-outline'} size={18} color={liked ? C.danger : C.sub} />
@@ -338,27 +362,34 @@ export default function RunPostScreen() {
             <KudosSheet runId={run.id} kudosCount={likeCount} onClose={() => setLikersOpen(false)} />
           )}
 
-          {/* Composer */}
-          <View style={[st.composer, { paddingBottom: Math.max(insets.bottom, S.sm) + 6 }]}>
-            <TextInput
-              value={draft}
-              onChangeText={setDraft}
-              placeholder="댓글 달기..."
-              placeholderTextColor={C.faint}
-              style={st.composerInput}
-              maxLength={500}
-              multiline
-            />
-            <Pressable
-              onPress={send}
-              disabled={!draft.trim() || posting}
-              style={[st.sendBtn, (!draft.trim() || posting) && st.sendBtnDisabled]}
-            >
-              {posting
-                ? <ActivityIndicator size="small" color={C.accentText} />
-                : <Text style={[st.sendTxt, !draft.trim() && { color: C.faint }]}>게시</Text>}
-            </Pressable>
-          </View>
+          {/* Composer — v1.5 hide-first: comments_disabled replaces it with
+              the quiet-state line for the visit */}
+          {commentsOff ? (
+            <View style={[st.composer, { paddingBottom: Math.max(insets.bottom, S.sm) + 6, justifyContent: 'center' }]}>
+              <Text style={st.commentsOffTxt}>댓글을 받지 않는 러닝이에요</Text>
+            </View>
+          ) : (
+            <View style={[st.composer, { paddingBottom: Math.max(insets.bottom, S.sm) + 6 }]}>
+              <TextInput
+                value={draft}
+                onChangeText={setDraft}
+                placeholder="댓글 달기..."
+                placeholderTextColor={C.faint}
+                style={st.composerInput}
+                maxLength={500}
+                multiline
+              />
+              <Pressable
+                onPress={send}
+                disabled={!draft.trim() || posting}
+                style={[st.sendBtn, (!draft.trim() || posting) && st.sendBtnDisabled]}
+              >
+                {posting
+                  ? <ActivityIndicator size="small" color={C.accentText} />
+                  : <Text style={[st.sendTxt, !draft.trim() && { color: C.faint }]}>게시</Text>}
+              </Pressable>
+            </View>
+          )}
         </>
       )}
     </KeyboardAvoidingView>
@@ -405,6 +436,7 @@ const st = StyleSheet.create({
   composer:        { flexDirection: 'row', alignItems: 'flex-end', gap: 9, paddingHorizontal: S.gutter, paddingTop: 10, borderTopWidth: 1, borderTopColor: C.border, backgroundColor: C.surface },
   composerInput:   { flex: 1, minHeight: 42, maxHeight: 100, borderRadius: 21, borderWidth: 1.5, borderColor: C.border, backgroundColor: C.bg, paddingHorizontal: 16, paddingTop: Platform.OS === 'ios' ? 11 : 8, paddingBottom: 8, fontSize: 14, color: C.text },
   sendBtn:         { height: 42, paddingHorizontal: 16, borderRadius: 21, backgroundColor: C.accent, alignItems: 'center', justifyContent: 'center' },
+  commentsOffTxt: { flex: 1, textAlign: 'center', fontSize: 12.5, fontWeight: '600', color: C.faint, letterSpacing: -0.2, paddingVertical: 12 },
   sendBtnDisabled: { backgroundColor: C.surfaceAlt, borderWidth: 1, borderColor: C.border },
   sendTxt:         { fontSize: 13.5, fontWeight: '700', color: C.accentText, letterSpacing: -0.2 },
 });
