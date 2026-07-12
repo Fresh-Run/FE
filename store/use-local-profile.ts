@@ -58,3 +58,16 @@ export const useLocalProfile = create<LocalProfileStore>((set, get) => ({
     try { await AsyncStorage.setItem(CACHE_KEY, JSON.stringify(fields)); } catch { /* best-effort */ }
   },
 }));
+
+// ─── kcal model (debt batch 2, owner ruling: MET×weight EVERYWHERE) ──────────
+// Single source: ~1.036 kcal per kg per km (flat-terrain running MET
+// approximation — the 활동 상세 model, now app-wide; the flat 62/km died).
+export const KCAL_PER_KG_KM = 1.036;
+
+/** MET×weight estimate; null when no user-confirmed weight exists (saved
+    flag) — surfaces render "—"/hint, never a fabricated number. */
+export function estimateKcal(distanceKm: number): number | null {
+  const s = useLocalProfile.getState();
+  if (!s.saved || !(s.fields.weightKg > 0)) return null;
+  return Math.round(KCAL_PER_KG_KM * s.fields.weightKg * distanceKm);
+}

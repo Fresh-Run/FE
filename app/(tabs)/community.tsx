@@ -729,7 +729,7 @@ const st = StyleSheet.create({
   codeSub:   { fontSize: 12.5, color: C.faint, letterSpacing: -0.2, marginTop: 2 },
 
   // Owner badge
-  ownerBadge:{ backgroundColor: '#E8B53D', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
+  ownerBadge:{ backgroundColor: C.crown, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
   ownerTxt:  { fontSize: 10, fontWeight: '800', color: '#0D1A06', letterSpacing: 0.2 },
 
   // Section head + create CTA

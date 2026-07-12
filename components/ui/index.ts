@@ -7,7 +7,6 @@ export { Button } from './button';
 export { Chip } from './chip';
 export { TopBar } from './top-bar';
 export { StatTile } from './stat-tile';
-export { BottomSheet, GrabHandle } from './bottom-sheet';
 export { RoutePolyline } from './route-polyline';
 export { ToggleRow, SegmentedControl } from './toggle';
 export { Input } from './input';

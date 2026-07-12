@@ -17,7 +17,6 @@ import { router } from 'expo-router';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -31,6 +30,7 @@ import { RealMap } from '@/components/real-map';
 import { Icon } from '@/components/ui';
 import { useCurrentLocation } from '@/hooks/use-current-location';
 import { KM_PER_MI } from '@/lib/run-format';
+import { setActiveCourse } from '@/store/active-course';
 import { useStartPoint } from '@/store/start-point';
 import { useSettings } from '@/store/use-settings';
 import {
@@ -354,7 +354,19 @@ export default function CreateScreen() {
             <Text style={st.secondaryBtnTxt}>다시 설정</Text>
           </Pressable>
           <Pressable
-            onPress={() => Alert.alert('준비 중', '러닝 추적은 다음 업데이트에서 지원됩니다.')}
+            // Debt batch 2: the stale 준비-중 stub died — tracking SHIPPED.
+            // Generated routes carry no id (RouteResponse — ledgered 지연
+            // ask), so the run gets the course title/shape/overlay but
+            // route_id stays null until the id lands.
+            onPress={() => {
+              setActiveCourse({
+                id: null,
+                title: route.summary,
+                distanceKm: route.total_distance_km,
+                polyline: route.polyline ?? null,
+              });
+              router.replace('/(course)/tracking' as any);
+            }}
             style={[st.primaryBtn, { flex: 1 }]}
           >
             <Icon name="play" size={18} color={C.accentText} />

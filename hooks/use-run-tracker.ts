@@ -6,6 +6,7 @@ import * as Location from 'expo-location';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { GpsPoint } from '@/lib/runs-api';
+import { estimateKcal } from '@/store/use-local-profile';
 import type { Coordinate } from '@/types';
 
 export type TrackerState = 'idle' | 'countdown' | 'running' | 'paused' | 'ended';
@@ -14,7 +15,8 @@ export type RunSnapshot = {
   distanceKm: number;
   elapsedSec: number;
   avgPaceSecPerKm: number | null;
-  kcal: number;
+  /** MET×weight (single app-wide model); null = no saved weight. */
+  kcal: number | null;
   path: Coordinate[];
   /** RAW received fixes (gates not applied) — uploaded as gps_track. */
   gpsTrack: GpsPoint[];
@@ -248,7 +250,7 @@ export function useRunTracker() {
       distanceKm: finalKm,
       elapsedSec: finalSec,
       avgPaceSecPerKm: finalKm >= 0.05 && finalSec > 0 ? Math.round(finalSec / finalKm) : null,
-      kcal: Math.round(finalKm * 62),
+      kcal: estimateKcal(finalKm),
       path: [...pathRef.current],
       gpsTrack: [...rawTrackRef.current],
       endedAt: Date.now(),
@@ -269,7 +271,7 @@ export function useRunTracker() {
   const distanceKm   = distanceMRef.current / 1000;
   const moving       = state === 'running' && winM >= MOVING_MIN_M && winSec > 0;
   const paceSecPerKm = moving ? Math.round(winSec / (winM / 1000)) : 0;
-  const kcal         = Math.round(distanceKm * 62); // heuristic, matches bundle
+  const kcal         = estimateKcal(distanceKm); // MET×weight — null without saved weight
 
   return {
     state,

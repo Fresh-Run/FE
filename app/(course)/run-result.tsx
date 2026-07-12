@@ -203,7 +203,7 @@ export default function RunResultScreen() {
               [fmtDist(run.distanceKm, units, 2), distUnit(units), '거리'],
               [fmtDuration(run.elapsedSec), '', '시간'],
               [run.avgPaceSecPerKm != null ? fmtPaceIn(run.avgPaceSecPerKm, units) : "--'--\"", paceUnit(units), '페이스'],
-              [String(run.kcal), 'kcal', '칼로리'],
+              [run.kcal != null ? String(run.kcal) : '—', 'kcal', '칼로리'],
             ] as [string, string, string][]).map(([val, unit, label], i) => (
               <View key={i} style={st.statTile}>
                 <Text style={st.statVal}>

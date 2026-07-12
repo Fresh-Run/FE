@@ -63,6 +63,7 @@ export const colors = {
   // Semantic
   blue:        palette.blue400,
   sun:         palette.amber400,    // sun icon, warning verdict
+  crown:       '#E8B53D',           // 크루장 role badge (debt batch 2 — was inline ×5)
   danger:      palette.red500,
 
   // AQI status map (index by Korean label)

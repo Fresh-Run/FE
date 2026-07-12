@@ -5,7 +5,7 @@
 import type { Coordinate } from '@/types';
 
 export type ActiveCourse = {
-  id: string; // my copy's route id — what runs.route_id links to
+  id: string | null; // copy's route id (runs.route_id link); null = AI-generated, unsaved (RouteResponse serves no id — ledgered 지연 ask)
   title: string;
   distanceKm: number;
   polyline: Coordinate[] | null;

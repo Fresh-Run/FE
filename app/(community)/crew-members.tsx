@@ -48,7 +48,7 @@ function MemberAvatar({ name, photoUrl, style, txtStyle }: {
 }
 
 const ROLE_BADGE: Record<CrewMember['role'], { label: string; bg: string; fg: string }> = {
-  owner:  { label: '크루장', bg: '#E8B53D', fg: '#0D1A06' },
+  owner:  { label: '크루장', bg: C.crown, fg: '#0D1A06' },
   admin:  { label: '운영진', bg: '#3D8BFF22', fg: '#3D8BFF' },
   member: { label: '멤버',   bg: 'transparent', fg: 'transparent' }, // no badge
 };

@@ -174,7 +174,7 @@ export default function CrewAdminScreen() {
               <View style={{ flex: 1, minWidth: 0 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                   <Text style={st.idName} numberOfLines={1}>{crew.name}</Text>
-                  <View style={[st.roleBadge, { backgroundColor: isOwner ? '#E8B53D' : C.accent }]}>
+                  <View style={[st.roleBadge, { backgroundColor: isOwner ? C.crown : C.accent }]}>
                     <Text style={st.roleBadgeTxt}>{isOwner ? '크루장' : '운영진'}</Text>
                   </View>
                 </View>

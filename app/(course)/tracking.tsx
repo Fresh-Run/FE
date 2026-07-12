@@ -39,10 +39,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
 
 import { Icon } from '@/components/ui';
-import { useCurrentLocation } from '@/hooks/use-current-location';
+import { SEOUL_FALLBACK, useCurrentLocation } from '@/hooks/use-current-location';
 import { useRunTracker } from '@/hooks/use-run-tracker';
 import { clearActiveCourse, getActiveCourse } from '@/store/active-course';
 import { setPendingRun } from '@/store/pending-run';
+import { useLocalProfile } from '@/store/use-local-profile';
 import { useSettings } from '@/store/use-settings';
 import { distUnit, fmtDist, fmtPaceIn, paceUnit } from '@/lib/run-format';
 import { accentShadow, colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
@@ -245,6 +246,8 @@ export default function TrackingScreen() {
   // Settings (run.haptics gates hold-stop feedback) — hydrate in case the
   // profile tab was never opened this session.
   useEffect(() => { useSettings.getState().hydrate(); }, []);
+  // kcal model needs the local weight hydrated before the run ends
+  useEffect(() => { useLocalProfile.getState().hydrate(); }, []);
   const {
     state, countdownValue, elapsedSec, distanceKm, paceSecPerKm, moving, kcal,
     start, togglePause, stop, livePath, lastFixAgeSec,
@@ -425,8 +428,8 @@ export default function TrackingScreen() {
           ref={mapRef}
           style={StyleSheet.absoluteFill}
           initialRegion={{
-            latitude: courseCoords[0]?.latitude ?? hereCoord?.lat ?? 37.5665,
-            longitude: courseCoords[0]?.longitude ?? hereCoord?.lng ?? 126.978,
+            latitude: courseCoords[0]?.latitude ?? hereCoord?.lat ?? SEOUL_FALLBACK.lat,
+            longitude: courseCoords[0]?.longitude ?? hereCoord?.lng ?? SEOUL_FALLBACK.lng,
             latitudeDelta: 0.006,
             longitudeDelta: 0.006,
           }}
@@ -544,7 +547,7 @@ export default function TrackingScreen() {
             {([
               [fmtDist(distanceKm, units, 2), distUnit(units), '거리'],
               [paceDisplay,                   paceUnit(units), '현재 페이스'],
-              [String(kcal),                  'kcal',          '칼로리'],
+              [kcal != null ? String(kcal) : '—', 'kcal',      '칼로리'],
             ] as [string, string, string][]).map(([val, unit, label], i) => (
               <View key={i} style={[st.metricCol, i > 0 && st.metricColDivider]}>
                 <View style={st.metricValRow}>

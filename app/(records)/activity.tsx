@@ -20,14 +20,13 @@ import { useRunDetail } from '@/hooks/use-runs';
 import { getRunTrack } from '@/lib/run-social-api';
 import { distUnit, fmtDist, fmtDuration, fmtPaceIn, fmtWhen, timeTitle } from '@/lib/run-format';
 import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
-import { useLocalProfile } from '@/store/use-local-profile';
+import { KCAL_PER_KG_KM, useLocalProfile } from '@/store/use-local-profile';
 import { useSettings } from '@/store/use-settings';
 import type { Coordinate } from '@/types';
 
 // ACSM flat-running approximation: ~1.036 kcal per kg per km. Shown only
 // with a USER-CONFIRMED weight (owner rule: never guess off the default),
 // always labeled 추정.
-const KCAL_PER_KG_KM = 1.036;
 
 // ─── Stat tile ────────────────────────────────────────────────────────────────
 

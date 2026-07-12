@@ -367,7 +367,7 @@ export default function CrewDetailScreen() {
               <View style={st.heroMeta}>
                 {/* Role badge (canvas: 크루장 amber / 운영진 accent) */}
                 {crew.myRole === 'owner' && (
-                  <View style={[st.roleBadge, { backgroundColor: '#E8B53D' }]}>
+                  <View style={[st.roleBadge, { backgroundColor: C.crown }]}>
                     <Text style={st.roleBadgeTxt}>크루장</Text>
                   </View>
                 )}
@@ -468,7 +468,7 @@ export default function CrewDetailScreen() {
               <View style={[st.chCard, shadows.sm]}>
                 <View style={st.chHead}>
                   <Text style={st.chTitle} numberOfLines={1}>{challenge.title}</Text>
-                  <View style={[st.chPct, challenge.is_completed && { backgroundColor: '#E8B53D' }]}>
+                  <View style={[st.chPct, challenge.is_completed && { backgroundColor: C.crown }]}>
                     <Text style={st.chPctTxt}>
                       {challenge.is_completed ? '달성!' : `${Math.round(challenge.progress_pct)}%`}
                     </Text>
@@ -673,7 +673,7 @@ const st = StyleSheet.create({
   memberRank:     { fontSize: 13, fontWeight: '700', color: C.faint, width: 22, textAlign: 'center', flexShrink: 0 },
   memberName:     { fontSize: 14.5, fontWeight: '700', color: C.text, letterSpacing: -0.3 },
   divider:        { height: 1, backgroundColor: C.border, marginHorizontal: 14 },
-  ownerBadge:     { backgroundColor: '#E8B53D', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
+  ownerBadge:     { backgroundColor: C.crown, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
   ownerTxt:       { fontSize: 10, fontWeight: '800', color: '#0D1A06', letterSpacing: 0.2 },
 
   // Empty / error states

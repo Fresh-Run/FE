@@ -17,7 +17,7 @@ export type PendingRun = {
   distanceKm: number;
   elapsedSec: number;
   avgPaceSecPerKm: number | null;
-  kcal: number;
+  kcal: number | null; // MET×weight estimate; null = no saved weight
   path: Coordinate[]; // client-filtered; on-screen polyline source
   /** RAW received fixes — uploaded as gps_track at save. Persists to disk
       with the rest (a crash can't lose the track). Optional: disk copies
@@ -25,7 +25,7 @@ export type PendingRun = {
   gpsTrack?: GpsPoint[];
   endedAt: number;
   /** Present when the run was started from a course ("이 코스 달리기"). */
-  course?: { id: string; title: string };
+  course?: { id: string | null; title: string };
 };
 
 export type RunVisibility = 'public' | 'followers' | 'private';
