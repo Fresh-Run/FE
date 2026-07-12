@@ -26,6 +26,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/ui';
+import { NumberWheelRow } from '@/components/wheel-sheet';
 import { createCrew, issueInviteCode, type Crew, type CrewLevel } from '@/lib/crews-api';
 import { useCurrentLocation } from '@/hooks/use-current-location';
 import { accentShadow, colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
@@ -85,22 +86,6 @@ export function Chip({ label, on, onPress }: { label: string; on: boolean; onPre
     <Pressable onPress={onPress} style={[st.chip, on && st.chipOn]}>
       <Text style={[st.chipTxt, on && { color: C.accentGrn }]}>{label}</Text>
     </Pressable>
-  );
-}
-
-export function StepperRow({ label, value, min, max, step, suffix, onChange }: {
-  label: string; value: number; min: number; max: number; step: number; suffix: string; onChange: (v: number) => void;
-}) {
-  const bump = (dir: 1 | -1) => onChange(Math.min(max, Math.max(min, value + dir * step)));
-  return (
-    <View style={st.stepperRow}>
-      <Text style={st.fieldLabel}>{label}</Text>
-      <View style={st.stepperCtrls}>
-        <Pressable onPress={() => bump(-1)} hitSlop={6} style={st.stepBtn}><Icon name="remove" size={16} color={C.text} /></Pressable>
-        <Text style={st.stepValue}>{value}{suffix}</Text>
-        <Pressable onPress={() => bump(1)} hitSlop={6} style={st.stepBtn}><Icon name="add" size={16} color={C.text} /></Pressable>
-      </View>
-    </View>
   );
 }
 
@@ -293,7 +278,7 @@ export default function CrewCreateScreen() {
             </View>
             <Slider
               minimumValue={1}
-              maximumValue={10}
+              maximumValue={20}
               step={1}
               value={radiusKm}
               onValueChange={setRadiusKm}
@@ -318,7 +303,7 @@ export default function CrewCreateScreen() {
 
         {/* 모집 */}
         <Group title="모집">
-          <StepperRow label="최대 인원" value={maxMembers} min={5} max={200} step={5} suffix="명" onChange={setMaxMembers} />
+          <NumberWheelRow label="최대 인원" value={maxMembers} min={5} max={100} step={1} suffix="명" onChange={setMaxMembers} />
         </Group>
 
         {/* 공개 범위 */}
@@ -413,11 +398,6 @@ export const st = StyleSheet.create({
   chip:    { height: 38, paddingHorizontal: 15, borderRadius: R.pill, backgroundColor: C.surface, borderWidth: 1.5, borderColor: C.border, alignItems: 'center', justifyContent: 'center' },
   chipOn:  { backgroundColor: C.accentDim, borderColor: C.accent },
   chipTxt: { fontSize: 13.5, fontWeight: '700', letterSpacing: -0.2, color: C.sub },
-
-  stepperRow:   { flexDirection: 'row', alignItems: 'center', paddingVertical: 12 },
-  stepperCtrls: { flexDirection: 'row', alignItems: 'center', gap: 14, marginLeft: 'auto' },
-  stepBtn:      { width: 32, height: 32, borderRadius: 16, borderWidth: 1.5, borderColor: C.border, backgroundColor: C.surfaceAlt, alignItems: 'center', justifyContent: 'center' },
-  stepValue:    { minWidth: 64, textAlign: 'center', fontSize: 15, fontWeight: '700', letterSpacing: -0.3, color: C.text, fontVariant: ['tabular-nums'] },
 
   selectRow:   { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 13, paddingHorizontal: 4 },
   selectLabel: { fontSize: 15, fontWeight: '600', letterSpacing: -0.3, color: C.text },

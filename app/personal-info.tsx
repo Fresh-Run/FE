@@ -29,6 +29,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AvatarCrop, type CropSource } from '@/components/avatar-crop';
 import { Icon } from '@/components/ui';
+import { NumberWheelRow } from '@/components/wheel-sheet';
 import { ApiError } from '@/lib/api';
 import { uploadAvatar } from '@/lib/avatar-api';
 import { avatarBg } from '@/lib/fr-hash';
@@ -39,7 +40,7 @@ import { useStore } from '@/store/use-store';
 
 const GENDERS: Gender[] = ['여성', '남성', '선택 안 함'];
 
-// ─── Row primitives (bundle: FrField / FrStepperRow / FrSelectRow) ────────────
+// ─── Row primitives (FrField / FrSelectRow; steppers → wheel sheets, wave B) ──
 
 function FieldRow({
   label, value, onChange, placeholder, keyboardType, editable = true, error,
@@ -62,33 +63,6 @@ function FieldRow({
           style={[st.fieldInput, !editable && { color: C.faint }]}
         />
         {error ? <Text style={st.fieldError}>{error}</Text> : null}
-      </View>
-    </View>
-  );
-}
-
-function StepperRow({
-  label, value, min, max, step, suffix, onChange,
-}: {
-  label: string; value: number; min: number; max: number; step: number;
-  suffix: string; onChange: (v: number) => void;
-}) {
-  const bump = (dir: 1 | -1) => {
-    const next = Math.round((value + dir * step) * 10) / 10;
-    onChange(Math.min(max, Math.max(min, next)));
-  };
-  const display = Number.isInteger(step) ? String(value) : value.toFixed(1);
-  return (
-    <View style={st.stepperRow}>
-      <Text style={st.fieldLabel}>{label}</Text>
-      <View style={st.stepperCtrls}>
-        <Pressable onPress={() => bump(-1)} hitSlop={6} style={st.stepBtn}>
-          <Icon name="remove" size={16} color={C.text} />
-        </Pressable>
-        <Text style={st.stepValue}>{display}{suffix}</Text>
-        <Pressable onPress={() => bump(1)} hitSlop={6} style={st.stepBtn}>
-          <Icon name="add" size={16} color={C.text} />
-        </Pressable>
       </View>
     </View>
   );
@@ -361,8 +335,8 @@ export default function PersonalInfoScreen() {
 
         {/* ── 신체 정보 ── */}
         <Group title="신체 정보" hint="신체 정보는 칼로리와 페이스 추정의 정확도를 높여요.">
-          <StepperRow label="체중" value={weightKg} min={30} max={150} step={0.5} suffix=" kg" onChange={setWeightKg} />
-          <StepperRow label="키" value={heightCm} min={120} max={220} step={1} suffix=" cm" onChange={setHeightCm} />
+          <NumberWheelRow label="체중" value={weightKg} min={30} max={150} step={0.5} suffix=" kg" onChange={setWeightKg} />
+          <NumberWheelRow label="키" value={heightCm} min={120} max={220} step={1} suffix=" cm" onChange={setHeightCm} />
         </Group>
 
         {/* ── 성별 ── */}
@@ -470,11 +444,6 @@ const st = StyleSheet.create({
   fieldLabel: { width: 76, fontSize: 14, fontWeight: '600', letterSpacing: -0.3, color: C.sub },
   fieldInput: { fontSize: 15, fontWeight: '600', letterSpacing: -0.3, color: C.text, paddingVertical: 10 },
   fieldError: { fontSize: 12, color: C.danger, letterSpacing: -0.2, marginTop: -6, paddingBottom: 8 },
-
-  stepperRow:   { flexDirection: 'row', alignItems: 'center', paddingVertical: 12 },
-  stepperCtrls: { flexDirection: 'row', alignItems: 'center', gap: 14, marginLeft: 'auto' },
-  stepBtn:      { width: 32, height: 32, borderRadius: 16, borderWidth: 1.5, borderColor: C.border, backgroundColor: C.surfaceAlt, alignItems: 'center', justifyContent: 'center' },
-  stepValue:    { minWidth: 74, textAlign: 'center', fontSize: 15, fontWeight: '700', letterSpacing: -0.3, color: C.text, fontVariant: ['tabular-nums'] },
 
   selectRow:  { flexDirection: 'row', alignItems: 'center', paddingVertical: 13 },
   radioOuter: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: C.border, alignItems: 'center', justifyContent: 'center' },

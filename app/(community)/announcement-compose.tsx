@@ -26,6 +26,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/ui';
+import { TimeWheelRow } from '@/components/wheel-sheet';
 import {
   createAnnouncement,
   getAnnouncement,
@@ -174,18 +175,7 @@ export default function AnnouncementComposeScreen() {
                   autoCorrect={false}
                 />
               </View>
-              <View style={st.fieldRow}>
-                <Text style={st.fieldLabel}>시각</Text>
-                <TextInput
-                  value={time}
-                  onChangeText={setTime}
-                  placeholder="20:00"
-                  placeholderTextColor={C.faint}
-                  style={st.fieldInput}
-                  keyboardType="numbers-and-punctuation"
-                  autoCorrect={false}
-                />
-              </View>
+              <TimeWheelRow label="시각" value={time} onChange={setTime} />
               <View style={st.fieldRow}>
                 <Text style={st.fieldLabel}>장소</Text>
                 <TextInput
@@ -197,7 +187,7 @@ export default function AnnouncementComposeScreen() {
                 />
               </View>
               {scheduleInvalid && (
-                <Text style={st.fieldError}>날짜는 2026-07-20, 시각은 20:00 형식으로 입력해 주세요</Text>
+                <Text style={st.fieldError}>날짜는 2026-07-20 형식으로 입력해 주세요</Text>
               )}
               {runAtIso && (
                 <Text style={st.fieldPreview}>한국 시간 기준으로 저장돼요</Text>

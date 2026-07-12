@@ -1,10 +1,13 @@
 /**
- * 크루 챌린지 생성 (M2) — title + goal_km + 기간 (date-only typed inputs per
- * the M1 composer pattern; the datetime redesign is docketed separately).
+ * 크루 챌린지 생성 (M2, design-wave B wheels) — title + 목표/기간 wheel
+ * sheets per canvas FrChallengeCreate (goal 5–100km ×1, 기간 3–90일 ×1 —
+ * probed inside server caps; goal_km=1 → 200, 0 → 422). The canvas is a
+ * DURATION model: the challenge starts today — starts_at = today 00:00 KST,
+ * ends_at = today+(기간−1) 23:59:59 KST (inclusive N days; naive datetimes
+ * are a server 422). The typed date-range inputs died with the redesign.
  * owner||admin (BE f68a48f). 409 (non-ended challenge exists) renders as a
  * FRIENDLY state — the entry CTA is hidden when a challenge is live, so this
- * path only fires on races. Dates serialize KST whole-day boundaries
- * (00:00 / 23:59:59 +09:00 — naive datetimes are a server 422).
+ * path only fires on races.
  */
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useState } from 'react';
@@ -23,29 +26,30 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/ui';
+import { NumberWheelRow } from '@/components/wheel-sheet';
 import { ApiError } from '@/lib/api';
 import { createChallenge, dateToKstIsoDay } from '@/lib/challenges-api';
 import { colors as C, radius as R, spacing as S } from '@/lib/theme';
+
+/** Calendar date N days from now, in KST (the serializer's input format). */
+function kstDateStr(offsetDays: number): string {
+  const d = new Date(Date.now() + 9 * 3600e3 + offsetDays * 86400e3);
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
+}
 
 export default function ChallengeCreateScreen() {
   const insets = useSafeAreaInsets();
   const { crewId } = useLocalSearchParams<{ crewId: string }>();
 
-  const [title, setTitle]   = useState('');
-  const [goalKm, setGoalKm] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate]     = useState('');
+  const [title, setTitle]     = useState('');
+  const [goalKm, setGoalKm]   = useState(50); // canvas defaults: 50km · 7일
+  const [periodDays, setPeriodDays] = useState(7);
   const [submitting, setSubmitting] = useState(false);
 
-  const goal = Number(goalKm);
-  const startIso = dateToKstIsoDay(startDate, 'start');
-  const endIso   = dateToKstIsoDay(endDate, 'end');
-  const dateEntered = startDate.trim() !== '' || endDate.trim() !== '';
-  const datesInvalid = dateEntered && (startIso === null || endIso === null);
-  const canSubmit = title.trim().length > 0
-    && Number.isFinite(goal) && goal > 0
-    && startIso !== null && endIso !== null
-    && !submitting;
+  // duration model: 오늘 시작, 기간 inclusive → today+(N−1) is the last day
+  const startIso = dateToKstIsoDay(kstDateStr(0), 'start');
+  const endIso   = dateToKstIsoDay(kstDateStr(periodDays - 1), 'end');
+  const canSubmit = title.trim().length > 0 && !submitting;
 
   async function submit() {
     if (!canSubmit || !crewId) return;
@@ -53,7 +57,7 @@ export default function ChallengeCreateScreen() {
     try {
       await createChallenge(crewId, {
         title: title.trim(),
-        goal_km: goal,
+        goal_km: goalKm,
         starts_at: startIso!,
         ends_at: endIso!,
       });
@@ -95,43 +99,12 @@ export default function ChallengeCreateScreen() {
           style={st.titleInput}
         />
 
-        <View style={st.fieldRow}>
-          <Text style={st.fieldLabel}>목표</Text>
-          <TextInput
-            value={goalKm}
-            onChangeText={t => setGoalKm(t.replace(/[^0-9.]/g, ''))}
-            placeholder="50"
-            placeholderTextColor={C.faint}
-            style={st.fieldInput}
-            keyboardType="decimal-pad"
-          />
-          <Text style={st.fieldUnit}>km</Text>
+        <View style={st.wheelCard}>
+          <NumberWheelRow label="목표 거리" value={goalKm} min={5} max={100} step={1} suffix="km" onChange={setGoalKm} />
+          <View style={st.divider} />
+          <NumberWheelRow label="기간" value={periodDays} min={3} max={90} step={1} suffix="일" onChange={setPeriodDays} />
         </View>
-        <View style={st.fieldRow}>
-          <Text style={st.fieldLabel}>시작일</Text>
-          <TextInput
-            value={startDate}
-            onChangeText={setStartDate}
-            placeholder="2026-07-14"
-            placeholderTextColor={C.faint}
-            style={st.fieldInput}
-            keyboardType="numbers-and-punctuation"
-            autoCorrect={false}
-          />
-        </View>
-        <View style={st.fieldRow}>
-          <Text style={st.fieldLabel}>종료일</Text>
-          <TextInput
-            value={endDate}
-            onChangeText={setEndDate}
-            placeholder="2026-07-20"
-            placeholderTextColor={C.faint}
-            style={st.fieldInput}
-            keyboardType="numbers-and-punctuation"
-            autoCorrect={false}
-          />
-        </View>
-        {datesInvalid && <Text style={st.fieldError}>날짜는 2026-07-14 형식으로 입력해 주세요</Text>}
+        <Text style={st.periodPreview}>오늘부터 {periodDays}일 · {kstDateStr(periodDays - 1)} 종료</Text>
 
         <View style={st.noteCard}>
           <Icon name="information-circle-outline" size={14} color={C.accentGrn} />
@@ -156,11 +129,9 @@ const st = StyleSheet.create({
 
   titleInput: { fontSize: 19, fontWeight: '700', color: C.text, letterSpacing: -0.5, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: C.border, marginBottom: 16 },
 
-  fieldRow:   { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 10 },
-  fieldLabel: { width: 48, fontSize: 13, fontWeight: '600', color: C.faint, letterSpacing: -0.2 },
-  fieldInput: { flex: 1, height: 44, borderRadius: R.md, borderWidth: 1, borderColor: C.border, backgroundColor: C.surfaceAlt, paddingHorizontal: 12, fontSize: 14.5, color: C.text },
-  fieldUnit:  { fontSize: 13.5, fontWeight: '600', color: C.faint },
-  fieldError: { fontSize: 12, color: C.danger, letterSpacing: -0.2, paddingLeft: 60, marginBottom: 6 },
+  wheelCard:     { backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: R.lg, paddingHorizontal: 16 },
+  divider:       { height: 1, backgroundColor: C.border },
+  periodPreview: { fontSize: 12, color: C.faint, letterSpacing: -0.2, marginTop: 8, paddingLeft: 4 },
 
   noteCard: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, backgroundColor: C.accentDim, borderWidth: 1, borderColor: C.accent + '44', borderRadius: R.md, padding: 12, marginTop: 10 },
   noteTxt:  { flex: 1, fontSize: 12.5, color: C.accentGrn, letterSpacing: -0.2, lineHeight: 18 },

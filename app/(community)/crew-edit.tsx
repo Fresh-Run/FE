@@ -27,6 +27,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/ui';
+import { NumberWheelRow } from '@/components/wheel-sheet';
 import {
   deleteCrew,
   getCrew,
@@ -49,7 +50,6 @@ import {
   SelectRow,
   SPORTS,
   st,
-  StepperRow,
   type Privacy,
 } from './crew-create';
 
@@ -232,7 +232,7 @@ export default function CrewEditScreen() {
             </View>
             <Slider
               minimumValue={1}
-              maximumValue={10}
+              maximumValue={20}
               step={1}
               value={radiusKm}
               onValueChange={setRadiusKm}
@@ -255,7 +255,7 @@ export default function CrewEditScreen() {
         </View>
 
         <Group title="모집">
-          <StepperRow label="최대 인원" value={maxMembers} min={5} max={200} step={5} suffix="명" onChange={setMaxMembers} />
+          <NumberWheelRow label="최대 인원" value={maxMembers} min={5} max={100} step={1} suffix="명" onChange={setMaxMembers} />
         </Group>
 
         <View style={{ paddingHorizontal: S.gutter }}>
