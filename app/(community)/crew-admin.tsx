@@ -19,6 +19,7 @@ import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Image,
   Pressable,
   ScrollView,
   Share,
@@ -168,9 +169,13 @@ export default function CrewAdminScreen() {
           {/* Identity card + stats (canvas) */}
           <View style={[st.idCard, shadows.sm]}>
             <View style={st.idHead}>
-              <View style={[st.idTile, { backgroundColor: crew.color ?? C.accent }]}>
+              {crew.icon_url ? (
+                <Image source={{ uri: crew.icon_url }} style={[st.idTile, { overflow: 'hidden' }]} />
+              ) : (
+                <View style={[st.idTile, { backgroundColor: crew.color ?? C.accent }]}>
                 <Icon name="people" size={26} color="#0D1A06" />
               </View>
+              )}
               <View style={{ flex: 1, minWidth: 0 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                   <Text style={st.idName} numberOfLines={1}>{crew.name}</Text>

@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  Image,
   Modal,
   Pressable,
   ScrollView,
@@ -140,7 +141,9 @@ function BrowseCrewCard({
   return (
     <Pressable onPress={full ? undefined : onPress} style={[st.card, { opacity: full ? 0.62 : 1 }]}>
       <View style={st.thumbWrap}>
-        <MiniMap seed={crew.id} height={54} borderRadius={0} />
+        {crew.icon_url
+          ? <Image source={{ uri: crew.icon_url }} style={{ width: '100%', height: 54 }} />
+          : <MiniMap seed={crew.id} height={54} borderRadius={0} />}
       </View>
 
       <View style={st.cardBody}>
@@ -196,8 +199,10 @@ function MyCrewCard({ crew, onPress }: { crew: Crew; onPress: () => void }) {
   return (
     <Pressable onPress={onPress} style={[st.card, shadows.sm]}>
       <View style={st.thumbWrap}>
-        <MiniMap seed={crew.id} height={54} borderRadius={0} />
-        {crew.color && (
+        {crew.icon_url
+          ? <Image source={{ uri: crew.icon_url }} style={{ width: '100%', height: 54 }} />
+          : <MiniMap seed={crew.id} height={54} borderRadius={0} />}
+        {crew.color && !crew.icon_url && (
           <View style={[st.colorDot, { backgroundColor: crew.color }]} />
         )}
       </View>

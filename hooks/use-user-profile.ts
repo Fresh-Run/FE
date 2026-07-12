@@ -26,6 +26,11 @@ export type UserProfile = {
   public_run_count: number; // zeroed by the server when locked
   visibility: 'public' | 'followers' | 'private';
   locked: boolean;          // true = non-follower viewing a gated account
+  /** v1.5 pre-render flags (지연 deploy, probed 2026-07-13): false = the
+      owner disabled it; null = locked account (no affordances either way);
+      absent (stale payload) = show + let the 403 net catch races. */
+  allow_likes?: boolean | null;
+  allow_comments?: boolean | null;
 };
 
 export type UserRun = {

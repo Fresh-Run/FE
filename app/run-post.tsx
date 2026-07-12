@@ -179,8 +179,15 @@ export default function RunPostScreen() {
   // affordance for the visit (count-only heart / quiet composer line), one
   // explanatory alert, never repeated. Screen state only — the next
   // encounter re-tries fresh (a re-enabled target self-corrects, no restart).
-  const [kudosOff, setKudosOff] = useState(false);
-  const [commentsOff, setCommentsOff] = useState(false);
+  const [kudosOff403, setKudosOff403] = useState(false);
+  const [commentsOff403, setCommentsOff403] = useState(false);
+  // pre-render seeds (her flags on the detail payload). NEVER in own mode:
+  // the server allows own kudos-view/comments regardless, and own detail
+  // serves the raw flag (deviation from her always-true contract — flagged).
+  const kudosOff = kudosOff403
+    || (!isOwn && run != null && (run.allow_likes === false || run.allow_likes === null));
+  const commentsOff = commentsOff403
+    || (!isOwn && run != null && (run.allow_comments === false || run.allow_comments === null));
 
   function toggleKudos() {
     if (!run || kudosOff) return;
@@ -192,7 +199,7 @@ export default function RunPostScreen() {
       setLiked(!next); // rollback
       setLikeDelta(d => d + (next ? -1 : 1));
       if (e instanceof ApiError && e.code === 'likes_disabled') {
-        setKudosOff(true); // silent conversion — owner bar
+        setKudosOff403(true); // silent race net
       }
     });
   }
@@ -207,7 +214,7 @@ export default function RunPostScreen() {
       setDraft('');
     } catch (e: unknown) {
       if (e instanceof ApiError && e.code === 'comments_disabled') {
-        setCommentsOff(true); // silent — composer becomes the quiet line
+        setCommentsOff403(true); // silent race net
       } else {
         Alert.alert('댓글 실패', '댓글을 게시하지 못했어요. 잠시 후 다시 시도해 주세요.');
       }

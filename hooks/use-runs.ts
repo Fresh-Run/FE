@@ -40,6 +40,11 @@ export type Run = {
   splits?: RunSplit[];
   /** Signed URLs, 1h expiry — use response values directly, NEVER cache (계약). Detail responses only. */
   photos?: string[] | null;
+  /** v1.5 pre-render flags — see use-user-profile note. ⚠️ own detail serves
+      the RAW flag (not always-true; contract deviation flagged to 지연) —
+      consumers must ignore these in own mode. */
+  allow_likes?: boolean | null;
+  allow_comments?: boolean | null;
   /** First-photo thumb (signed) on list rows */
   photo_thumb?: string | null;
   /** ≤36-pt simplified track on list rows (BE 6baa192; null = trackless) */

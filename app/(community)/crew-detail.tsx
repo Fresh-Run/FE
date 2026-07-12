@@ -18,8 +18,12 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import * as ImagePicker from 'expo-image-picker';
+
+import { AvatarCrop, type CropSource } from '@/components/avatar-crop';
 import { MiniMap } from '@/components/mini-map';
 import { Icon } from '@/components/ui';
+import { reencodeForUpload } from '@/lib/run-photos';
 import {
   cancelJoinRequest,
   joinCrew,
@@ -31,7 +35,7 @@ import { avatarBg } from '@/lib/fr-hash';
 import { listAnnouncements, type Announcement } from '@/lib/announcements-api';
 import { getCurrentChallenge, type Challenge } from '@/lib/challenges-api';
 import { getUnread } from '@/lib/chat-api';
-import { getCrewRanking, listJoinRequests, type CrewRankingEntry } from '@/lib/crews-api';
+import { getCrewRanking, listJoinRequests, uploadCrewImage, type CrewRankingEntry } from '@/lib/crews-api';
 import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -202,6 +206,55 @@ export default function CrewDetailScreen() {
     return () => { cancelled = true; };
   }, [crewId, isMember]));
 
+  // ── 크루 이미지 (⑤⑥) — OWNER-only end-to-end (probed: admin upload-url
+  // 200 but the attach PATCH 403s — no half-flows offered). icon → 1:1
+  // avatar-crop stage (output already re-encoded/EXIF-free); cover → skip
+  // crop (render-time cover-fit composes; a dedicated aspect crop is a
+  // design follow-up), reencodeForUpload strips EXIF. PUBLIC bucket — the
+  // hard rule applies doubly.
+  const isOwner = crew?.myRole === 'owner';
+  const [imgBusy, setImgBusy] = useState<'cover' | 'icon' | null>(null);
+  const [iconCropSrc, setIconCropSrc] = useState<CropSource | null>(null);
+
+  async function pickCrewImage(kind: 'cover' | 'icon') {
+    let res: ImagePicker.ImagePickerResult;
+    try {
+      res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: 'images', quality: 1 });
+    } catch {
+      Alert.alert('사진 선택 실패', '사진 선택 화면을 열지 못했어요. 다시 시도해 주세요.');
+      return;
+    }
+    if (res.canceled || !res.assets[0]) return;
+    const a = res.assets[0];
+    if (kind === 'icon') {
+      setIconCropSrc({ uri: a.uri, width: a.width ?? 1, height: a.height ?? 1 });
+      return; // upload continues in onConfirm
+    }
+    setImgBusy('cover');
+    try {
+      const clean = await reencodeForUpload(a.uri, a.width, a.height);
+      await uploadCrewImage(crew!.id, 'cover', clean);
+      refetch();
+    } catch (e: unknown) {
+      Alert.alert('커버 업로드 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요.');
+    } finally {
+      setImgBusy(null);
+    }
+  }
+
+  async function onIconCropped(croppedUri: string) {
+    setIconCropSrc(null);
+    setImgBusy('icon');
+    try {
+      await uploadCrewImage(crew!.id, 'icon', croppedUri); // crop output = re-encoded, EXIF-free
+      refetch();
+    } catch (e: unknown) {
+      Alert.alert('아이콘 업로드 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요.');
+    } finally {
+      setImgBusy(null);
+    }
+  }
+
   // ── 챌린지 + 랭킹 (M2/M2b) — members only ───────────────────────────────────
   const [challenge, setChallenge] = useState<Challenge | null | undefined>(undefined); // undefined = loading
   const [ranking, setRanking]     = useState<CrewRankingEntry[] | null>(null);
@@ -319,9 +372,14 @@ export default function CrewDetailScreen() {
     <View style={st.root}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 110 }}>
 
-        {/* ── Dark hero header ─────────────────────────────────────────── */}
+        {/* ── Dark hero header — cover photo (staff-set) or the MiniMap
+            fallback; imageless crews render exactly as before ─────────── */}
         <View style={[st.hero, { height: HERO_H + insets.top }]}>
-          <MiniMap seed={crew.id} height={HERO_H + insets.top} borderRadius={0} />
+          {crew.cover_url ? (
+            <Image source={{ uri: crew.cover_url }} style={[StyleSheet.absoluteFillObject, { width: undefined, height: undefined }]} resizeMode="cover" />
+          ) : (
+            <MiniMap seed={crew.id} height={HERO_H + insets.top} borderRadius={0} />
+          )}
           <LinearGradient
             colors={['rgba(8,12,4,0.55)', 'rgba(8,12,4,0.92)']}
             style={StyleSheet.absoluteFillObject}
@@ -354,6 +412,43 @@ export default function CrewDetailScreen() {
 
             {/* Crew info pinned to bottom */}
             <View style={{ flex: 1, justifyContent: 'flex-end' }}>
+              {/* Ringed identity icon (canvas) — owner taps to change */}
+              <View style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' }}>
+                <Pressable
+                  onPress={isOwner && !imgBusy ? () => pickCrewImage('icon') : undefined}
+                  disabled={!isOwner || !!imgBusy}
+                  style={st.heroIconWrap}
+                >
+                  {crew.icon_url ? (
+                    <Image source={{ uri: crew.icon_url }} style={st.heroIconImg} />
+                  ) : (
+                    <View style={[st.heroIconImg, { backgroundColor: crew.color ?? C.accent, alignItems: 'center', justifyContent: 'center' }]}>
+                      <Icon name="people" size={26} color="#0D1A06" />
+                    </View>
+                  )}
+                  {isOwner && (
+                    <View style={st.heroIconEdit}>
+                      {imgBusy === 'icon'
+                        ? <ActivityIndicator size="small" color={C.accentText} />
+                        : <Icon name="camera-outline" size={11} color={C.accentText} />}
+                    </View>
+                  )}
+                </Pressable>
+                {/* 커버 변경 chip — owner only (운영진 upload-url works but the
+                    attach PATCH is 크루장만: probed 403; 지연 flag ledgered) */}
+                {isOwner && (
+                  <Pressable
+                    onPress={!imgBusy ? () => pickCrewImage('cover') : undefined}
+                    disabled={!!imgBusy}
+                    style={({ pressed }) => [st.coverChip, pressed && { opacity: 0.75 }]}
+                  >
+                    {imgBusy === 'cover'
+                      ? <ActivityIndicator size="small" color="#fff" />
+                      : <Icon name="camera-outline" size={13} color="#fff" />}
+                    <Text style={st.coverChipTxt}>커버 변경</Text>
+                  </Pressable>
+                )}
+              </View>
               <Text style={st.heroName}>{crew.name}</Text>
               <View style={st.heroMeta}>
                 {/* Role badge (canvas: 크루장 amber / 운영진 accent) */}
@@ -644,6 +739,14 @@ export default function CrewDetailScreen() {
         </View>
       )}
 
+      {/* ── 아이콘 crop (1:1, avatar-crop reuse) ─────────────────────── */}
+      <AvatarCrop
+        src={iconCropSrc}
+        onClose={() => setIconCropSrc(null)}
+        onConfirm={onIconCropped}
+        onRetake={() => { setIconCropSrc(null); pickCrewImage('icon'); }}
+      />
+
       {/* ── Sticky CTA ────────────────────────────────────────────────── */}
       <View style={[st.footer, { paddingBottom: Math.max(insets.bottom, S.lg) + S.sm }]}>
         <CtaButton
@@ -729,6 +832,13 @@ const st = StyleSheet.create({
   rankMedalTxt: { fontSize: 12.5, fontWeight: '800', color: '#fff', fontVariant: ['tabular-nums'] },
   rankName:     { flexShrink: 1, fontSize: 14, fontWeight: '600', color: C.text, letterSpacing: -0.3 },
   rankKm:       { fontSize: 13.5, fontWeight: '700', color: C.sub, fontVariant: ['tabular-nums'] },
+
+  // 크루 이미지 (⑤⑥)
+  heroIconWrap: { width: 64, height: 64, borderRadius: 17, borderWidth: 2, borderColor: 'rgba(255,255,255,0.35)', overflow: 'hidden', marginBottom: 10 },
+  heroIconImg:  { width: '100%', height: '100%' },
+  heroIconEdit: { position: 'absolute', bottom: 0, right: 0, width: 20, height: 20, borderTopLeftRadius: 8, backgroundColor: C.accent, alignItems: 'center', justifyContent: 'center' },
+  coverChip:    { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(0,0,0,0.45)', borderRadius: R.pill, paddingHorizontal: 12, paddingVertical: 7, marginBottom: 10 },
+  coverChipTxt: { fontSize: 11.5, fontWeight: '700', color: '#fff', letterSpacing: -0.2 },
 
   // 크루 채팅 entry (chat v1)
   chatBtn:      { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: R.lg, paddingVertical: 13, paddingHorizontal: 15 },

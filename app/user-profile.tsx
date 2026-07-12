@@ -227,7 +227,11 @@ export default function UserProfileScreen() {
   // is SILENT: all hearts flip to count-only, no message — never explain,
   // just don't offer. State dies with the screen; the 403 catch stays
   // permanently as the race safety net behind her future pre-render flags.
-  const [likesOff, setLikesOff] = useState(false);
+  const [likesOff403, setLikesOff403] = useState(false);
+  // pre-render seed (her flags): false OR null (locked) = no affordances;
+  // absent (stale payload) = show — the 403 net stays underneath for races
+  const likesOff = likesOff403
+    || (profile != null && (profile.allow_likes === false || profile.allow_likes === null));
   function toggleKudos(run: UserRun) {
     if (likesOff) return;
     const cur = kudosOverlay[run.run_id]?.on ?? run.my_kudos;
@@ -237,7 +241,7 @@ export default function UserProfileScreen() {
       .catch((e: unknown) => {
         setKudosOverlay(p => ({ ...p, [run.run_id]: { on: run.my_kudos, delta: 0 } }));
         if (e instanceof ApiError && e.code === 'likes_disabled') {
-          setLikesOff(true); // silent — the hearts just stop being offered
+          setLikesOff403(true); // silent race net — flags said on, server said off
         }
       });
   }

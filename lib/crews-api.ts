@@ -22,6 +22,8 @@ export type Crew = {
   active_days: string[] | null;
   active_time: string | null;
   color: string | null;
+  cover_url: string | null; // BE 87a4026 크루 이미지 — hero band photo (staff-set)
+  icon_url: string | null;  // card/hero identity image
   join_policy: 'open' | 'approval';
   member_count: number;
   owner_nickname: string | null;
@@ -63,6 +65,8 @@ type ServerCrew = {
   active_days: string[];
   active_time: string | null;
   color: string | null;
+  cover_url?: string | null;
+  icon_url?: string | null;
   member_count: number;
   owner_nickname: string | null;
   sido?: string | null;
@@ -97,6 +101,8 @@ export function mapCrew(row: ServerCrew, myRole?: 'owner' | 'admin' | 'member'):
     active_days: row.active_days ?? null,
     active_time: row.active_time ?? null,
     color:       row.color ?? null,
+    cover_url:   row.cover_url ?? null,
+    icon_url:    row.icon_url ?? null,
     join_policy: (row.join_policy as 'open' | 'approval') ?? 'open',
     member_count: row.member_count,
     owner_nickname: row.owner_nickname ?? null,
@@ -228,6 +234,44 @@ export type CrewRankingEntry = {
   distance_km: number;
   me: boolean;
 };
+
+// ─── 크루 이미지 (BE 87a4026, guide "크루 이미지 업로드" — probed 2026-07-13) ──
+// Avatar-isomorphic 3-step: upload-url → PUT → PATCH {cover_url|icon_url}
+// w/ ?v= cache-bust. Fixed path per crew (re-upload overwrites). 운영진 get
+// the upload-url BUT the attach PATCH is 크루장만 (403 probed — 지연 flag
+// ledgered): the FE gates the whole affordance to OWNER until she
+// special-cases the image fields. ⚠️ PUBLIC bucket — the caller must pass
+// an already re-encoded, EXIF-free uri (avatar-crop output or
+// reencodeForUpload), never a raw picker uri.
+
+type CrewImageUploadUrl = {
+  upload_url: string;
+  public_url: string;
+  max_bytes: number;
+  allowed_types: string[];
+};
+
+export async function uploadCrewImage(
+  crewId: string,
+  kind: 'cover' | 'icon',
+  cleanLocalUri: string,
+): Promise<string> {
+  const { upload_url, public_url } = await apiFetch<CrewImageUploadUrl>(
+    `/api/crews/${crewId}/${kind}/upload-url`, { method: 'POST' });
+  const bytes = await (await fetch(cleanLocalUri)).blob();
+  const put = await fetch(upload_url, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'image/jpeg' },
+    body: bytes,
+  });
+  if (!put.ok) throw new Error(`업로드 실패 (${put.status})`);
+  const busted = `${public_url}?v=${Date.now()}`;
+  await apiFetch<void>(`/api/crews/${crewId}`, {
+    method: 'PATCH',
+    body: { [kind === 'cover' ? 'cover_url' : 'icon_url']: busted },
+  });
+  return busted;
+}
 
 export async function getCrewRanking(crewId: string): Promise<CrewRankingEntry[]> {
   return apiFetch<CrewRankingEntry[]>(`/api/crews/${crewId}/ranking`);
