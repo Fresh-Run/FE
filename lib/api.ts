@@ -38,11 +38,28 @@ export async function apiRequest<T>(path: string, opts: ApiOptions = {}): Promis
     throw new ApiError('백엔드 주소가 설정되지 않았어요. .env.local의 EXPO_PUBLIC_API_URL을 확인해 주세요.', 0, 'config');
   }
 
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) throw new ApiError('로그인이 필요해요', 401, null);
-
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), opts.timeoutMs ?? DEFAULT_TIMEOUT_MS);
+
+  // getSession lives INSIDE the deadline: offline, an expired-token refresh
+  // inside it can stall past the fetch's own abort guard (the airplane-mode
+  // "alert only after reconnect" bug, 2026-07-26) — the whole request now
+  // shares one clock.
+  let session: Awaited<ReturnType<typeof supabase.auth.getSession>>['data']['session'];
+  try {
+    session = await Promise.race([
+      supabase.auth.getSession().then(r => r.data.session),
+      new Promise<never>((_, reject) =>
+        controller.signal.addEventListener('abort', () => reject(new Error('timeout')), { once: true })),
+    ]);
+  } catch {
+    clearTimeout(timer);
+    throw new ApiError('요청 시간이 초과됐어요. 다시 시도해 주세요.', 0, 'timeout');
+  }
+  if (!session) {
+    clearTimeout(timer);
+    throw new ApiError('로그인이 필요해요', 401, null);
+  }
 
   let res: Response;
   try {

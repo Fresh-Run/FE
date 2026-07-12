@@ -4,15 +4,25 @@
 
 import { apiFetch } from '@/lib/api';
 
+/** 계정 공개 범위 (비공개 프로필 v1, BE acc1ad1 — write path probed live
+    2026-07-26; the read-side gate is staging-dark, 지연-reported). */
+export type ProfileVisibility = 'public' | 'followers' | 'private';
+
 export type ProfileResponse = {
   user_id: string;
   nickname: string;
   avatar_url: string | null;
   bio: string | null;
   tier: string;
+  visibility: ProfileVisibility;
   created_at: string;
   updated_at: string;
 };
+
+/** Own profile read — 404 on a profile-less account (pre-onboarding). */
+export function getMyProfile(timeoutMs?: number): Promise<ProfileResponse> {
+  return apiFetch<ProfileResponse>('/api/me/profile', { timeoutMs });
+}
 
 export function updateNickname(nickname: string): Promise<ProfileResponse> {
   return apiFetch<ProfileResponse>('/api/me/profile', {
@@ -39,6 +49,7 @@ export function updateProfile(input: {
   weight_kg?: number | null;
   height_cm?: number | null;
   avatar_url?: string | null;
-}): Promise<ProfileResponse> {
-  return apiFetch<ProfileResponse>('/api/me/profile', { method: 'PATCH', body: input });
+  visibility?: ProfileVisibility;
+}, timeoutMs?: number): Promise<ProfileResponse> {
+  return apiFetch<ProfileResponse>('/api/me/profile', { method: 'PATCH', body: input, timeoutMs });
 }

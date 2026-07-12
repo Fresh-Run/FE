@@ -1,28 +1,38 @@
 /**
  * 프로필 설정 — the 내 프로필 gear's destination (canvas: my-profile.jsx
- * FrProfileSettings), design-wave C honest subset.
+ * FrProfileSettings), design-wave C + ⑨ wire-up.
  *
- * SERVER GAPS (probed 2026-07-26, staging + BE 5827c94 — the ask batch's
- * privacy pack has NOT landed): 프로필 공개 범위, 좋아요/댓글 허용, 팔로우
- * 승인제, 차단 관리 have no backing fields/resources and render NOT AT ALL
- * (the line-132 rule — no disabled teasers). They join this screen the day
- * her fields land; canvas parity notes in TODO.md.
+ * 공개 범위 (비공개 프로필 v1, BE acc1ad1): 3-way wired to PATCH /me/profile
+ * {nickname, visibility} — nickname must ride every PATCH (422 without,
+ * probed). WRITE path live-probed; the read-side lock GATE is staging-dark
+ * as of 2026-07-26 (지연-reported: locked never true, runs not 404'd) —
+ * the setting stores server-side now, enforcement engages with her deploy.
  *
- * What ships: 러닝 자동 게시 (device-local default save-visibility —
+ * SERVER GAPS (her roadmap): 좋아요/댓글 허용 = v1.5 · 팔로우 승인제 = v2 ·
+ * 차단 관리 = v3 — still render NOT AT ALL (the line-132 rule — no disabled
+ * teasers); parity notes in TODO.md.
+ *
+ * Also ships: 러닝 자동 게시 (device-local default save-visibility —
  * store/feed-prefs), 프로필 편집 / 앱 설정 doors, 회원 탈퇴 (the 8bc494e
  * flow — canvas draws a simple modal; ours keeps the server-mandated
  * crew-owner 409 path). 앱 설정 row = the preserved door for the settings
- * hub, whose ONLY previous entry was the gear this screen now owns
- * (deviation from canvas, stated in the checkpoint).
+ * hub, whose ONLY previous entry was the gear this screen now owns.
  */
 import { router } from 'expo-router';
-import React, { useEffect } from 'react';
-import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/ui';
+import { getMyProfile, updateProfile, type ProfileVisibility } from '@/lib/profile-api';
 import { colors as C, shadows, spacing as S } from '@/lib/theme';
 import { useFeedPrefs } from '@/store/feed-prefs';
+
+const VISIBILITY_OPTS: { value: ProfileVisibility; label: string; sub: string }[] = [
+  { value: 'public',    label: '전체 공개', sub: '누구나 내 프로필과 게시한 러닝을 볼 수 있어요' },
+  { value: 'followers', label: '팔로워만',  sub: '팔로워에게만 게시한 러닝이 보여요' },
+  { value: 'private',   label: '비공개',    sub: '아무에게도 보이지 않아요' },
+];
 
 function Group({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
   const items = React.Children.toArray(children);
@@ -61,6 +71,46 @@ export default function ProfileSettingsScreen() {
   const setAutoPost = useFeedPrefs(s => s.setAutoPost);
   useEffect(() => { useFeedPrefs.getState().hydrate(); }, []);
 
+  // ── 공개 범위 — server truth on mount; default-select public on a failed
+  // read (all accounts are backfilled public; NEVER hide the section on a
+  // read miss). nicknameRef rides every PATCH (required by contract).
+  const [visibility, setVisibility] = useState<ProfileVisibility>('public');
+  const [visBusy, setVisBusy] = useState(false);
+  const nicknameRef = useRef<string | null>(null);
+  useEffect(() => {
+    getMyProfile()
+      .then(p => { nicknameRef.current = p.nickname; setVisibility(p.visibility ?? 'public'); })
+      .catch(() => { /* profile-less/offline — defaults stand, change surfaces the error */ });
+  }, []);
+
+  // Optimistic write with a FAST failure (10s deadline — offline must revert
+  // + alert while the user is still on the screen, not after reconnect).
+  // On failure, one reconcile GET re-reads server truth: a PATCH the OS
+  // queue landed anyway wins over the revert instead of diverging. A PATCH
+  // that lands after even that closes on the next screen open (mount read).
+  const VIS_TIMEOUT_MS = 10_000;
+  async function pickVisibility(v: ProfileVisibility) {
+    if (visBusy || v === visibility) return;
+    if (!nicknameRef.current) {
+      Alert.alert('저장할 수 없어요', '프로필을 불러오지 못했어요. 잠시 후 다시 열어 주세요.');
+      return;
+    }
+    const prev = visibility;
+    setVisibility(v);
+    setVisBusy(true);
+    try {
+      await updateProfile({ nickname: nicknameRef.current, visibility: v }, VIS_TIMEOUT_MS);
+    } catch (e: unknown) {
+      setVisibility(prev); // last known server truth, until the reconcile says otherwise
+      getMyProfile(VIS_TIMEOUT_MS)
+        .then(p => setVisibility(p.visibility ?? 'public'))
+        .catch(() => { /* still offline — prev stands; next mount re-reads */ });
+      Alert.alert('변경 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요.');
+    } finally {
+      setVisBusy(false);
+    }
+  }
+
   return (
     <View style={[st.root, { paddingTop: insets.top }]}>
       <View style={st.appBar}>
@@ -72,6 +122,31 @@ export default function ProfileSettingsScreen() {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
+        {/* ── 공개 범위 — canvas top section (⑨ wire-up) ── */}
+        <Group
+          title="프로필 공개 범위"
+          hint="비공개로 하면 팔로워가 아닌 사람에게는 게시한 러닝이 보이지 않아요."
+        >
+          {VISIBILITY_OPTS.map(o => {
+            const on = visibility === o.value;
+            return (
+              <Pressable
+                key={o.value}
+                onPress={() => pickVisibility(o.value)}
+                disabled={visBusy}
+                style={({ pressed }) => [st.row, pressed && { opacity: 0.7 }]}
+              >
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={st.rowLabel}>{o.label}</Text>
+                  <Text style={st.rowSub}>{o.sub}</Text>
+                </View>
+                <View style={[st.radioOuter, on && { borderColor: C.accent, backgroundColor: C.accent }]}>
+                  {on && <Icon name="checkmark" size={13} color={C.accentText} />}
+                </View>
+              </Pressable>
+            );
+          })}
+        </Group>
         <Group
           title="피드"
           hint="끄면 새 러닝의 공개 범위가 비공개로 시작해요. 저장 화면에서 러닝마다 바꿀 수 있어요."
@@ -128,6 +203,8 @@ const st = StyleSheet.create({
   rowLabel: { fontSize: 14.5, fontWeight: '600', color: C.text, letterSpacing: -0.3 },
   rowSub:   { fontSize: 12, color: C.faint, letterSpacing: -0.2, marginTop: 2 },
   rowValue: { fontSize: 12.5, fontWeight: '600', color: C.faint, letterSpacing: -0.2, marginLeft: 'auto' },
+
+  radioOuter: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: C.border, alignItems: 'center', justifyContent: 'center' },
 
   deleteBtn: { height: 50, borderRadius: 14, borderWidth: 1, borderColor: C.danger + '44', alignItems: 'center', justifyContent: 'center' },
   deleteTxt: { fontSize: 14.5, fontWeight: '700', color: C.danger, letterSpacing: -0.3 },
