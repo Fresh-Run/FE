@@ -1,7 +1,8 @@
 /**
  * 내 프로필 — social/public profile, own-view (canvas 2026-07-07; screenshot-
  * verified). Pushed from the home header avatar. Distinct from the 프로필 TAB —
- * the gear here routes to the 설정 hub (/settings).
+ * the gear routes to 프로필 설정 (design-wave C — canvas my-profile.jsx
+ * gear → profileSettings; the 설정 hub keeps its door inside that screen).
  *
  * Approved interim honesty (backend gaps, TODO'd):
  *  - location row shows `bio` when present (no location field on profiles);
@@ -222,13 +223,13 @@ export default function MyProfileScreen() {
 
   return (
     <View style={[st.root, { paddingTop: insets.top }]}>
-      {/* App bar: back · title · gear → 설정 hub (canvas: settingsHub) */}
+      {/* App bar: back · title · gear → 프로필 설정 (canvas: profileSettings) */}
       <View style={st.appBar}>
         <Pressable onPress={() => router.back()} hitSlop={12} style={st.appBarBtn}>
           <Icon name="chevron-back" size={22} color={C.text} />
         </Pressable>
         <Text style={st.appBarTitle}>내 프로필</Text>
-        <Pressable onPress={() => router.push('/settings' as any)} hitSlop={12} style={st.appBarBtn}>
+        <Pressable onPress={() => router.push('/profile-settings' as any)} hitSlop={12} style={st.appBarBtn}>
           <Icon name="settings-outline" size={20} color={C.text} />
         </Pressable>
       </View>
