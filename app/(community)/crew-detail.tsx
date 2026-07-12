@@ -32,7 +32,7 @@ import {
 import { avatarBg } from '@/lib/fr-hash';
 import { listAnnouncements, type Announcement } from '@/lib/announcements-api';
 import { getCurrentChallenge, type Challenge } from '@/lib/challenges-api';
-import { getCrewRanking, getInviteCode, issueInviteCode, type CrewRankingEntry } from '@/lib/crews-api';
+import { getCrewRanking, getInviteCode, issueInviteCode, listJoinRequests, type CrewRankingEntry } from '@/lib/crews-api';
 import { openProfile } from '@/lib/profile-nav';
 import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
 
@@ -200,6 +200,17 @@ export default function CrewDetailScreen() {
       .catch(() => { if (!cancelled) setAnnPreview([]); });
     return () => { cancelled = true; };
   }, [crewId, isMember]));
+
+  // ── 가입 요청 count (M-tier 신청 관리, owner-only) — badge on the entry ──────
+  const [pendingReqCount, setPendingReqCount] = useState(0);
+  useFocusEffect(useCallback(() => {
+    if (!crewId || crew?.myRole !== 'owner') { setPendingReqCount(0); return; }
+    let cancelled = false;
+    listJoinRequests(crewId)
+      .then(rows => { if (!cancelled) setPendingReqCount(rows.length); })
+      .catch(() => { /* quiet — the screen itself surfaces errors */ });
+    return () => { cancelled = true; };
+  }, [crewId, crew?.myRole]));
 
   // ── 초대 코드 (S-batch2 #8, owner-only) ─────────────────────────────────────
   const isOwnerRole = crew?.myRole === 'owner';
@@ -584,6 +595,30 @@ export default function CrewDetailScreen() {
           )}
         </View>
 
+        {/* ── 가입 요청 (M-tier 신청 관리, owner-only) — the approver side;
+               the owner's join_requested notification lands on this crew,
+               so the entry lives here. Count badge from the pending list. ── */}
+        {crew.myRole === 'owner' && (
+          <View style={{ paddingHorizontal: S.gutter, paddingTop: S.xl }}>
+            <Pressable
+              onPress={() => router.push({
+                pathname: '/(community)/crew-requests' as never,
+                params: { crewId: crew.id },
+              })}
+              style={({ pressed }) => [st.requestsRow, shadows.sm, pressed && { opacity: 0.8 }]}
+            >
+              <View style={st.requestsIcon}>
+                <Icon name="person-add-outline" size={17} color={C.accentGrn} />
+              </View>
+              <Text style={st.requestsTxt}>가입 요청</Text>
+              {pendingReqCount > 0 && (
+                <View style={st.requestsBadge}><Text style={st.requestsBadgeTxt}>{pendingReqCount}</Text></View>
+              )}
+              <Icon name="chevron-forward" size={16} color={C.faint} />
+            </Pressable>
+          </View>
+        )}
+
         {/* ── 초대 (S-batch2 #8, owner-only) — code display + share sheet +
                재생성 (kills the old code + every shared link: guide §204).
                Share text is CODE-ONLY (recommendation): the recorded deep
@@ -674,6 +709,13 @@ const st = StyleSheet.create({
 
   // Member list
   memberList:     { backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 18, overflow: 'hidden' },
+
+  // 가입 요청 entry (M-tier 신청 관리)
+  requestsRow:      { flexDirection: 'row', alignItems: 'center', gap: 11, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 18, padding: 14 },
+  requestsIcon:     { width: 34, height: 34, borderRadius: 10, backgroundColor: C.accentDim, alignItems: 'center', justifyContent: 'center' },
+  requestsTxt:      { flex: 1, fontSize: 14.5, fontWeight: '700', color: C.text, letterSpacing: -0.3 },
+  requestsBadge:    { minWidth: 22, height: 22, borderRadius: 11, backgroundColor: C.danger, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 7 },
+  requestsBadgeTxt: { fontSize: 12, fontWeight: '800', color: '#fff' },
 
   // 초대 (S-batch2 #8)
   inviteCard:     { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 18, padding: 14 },

@@ -230,6 +230,33 @@ export async function getCrewRanking(crewId: string): Promise<CrewRankingEntry[]
   return apiFetch<CrewRankingEntry[]>(`/api/crews/${crewId}/ranking`);
 }
 
+// ─── 가입 신청 관리 (owner-only, guide §200-201) ───────────────────────────────
+// List = PENDING only, newest first; non-owner → 403 (probed 2026-07-15).
+// No avatar_url in this payload (지연-observation — the avatar batch skipped
+// JoinRequestItem); nickname nullable → '러너' fallback.
+
+export type CrewJoinRequest = {
+  id: string;
+  user_id: string;
+  nickname: string | null;
+  created_at: string;
+};
+
+export function listJoinRequests(crewId: string): Promise<CrewJoinRequest[]> {
+  return apiFetch<CrewJoinRequest[]>(`/api/crews/${crewId}/join-requests?limit=100`);
+}
+
+/** 204; 409 = 정원 초과 (request stays pending); 404 = already decided. */
+export function approveJoinRequest(crewId: string, requestId: string): Promise<void> {
+  return apiFetch<void>(`/api/crews/${crewId}/join-requests/${requestId}/approve`, { method: 'POST' });
+}
+
+/** 204 — silent to the requester BY DESIGN (guide §198: no rejection
+    notification; their button state comes from join-requests/me). */
+export function rejectJoinRequest(crewId: string, requestId: string): Promise<void> {
+  return apiFetch<void>(`/api/crews/${crewId}/join-requests/${requestId}/reject`, { method: 'POST' });
+}
+
 // ─── Invite code (owner-only, guide §204) ─────────────────────────────────────
 // 8 chars A-Z/2-9 (no I/O/0/1). GET 404 = not yet issued → POST issues.
 // POST REGENERATES: the old code (and every shared link carrying it) dies
