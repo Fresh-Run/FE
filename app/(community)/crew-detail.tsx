@@ -5,13 +5,14 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   Image,
   Pressable,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   View,
@@ -31,7 +32,7 @@ import {
 import { avatarBg } from '@/lib/fr-hash';
 import { listAnnouncements, type Announcement } from '@/lib/announcements-api';
 import { getCurrentChallenge, type Challenge } from '@/lib/challenges-api';
-import { getCrewRanking, type CrewRankingEntry } from '@/lib/crews-api';
+import { getCrewRanking, getInviteCode, issueInviteCode, type CrewRankingEntry } from '@/lib/crews-api';
 import { openProfile } from '@/lib/profile-nav';
 import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
 
@@ -199,6 +200,59 @@ export default function CrewDetailScreen() {
       .catch(() => { if (!cancelled) setAnnPreview([]); });
     return () => { cancelled = true; };
   }, [crewId, isMember]));
+
+  // ── 초대 코드 (S-batch2 #8, owner-only) ─────────────────────────────────────
+  const isOwnerRole = crew?.myRole === 'owner';
+  const [inviteCode, setInviteCode] = useState<string | null>(null);
+  const [inviteBusy, setInviteBusy] = useState(false);
+  useEffect(() => {
+    if (!crewId || !isOwnerRole) { setInviteCode(null); return; }
+    let cancelled = false;
+    getInviteCode(crewId)
+      .then(code => { if (!cancelled) setInviteCode(code); })
+      .catch(() => { /* quiet — 공유 press issues on demand */ });
+    return () => { cancelled = true; };
+  }, [crewId, isOwnerRole]);
+
+  async function shareInvite() {
+    if (!crewId || !crew || inviteBusy) return;
+    setInviteBusy(true);
+    try {
+      const code = inviteCode ?? await issueInviteCode(crewId);
+      setInviteCode(code);
+      await Share.share({
+        message: `FreshRun 크루 '${crew.name}'에 초대해요!\n초대 코드: ${code}\n앱 커뮤니티 탭의 '코드로 가입'에서 입력해 주세요.`,
+      });
+    } catch (e: unknown) {
+      Alert.alert('초대 코드 오류', e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요');
+    } finally {
+      setInviteBusy(false);
+    }
+  }
+
+  function confirmRegenInvite() {
+    if (!crewId) return;
+    Alert.alert(
+      '초대 코드를 재생성할까요?',
+      '기존 초대 링크가 무효화됩니다 — 이미 공유한 코드로는 더 이상 가입할 수 없어요.',
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '재생성', style: 'destructive',
+          onPress: async () => {
+            setInviteBusy(true);
+            try {
+              setInviteCode(await issueInviteCode(crewId));
+            } catch (e: unknown) {
+              Alert.alert('재생성 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요');
+            } finally {
+              setInviteBusy(false);
+            }
+          },
+        },
+      ],
+    );
+  }
 
   // ── 챌린지 + 랭킹 (M2/M2b) — members only ───────────────────────────────────
   const [challenge, setChallenge] = useState<Challenge | null | undefined>(undefined); // undefined = loading
@@ -530,6 +584,35 @@ export default function CrewDetailScreen() {
           )}
         </View>
 
+        {/* ── 초대 (S-batch2 #8, owner-only) — code display + share sheet +
+               재생성 (kills the old code + every shared link: guide §204).
+               Share text is CODE-ONLY (recommendation): the recorded deep
+               link freshrun://crew-invite?code= only resolves post-native-
+               build — a dead link in 카톡 is worse than none. Flip to
+               link+code when the dev build ships. ── */}
+        {crew.myRole === 'owner' && (
+          <View style={{ paddingHorizontal: S.gutter, paddingTop: S.xl }}>
+            <View style={st.sectionHead}>
+              <Text style={st.sectionTitle}>초대</Text>
+            </View>
+            <View style={[st.inviteCard, shadows.sm]}>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={st.inviteLbl}>초대 코드</Text>
+                <Text style={st.inviteCode}>{inviteCode ?? '미발급'}</Text>
+              </View>
+              <Pressable onPress={shareInvite} disabled={inviteBusy} style={[st.inviteShareBtn, inviteBusy && { opacity: 0.5 }]}>
+                <Icon name="share-outline" size={15} color={C.accentText} />
+                <Text style={st.inviteShareTxt}>{inviteCode ? '공유' : '발급·공유'}</Text>
+              </Pressable>
+              {inviteCode && (
+                <Pressable onPress={confirmRegenInvite} disabled={inviteBusy} hitSlop={8} style={st.inviteRegenBtn}>
+                  <Icon name="refresh" size={16} color={C.sub} />
+                </Pressable>
+              )}
+            </View>
+          </View>
+        )}
+
       </ScrollView>
 
       {/* ── Error banner ──────────────────────────────────────────────── */}
@@ -591,6 +674,14 @@ const st = StyleSheet.create({
 
   // Member list
   memberList:     { backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 18, overflow: 'hidden' },
+
+  // 초대 (S-batch2 #8)
+  inviteCard:     { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 18, padding: 14 },
+  inviteLbl:      { fontSize: 11, fontWeight: '600', color: C.faint, letterSpacing: -0.1 },
+  inviteCode:     { fontSize: 20, fontWeight: '800', color: C.text, letterSpacing: 2, marginTop: 2, fontVariant: ['tabular-nums'] },
+  inviteShareBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: C.accent, borderRadius: R.pill, paddingHorizontal: 14, height: 38 },
+  inviteShareTxt: { fontSize: 13, fontWeight: '800', color: C.accentText, letterSpacing: -0.2 },
+  inviteRegenBtn: { width: 38, height: 38, borderRadius: R.pill, borderWidth: 1, borderColor: C.border, alignItems: 'center', justifyContent: 'center' },
   memberRow:      { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 14 },
   memberRowOwner: { backgroundColor: C.accentDim },
   memberRank:     { fontSize: 13, fontWeight: '700', color: C.faint, width: 22, textAlign: 'center', flexShrink: 0 },

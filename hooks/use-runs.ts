@@ -2,12 +2,14 @@
 // Supabase reads, the audit's grandfather exception #1). Signatures and
 // consumer contracts unchanged. Auth stays Supabase (architecture rule).
 // History cap: /api/runs takes limit only (offset ignored server-side) —
-// limit=100 covers current scale; pagination ask logged in TODO.
+// Cursor-paged (S-batch2 #9): RUNS_PAGE_SIZE per page, before= for older.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { ApiError, apiFetch } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
+
+const RUNS_PAGE_SIZE = 50;
 
 export type RunSplit = {
   km: number;             // cumulative km mark (1.0, 2.0, …; partial = total)
@@ -54,12 +56,17 @@ export type Run = {
 export function useRuns() {
   const [runs, setRuns]           = useState<Run[]>([]);
   const [loading, setLoading]     = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore]     = useState(true);
   const [error, setError]         = useState<string | null>(null);
   const [signedOut, setSignedOut] = useState(false);
   const [key, setKey]             = useState(0);
   // SWR-lite (2026-07-08): mirrors `runs` so the effect can tell a true
   // first load from a focus-refetch without depending on state.
   const hasDataRef = useRef(false);
+  const runsRef = useRef<Run[]>([]);
+  runsRef.current = runs;
+  const loadingMoreRef = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -82,9 +89,18 @@ export function useRuns() {
       }
 
       try {
-        const rows = await apiFetch<Run[]>('/api/runs?limit=100');
+        const rows = await apiFetch<Run[]>(`/api/runs?limit=${RUNS_PAGE_SIZE}`);
         if (cancelled) return;
-        setRuns(rows); // server returns 최신순 — same order as the legacy read
+        // Focus-refetch keeps paged-in older items: fresh first page wins,
+        // existing rows beyond it are re-appended (dedup by id).
+        setRuns(prev => {
+          const seen = new Set(rows.map(r => r.id));
+          return [...rows, ...prev.filter(r => !seen.has(r.id))];
+        });
+        // hasMore only re-arms from the first page when nothing older was
+        // already loaded (a short first page after paging just means the
+        // page boundary moved, not that history shrank)
+        if (runsRef.current.length <= rows.length) setHasMore(rows.length === RUNS_PAGE_SIZE);
         hasDataRef.current = rows.length > 0;
       } catch (e: unknown) {
         // Silent-refetch failure keeps the stale list; error state is for
@@ -98,8 +114,33 @@ export function useRuns() {
     return () => { cancelled = true; };
   }, [key]);
 
+  // Cursor pagination (guide §108): before=<last ran_at>, ISO+tz — the '+'
+  // MUST be URL-encoded (encodeURIComponent, 정석 per contract); a page
+  // shorter than limit means end-of-history.
+  const loadMore = useCallback(async () => {
+    if (loadingMoreRef.current || !hasDataRef.current) return;
+    const last = runsRef.current[runsRef.current.length - 1];
+    if (!last) return;
+    loadingMoreRef.current = true;
+    setLoadingMore(true);
+    try {
+      const rows = await apiFetch<Run[]>(
+        `/api/runs?limit=${RUNS_PAGE_SIZE}&before=${encodeURIComponent(last.ran_at)}`,
+      );
+      setRuns(prev => {
+        const seen = new Set(prev.map(r => r.id));
+        return [...prev, ...rows.filter(r => !seen.has(r.id))];
+      });
+      setHasMore(rows.length === RUNS_PAGE_SIZE);
+    } catch { /* footer retry = scroll again; list stays intact */ }
+    finally {
+      loadingMoreRef.current = false;
+      setLoadingMore(false);
+    }
+  }, []);
+
   const refetch = useCallback(() => setKey(k => k + 1), []);
-  return { runs, loading, error, signedOut, refetch };
+  return { runs, loading, loadingMore, hasMore, loadMore, error, signedOut, refetch };
 }
 
 // ─── useRunDetail — single run by id ─────────────────────────────────────────

@@ -43,6 +43,13 @@ export type InsightPlanItem = {
   body: string;
 };
 
+export type PaceTrendPoint = {
+  year: number;
+  month: number;
+  /** null = no runs that month → line GAP, never zero (guide §127). */
+  avg_pace_sec_per_km: number | null;
+};
+
 export type MonthlyInsight = {
   year: number;
   month: number;
@@ -50,6 +57,9 @@ export type MonthlyInsight = {
   weeks: InsightWeek[];
   records: InsightRecord[];
   pattern: InsightPattern;
+  /** 최근 3개월 (조회 월 포함, 오래된 달부터; BE 9e61bef) — last point ==
+      stats.avg_pace_sec_per_km by contract. */
+  pace_trend: PaceTrendPoint[];
   // NOTE (2026-07-09, owner + backend decision): the ai block is typed
   // because the server still sends it, but the app deliberately renders
   // NONE of it (coaching card + 추천 플랜 removed from the report screen;

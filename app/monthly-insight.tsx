@@ -25,11 +25,12 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Svg, { Circle, Line } from 'react-native-svg';
 
 import { MonthPicker } from '@/components/month-picker';
 import { Icon } from '@/components/ui';
 import { ApiError } from '@/lib/api';
-import { getMonthlyInsight, type MonthlyInsight } from '@/lib/insights-api';
+import { getMonthlyInsight, type MonthlyInsight, type PaceTrendPoint } from '@/lib/insights-api';
 import { distUnit, fmtDist, fmtDuration, fmtPaceIn, paceUnit } from '@/lib/run-format';
 import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
 import { useSettings } from '@/store/use-settings';
@@ -63,6 +64,49 @@ function SectionCard({ title, hint, children }: { title: string; hint?: string; 
       <Text style={st.sectionTitle}>{title}</Text>
       <View style={[st.card, shadows.sm]}>{children}</View>
       {hint ? <Text style={st.sectionHint}>{hint}</Text> : null}
+    </View>
+  );
+}
+
+// ─── 페이스 추이 (3-point line, gap on null months) ────────────────────────────
+
+function PaceTrendChart({ points, units }: { points: PaceTrendPoint[]; units: 'km' | 'mi' }) {
+  const W = 300, H = 64, PAD = 12;
+  const nums = points.map(p => p.avg_pace_sec_per_km).filter((v): v is number => v != null);
+  const min = Math.min(...nums), max = Math.max(...nums);
+  const x = (i: number) => PAD + (i * (W - 2 * PAD)) / Math.max(1, points.length - 1);
+  // Faster pace (lower sec) draws LOWER — "아래일수록 빨라요" (hint copy)
+  const y = (v: number) => (max === min ? H / 2 : PAD + ((v - min) / (max - min)) * (H - 2 * PAD));
+
+  // Line segments only between ADJACENT non-null months (null = gap, §127)
+  const segments: { x1: number; y1: number; x2: number; y2: number }[] = [];
+  for (let i = 0; i < points.length - 1; i++) {
+    const a = points[i].avg_pace_sec_per_km, b = points[i + 1].avg_pace_sec_per_km;
+    if (a != null && b != null) segments.push({ x1: x(i), y1: y(a), x2: x(i + 1), y2: y(b) });
+  }
+
+  return (
+    <View>
+      <Svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none">
+        {segments.map((s, i) => (
+          <Line key={i} x1={s.x1} y1={s.y1} x2={s.x2} y2={s.y2} stroke={C.accent} strokeWidth={2.5} strokeLinecap="round" />
+        ))}
+        {points.map((p, i) => p.avg_pace_sec_per_km != null && (
+          <Circle key={`d${i}`} cx={x(i)} cy={y(p.avg_pace_sec_per_km)} r={4}
+            fill={i === points.length - 1 ? C.accent : C.surface}
+            stroke={C.accent} strokeWidth={2} />
+        ))}
+      </Svg>
+      <View style={st.trendLabels}>
+        {points.map((p, i) => (
+          <View key={i} style={{ flex: 1, alignItems: i === 0 ? 'flex-start' : i === points.length - 1 ? 'flex-end' : 'center' }}>
+            <Text style={st.trendMonth}>{p.month}월</Text>
+            <Text style={[st.trendPace, p.avg_pace_sec_per_km == null && { color: C.faint, fontWeight: '600' }]}>
+              {p.avg_pace_sec_per_km != null ? fmtPaceIn(p.avg_pace_sec_per_km, units) : '—'}
+            </Text>
+          </View>
+        ))}
+      </View>
     </View>
   );
 }
@@ -287,6 +331,17 @@ export default function MonthlyInsightScreen() {
             </View>
           </SectionCard>
 
+          {/* 페이스 추이 (S-batch2 #5) — the payload IS the 시안's 라인 차트
+              at 3-point resolution (최근 3개월, nullable per guide §127:
+              null = line GAP, never zero). Line-with-labels chosen over a
+              delta stat: a delta would drop the contract's gap semantics.
+              Hidden when all three months are null. */}
+          {(data.pace_trend ?? []).some(p => p.avg_pace_sec_per_km != null) && (
+            <SectionCard title="페이스 추이" hint="최근 3개월 평균 페이스 — 아래일수록 빨라요.">
+              <PaceTrendChart points={data.pace_trend} units={units} />
+            </SectionCard>
+          )}
+
           {/* AI 코칭/추천 플랜: REMOVED (owner + backend decision 2026-07-09).
               The server still sends the ai block (typed in insights-api.ts);
               we deliberately don't render it. Replacement content
@@ -327,6 +382,9 @@ const st = StyleSheet.create({
 
   sectionTitle: { fontSize: 16.5, fontWeight: '800', letterSpacing: -0.4, color: C.text, paddingBottom: 12, paddingHorizontal: 2 },
   sectionHint:  { fontSize: 11.5, color: C.faint, letterSpacing: -0.2, lineHeight: 17, paddingTop: 9, paddingHorizontal: 6 },
+  trendLabels:  { flexDirection: 'row', marginTop: 10 },
+  trendMonth:   { fontSize: 11, color: C.faint, letterSpacing: -0.2 },
+  trendPace:    { fontSize: 14, fontWeight: '700', color: C.text, letterSpacing: -0.3, marginTop: 2, fontVariant: ['tabular-nums'] },
   card:         { backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 18, padding: 16 },
 
   prGrid:  { flexDirection: 'row', flexWrap: 'wrap', gap: 14, justifyContent: 'space-between' },

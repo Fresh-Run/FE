@@ -230,6 +230,33 @@ export async function getCrewRanking(crewId: string): Promise<CrewRankingEntry[]
   return apiFetch<CrewRankingEntry[]>(`/api/crews/${crewId}/ranking`);
 }
 
+// ─── Invite code (owner-only, guide §204) ─────────────────────────────────────
+// 8 chars A-Z/2-9 (no I/O/0/1). GET 404 = not yet issued → POST issues.
+// POST REGENERATES: the old code (and every shared link carrying it) dies
+// immediately — the UI's confirm must say so.
+
+export async function getInviteCode(crewId: string): Promise<string | null> {
+  try {
+    const r = await apiFetch<{ code: string }>(`/api/crews/${crewId}/invite`);
+    return r.code;
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 404) return null; // 미발급
+    throw e;
+  }
+}
+
+export async function issueInviteCode(crewId: string): Promise<string> {
+  const r = await apiFetch<{ code: string }>(`/api/crews/${crewId}/invite`, { method: 'POST' });
+  return r.code;
+}
+
+/** name/area/description 부분일치 (guide §188) — no region params: search is
+    GLOBAL, the browse region filter doesn't apply to results. */
+export async function searchCrews(q: string): Promise<Crew[]> {
+  const rows = await apiFetch<ServerCrew[]>(`/api/crews/search?q=${encodeURIComponent(q)}`);
+  return rows.map(r => mapCrew(r));
+}
+
 /** Owner-only (403 otherwise — probed 2026-07-15): hand ownership to a
     member. `leave_after` keeps the old owner as a regular member when false
     (our UI's semantics). Body shape per BE TransferRequest. */

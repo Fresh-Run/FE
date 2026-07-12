@@ -4,6 +4,7 @@ import React, { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -286,9 +287,17 @@ function RunRow({ run }: { run: Run }) {
       style={({ pressed }) => [st.runRow, shadows.sm, pressed && { opacity: 0.75 }]}
     >
       <View style={st.mapThumb}>
-        {/* Route-shaped mini when a thumb exists (ledger ruling: actual
-            geometry in the stylized language); seed art on trackless */}
-        <MiniMap seed={run.id} height={62} borderRadius={14} polyline={run.polyline_thumb ?? undefined} />
+        {/* photo_thumb (S-batch2 #6): the first photo takes the 62px tile
+            when present (photo > map priority, photo_thumb↔polyline_thumb
+            대칭 per guide §108; signed URL — used directly, never cached).
+            INSTEAD-of choice: a second 62px tile beside the mini doesn't
+            fit the current row; the ~110px redesign docket revisits.
+            Otherwise: route-shaped mini (thumb) / seed art (trackless). */}
+        {run.photo_thumb ? (
+          <Image source={{ uri: run.photo_thumb }} style={st.photoThumb} />
+        ) : (
+          <MiniMap seed={run.id} height={62} borderRadius={14} polyline={run.polyline_thumb ?? undefined} />
+        )}
       </View>
       <View style={{ flex: 1, minWidth: 0 }}>
         <View style={st.runRowTop}>
@@ -312,7 +321,7 @@ function RunRow({ run }: { run: Run }) {
 export default function RecordsScreen() {
   const insets = useSafeAreaInsets();
   const tabBarInset = useTabBarInset();
-  const { runs, loading, error, signedOut, refetch } = useRuns();
+  const { runs, loading, loadingMore, hasMore, loadMore, error, signedOut, refetch } = useRuns();
 
   // Tier for the AI 월간 분석 card (I1)
   const isPremium = useQuota(s => s.isPremium);
@@ -365,6 +374,13 @@ export default function RecordsScreen() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: tabBarInset }}
+        // Infinite scroll (#9): near-bottom triggers the next cursor page
+        onScroll={({ nativeEvent: e }) => {
+          if (hasMore && e.contentOffset.y + e.layoutMeasurement.height > e.contentSize.height - 600) {
+            loadMore();
+          }
+        }}
+        scrollEventThrottle={120}
       >
         <Text style={[st.screenTitle, st.headerPad]}>기록</Text>
 
@@ -390,6 +406,12 @@ export default function RecordsScreen() {
             <View style={{ paddingHorizontal: S.gutter, gap: 12 }}>
               {runs.map(run => <RunRow key={run.id} run={run} />)}
             </View>
+            {/* Pagination footer: loading spinner / end-of-history */}
+            {loadingMore ? (
+              <ActivityIndicator size="small" color={C.faint} style={{ paddingVertical: 18 }} />
+            ) : !hasMore && runs.length > 0 ? (
+              <Text style={st.endNote}>모든 기록을 다 봤어요</Text>
+            ) : null}
           </>
         )}
       </ScrollView>
@@ -444,7 +466,9 @@ const st = StyleSheet.create({
 
   // Run row
   runRow:    { flexDirection: 'row', alignItems: 'center', gap: 13, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: R.xl, padding: 12 },
-  mapThumb:  { width: 62, flexShrink: 0 },
+  mapThumb:   { width: 62, flexShrink: 0 },
+  photoThumb: { width: 62, height: 62, borderRadius: 14 },
+  endNote:    { textAlign: 'center', fontSize: 12, color: C.faint, letterSpacing: -0.2, paddingVertical: 18 },
   runRowTop: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 },
   runTitle:  { flex: 1, fontSize: 15, fontWeight: '700', letterSpacing: -0.4, color: C.text },
   runDate:   { fontSize: 11.5, color: C.faint, flexShrink: 0 },

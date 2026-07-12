@@ -3,7 +3,7 @@
  */
 import { useFocusEffect } from '@react-navigation/native';
 import { router } from 'expo-router';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -30,7 +30,7 @@ import {
   type Crew,
 } from '@/hooks/use-crews';
 import { useCurrentLocation } from '@/hooks/use-current-location';
-import { getMyJoinRequests } from '@/lib/crews-api';
+import { getMyJoinRequests, searchCrews } from '@/lib/crews-api';
 import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
 import { getCrewFilter, type CrewLocationFilter } from '@/store/crew-filter';
 import { useJoinRequests } from '@/store/join-requests';
@@ -268,6 +268,29 @@ function DiscoverTab() {
     refetch();
   }, [refetch]));
 
+  // 크루 검색 (S-batch2 #7): text search via GET /crews/search — the
+  // start-picker pattern (300ms debounce + seq stale-guard). COMPOSITION:
+  // search OVERRIDES the region filter (the endpoint has no region params —
+  // global name/area/description 부분일치); clearing the query returns to
+  // the filtered browse. Joined-crew exclusion applies to results too.
+  const [query, setQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<Crew[] | null>(null);
+  const searchSeq = useRef(0);
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    const q = query.trim();
+    if (!q) { searchSeq.current++; setSearchResults(null); return; }
+    const seq = ++searchSeq.current;
+    debounceTimer.current = setTimeout(() => {
+      searchCrews(q)
+        .then(rows => { if (searchSeq.current === seq) setSearchResults(rows); })
+        .catch(() => { if (searchSeq.current === seq) setSearchResults([]); });
+    }, 300);
+    return () => { if (debounceTimer.current) clearTimeout(debounceTimer.current); };
+  }, [query]);
+  const searching = query.trim().length > 0;
+
   if (loading) return <LoadingState />;
   if (error)   return <ErrorState message={error} onRetry={refetch} />;
 
@@ -276,7 +299,7 @@ function DiscoverTab() {
   // carries no joined field (probed 2026-07-14), so the useMyCrews set we
   // already fetch is the source. The at-scale server param stays a docketed
   // ask. List = server order (distance-ascending when lat/lng were sent).
-  const visible = crews.filter(c => !memberIds.has(c.id));
+  const visible = (searching ? (searchResults ?? []) : crews).filter(c => !memberIds.has(c.id));
 
   async function handleJoin(crew: Crew) {
     try {
@@ -310,25 +333,57 @@ function DiscoverTab() {
       )}
       ListHeaderComponent={
         <View>
-          <LocationCard
-            filter={locFilter}
-            placeName={placeName}
-            onPress={() => router.push('/region-picker' as never)}
-          />
-          <View style={st.toggleRow}>
-            <Text style={st.toggleCount}>{visible.length}개 크루</Text>
-            <Pressable onPress={() => setShowFull(v => !v)} style={st.toggleBtn}>
-              <Text style={[st.toggleLabel, { color: showFull ? C.accentGrn : C.sub }]}>
-                {showFull ? '가입 가능한 크루만 보기' : '모집 마감 크루도 보기'}
-              </Text>
-              <View style={[st.switch, { backgroundColor: showFull ? C.accent : C.border }]}>
-                <View style={[st.switchThumb, { left: showFull ? 18 : 2 }]} />
-              </View>
-            </Pressable>
+          {/* 크루 검색 (#7) — search overrides the region filter (global) */}
+          <View style={st.searchBar}>
+            <Icon name="search" size={16} color={C.faint} />
+            <TextInput
+              value={query}
+              onChangeText={setQuery}
+              placeholder="크루 이름·지역·소개 검색"
+              placeholderTextColor={C.faint}
+              autoCorrect={false}
+              returnKeyType="search"
+              style={st.searchInput}
+            />
+            {query.length > 0 && (
+              <Pressable onPress={() => setQuery('')} hitSlop={8}>
+                <Icon name="close-circle" size={16} color={C.faint} />
+              </Pressable>
+            )}
           </View>
+          {searching ? (
+            <View style={st.toggleRow}>
+              <Text style={st.toggleCount}>
+                {searchResults === null ? '검색 중…' : `검색 결과 ${visible.length}개`}
+              </Text>
+            </View>
+          ) : (
+            <>
+              <LocationCard
+                filter={locFilter}
+                placeName={placeName}
+                onPress={() => router.push('/region-picker' as never)}
+              />
+              <View style={st.toggleRow}>
+                <Text style={st.toggleCount}>{visible.length}개 크루</Text>
+                <Pressable onPress={() => setShowFull(v => !v)} style={st.toggleBtn}>
+                  <Text style={[st.toggleLabel, { color: showFull ? C.accentGrn : C.sub }]}>
+                    {showFull ? '가입 가능한 크루만 보기' : '모집 마감 크루도 보기'}
+                  </Text>
+                  <View style={[st.switch, { backgroundColor: showFull ? C.accent : C.border }]}>
+                    <View style={[st.switchThumb, { left: showFull ? 18 : 2 }]} />
+                  </View>
+                </Pressable>
+              </View>
+            </>
+          )}
         </View>
       }
-      ListEmptyComponent={<EmptyState text="조건에 맞는 크루가 없어요" />}
+      ListEmptyComponent={
+        searching && searchResults === null
+          ? <ActivityIndicator size="small" color={C.faint} style={{ paddingTop: 40 }} />
+          : <EmptyState text={searching ? '검색 결과가 없어요' : '조건에 맞는 크루가 없어요'} />
+      }
       contentContainerStyle={{ paddingHorizontal: S.gutter, paddingBottom: tabBarInset }}
       ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
       showsVerticalScrollIndicator={false}
@@ -627,6 +682,8 @@ const st = StyleSheet.create({
 
   // 검색 위치 card (replaced the level chips, per canvas)
   locCard:  { flexDirection: 'row', alignItems: 'center', gap: 11, marginTop: 14, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 16, padding: 12 },
+  searchBar:   { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 14, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 14, paddingHorizontal: 12, height: 44 },
+  searchInput: { flex: 1, fontSize: 14.5, fontWeight: '600', color: C.text, letterSpacing: -0.3, paddingVertical: 0 },
   locIcon:  { width: 34, height: 34, borderRadius: 10, backgroundColor: C.accentDim, alignItems: 'center', justifyContent: 'center' },
   locLabel: { fontSize: 10.5, fontWeight: '600', color: C.faint, letterSpacing: -0.1 },
   locValue: { fontSize: 14, fontWeight: '700', color: C.text, letterSpacing: -0.3, marginTop: 2 },
