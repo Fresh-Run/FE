@@ -133,7 +133,7 @@ export default function UserProfileScreen() {
   const insets = useSafeAreaInsets();
   const { uid, nickname: nickParam } = useLocalSearchParams<{ uid: string; nickname?: string }>();
   const units = useSettings(s => s.settings.units);
-  const { profile, runs, loading, error, refetch } = useUserProfile(uid ?? null);
+  const { profile, identity, runs, loading, error, refetch } = useUserProfile(uid ?? null);
 
   // Optimistic overlays — follow state + per-run kudos.
   // v2 (팔로우 승인제): the profile payload carries no pending marker
@@ -314,7 +314,22 @@ export default function UserProfileScreen() {
       </View>
 
       {loading ? (
-        <View style={st.centered}><ActivityIndicator size="large" color={C.accent} /></View>
+        identity ? (
+          /* #8 render split: cached identity paints the header instantly
+             (lock-served fields only — leak-free); the spinner confines to
+             the body below. Counts/CTA/runs always arrive fresh. */
+          <View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, paddingHorizontal: S.gutter, paddingTop: 20 }}>
+              <Avatar name={identity.nickname} size={76} photoUrl={identity.avatar_url} />
+              <Text style={st.name} numberOfLines={1}>{identity.nickname}</Text>
+            </View>
+            <View style={[st.centered, { paddingTop: 60 }]}>
+              <ActivityIndicator size="large" color={C.accent} />
+            </View>
+          </View>
+        ) : (
+          <View style={st.centered}><ActivityIndicator size="large" color={C.accent} /></View>
+        )
       ) : error || !profile ? (
         <View style={st.centered}>
           <Icon name="warning-outline" size={36} color={C.faint} />

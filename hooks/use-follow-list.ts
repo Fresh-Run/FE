@@ -1,10 +1,18 @@
 // 팔로잉/팔로워 lists — both fetched in parallel (the tab labels need both
 // counts). Rows carry is_following for the per-row follow button.
+//
+// SWR-lite (#8): cached instant paint for MY OWN lists ONLY (per-uid key —
+// account-switch purity). Another user's lists are NEVER cached: they're
+// privacy-gated territory (her lock 404s/sanitizes them; a cached copy
+// would paint pre-lock rows after a visibility change).
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useState } from 'react';
 
 import { apiFetch } from '@/lib/api';
 import { useStore } from '@/store/use-store';
+
+const cacheKey = (uid: string) => `@fr_follows:${uid}`;
 
 export type FollowUser = {
   user_id: string;
@@ -28,23 +36,45 @@ export function useFollowList(overrideUid?: string | null) {
     const uid = overrideUid ?? session?.user.id;
     if (!uid) { setLoading(false); setError('로그인이 필요해요'); return; }
 
+    const isOwn = uid === session?.user.id;
     let cancelled = false;
-    setLoading(true);
     setError(null);
 
-    Promise.all([
-      apiFetch<FollowUser[]>(`/api/users/${uid}/following`),
-      apiFetch<FollowUser[]>(`/api/users/${uid}/followers`),
-    ])
-      .then(([fing, fers]) => {
+    let painted = false;
+    (async () => {
+      // 1) cache paint STRICTLY before the fetch starts — no stale-over-fresh race
+      if (isOwn) {
+        try {
+          const raw = await AsyncStorage.getItem(cacheKey(uid));
+          if (raw && !cancelled) {
+            const c = JSON.parse(raw) as { following: FollowUser[]; followers: FollowUser[] };
+            setFollowing(c.following ?? []);
+            setFollowers(c.followers ?? []);
+            setLoading(false);
+            painted = true;
+          }
+        } catch { /* hard load below */ }
+      }
+      if (!painted && !cancelled) setLoading(true);
+
+      // 2) server truth corrects
+      try {
+        const [fing, fers] = await Promise.all([
+          apiFetch<FollowUser[]>(`/api/users/${uid}/following`),
+          apiFetch<FollowUser[]>(`/api/users/${uid}/followers`),
+        ]);
         if (cancelled) return;
         setFollowing(fing);
         setFollowers(fers);
-      })
-      .catch((e: unknown) => {
-        if (!cancelled) setError(e instanceof Error ? e.message : '목록을 불러올 수 없어요');
-      })
-      .finally(() => { if (!cancelled) setLoading(false); });
+        if (isOwn) {
+          AsyncStorage.setItem(cacheKey(uid), JSON.stringify({ following: fing, followers: fers })).catch(() => {});
+        }
+      } catch (e: unknown) {
+        if (!cancelled && !painted) setError(e instanceof Error ? e.message : '목록을 불러올 수 없어요');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
 
     return () => { cancelled = true; };
   }, [overrideUid, session?.user.id, key]);

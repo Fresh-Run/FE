@@ -9,9 +9,17 @@
 // the screen's error state. (Gate staging-dark as of 2026-07-26 — locked
 // arrives false until her deploy; this path is forward-wired.)
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useState } from 'react';
 
 import { apiFetch } from '@/lib/api';
+
+// identity-only cache (#8 correction): nickname/avatar are lock-served to
+// every viewer — the ONLY leak-free cacheable subset. Target-keyed (not
+// viewer-keyed): the fields are identical for all viewers by her contract.
+// Counts/bio/runs/flags are NEVER cached (all change under lock).
+const identKey = (uid: string) => `@fr_uident:${uid}`;
+export type CachedIdentity = { nickname: string; avatar_url: string | null };
 
 export type UserProfile = {
   user_id: string;
@@ -52,6 +60,7 @@ export type UserRun = {
 
 export function useUserProfile(uid: string | null) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [identity, setIdentity] = useState<CachedIdentity | null>(null);
   const [runs, setRuns]       = useState<UserRun[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState<string | null>(null);
@@ -62,13 +71,23 @@ export function useUserProfile(uid: string | null) {
     let cancelled = false;
     setLoading(true);
     setError(null);
+    // instant identity paint (header only — the body stays fresh-loading)
+    AsyncStorage.getItem(identKey(uid))
+      .then(raw => { if (raw && !cancelled) setIdentity(JSON.parse(raw)); })
+      .catch(() => {});
     Promise.all([
       apiFetch<UserProfile>(`/api/users/${uid}/profile`),
       // non-fatal: locked accounts 404 here by contract; any runs hiccup
       // degrades to an empty list instead of killing the profile
       apiFetch<UserRun[]>(`/api/users/${uid}/runs?limit=50`).catch(() => [] as UserRun[]),
     ])
-      .then(([p, r]) => { if (!cancelled) { setProfile(p); setRuns(r); } })
+      .then(([p, r]) => {
+        if (cancelled) return;
+        setProfile(p);
+        setRuns(r);
+        // write on EVERY payload shape — locked responses serve both fields
+        AsyncStorage.setItem(identKey(uid), JSON.stringify({ nickname: p.nickname, avatar_url: p.avatar_url })).catch(() => {});
+      })
       .catch((e: unknown) => {
         if (!cancelled) setError(e instanceof Error ? e.message : '프로필을 불러올 수 없어요');
       })
@@ -77,5 +96,5 @@ export function useUserProfile(uid: string | null) {
   }, [uid, key]);
 
   const refetch = useCallback(() => setKey(k => k + 1), []);
-  return { profile, runs, loading, error, refetch };
+  return { profile, identity, runs, loading, error, refetch };
 }

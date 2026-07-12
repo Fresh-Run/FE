@@ -1,12 +1,18 @@
 // 내 프로필 (social, own-view) — parallel fetch of the three sources:
 // profile fields, follow counts, 활동 count + the own-runs list.
-// Runs are fetched via apiFetch directly (NOT lib/runs-api — that file is
-// uncommitted item-17 territory; this hook must commit alone).
+//
+// SWR-lite (#8): per-user AsyncStorage cache → instant paint on revisit →
+// silent server refetch corrects. OWN data end-to-end (profile + own runs)
+// — no privacy interaction; the account-switch purity rule rides via the
+// per-uid cache key (the S2 bleed-fix precedent).
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useState } from 'react';
 
 import { apiFetch } from '@/lib/api';
 import { useStore } from '@/store/use-store';
+
+const cacheKey = (uid: string) => `@fr_myprofile:${uid}`;
 
 export type MyPublicProfile = {
   nickname: string;
@@ -48,10 +54,25 @@ export function useMyPublicProfile() {
     if (!uid) { setLoading(false); setError('로그인이 필요해요'); return; }
 
     let cancelled = false;
-    setLoading(true);
     setError(null);
 
     (async () => {
+      // 1) instant paint from this user's cache (silent-refetch below wins)
+      let painted = false;
+      try {
+        const raw = await AsyncStorage.getItem(cacheKey(uid));
+        if (raw && !cancelled) {
+          const c = JSON.parse(raw) as { profile: MyPublicProfile; runs: MyRun[] };
+          if (c.profile) {
+            setProfile(c.profile);
+            setRuns(c.runs ?? []);
+            setLoading(false);
+            painted = true;
+          }
+        }
+      } catch { /* unreadable cache — hard load below */ }
+      if (!painted && !cancelled) setLoading(true);
+
       try {
         const [me, pub, stats, runRows] = await Promise.all([
           apiFetch<ProfileResp>('/api/me/profile'),
@@ -60,17 +81,20 @@ export function useMyPublicProfile() {
           apiFetch<MyRun[]>('/api/runs?limit=50'),
         ]);
         if (cancelled) return;
-        setProfile({
+        const fresh: MyPublicProfile = {
           nickname:       me.nickname,
           avatarUrl:      me.avatar_url,
           bio:            me.bio,
           followingCount: pub.following_count,
           followerCount:  pub.follower_count,
           runCount:       stats.all_time.run_count,
-        });
+        };
+        setProfile(fresh);
         setRuns(runRows);
+        AsyncStorage.setItem(cacheKey(uid), JSON.stringify({ profile: fresh, runs: runRows })).catch(() => {});
       } catch (e: unknown) {
-        if (!cancelled) setError(e instanceof Error ? e.message : '프로필을 불러올 수 없어요');
+        // cached paint stands on a refetch miss — error only on a blank screen
+        if (!cancelled && !painted) setError(e instanceof Error ? e.message : '프로필을 불러올 수 없어요');
       } finally {
         if (!cancelled) setLoading(false);
       }
