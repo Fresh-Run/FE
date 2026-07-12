@@ -4,8 +4,8 @@
  * from 저장 → 수고했어요 (run-result receives the already-saved response).
  *
  * Contract (BE 2af3715, live-probed): title ≤60 / notes ≤2000 / visibility
- * public|followers|private — all POST-time-only (no PATCH exists), which is
- * why composing happens BEFORE the save. Photo add: no endpoint → 준비 중.
+ * public|followers|private. Post-save editing now exists too (edit-run
+ * slice, PATCH /runs/{id}) — composing here remains the primary path. Photo add: no endpoint → 준비 중.
  *
  * Crash safety: the run + typed fields persist to AsyncStorage (store/
  * pending-run) — an app kill mid-compose is recoverable at next launch.
@@ -44,7 +44,7 @@ import { useSettings } from '@/store/use-settings';
 const MIN_SAVE_KM = 0.05; // 50m floor (owner spec, 2026-07-11 outing) — GPS noise can fake sub-50m "runs"
 const MAP_HIDE_BELOW_KM = 0.3;
 
-const VISIBILITY_OPTIONS: { value: RunVisibility; label: string; sub: string }[] = [
+export const VISIBILITY_OPTIONS: { value: RunVisibility; label: string; sub: string }[] = [
   { value: 'public',    label: '전체 공개', sub: '피드와 프로필에 공개' },
   { value: 'followers', label: '팔로워만',  sub: '팔로워에게만 보여요' },
   { value: 'private',   label: '비공개',    sub: '나만 볼 수 있어요' },

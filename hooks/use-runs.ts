@@ -153,16 +153,23 @@ export function useRunDetail(runId: string | null) {
   const [error, setError]     = useState<string | null>(null);
   const [key, setKey]         = useState(0);
 
+  // SWR-lite (edit-run slice): refetches with data on screen run silently —
+  // the spinner and the run-reset are reserved for the true first load.
+  const hasDataRef = useRef(false);
+
   useEffect(() => {
     if (!runId) { setLoading(false); return; }
 
     let cancelled = false;
-    setLoading(true);
+    const firstLoad = !hasDataRef.current;
+    if (firstLoad) {
+      setLoading(true);
+      setRun(null);
+    }
     setError(null);
-    setRun(null);
 
     apiFetch<Run>(`/api/runs/${runId}`)
-      .then(row => { if (!cancelled) setRun(row); })
+      .then(row => { if (!cancelled) { setRun(row); hasDataRef.current = true; } })
       .catch((e: unknown) => {
         if (cancelled) return;
         setError(e instanceof ApiError && e.status === 404

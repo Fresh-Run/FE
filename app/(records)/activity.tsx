@@ -86,6 +86,10 @@ export default function ActivityScreen() {
     if (trackFailed) setTrackAttempt(a => a + 1);
   }, [trackFailed]));
 
+  // Refetch on focus (silent — useRunDetail's SWR-lite): returning from
+  // 러닝 편집 shows the new title/visibility/memo without a spinner flash
+  useFocusEffect(useCallback(() => { refetch(); }, [refetch]));
+
   // ── Loading ────────────────────────────────────────────────────────────────
   if (loading) {
     return (
@@ -151,13 +155,22 @@ export default function ActivityScreen() {
             style={[StyleSheet.absoluteFillObject, { paddingTop: insets.top + S.sm }]}
             pointerEvents="box-none"
           >
-            <Pressable
-              onPress={() => router.back()}
-              hitSlop={12}
-              style={[st.backBtn, { marginLeft: S.gutter }]}
-            >
-              <Icon name="arrow-back" size={20} color="#fff" />
-            </Pressable>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: S.gutter }}>
+              <Pressable onPress={() => router.back()} hitSlop={12} style={st.backBtn}>
+                <Icon name="arrow-back" size={20} color="#fff" />
+              </Pressable>
+              {/* 편집 (edit-run slice) — own-run screen by contract */}
+              <Pressable
+                onPress={() => router.push({
+                  pathname: '/(records)/edit-run' as never,
+                  params: { runId: run.id },
+                })}
+                hitSlop={12}
+                style={st.backBtn}
+              >
+                <Icon name="create-outline" size={19} color="#fff" />
+              </Pressable>
+            </View>
           </View>
         </View>
 

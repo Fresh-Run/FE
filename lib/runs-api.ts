@@ -68,6 +68,16 @@ function thinTrack(track: GpsPoint[]): GpsPoint[] {
 export const POSITIVE_TAGS = ['경치좋음', '노면좋음', '평탄함', '한적함', '적당한거리'] as const;
 export const NEGATIVE_TAGS = ['오르막많음', '신호등많음', '노면나쁨', '사람많음', '너무김', '너무짧음'] as const;
 
+/** 저장 후 편집 (BE RunUpdate, probed 2026-07-15): partial — sent fields
+    only; 거리·시간 불변; non-owner → 404 (hidden). List rows reflect the
+    edit server-side immediately (focus-refetch picks it up). */
+export function updateRun(
+  runId: string,
+  patch: { title?: string; visibility?: RunVisibility; notes?: string | null },
+): Promise<void> {
+  return apiFetch<void>(`/api/runs/${runId}`, { method: 'PATCH', body: patch });
+}
+
 export function saveRun(input: SaveRunInput): Promise<SavedRun> {
   // Send-side t sanitizer: heals tracks persisted before the capture-side
   // round (pending-run disk copies) and any other float leakage — the
