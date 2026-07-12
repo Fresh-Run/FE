@@ -34,9 +34,12 @@ export type PendingDraft = {
   title: string;
   memo: string;
   visibility: RunVisibility;
+  /** Local URIs, ALREADY re-encoded (EXIF-free) at pick time — crash-safe
+      like the text fields; uploaded after the run save (attach-after). */
+  photos: string[];
 };
 
-const EMPTY_DRAFT: PendingDraft = { title: '', memo: '', visibility: 'public' };
+const EMPTY_DRAFT: PendingDraft = { title: '', memo: '', visibility: 'public', photos: [] };
 
 let pending: PendingRun | null = null;
 let draft: PendingDraft = EMPTY_DRAFT;

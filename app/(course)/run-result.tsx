@@ -30,6 +30,7 @@ import { MiniMap } from '@/components/mini-map';
 import { PbCelebration } from '@/components/pb-celebration';
 import { Icon } from '@/components/ui';
 import { distUnit, fmtDist, fmtDuration, fmtPaceIn, paceUnit } from '@/lib/run-format';
+import { uploadRunPhotos } from '@/lib/run-photos';
 import {
   NEGATIVE_TAGS,
   POSITIVE_TAGS,
@@ -39,7 +40,7 @@ import {
   type SavedRun,
 } from '@/lib/runs-api';
 import { accentShadow, colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
-import { clearPendingRun, getPendingRun, getSavedResult } from '@/store/pending-run';
+import { clearPendingRun, getPendingDraft, getPendingRun, getSavedResult } from '@/store/pending-run';
 import { useSettings } from '@/store/use-settings';
 import { useStore } from '@/store/use-store';
 
@@ -98,6 +99,35 @@ export default function RunResultScreen() {
   }, [run, tooShort]);
 
   useEffect(() => { doSave(); }, [doSave]);
+
+  // ── 사진 attach-after (R2'): the run save NEVER waits on photos. Once we
+  // hold a run id, the ≤3 pre-re-encoded draft URIs upload sequentially
+  // (3-step cycle per photo, PATCH photos[] at the end). Failure is honest
+  // and local to this strip — the run stays saved, 다시 시도 re-runs the
+  // whole cycle (upload-urls re-issue, the PATCH replaces). ─────────────────
+  const [photoUris] = useState<string[]>(() => getPendingDraft().photos);
+  const [photoState, setPhotoState] = useState<'idle' | 'uploading' | 'done' | 'error'>('idle');
+  const [photoDone, setPhotoDone] = useState(0);
+  const photoStartedRef = useRef(false);
+
+  const doAttachPhotos = useCallback(async () => {
+    const runId = savedRunRef.current?.id;
+    if (!runId || photoUris.length === 0) return;
+    setPhotoState('uploading');
+    setPhotoDone(0);
+    try {
+      await uploadRunPhotos(runId, photoUris, done => setPhotoDone(Math.min(done, photoUris.length)));
+      setPhotoState('done');
+    } catch {
+      setPhotoState('error');
+    }
+  }, [photoUris]);
+
+  useEffect(() => {
+    if (saveState !== 'saved' || photoStartedRef.current) return;
+    photoStartedRef.current = true;
+    doAttachPhotos();
+  }, [saveState, doAttachPhotos]);
 
   // No pending run (e.g. cold navigation to this route) → nothing to show.
   useEffect(() => {
@@ -240,6 +270,31 @@ export default function RunResultScreen() {
             <View style={st.saveRow}>
               <Icon name="information-circle-outline" size={15} color={C.faint} />
               <Text style={st.saveRowTxt}>너무 짧은 러닝은 저장되지 않아요</Text>
+            </View>
+          )}
+
+          {/* ── 사진 attach strip — independent of the run's save state ── */}
+          {photoState === 'uploading' && (
+            <View style={st.saveRow}>
+              <ActivityIndicator size="small" color={C.faint} />
+              <Text style={st.saveRowTxt}>
+                사진 업로드 중 ({Math.min(photoDone + 1, photoUris.length)}/{photoUris.length})
+              </Text>
+            </View>
+          )}
+          {photoState === 'done' && (
+            <View style={st.saveRow}>
+              <Icon name="checkmark-circle" size={15} color={C.accentGrn} />
+              <Text style={[st.saveRowTxt, { color: C.accentGrn }]}>사진 {photoUris.length}장 첨부됨</Text>
+            </View>
+          )}
+          {photoState === 'error' && (
+            <View style={st.errCard}>
+              <Icon name="alert-circle-outline" size={15} color={C.danger} />
+              <Text style={st.errTxt} numberOfLines={2}>사진 업로드에 실패했어요 — 기록은 저장됐어요</Text>
+              <Pressable onPress={doAttachPhotos} style={st.retryBtn} hitSlop={6}>
+                <Text style={st.retryTxt}>다시 시도</Text>
+              </Pressable>
             </View>
           )}
 

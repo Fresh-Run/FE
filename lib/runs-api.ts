@@ -70,10 +70,11 @@ export const NEGATIVE_TAGS = ['오르막많음', '신호등많음', '노면나�
 
 /** 저장 후 편집 (BE RunUpdate, probed 2026-07-15): partial — sent fields
     only; 거리·시간 불변; non-owner → 404 (hidden). List rows reflect the
-    edit server-side immediately (focus-refetch picks it up). */
+    edit server-side immediately (focus-refetch picks it up). photos paths
+    must be {run_id}/-prefixed (422 otherwise); order = display order. */
 export function updateRun(
   runId: string,
-  patch: { title?: string; visibility?: RunVisibility; notes?: string | null },
+  patch: { title?: string; visibility?: RunVisibility; notes?: string | null; photos?: string[] },
 ): Promise<void> {
   return apiFetch<void>(`/api/runs/${runId}`, { method: 'PATCH', body: patch });
 }
@@ -85,11 +86,6 @@ export function saveRun(input: SaveRunInput): Promise<SavedRun> {
   const track = input.gpsTrack && input.gpsTrack.length >= 2
     ? thinTrack(input.gpsTrack).map(p => ({ ...p, t: Math.round(p.t) }))
     : null;
-  // TRACKLOG — sanctioned temp instrumentation (owner directive 2026-07-11):
-  // 교정워크 saved trackless with no client conditional explaining it (all
-  // save paths forward gpsTrack). One line to convict the next occurrence;
-  // strip once the mystery is closed.
-  console.log(`[savetrack] captured=${input.gpsTrack?.length ?? 0} sent=${track?.length ?? 0}`);
   return apiFetch<SavedRun>('/api/runs', {
     method: 'POST',
     body: {

@@ -5,18 +5,25 @@
  *
  * Contract (BE 2af3715, live-probed): title ≤60 / notes ≤2000 / visibility
  * public|followers|private. Post-save editing now exists too (edit-run
- * slice, PATCH /runs/{id}) — composing here remains the primary path. Photo add: no endpoint → 준비 중.
+ * slice, PATCH /runs/{id}) — composing here remains the primary path.
  *
- * Crash safety: the run + typed fields persist to AsyncStorage (store/
- * pending-run) — an app kill mid-compose is recoverable at next launch.
- * Back-nav is locked; the exits are 저장 or 러닝 삭제하기 (destructive).
+ * Crash safety: the run + typed fields (photos included) persist to
+ * AsyncStorage (store/pending-run) — an app kill mid-compose is recoverable
+ * at next launch. Back-nav is locked; the exits are 저장 or 러닝 삭제하기.
+ *
+ * 사진 추가 (R2', guide §110): pick ≤3 → EXIF-stripping re-encode AT PICK
+ * TIME (hard rule — storage keeps whatever we send, probed) → thumbnails
+ * here, upload happens post-save on 수고했어요 (photo failure never blocks
+ * the run save). 동영상 = v2 per the standing ruling — the row says 사진.
  */
+import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import { router, useNavigation } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Image,
   Modal,
   Pressable,
   ScrollView,
@@ -30,6 +37,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MiniMap } from '@/components/mini-map';
 import { Icon } from '@/components/ui';
 import { distUnit, fmtDist, fmtDuration, fmtPaceIn, fmtWhen, paceUnit, timeTitle } from '@/lib/run-format';
+import { MAX_RUN_PHOTOS, reencodeForUpload } from '@/lib/run-photos';
 import { saveRun, type RunVisibility } from '@/lib/runs-api';
 import { colors as C, radius as R, spacing as S } from '@/lib/theme';
 import {
@@ -63,6 +71,8 @@ export default function RunSaveScreen() {
   const [title, setTitle]           = useState(initialDraft.title);
   const [memo, setMemo]             = useState(initialDraft.memo);
   const [visibility, setVisibility] = useState<RunVisibility>(initialDraft.visibility);
+  const [photos, setPhotos]         = useState<string[]>(initialDraft.photos);
+  const [picking, setPicking]       = useState(false);
   const [sheetOpen, setSheetOpen]     = useState(false);
   const [discardOpen, setDiscardOpen] = useState(false);
   const [saving, setSaving]           = useState(false);
@@ -85,7 +95,33 @@ export default function RunSaveScreen() {
   }, []);
 
   // Crash safety: typed fields persist as they change
-  useEffect(() => { updatePendingDraft({ title, memo, visibility }); }, [title, memo, visibility]);
+  useEffect(() => { updatePendingDraft({ title, memo, visibility, photos }); }, [title, memo, visibility, photos]);
+
+  // 사진 추가: PHPicker (no allowsEditing — the 4s legacy-controller lesson),
+  // multi-select capped to the remaining slots. Every pick re-encodes
+  // immediately — the stored draft URI is already EXIF-free.
+  async function addPhotos() {
+    if (picking || photos.length >= MAX_RUN_PHOTOS) return;
+    setPicking(true);
+    try {
+      const res = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: 'images',
+        allowsMultipleSelection: true,
+        selectionLimit: MAX_RUN_PHOTOS - photos.length,
+        quality: 1, // full-quality handoff — our re-encode owns compression
+      });
+      if (res.canceled) return;
+      const clean: string[] = [];
+      for (const a of res.assets.slice(0, MAX_RUN_PHOTOS - photos.length)) {
+        clean.push(await reencodeForUpload(a.uri, a.width, a.height));
+      }
+      setPhotos(p => [...p, ...clean].slice(0, MAX_RUN_PHOTOS));
+    } catch {
+      Alert.alert('사진 추가 실패', '사진을 불러오지 못했어요. 다시 시도해 주세요.');
+    } finally {
+      setPicking(false);
+    }
+  }
 
   // No pending run (cold navigation) → home
   useEffect(() => { if (!run) router.replace('/(tabs)' as any); }, [run]);
@@ -222,17 +258,39 @@ export default function RunSaveScreen() {
           </View>
         )}
 
-        {/* ── Photo add (canvas: dashed square + label; no endpoint — 준비 중) ── */}
-        <View style={{ paddingHorizontal: S.gutter, paddingTop: 16 }}>
+        {/* ── 사진 추가 (canvas run-save.jsx: dashed square, 76px thumbs,
+                × badge; add square dims at 3) — photos only, video = v2 ── */}
+        <View style={[st.photoRow, { paddingHorizontal: S.gutter, paddingTop: 16 }]}>
           <Pressable
-            onPress={() => Alert.alert('준비 중', '사진·동영상 추가는 다음 업데이트에서 지원돼요.')}
-            style={({ pressed }) => [st.photoRow, { opacity: pressed ? 0.7 : 1 }]}
+            onPress={addPhotos}
+            disabled={picking || photos.length >= MAX_RUN_PHOTOS}
+            style={({ pressed }) => [
+              st.photoSquare,
+              { opacity: photos.length >= MAX_RUN_PHOTOS ? 0.45 : pressed ? 0.7 : 1 },
+            ]}
           >
-            <View style={st.photoSquare}>
-              <Icon name="add" size={22} color={C.faint} />
-            </View>
-            <Text style={st.photoTxt}>사진 · 동영상 추가</Text>
+            {picking
+              ? <ActivityIndicator size="small" color={C.faint} />
+              : <Icon name="add" size={22} color={C.faint} />}
           </Pressable>
+          {photos.length === 0 ? (
+            <Text style={st.photoTxt}>사진 추가</Text>
+          ) : (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1 }} contentContainerStyle={{ gap: 8, paddingTop: 6, paddingRight: 6 }}>
+              {photos.map(uri => (
+                <View key={uri} style={st.thumbWrap}>
+                  <Image source={{ uri }} style={st.thumb} />
+                  <Pressable
+                    onPress={() => setPhotos(p => p.filter(x => x !== uri))}
+                    hitSlop={8}
+                    style={st.thumbRemove}
+                  >
+                    <Icon name="close" size={11} color={C.bg} />
+                  </Pressable>
+                </View>
+              ))}
+            </ScrollView>
+          )}
         </View>
         <View style={st.hairline} />
 
@@ -348,6 +406,9 @@ const st = StyleSheet.create({
   photoRow:    { flexDirection: 'row', alignItems: 'center', gap: 12, paddingBottom: 16 },
   photoSquare: { width: 52, height: 52, borderRadius: 12, borderWidth: 1.5, borderColor: C.border, borderStyle: 'dashed', backgroundColor: C.surfaceAlt, alignItems: 'center', justifyContent: 'center' },
   photoTxt:    { fontSize: 14, fontWeight: '600', color: C.sub, letterSpacing: -0.2 },
+  thumbWrap:   { position: 'relative' },
+  thumb:       { width: 76, height: 76, borderRadius: 12, backgroundColor: C.surfaceAlt },
+  thumbRemove: { position: 'absolute', top: -6, right: -6, width: 20, height: 20, borderRadius: 999, borderWidth: 1.5, borderColor: C.surface, backgroundColor: C.text, alignItems: 'center', justifyContent: 'center' },
 
   memoInput: { minHeight: 76, fontSize: 14.5, color: C.text, letterSpacing: -0.2, lineHeight: 21, textAlignVertical: 'top', paddingVertical: 14 },
 
