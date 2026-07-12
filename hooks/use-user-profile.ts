@@ -1,6 +1,13 @@
 // 타인 프로필 — parallel fetch of the public profile + visibility-filtered
 // runs (server filters by viewer; the 공개 framing is honest here).
 // Shapes staging-probed 2026-07-08.
+//
+// 비공개 프로필 v1 (⑪): the profile response carries `locked` — when her
+// gate is live, a locked account's runs GET is a 404 BY CONTRACT ("more
+// restrictive wins", run-level visibility included). The runs fetch is
+// therefore NON-FATAL: it degrades to [] and only the profile fetch drives
+// the screen's error state. (Gate staging-dark as of 2026-07-26 — locked
+// arrives false until her deploy; this path is forward-wired.)
 
 import { useCallback, useEffect, useState } from 'react';
 
@@ -12,11 +19,13 @@ export type UserProfile = {
   avatar_url: string | null;
   bio: string | null;
   tier: string;
-  follower_count: number;
-  following_count: number;
+  follower_count: number;   // zeroed by the server when locked (her contract)
+  following_count: number;  // zeroed by the server when locked
   is_following: boolean;
   is_followed_by: boolean;
-  public_run_count: number;
+  public_run_count: number; // zeroed by the server when locked
+  visibility: 'public' | 'followers' | 'private';
+  locked: boolean;          // true = non-follower viewing a gated account
 };
 
 export type UserRun = {
@@ -50,7 +59,9 @@ export function useUserProfile(uid: string | null) {
     setError(null);
     Promise.all([
       apiFetch<UserProfile>(`/api/users/${uid}/profile`),
-      apiFetch<UserRun[]>(`/api/users/${uid}/runs?limit=50`),
+      // non-fatal: locked accounts 404 here by contract; any runs hiccup
+      // degrades to an empty list instead of killing the profile
+      apiFetch<UserRun[]>(`/api/users/${uid}/runs?limit=50`).catch(() => [] as UserRun[]),
     ])
       .then(([p, r]) => { if (!cancelled) { setProfile(p); setRuns(r); } })
       .catch((e: unknown) => {

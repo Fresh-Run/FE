@@ -15,6 +15,7 @@ export type ProfileResponse = {
   bio: string | null;
   tier: string;
   visibility: ProfileVisibility;
+  follow_approval: boolean; // v2 팔로우 승인제 (BE 610c7f3)
   created_at: string;
   updated_at: string;
 };
@@ -28,6 +29,28 @@ export function updateNickname(nickname: string): Promise<ProfileResponse> {
   return apiFetch<ProfileResponse>('/api/me/profile', {
     method: 'PATCH',
     body: { nickname },
+  });
+}
+
+// ─── 팔로우 승인제 (v2, BE 610c7f3 — probed live 2026-07-13) ─────────────────
+
+export type FollowRequestItem = {
+  user_id: string;
+  nickname: string | null;   // null (탈퇴/프로필 없음) → '러너' fallback
+  avatar_url: string | null;
+  followed_at: string;
+  is_following: boolean;     // do I follow the requester back
+};
+
+/** 내게 온 팔로우 요청 목록 (승인제 ON일 때 쌓임). */
+export function listFollowRequests(): Promise<FollowRequestItem[]> {
+  return apiFetch<FollowRequestItem[]>('/api/me/follow-requests');
+}
+
+/** 승인(follows 생성+알림) / 거절(무알림). 없음/이미 처리 → 404. */
+export function respondFollowRequest(requesterId: string, approve: boolean): Promise<void> {
+  return apiFetch<void>(`/api/me/follow-requests/${requesterId}`, {
+    method: 'PATCH', body: { approve },
   });
 }
 
@@ -50,6 +73,7 @@ export function updateProfile(input: {
   height_cm?: number | null;
   avatar_url?: string | null;
   visibility?: ProfileVisibility;
+  follow_approval?: boolean;
 }, timeoutMs?: number): Promise<ProfileResponse> {
   return apiFetch<ProfileResponse>('/api/me/profile', { method: 'PATCH', body: input, timeoutMs });
 }

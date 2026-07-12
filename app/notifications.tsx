@@ -66,6 +66,10 @@ const TYPE_META: Record<string, Meta> = {
   // 10th type, discovered live 2026-07-07 (ships with her run-comments batch)
   run_commented:       { tag: '댓글',     tone: C.accentGrn, icon: 'avatar', copy: '님이 내 러닝에 댓글을 남겼어요' },
   user_followed:       { tag: '팔로우',   tone: CREW_BLUE,   icon: 'avatar', copy: '님이 회원님을 팔로우하기 시작했어요' },
+  // v2 승인제 (BE 610c7f3) — was falling through to FALLBACK_META, generic
+  // and inert (the dropped-type bug, 2026-07-13). payload is null by
+  // contract → the deep-link target is the 팔로우 요청 inbox LIST.
+  follow_requested:    { tag: '팔로우 요청', tone: CREW_BLUE, icon: 'avatar', copy: '님이 팔로우를 요청했어요' },
   crew_joined:         { tag: '크루',     tone: CREW_BLUE,   icon: { name: 'people-outline',    color: CREW_BLUE,  bg: CREW_BLUE + '22' },  copy: '님이 크루에 가입했어요' },
   join_requested:      { tag: '크루 신청', tone: CREW_BLUE,   icon: { name: 'people-outline',    color: CREW_BLUE,  bg: CREW_BLUE + '22' },  copy: '님이 크루 가입을 신청했어요' },
   join_approved:       { tag: '크루 승인', tone: CREW_BLUE,   icon: { name: 'people-outline',    color: CREW_BLUE,  bg: CREW_BLUE + '22' },  copy: '님이 크루 가입을 승인했어요' },
@@ -92,7 +96,7 @@ const TABS: { key: TabKey; label: string }[] = [
   { key: 'crew',   label: '크루' },
 ];
 
-const FOLLOW_TYPES = new Set(['user_followed']);
+const FOLLOW_TYPES = new Set(['user_followed', 'follow_requested']);
 const SOCIAL_TYPES = new Set(['run_kudoed', 'run_commented', 'route_liked', 'route_commented']);
 const CREW_TYPES   = new Set(['crew_joined', 'join_requested', 'join_approved', 'crew_announcement']);
 
@@ -117,6 +121,9 @@ function deepLink(n: AppNotification): (() => void) | null {
     case 'join_approved':
       if (!n.target_id) return null;
       return () => router.push({ pathname: '/(community)/crew-detail' as any, params: { crewId: n.target_id! } });
+    case 'follow_requested':
+      // 수락/거절 lives on the inbox — the list is the target (null payload)
+      return () => router.push('/follow-requests' as any);
     case 'user_followed':
       // GRADUATED 2026-07-08: target_id = the actor's uid (probed) — the
       // other-user profile screen now exists. Never self.

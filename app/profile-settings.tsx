@@ -8,9 +8,10 @@
  * as of 2026-07-26 (지연-reported: locked never true, runs not 404'd) —
  * the setting stores server-side now, enforcement engages with her deploy.
  *
- * SERVER GAPS (her roadmap): 좋아요/댓글 허용 = v1.5 · 팔로우 승인제 = v2 ·
- * 차단 관리 = v3 — still render NOT AT ALL (the line-132 rule — no disabled
- * teasers); parity notes in TODO.md.
+ * 팔로우 승인제 (v2, BE 610c7f3 — probed live): PATCH {nickname,
+ * follow_approval}; ON → new follows become 202-pending requests.
+ * SERVER GAPS (her roadmap): 좋아요/댓글 허용 = v1.5 · 차단 관리 = v3 —
+ * still render NOT AT ALL (the line-132 rule); parity notes in TODO.md.
  *
  * Also ships: 러닝 자동 게시 (device-local default save-visibility —
  * store/feed-prefs), 프로필 편집 / 앱 설정 doors, 회원 탈퇴 (the 8bc494e
@@ -24,7 +25,7 @@ import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 're
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/ui';
-import { getMyProfile, updateProfile, type ProfileVisibility } from '@/lib/profile-api';
+import { getMyProfile, listFollowRequests, updateProfile, type ProfileVisibility } from '@/lib/profile-api';
 import { colors as C, shadows, spacing as S } from '@/lib/theme';
 import { useFeedPrefs } from '@/store/feed-prefs';
 
@@ -65,6 +66,8 @@ function NavRow({ icon, label, value, onPress }: {
   );
 }
 
+const VIS_TIMEOUT_MS = 10_000; // optimistic-write clock (timeout rider)
+
 export default function ProfileSettingsScreen() {
   const insets = useSafeAreaInsets();
   const autoPost = useFeedPrefs(s => s.autoPost);
@@ -75,20 +78,47 @@ export default function ProfileSettingsScreen() {
   // read (all accounts are backfilled public; NEVER hide the section on a
   // read miss). nicknameRef rides every PATCH (required by contract).
   const [visibility, setVisibility] = useState<ProfileVisibility>('public');
+  const [approval, setApproval] = useState(false);
+  const [reqCount, setReqCount] = useState(0);
+  useEffect(() => {
+    listFollowRequests().then(rows => setReqCount(rows.length)).catch(() => {});
+  }, []);
   const [visBusy, setVisBusy] = useState(false);
   const nicknameRef = useRef<string | null>(null);
   useEffect(() => {
     getMyProfile()
-      .then(p => { nicknameRef.current = p.nickname; setVisibility(p.visibility ?? 'public'); })
+      .then(p => {
+        nicknameRef.current = p.nickname;
+        setVisibility(p.visibility ?? 'public');
+        setApproval(p.follow_approval ?? false);
+      })
       .catch(() => { /* profile-less/offline — defaults stand, change surfaces the error */ });
   }, []);
+
+  // same fast-fail + reconcile discipline as visibility (the timeout rider)
+  async function toggleApproval(v: boolean) {
+    if (!nicknameRef.current) {
+      Alert.alert('저장할 수 없어요', '프로필을 불러오지 못했어요. 잠시 후 다시 열어 주세요.');
+      return;
+    }
+    const prev = approval;
+    setApproval(v);
+    try {
+      await updateProfile({ nickname: nicknameRef.current, follow_approval: v }, VIS_TIMEOUT_MS);
+    } catch (e: unknown) {
+      setApproval(prev);
+      getMyProfile(VIS_TIMEOUT_MS)
+        .then(p => setApproval(p.follow_approval ?? false))
+        .catch(() => {});
+      Alert.alert('변경 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요.');
+    }
+  }
 
   // Optimistic write with a FAST failure (10s deadline — offline must revert
   // + alert while the user is still on the screen, not after reconnect).
   // On failure, one reconcile GET re-reads server truth: a PATCH the OS
   // queue landed anyway wins over the revert instead of diverging. A PATCH
   // that lands after even that closes on the next screen open (mount read).
-  const VIS_TIMEOUT_MS = 10_000;
   async function pickVisibility(v: ProfileVisibility) {
     if (visBusy || v === visibility) return;
     if (!nicknameRef.current) {
@@ -164,6 +194,28 @@ export default function ProfileSettingsScreen() {
               thumbColor="#fff"
             />
           </View>
+        </Group>
+
+        <Group title="팔로우">
+          <View style={st.row}>
+            <View style={st.rowIcon}><Icon name="person-add-outline" size={18} color={C.sub} /></View>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={st.rowLabel}>팔로우 승인제</Text>
+              <Text style={st.rowSub}>새 팔로워를 직접 승인해요</Text>
+            </View>
+            <Switch
+              value={approval}
+              onValueChange={toggleApproval}
+              trackColor={{ true: C.accent, false: C.border }}
+              thumbColor="#fff"
+            />
+          </View>
+          <NavRow
+            icon="mail-unread-outline"
+            label="팔로우 요청"
+            value={reqCount > 0 ? `${reqCount}건 대기` : undefined}
+            onPress={() => router.push('/follow-requests' as any)}
+          />
         </Group>
 
         <Group title="관리">

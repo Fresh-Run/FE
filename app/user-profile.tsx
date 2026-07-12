@@ -10,7 +10,7 @@
  */
 import { useFocusEffect } from '@react-navigation/native';
 import { router, useLocalSearchParams } from 'expo-router';
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -26,11 +26,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MiniMap } from '@/components/mini-map';
 import { RealMap } from '@/components/real-map';
 import { Icon } from '@/components/ui';
-import { apiFetch } from '@/lib/api';
+import { ApiError, apiFetch, apiRequest } from '@/lib/api';
 import { avatarBg } from '@/lib/fr-hash';
 import { distUnit, fmtDist, fmtDuration, fmtPaceIn, fmtWhen, paceUnit, timeTitle } from '@/lib/run-format';
 import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
 import { useUserProfile, type UserRun } from '@/hooks/use-user-profile';
+import { usePendingFollows } from '@/store/pending-follows';
 import { useSettings } from '@/store/use-settings';
 
 function Avatar({ name, size, ring = C.border, photoUrl }: { name: string; size: number; ring?: string; photoUrl?: string | null }) {
@@ -124,13 +125,30 @@ export default function UserProfileScreen() {
   const units = useSettings(s => s.settings.units);
   const { profile, runs, loading, error, refetch } = useUserProfile(uid ?? null);
 
-  // Optimistic overlays — follow state + per-run kudos
-  const [followOverlay, setFollowOverlay] = useState<boolean | null>(null);
+  // Optimistic overlays — follow state + per-run kudos.
+  // v2 (팔로우 승인제): the profile payload carries no pending marker
+  // (지연 ask: is_requested), so 요청됨 persists via the device-local
+  // pending-follows cache (owner ruling 2026-07-13) and the server's 409
+  // follow_request_pending stays the fallback corrector.
+  const [followOverlay, setFollowOverlay] = useState<'following' | 'requested' | 'none' | null>(null);
   const [kudosOverlay, setKudosOverlay]   = useState<Record<string, { on: boolean; delta: number }>>({});
+  const pendingIds = usePendingFollows(st_ => st_.ids);
+  useEffect(() => { usePendingFollows.getState().hydrate(); }, []);
 
   useFocusEffect(useCallback(() => { refetch(); }, [refetch]));
 
-  const isFollowing = followOverlay ?? profile?.is_following ?? false;
+  // approve-detection: server says following → any cached pending is stale
+  useEffect(() => {
+    if (profile?.is_following && pendingIds[profile.user_id]) {
+      usePendingFollows.getState().remove(profile.user_id);
+    }
+  }, [profile?.is_following, profile?.user_id, pendingIds]);
+
+  const followState: 'following' | 'requested' | 'none' =
+    followOverlay
+    ?? (profile?.is_following ? 'following'
+      : profile && pendingIds[profile.user_id] ? 'requested'
+      : 'none');
 
   // polyline_thumb slice — feed viewability pattern (stable refs, 25%)
   const [liveIds, setLiveIds] = useState<Set<string>>(new Set());
@@ -143,12 +161,50 @@ export default function UserProfileScreen() {
 
   function toggleFollow() {
     if (!profile) return;
-    const next = !isFollowing;
-    setFollowOverlay(next);
-    apiFetch<void>(`/api/users/${profile.user_id}/follow`, { method: next ? 'POST' : 'DELETE' })
-      .then(() => refetch()) // follower count + followers-only runs change
-      .catch(() => {
-        setFollowOverlay(!next);
+    const prev = followState;
+    if (prev === 'requested') {
+      // 요청됨 → 취소 (DELETE /follow-request, idempotent-204 probed)
+      setFollowOverlay('none');
+      usePendingFollows.getState().remove(profile.user_id);
+      apiFetch<void>(`/api/users/${profile.user_id}/follow-request`, { method: 'DELETE' })
+        .catch(() => {
+          setFollowOverlay(prev);
+          usePendingFollows.getState().add(profile.user_id);
+          Alert.alert('실패', '요청을 취소하지 못했어요. 잠시 후 다시 시도해 주세요.');
+        });
+      return;
+    }
+    if (prev === 'following') {
+      setFollowOverlay('none');
+      apiFetch<void>(`/api/users/${profile.user_id}/follow`, { method: 'DELETE' })
+        .then(() => refetch())
+        .catch(() => {
+          setFollowOverlay(prev);
+          Alert.alert('실패', '팔로우 상태를 변경하지 못했어요. 잠시 후 다시 시도해 주세요.');
+        });
+      return;
+    }
+    // 팔로우: 200/204 = followed (open account) · 202 = 승인 대기 (approval
+    // account, probed) · 409 follow_request_pending = already pending
+    setFollowOverlay('following');
+    apiRequest<void>(`/api/users/${profile.user_id}/follow`, { method: 'POST' })
+      .then(({ status }) => {
+        if (status === 202) {
+          setFollowOverlay('requested');
+          usePendingFollows.getState().add(profile.user_id); // survives re-entry
+          return;
+        }
+        // 200/204 = followed instantly — any cached pending was stale
+        usePendingFollows.getState().remove(profile.user_id);
+        refetch(); // follower count + followers-only/locked runs change
+      })
+      .catch((e: unknown) => {
+        if (e instanceof ApiError && e.code === 'follow_request_pending') {
+          setFollowOverlay('requested'); // server knew better — adopt + persist
+          usePendingFollows.getState().add(profile.user_id);
+          return;
+        }
+        setFollowOverlay(prev);
         Alert.alert('실패', '팔로우 상태를 변경하지 못했어요. 잠시 후 다시 시도해 주세요.');
       });
   }
@@ -199,20 +255,22 @@ export default function UserProfileScreen() {
           onPress={toggleFollow}
           style={({ pressed }) => [
             st.followBtn,
-            isFollowing ? st.followBtnOutlined : st.followBtnFilled,
+            followState !== 'none' ? st.followBtnOutlined : st.followBtnFilled,
             pressed && { opacity: 0.85 },
           ]}
         >
-          <Text style={isFollowing ? st.followTxtOutlined : st.followTxtFilled}>
-            {isFollowing ? '팔로잉' : '팔로우'}
+          <Text style={followState !== 'none' ? st.followTxtOutlined : st.followTxtFilled}>
+            {followState === 'following' ? '팔로잉' : followState === 'requested' ? '요청됨 · 취소' : '팔로우'}
           </Text>
         </Pressable>
       </View>
 
-      <View style={st.sectionHead}>
-        <Text style={st.sectionTitle}>게시한 러닝</Text>
-        <Text style={st.sectionCount}>공개 {runs.length}개</Text>
-      </View>
+      {!profile?.locked && (
+        <View style={st.sectionHead}>
+          <Text style={st.sectionTitle}>게시한 러닝</Text>
+          <Text style={st.sectionCount}>공개 {runs.length}개</Text>
+        </View>
+      )}
     </View>
   );
 
@@ -270,12 +328,25 @@ export default function UserProfileScreen() {
             );
           }}
           ItemSeparatorComponent={() => <View style={{ height: 14 }} />}
-          ListEmptyComponent={
+          ListEmptyComponent={profile.locked ? (
+            // 비공개 프로필 v1 (⑪, canvas locked state): identity + counts
+            // stay above; the lock box replaces runs. 팔로우 unlocks —
+            // refetch returns locked:false + the runs per server truth.
+            <View style={[st.lockBox]}>
+              <View style={st.lockCircle}>
+                <Icon name="lock-closed-outline" size={24} color={C.faint} />
+              </View>
+              <Text style={st.lockTitle}>비공개 프로필입니다</Text>
+              <Text style={st.lockSub}>
+                팔로우하면 {profile.nickname}님이 게시한 러닝을 볼 수 있어요.
+              </Text>
+            </View>
+          ) : (
             <View style={st.centered}>
               <Icon name="walk-outline" size={36} color={C.faint} />
               <Text style={st.stateTxt}>아직 공개된 러닝이 없어요</Text>
             </View>
-          }
+          )}
           contentContainerStyle={{ paddingBottom: 36 }}
           showsVerticalScrollIndicator={false}
         />
@@ -286,6 +357,12 @@ export default function UserProfileScreen() {
 
 const st = StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
+
+  // 비공개 프로필 lock box (canvas: dashed rounded, lock circle, follow hint)
+  lockBox:    { marginHorizontal: S.gutter, marginTop: 18, alignItems: 'center', gap: 13, backgroundColor: C.surfaceAlt, borderWidth: 1, borderStyle: 'dashed', borderColor: C.border, borderRadius: 20, paddingVertical: 36, paddingHorizontal: 24 },
+  lockCircle: { width: 56, height: 56, borderRadius: 28, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, alignItems: 'center', justifyContent: 'center' },
+  lockTitle:  { fontSize: 15.5, fontWeight: '700', color: C.text, letterSpacing: -0.4 },
+  lockSub:    { fontSize: 13, lineHeight: 20, color: C.sub, letterSpacing: -0.2, textAlign: 'center', maxWidth: 240, marginTop: -6 },
 
   appBar:      { flexDirection: 'row', alignItems: 'center', paddingHorizontal: S.md, paddingVertical: 10 },
   appBarBtn:   { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
