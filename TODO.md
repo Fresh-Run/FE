@@ -366,4 +366,4 @@ Declared sub-visual normalizations: run-post/course-post initials fontSize now r
 
 ## PUBLISH — 2026-07-13 [post-04:47]
 
-`eas update --channel main` — "프라이버시 완성 + 집결 핀 + 리포트 공유 (95ec7cc)". Update group `68673b73-74f3-4965-889f-df4e9686b273` (android `019f57e2-2f1b-70be-abd7-102ee4960123`, ios `019f57e2-2f1b-78b0-ba1f-e4a4844e483e`), runtime `exposdk:54.0.0`, embedded commit `95ec7cc` = HEAD = origin/main at publish. Env guard read-verified staging. Carries: 13422d4 ledger · 724d8bb #6 map-pick · 562dccc #7 report share · 316ad42 #8 SWR-lite · a7edccb #9 avatar consolidation · 95ec7cc privacy splice.
+`eas update --channel main` — "프라이버시 완성 + 집결 핀 + 리포트 공유 (95ec7cc)". Update group `68673b73-74f3-4965-889f-df4e9686b273` (android `019f57e2-2f1b-70be-abd7-102ee4960123`, ios `019f57e2-2f1b-78b0-ba1f-e4a4844e483e`), runtime `exposdk:54.0.0`, embedded commit `95ec7cc` = HEAD = origin/main at publish. Env guard read-verified staging. Carries: 13422d4 ledger · 724d8bb #6 map-pick · 562dbcc #7 report share · 316ad42 #8 SWR-lite · a7edccb #9 avatar consolidation · 95ec7cc privacy splice.
