@@ -26,13 +26,11 @@ import {
   leaveCrew,
   useCrewDetail,
   type Crew,
-  type CrewMember,
 } from '@/hooks/use-crews';
 import { avatarBg } from '@/lib/fr-hash';
 import { listAnnouncements, type Announcement } from '@/lib/announcements-api';
 import { getCurrentChallenge, type Challenge } from '@/lib/challenges-api';
 import { getCrewRanking, listJoinRequests, type CrewRankingEntry } from '@/lib/crews-api';
-import { openProfile } from '@/lib/profile-nav';
 import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -65,27 +63,8 @@ function Avatar({ name, size = 40, photoUrl }: { name: string; size?: number; ph
   );
 }
 
-// ─── Member row ───────────────────────────────────────────────────────────────
-
-function MemberRow({ member, index }: { member: CrewMember; index: number }) {
-  const isOwner = member.role === 'owner';
-  return (
-    // Tappable per the routing rule — openProfile self-checks (me → 내 프로필)
-    <Pressable
-      onPress={() => openProfile(member.user_id, member.nickname)}
-      style={({ pressed }) => [st.memberRow, isOwner && st.memberRowOwner, pressed && { opacity: 0.7 }]}
-    >
-      <Text style={st.memberRank}>{index + 1}</Text>
-      <Avatar name={member.nickname} size={40} photoUrl={member.avatar_url} />
-      <View style={{ flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-        <Text style={st.memberName} numberOfLines={1}>{member.nickname}</Text>
-        {isOwner && (
-          <View style={st.ownerBadge}><Text style={st.ownerTxt}>크루장</Text></View>
-        )}
-      </View>
-    </Pressable>
-  );
-}
+// 랭킹 메달 — canvas FrRankMedal colors (gold = the 크루장 crown token)
+const RANK_MEDAL: Record<number, string> = { 1: C.crown, 2: '#AEB6BE', 3: '#D08B4F' };
 
 // ─── CTA footer ───────────────────────────────────────────────────────────────
 
@@ -493,28 +472,59 @@ export default function CrewDetailScreen() {
           </View>
         )}
 
-        {/* ── 랭킹 (M2b) — 이번 주 거리순; server aggregation ───────────── */}
-        {isMember && ranking !== null && ranking.length > 0 && (
+        {/* ── 랭킹 (design-wave A) — canvas top-3 w/ medals + role badges;
+            the full list moved to the 크루원 screen (door below). Server is
+            이번 주 KST · GPS-verified — the caption keeps that truth next to
+            the canvas's bare "크루 랭킹" title. ───────────────────────── */}
+        {isMember && (
           <View style={{ paddingHorizontal: S.gutter, paddingTop: S.xl }}>
-            <View style={st.sectionHead}>
-              <Text style={st.sectionTitle}>이번 주 랭킹</Text>
-              <Text style={st.memberCount}>GPS 기록 기준</Text>
-            </View>
-            <View style={[st.rankList, shadows.sm]}>
-              {ranking.slice(0, 6).map((r, i) => (
-                <React.Fragment key={r.user_id}>
-                  {i > 0 && <View style={st.divider} />}
-                  <View style={[st.rankRow, r.me && st.rankRowMe]}>
-                    <Text style={[st.rankNum, r.rank <= 3 && { color: C.accentGrn }]}>{r.rank}</Text>
-                    <Avatar name={r.nickname ?? '러너'} size={26} photoUrl={r.avatar_url} />
-                    <Text style={[st.rankName, r.me && { fontWeight: '700' }]} numberOfLines={1}>
-                      {r.nickname ?? '러너'}{r.me ? ' (나)' : ''}
-                    </Text>
-                    <Text style={st.rankKm}>{r.distance_km.toFixed(1)} km</Text>
-                  </View>
-                </React.Fragment>
-              ))}
-            </View>
+            {ranking !== null && ranking.length > 0 && (
+              <>
+                <View style={st.sectionHead}>
+                  <Text style={st.sectionTitle}>크루 랭킹</Text>
+                  <Text style={st.memberCount}>이번 주 · GPS 기준</Text>
+                </View>
+                <View style={[st.rankList, shadows.sm]}>
+                  {ranking.slice(0, 3).map((r, i) => {
+                    const role = members.find(m => m.user_id === r.user_id)?.role;
+                    return (
+                      <React.Fragment key={r.user_id}>
+                        {i > 0 && <View style={st.divider} />}
+                        <View style={[st.rankRow, r.me && st.rankRowMe]}>
+                          <View style={[st.rankMedal, { backgroundColor: RANK_MEDAL[r.rank] ?? C.faint }]}>
+                            <Text style={st.rankMedalTxt}>{r.rank}</Text>
+                          </View>
+                          <Avatar name={r.nickname ?? '러너'} size={30} photoUrl={r.avatar_url} />
+                          <View style={{ flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                            <Text style={[st.rankName, r.me && { fontWeight: '700' }]} numberOfLines={1}>
+                              {r.nickname ?? '러너'}
+                            </Text>
+                            {r.me && <View style={st.meBadge}><Text style={st.meBadgeTxt}>나</Text></View>}
+                            {role === 'owner' && <View style={st.ownerBadge}><Text style={st.ownerTxt}>크루장</Text></View>}
+                            {role === 'admin' && <View style={st.adminBadge}><Text style={st.adminTxt}>운영진</Text></View>}
+                          </View>
+                          <Text style={st.rankKm}>{r.distance_km.toFixed(1)} km</Text>
+                        </View>
+                      </React.Fragment>
+                    );
+                  })}
+                </View>
+              </>
+            )}
+
+            {/* canvas: the full-roster door sits directly under the ranking card */}
+            <Pressable
+              onPress={() => router.push({
+                pathname: '/(community)/crew-members' as never,
+                params: { crewId: crew.id },
+              })}
+              style={({ pressed }) => [st.rosterBtn, shadows.sm, pressed && { opacity: 0.8 }]}
+            >
+              <View style={st.rosterIcon}><Icon name="people-outline" size={18} color={C.accentGrn} /></View>
+              <Text style={st.rosterTxt}>크루원 전체 보기</Text>
+              <Text style={st.rosterCount}>{crew.member_count}명</Text>
+              <Icon name="chevron-forward" size={16} color={C.faint} />
+            </Pressable>
           </View>
         )}
 
@@ -573,30 +583,6 @@ export default function CrewDetailScreen() {
             )}
           </View>
         )}
-
-        {/* ── Member list ──────────────────────────────────────────────── */}
-        <View style={{ paddingHorizontal: S.gutter, paddingTop: S.xl }}>
-          <View style={st.sectionHead}>
-            <Text style={st.sectionTitle}>크루원</Text>
-            <Text style={st.memberCount}>{members.length}명</Text>
-            {/* 관리 folded into the 크루 관리 hub (redesign ③) */}
-          </View>
-
-          {members.length === 0 ? (
-            <View style={st.emptyBox}>
-              <Text style={st.emptyTxt}>크루원이 없어요</Text>
-            </View>
-          ) : (
-            <View style={[st.memberList, shadows.sm]}>
-              {members.map((m, i) => (
-                <React.Fragment key={m.user_id}>
-                  {i > 0 && <View style={st.divider} />}
-                  <MemberRow member={m} index={i} />
-                </React.Fragment>
-              ))}
-            </View>
-          )}
-        </View>
 
       </ScrollView>
 
@@ -665,16 +651,13 @@ const st = StyleSheet.create({
   sectionTitle: { fontSize: 17, fontWeight: '700', letterSpacing: -0.4, color: C.text },
   memberCount:  { fontSize: 13, fontWeight: '600', color: C.faint },
 
-  // Member list
-  memberList:     { backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 18, overflow: 'hidden' },
-
-  memberRow:      { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 14 },
-  memberRowOwner: { backgroundColor: C.accentDim },
-  memberRank:     { fontSize: 13, fontWeight: '700', color: C.faint, width: 22, textAlign: 'center', flexShrink: 0 },
-  memberName:     { fontSize: 14.5, fontWeight: '700', color: C.text, letterSpacing: -0.3 },
-  divider:        { height: 1, backgroundColor: C.border, marginHorizontal: 14 },
-  ownerBadge:     { backgroundColor: C.crown, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
-  ownerTxt:       { fontSize: 10, fontWeight: '800', color: '#0D1A06', letterSpacing: 0.2 },
+  divider:    { height: 1, backgroundColor: C.border, marginHorizontal: 14 },
+  ownerBadge: { backgroundColor: C.crown, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
+  ownerTxt:   { fontSize: 10, fontWeight: '800', color: '#0D1A06', letterSpacing: 0.2 },
+  adminBadge: { backgroundColor: C.accentDim, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
+  adminTxt:   { fontSize: 10, fontWeight: '800', color: C.accentGrn, letterSpacing: 0.2 },
+  meBadge:    { backgroundColor: C.accent, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
+  meBadgeTxt: { fontSize: 10, fontWeight: '800', color: C.accentText, letterSpacing: 0.2 },
 
   // Empty / error states
   emptyBox: { backgroundColor: C.surfaceAlt, borderWidth: 1, borderColor: C.border, borderRadius: R.lg, padding: 20, alignItems: 'center' },
@@ -691,13 +674,20 @@ const st = StyleSheet.create({
   chMeta:     { fontSize: 12.5, fontWeight: '600', color: C.sub, letterSpacing: -0.2 },
   chCaption:  { fontSize: 11, color: C.faint, letterSpacing: -0.2, marginTop: 6 },
 
-  // 랭킹 (M2b)
-  rankList:  { backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: R.xl, overflow: 'hidden' },
-  rankRow:   { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 11, paddingHorizontal: 14 },
-  rankRowMe: { backgroundColor: C.accentDim },
-  rankNum:   { width: 20, fontSize: 13.5, fontWeight: '800', color: C.faint, fontVariant: ['tabular-nums'] },
-  rankName:  { flex: 1, minWidth: 0, fontSize: 14, fontWeight: '600', color: C.text, letterSpacing: -0.3 },
-  rankKm:    { fontSize: 13.5, fontWeight: '700', color: C.sub, fontVariant: ['tabular-nums'] },
+  // 랭킹 (design-wave A — canvas top-3)
+  rankList:     { backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: R.xl, overflow: 'hidden' },
+  rankRow:      { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 11, paddingHorizontal: 14 },
+  rankRowMe:    { backgroundColor: C.accentDim },
+  rankMedal:    { width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  rankMedalTxt: { fontSize: 12.5, fontWeight: '800', color: '#fff', fontVariant: ['tabular-nums'] },
+  rankName:     { flexShrink: 1, fontSize: 14, fontWeight: '600', color: C.text, letterSpacing: -0.3 },
+  rankKm:       { fontSize: 13.5, fontWeight: '700', color: C.sub, fontVariant: ['tabular-nums'] },
+
+  // 크루원 전체 보기 door (canvas)
+  rosterBtn:   { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: R.lg, paddingVertical: 13, paddingHorizontal: 15, marginTop: 10 },
+  rosterIcon:  { width: 36, height: 36, borderRadius: 11, backgroundColor: C.accentDim, alignItems: 'center', justifyContent: 'center' },
+  rosterTxt:   { flex: 1, fontSize: 14.5, fontWeight: '700', color: C.text, letterSpacing: -0.3 },
+  rosterCount: { fontSize: 13, fontWeight: '700', color: C.accentGrn },
 
   // 공지 preview (M1)
   annMoreTxt: { fontSize: 12.5, fontWeight: '700', color: C.accentGrn, letterSpacing: -0.2 },

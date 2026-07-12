@@ -13,7 +13,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { MediaCarousel } from '@/components/media-carousel';
-import { PaceElevChart, SplitsTable } from '@/components/run-splits';
+import { PaceChart, SplitsTable } from '@/components/run-splits';
 import { Icon } from '@/components/ui';
 // MiniMap fallback now lives inside MediaCarousel (no polyline → seed map)
 import { useRunDetail } from '@/hooks/use-runs';
@@ -222,11 +222,11 @@ export default function ActivityScreen() {
             </>
           )}
 
-          {/* 페이스 & 고도 — needs at least two splits to chart */}
+          {/* 페이스 차트 — needs at least two splits (elevation parked, 지연 ⓑ) */}
           {splits.length >= 2 && (
             <>
-              <Text style={st.sectionTitle}>페이스 & 고도 분석</Text>
-              <PaceElevChart splits={splits} />
+              <Text style={st.sectionTitle}>페이스 분석</Text>
+              <PaceChart splits={splits} />
             </>
           )}
 

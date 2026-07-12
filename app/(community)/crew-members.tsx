@@ -1,12 +1,15 @@
 /**
- * 크루원 관리 (M3) — FrCrewManage's buildable subset on admin v1
- * (BE f68a48f). Owner: 운영진 지정/해제 (PATCH role, 멱등; owner target is
- * a server 422 — no affordance rendered) + 강퇴. Admin: 강퇴 on members
- * only — admin/owner targets render DISABLED affordances (the 403
- * semantics made visible, not error surprises). Self never shows actions.
+ * 크루원 — full roster per canvas FrCrewMembers (design-wave A), now the
+ * member-visible door from crew-detail's 전체 보기 (was manage-hub-only).
+ * Rows: avatar · name · 나/크루장/운영진 badges · "이번 주 Nkm" subtitle —
+ * distance composed client-side from GET /crews/{id}/ranking (weekly KST,
+ * GPS-verified; zero-km members are absent from ranking → 0). Canvas labels
+ * this 이번 챌린지; server serves WEEKLY — the copy stays honest (이번 주).
  *
- * FrCrewPerms per-admin permission toggles are OUT — 지연's admin v2
- * boundary; this screen stops at the single admin role.
+ * Manage actions re-housed per the new design: 내보내기 stays inline
+ * (disabled = the 403 made visible, admin targets); owner's 운영진 지정/해제
+ * + 크루장 양도 move into a per-member bottom sheet (⋯) — same capabilities
+ * as before (admin v1, BE f68a48f), new furniture. Self never shows actions.
  */
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
@@ -15,6 +18,7 @@ import {
   Alert,
   FlatList,
   Image,
+  Modal,
   Pressable,
   StyleSheet,
   Text,
@@ -23,7 +27,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/ui';
-import { getCrewMembers, kickMember, setMemberRole, transferCrew, type CrewMember } from '@/lib/crews-api';
+import { getCrewMembers, getCrewRanking, kickMember, setMemberRole, transferCrew, type CrewMember } from '@/lib/crews-api';
 import { avatarBg } from '@/lib/fr-hash';
 import { openProfile } from '@/lib/profile-nav';
 import { supabase } from '@/lib/supabase';
@@ -47,30 +51,42 @@ function MemberAvatar({ name, photoUrl, style, txtStyle }: {
   );
 }
 
-const ROLE_BADGE: Record<CrewMember['role'], { label: string; bg: string; fg: string }> = {
-  owner:  { label: '크루장', bg: C.crown, fg: '#0D1A06' },
-  admin:  { label: '운영진', bg: '#3D8BFF22', fg: '#3D8BFF' },
-  member: { label: '멤버',   bg: 'transparent', fg: 'transparent' }, // no badge
-};
+type Row = CrewMember & { weekKm: number };
+
+const ROLE_ORDER: Record<CrewMember['role'], number> = { owner: 0, admin: 1, member: 2 };
 
 export default function CrewMembersScreen() {
   const insets = useSafeAreaInsets();
   const { crewId } = useLocalSearchParams<{ crewId: string }>();
 
-  const [members, setMembers] = useState<CrewMember[] | null>(null);
+  const [rows, setRows]       = useState<Row[] | null>(null);
   const [myUid, setMyUid]     = useState<string | null>(null);
   const [busyUid, setBusyUid] = useState<string | null>(null);
+  const [sheetFor, setSheetFor] = useState<Row | null>(null); // owner's per-member action sheet
 
   const load = useCallback(() => {
     if (!crewId) return;
-    getCrewMembers(crewId).then(setMembers).catch(() => setMembers([]));
+    // ranking is best-effort garnish — a ranking failure must not blank the roster
+    Promise.all([
+      getCrewMembers(crewId),
+      getCrewRanking(crewId).catch(() => []),
+    ]).then(([members, ranking]) => {
+      const kmByUid = new Map(ranking.map(r => [r.user_id, r.distance_km]));
+      const joined = members.map(m => ({ ...m, weekKm: kmByUid.get(m.user_id) ?? 0 }));
+      // canvas: distance desc; ties settle by role then name (stable eyeballing)
+      joined.sort((a, b) =>
+        b.weekKm - a.weekKm
+        || ROLE_ORDER[a.role] - ROLE_ORDER[b.role]
+        || (a.nickname ?? '').localeCompare(b.nickname ?? ''));
+      setRows(joined);
+    }).catch(() => setRows([]));
   }, [crewId]);
   useEffect(() => { load(); }, [load]);
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => setMyUid(user?.id ?? null));
   }, []);
 
-  const myRole = members?.find(m => m.user_id === myUid)?.role;
+  const myRole = rows?.find(m => m.user_id === myUid)?.role;
   const iAmOwner = myRole === 'owner';
   const iAmAdmin = myRole === 'admin';
 
@@ -148,11 +164,11 @@ export default function CrewMembersScreen() {
 
   /** Authorization matrix → affordances. Disabled = visible but inert
       (the server's 403 semantics, surfaced honestly). */
-  function actionsFor(m: CrewMember): { role?: boolean; kick?: 'enabled' | 'disabled'; transfer?: boolean } {
+  function actionsFor(m: CrewMember): { more?: boolean; kick?: 'enabled' | 'disabled' } {
     if (m.user_id === myUid) return {};              // self — never
     if (iAmOwner) {
       if (m.role === 'owner') return {};             // cannot occur (self is owner)
-      return { role: true, kick: 'enabled', transfer: true };
+      return { more: true, kick: 'enabled' };        // 지정/해제·양도 in the sheet
     }
     if (iAmAdmin) {
       if (m.role === 'member') return { kick: 'enabled' };
@@ -167,61 +183,59 @@ export default function CrewMembersScreen() {
         <Pressable onPress={() => router.back()} hitSlop={12} style={st.backBtn}>
           <Icon name="arrow-back" size={20} color={C.text} />
         </Pressable>
-        <Text style={st.appBarTitle}>크루원 관리</Text>
-        <View style={{ width: 36 }} />
+        <Text style={st.appBarTitle}>크루원</Text>
+        <Text style={st.appBarCount}>{rows ? `${rows.length}명` : ''}</Text>
       </View>
 
-      {members === null ? (
+      {rows === null ? (
         <View style={st.centered}><ActivityIndicator size="large" color={C.accent} /></View>
       ) : (
         <FlatList
-          data={members}
+          data={rows}
           keyExtractor={m => m.user_id}
           renderItem={({ item: m }) => {
             const acts = actionsFor(m);
-            const badge = ROLE_BADGE[m.role];
+            const isMe = m.user_id === myUid;
             const busy = busyUid === m.user_id;
             return (
-              <View style={[st.row, shadows.sm]}>
+              <View style={[st.row, shadows.sm, isMe && { borderColor: C.accent + '66' }]}>
                 <Pressable
                   onPress={() => openProfile(m.user_id, m.nickname)}
                   style={({ pressed }) => [st.rowBody, pressed && { opacity: 0.7 }]}
                 >
                   <MemberAvatar name={m.nickname} photoUrl={m.avatar_url} style={st.avatar} txtStyle={st.avatarTxt} />
-                  <Text style={st.name} numberOfLines={1}>{m.nickname}</Text>
-                  {m.role !== 'member' && (
-                    <View style={[st.badge, { backgroundColor: badge.bg }]}>
-                      <Text style={[st.badgeTxt, { color: badge.fg }]}>{badge.label}</Text>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Text style={st.name} numberOfLines={1}>{m.nickname}</Text>
+                      {isMe && <View style={st.meBadge}><Text style={st.meBadgeTxt}>나</Text></View>}
+                      {m.role === 'owner' && <View style={st.ownerBadge}><Text style={st.ownerTxt}>크루장</Text></View>}
+                      {m.role === 'admin' && <View style={st.adminBadge}><Text style={st.adminTxt}>운영진</Text></View>}
                     </View>
-                  )}
+                    <Text style={st.kmSub}>이번 주 {m.weekKm.toFixed(1)}km</Text>
+                  </View>
                 </Pressable>
 
                 {busy ? (
                   <ActivityIndicator size="small" color={C.faint} />
                 ) : (
                   <View style={st.actions}>
-                    {acts.role && (
-                      <Pressable onPress={() => confirmRole(m)} hitSlop={6} style={({ pressed }) => [st.actBtn, pressed && { opacity: 0.7 }]}>
-                        <Text style={st.actTxt}>{m.role === 'admin' ? '운영진 해제' : '운영진 지정'}</Text>
-                      </Pressable>
-                    )}
-                    {acts.transfer && (
-                      <Pressable onPress={() => confirmTransfer(m)} hitSlop={6} style={({ pressed }) => [st.actBtn, pressed && { opacity: 0.7 }]}>
-                        <Text style={st.actTxt}>양도</Text>
-                      </Pressable>
-                    )}
                     {acts.kick && (
                       <Pressable
                         onPress={acts.kick === 'enabled' ? () => confirmKick(m) : undefined}
                         disabled={acts.kick === 'disabled'}
                         hitSlop={6}
                         style={({ pressed }) => [
-                          st.actBtn, st.actBtnDanger,
+                          st.kickBtn,
                           acts.kick === 'disabled' && { opacity: 0.35 },
                           pressed && acts.kick === 'enabled' && { opacity: 0.7 },
                         ]}
                       >
-                        <Text style={[st.actTxt, { color: C.danger }]}>내보내기</Text>
+                        <Text style={st.kickTxt}>내보내기</Text>
+                      </Pressable>
+                    )}
+                    {acts.more && (
+                      <Pressable onPress={() => setSheetFor(m)} hitSlop={8} style={({ pressed }) => [st.moreBtn, pressed && { opacity: 0.6 }]}>
+                        <Icon name="ellipsis-horizontal" size={17} color={C.sub} />
                       </Pressable>
                     )}
                   </View>
@@ -239,6 +253,31 @@ export default function CrewMembersScreen() {
           showsVerticalScrollIndicator={false}
         />
       )}
+
+      {/* ── owner's per-member sheet — 지정/해제 + 양도 (kudos-sheet furniture) ── */}
+      <Modal visible={!!sheetFor} transparent animationType="slide" onRequestClose={() => setSheetFor(null)}>
+        <Pressable style={st.sheetOverlay} onPress={() => setSheetFor(null)}>
+          <Pressable style={[st.sheet, { paddingBottom: Math.max(insets.bottom, 12) + 8 }]} onPress={() => {}}>
+            <View style={st.sheetHandleRow}><View style={st.sheetHandle} /></View>
+            <Text style={st.sheetTitle}>{sheetFor?.nickname}</Text>
+            <Pressable
+              onPress={() => { const m = sheetFor!; setSheetFor(null); confirmRole(m); }}
+              style={({ pressed }) => [st.sheetRow, pressed && { opacity: 0.7 }]}
+            >
+              <Icon name="shield-outline" size={19} color={C.text} />
+              <Text style={st.sheetRowTxt}>{sheetFor?.role === 'admin' ? '운영진 해제' : '운영진 지정'}</Text>
+            </Pressable>
+            <View style={st.sheetDivider} />
+            <Pressable
+              onPress={() => { const m = sheetFor!; setSheetFor(null); confirmTransfer(m); }}
+              style={({ pressed }) => [st.sheetRow, pressed && { opacity: 0.7 }]}
+            >
+              <Icon name="swap-horizontal-outline" size={19} color={C.danger} />
+              <Text style={[st.sheetRowTxt, { color: C.danger }]}>크루장 양도</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -249,21 +288,37 @@ const st = StyleSheet.create({
   appBar:      { flexDirection: 'row', alignItems: 'center', paddingHorizontal: S.gutter, paddingVertical: 10 },
   backBtn:     { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
   appBarTitle: { flex: 1, textAlign: 'center', fontSize: 16, fontWeight: '700', letterSpacing: -0.3, color: C.text },
+  appBarCount: { width: 36, textAlign: 'right', fontSize: 12.5, fontWeight: '700', color: C.faint },
 
   centered: { paddingTop: 70, alignItems: 'center' },
 
   row:     { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: R.xl, paddingVertical: 11, paddingHorizontal: 13 },
-  rowBody: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 10 },
-  avatar:    { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
-  avatarTxt: { fontSize: 15, fontWeight: '700', color: '#fff' },
+  rowBody: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  avatar:    { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center' },
+  avatarTxt: { fontSize: 16, fontWeight: '700', color: '#fff' },
   name:      { flexShrink: 1, fontSize: 14.5, fontWeight: '600', color: C.text, letterSpacing: -0.3 },
-  badge:     { borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
-  badgeTxt:  { fontSize: 10, fontWeight: '800', letterSpacing: 0.2 },
+  kmSub:     { fontSize: 12, color: C.faint, letterSpacing: -0.2, marginTop: 2, fontVariant: ['tabular-nums'] },
 
-  actions:      { flexDirection: 'row', gap: 6 },
-  actBtn:       { borderWidth: 1, borderColor: C.border, borderRadius: R.pill, paddingHorizontal: 10, paddingVertical: 6, backgroundColor: C.surfaceAlt },
-  actBtnDanger: { borderColor: '#EF444440' },
-  actTxt:       { fontSize: 11.5, fontWeight: '700', color: C.sub, letterSpacing: -0.2 },
+  meBadge:    { backgroundColor: C.accent, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
+  meBadgeTxt: { fontSize: 10, fontWeight: '800', color: C.accentText, letterSpacing: 0.2 },
+  ownerBadge: { backgroundColor: C.crown, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
+  ownerTxt:   { fontSize: 10, fontWeight: '800', color: '#0D1A06', letterSpacing: 0.2 },
+  adminBadge: { backgroundColor: C.accentDim, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
+  adminTxt:   { fontSize: 10, fontWeight: '800', color: C.accentGrn, letterSpacing: 0.2 },
+
+  actions: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  kickBtn: { height: 32, paddingHorizontal: 13, borderRadius: R.pill, borderWidth: 1, borderColor: C.danger + '44', backgroundColor: 'transparent', alignItems: 'center', justifyContent: 'center' },
+  kickTxt: { fontSize: 12, fontWeight: '700', color: C.danger, letterSpacing: -0.2 },
+  moreBtn: { width: 32, height: 32, borderRadius: 16, borderWidth: 1, borderColor: C.border, backgroundColor: C.surfaceAlt, alignItems: 'center', justifyContent: 'center' },
 
   footNote: { textAlign: 'center', fontSize: 11.5, color: C.faint, letterSpacing: -0.2, paddingTop: 14 },
+
+  sheetOverlay:   { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.42)' },
+  sheet:          { backgroundColor: C.bg, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: S.gutter },
+  sheetHandleRow: { alignItems: 'center', paddingTop: 10, paddingBottom: 2 },
+  sheetHandle:    { width: 38, height: 5, borderRadius: 99, backgroundColor: C.border },
+  sheetTitle:     { fontSize: 16, fontWeight: '700', color: C.text, letterSpacing: -0.4, paddingVertical: 12, textAlign: 'center' },
+  sheetDivider:   { height: 1, backgroundColor: C.border },
+  sheetRow:       { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 16, paddingHorizontal: 4 },
+  sheetRowTxt:    { fontSize: 15, fontWeight: '600', color: C.text, letterSpacing: -0.3 },
 });

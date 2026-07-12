@@ -1,7 +1,13 @@
 /**
- * 구간 기록 + 페이스&고도 — activity-detail enrichment (canvas:
+ * 구간 기록 + 페이스 차트 — activity-detail enrichment (canvas:
  * FrSplitsTable + FrPaceChart, activity-detail.jsx). Fed by the server's
  * RunSplit[] ({km, sec, elev_gain_m, partial} — probed 2026-07-11).
+ *
+ * ELEVATION PARKED (지연 ruling ⓑ, design-wave A rider): elev_gain_m is
+ * permanently null by privacy design — the ±elev column and the chart's
+ * elevation curve were empty theater and came OUT. Pace bars + ⚡ fastest
+ * carry both views. The eventual path is a SERVER-side elevation lookup
+ * from track coords, not device collection — re-add when that ships.
  *
  * Unit note: split buckets are server-defined PER KM — the Km column keeps
  * km marks in both unit modes (relabeling buckets as miles would be fake
@@ -9,7 +15,7 @@
  */
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import Svg, { Circle, Line, Path, Rect, Text as SvgText } from 'react-native-svg';
+import Svg, { Line, Rect, Text as SvgText } from 'react-native-svg';
 
 import type { RunSplit } from '@/hooks/use-runs';
 import { fmtPaceIn } from '@/lib/run-format';
@@ -32,7 +38,6 @@ export function SplitsTable({ splits, units }: { splits: RunSplit[]; units: Unit
         <Text style={[st.headTxt, { width: 34 }]}>Km</Text>
         <Text style={[st.headTxt, { width: 52 }]}>페이스</Text>
         <View style={{ flex: 1 }} />
-        <Text style={st.headTxt}>고도</Text>
       </View>
       {splits.map((s, i) => {
         const frac = 0.3 + 0.7 * (1 - (s.sec - fastest) / range); // faster → longer bar
@@ -47,9 +52,6 @@ export function SplitsTable({ splits, units }: { splits: RunSplit[]; units: Unit
                 {isFast && <Text style={st.fastTag}>⚡</Text>}
               </View>
             </View>
-            <Text style={st.elevTxt}>
-              {s.elev_gain_m == null ? '—' : s.elev_gain_m > 0 ? `+${s.elev_gain_m}` : String(s.elev_gain_m)}
-            </Text>
           </View>
         );
       })}
@@ -57,14 +59,13 @@ export function SplitsTable({ splits, units }: { splits: RunSplit[]; units: Unit
   );
 }
 
-// ─── 페이스 & 고도 chart — SVG port of FrPaceChart ────────────────────────────
+// ─── 페이스 chart — SVG port of FrPaceChart (elevation curve parked) ──────────
 
 const W = 320, H = 150, PAD_L = 6, PAD_R = 6, PAD_T = 12, PAD_B = 22;
 
-export function PaceElevChart({ splits }: { splits: RunSplit[] }) {
+export function PaceChart({ splits }: { splits: RunSplit[] }) {
   if (splits.length < 2) return null;
   const paces = splits.map(s => s.sec);
-  const elevs = splits.map(s => s.elev_gain_m ?? 0);
   const n = paces.length;
   const innerW = W - PAD_L - PAD_R, innerH = H - PAD_T - PAD_B;
   const bw = innerW / n;
@@ -72,18 +73,6 @@ export function PaceElevChart({ splits }: { splits: RunSplit[] }) {
   const pRange = Math.max(1, pMax - pMin);
   // Bar height: faster (lower sec) → taller. Normalize 0.4..1 (canvas math)
   const barH = (p: number) => innerH * (0.4 + (1 - (p - pMin) / pRange) * 0.6);
-  const eMax = Math.max(...elevs, 1);
-  const ePts = elevs.map((e, i): [number, number] => [
-    PAD_L + bw * (i + 0.5),
-    PAD_T + innerH - (e / eMax) * innerH * 0.72,
-  ]);
-  let eD = '';
-  ePts.forEach((p, i) => {
-    if (i === 0) { eD = `M ${p[0].toFixed(1)} ${p[1].toFixed(1)}`; return; }
-    const prev = ePts[i - 1];
-    const mx = (prev[0] + p[0]) / 2;
-    eD += ` C ${mx.toFixed(1)} ${prev[1].toFixed(1)}, ${mx.toFixed(1)} ${p[1].toFixed(1)}, ${p[0].toFixed(1)} ${p[1].toFixed(1)}`;
-  });
 
   return (
     <View style={[st.card, shadows.sm]}>
@@ -104,8 +93,6 @@ export function PaceElevChart({ splits }: { splits: RunSplit[] }) {
             />
           );
         })}
-        <Path d={eD} fill="none" stroke={C.faint} strokeWidth={2.2} strokeDasharray="5 4" strokeLinecap="round" />
-        {ePts.map((p, i) => <Circle key={i} cx={p[0]} cy={p[1]} r={2.4} fill={C.sub} />)}
         {splits.map((s, i) => (
           <SvgText
             key={i}
@@ -116,16 +103,6 @@ export function PaceElevChart({ splits }: { splits: RunSplit[] }) {
           </SvgText>
         ))}
       </Svg>
-      <View style={st.legendRow}>
-        <View style={st.legendItem}>
-          <View style={st.legendSwatch} />
-          <Text style={st.legendTxt}>페이스</Text>
-        </View>
-        <View style={st.legendItem}>
-          <View style={st.legendDash} />
-          <Text style={st.legendTxt}>고도</Text>
-        </View>
-      </View>
     </View>
   );
 }
@@ -142,11 +119,4 @@ const st = StyleSheet.create({
   barTrack: { flex: 1, flexDirection: 'row', alignItems: 'center' },
   bar:      { height: 14, borderRadius: 7, backgroundColor: C.accent, minWidth: 22, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end' },
   fastTag:  { fontSize: 9, marginRight: 3 },
-  elevTxt:  { width: 38, textAlign: 'right', fontSize: 12.5, fontWeight: '600', color: C.faint, fontVariant: ['tabular-nums'] },
-
-  legendRow:    { flexDirection: 'row', gap: 16, marginTop: 6, paddingLeft: 2 },
-  legendItem:   { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  legendSwatch: { width: 11, height: 11, borderRadius: 3, backgroundColor: C.accent },
-  legendDash:   { width: 14, height: 0, borderTopWidth: 2.2, borderStyle: 'dashed', borderTopColor: C.faint },
-  legendTxt:    { fontSize: 12, fontWeight: '600', color: C.sub },
 });

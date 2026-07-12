@@ -1,18 +1,26 @@
 /**
- * 크루 공지 상세 (M1) — body + 러닝 일정 card (place map when coords exist)
- * + RSVP 3-state poll (server contract: going/not_going/maybe, re-vote
+ * 크루 공지 상세 (M1, +design-wave A meeting-point map) — body + 러닝 일정
+ * card + RSVP 3-state poll (server contract: going/not_going/maybe, re-vote
  * overwrites; canvas's 2-option poll adapted per the approved decision) +
  * going_members roster. 수정/삭제 = owner||admin — role computed HERE from
  * the members list (server truth) so the notification deep-link path gets
  * full function without param threading.
+ *
+ * Meeting-point map: server coords win (place_lat/lng — composer sends
+ * none yet, map-pick is its own slice); otherwise the place STRING geocodes
+ * best-effort via the Apple path (the ⓑ precedent). Geocode failure →
+ * text-only rows, honestly. "지도 앱에서 보기" opens the OS maps app.
  */
 import { useFocusEffect } from '@react-navigation/native';
+import * as Location from 'expo-location';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   Image,
+  Linking,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -70,6 +78,7 @@ export default function AnnouncementDetailScreen() {
   const [error, setError]     = useState<string | null>(null);
   const [canManage, setCanManage] = useState(false);
   const [voting, setVoting]   = useState(false);
+  const [geoCoords, setGeoCoords] = useState<{ lat: number; lng: number } | null>(null);
 
   const load = useCallback(() => {
     if (!crewId || !announcementId) return;
@@ -78,6 +87,36 @@ export default function AnnouncementDetailScreen() {
       .catch(() => setError('공지를 불러올 수 없어요'));
   }, [crewId, announcementId]);
   useEffect(() => { load(); }, [load]);
+
+  // 집결 장소 geocode — only when the server serves no coords. Free-string
+  // geocoding can miss or mislocate; failure/empty → geoCoords stays null
+  // and the card renders text-only (never a wrong-looking guess... the
+  // geocoder's best hit is still a best guess — the lat/lng upgrade rides
+  // the composer map-pick slice).
+  useEffect(() => {
+    if (!ann?.place_name || (ann.place_lat != null && ann.place_lng != null)) return;
+    let cancelled = false;
+    Location.geocodeAsync(ann.place_name)
+      .then(rs => {
+        if (!cancelled && rs[0]) setGeoCoords({ lat: rs[0].latitude, lng: rs[0].longitude });
+      })
+      .catch(() => { /* offline/unknown place — text-only card */ });
+    return () => { cancelled = true; };
+  }, [ann?.place_name, ann?.place_lat, ann?.place_lng]);
+
+  // server coords win over the geocoder's guess
+  const meetCoords = ann?.place_lat != null && ann?.place_lng != null
+    ? { lat: ann.place_lat, lng: ann.place_lng }
+    : geoCoords;
+
+  function openInMaps() {
+    if (!meetCoords || !ann?.place_name) return;
+    const q = encodeURIComponent(ann.place_name);
+    const url = Platform.OS === 'ios'
+      ? `http://maps.apple.com/?ll=${meetCoords.lat},${meetCoords.lng}&q=${q}`
+      : `geo:${meetCoords.lat},${meetCoords.lng}?q=${meetCoords.lat},${meetCoords.lng}(${q})`;
+    Linking.openURL(url).catch(() => { /* no maps handler — silently keep the in-app map */ });
+  }
 
   // Role from server truth — enables 수정/삭제 on the deep-link path too.
   // Focus-retry (debt batch 1): a transient failure here silently stripped
@@ -168,15 +207,25 @@ export default function AnnouncementDetailScreen() {
                 <Icon name="calendar-outline" size={15} color={C.accentGrn} />
                 <Text style={st.scheduleTxt}>{fmtRunAt(ann.run_at)}</Text>
               </View>
-              {ann.place_name ? (
+              {ann.place_name && !meetCoords ? (
+                // honest fallback — geocode missed (or is still in flight)
                 <View style={st.scheduleRow}>
                   <Icon name="location-outline" size={15} color={C.accentGrn} />
                   <Text style={st.scheduleTxt}>{ann.place_name}</Text>
                 </View>
               ) : null}
-              {ann.place_lat != null && ann.place_lng != null ? (
-                <View style={st.mapWrap}>
-                  <RealMap height={120} center={{ lat: ann.place_lat, lng: ann.place_lng }} borderRadius={12} />
+              {ann.place_name && meetCoords ? (
+                // canvas 집결 장소 card: light map + info row + 지도 앱에서 보기
+                <View style={st.meetCard}>
+                  <RealMap height={150} center={meetCoords} borderRadius={0} />
+                  <Pressable onPress={openInMaps} style={({ pressed }) => [st.meetRow, pressed && { opacity: 0.7 }]}>
+                    <View style={st.meetPin}><Icon name="location" size={17} color={C.danger} /></View>
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text style={st.meetName} numberOfLines={1}>{ann.place_name}</Text>
+                      <Text style={st.meetSub} numberOfLines={1}>{fmtRunAt(ann.run_at!)} 집결</Text>
+                    </View>
+                    <Text style={st.meetOpenTxt}>지도 앱에서 보기</Text>
+                  </Pressable>
                 </View>
               ) : null}
 
@@ -250,7 +299,14 @@ const st = StyleSheet.create({
   scheduleCard: { marginTop: 20, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: R.xl, padding: 14, gap: 10 },
   scheduleRow:  { flexDirection: 'row', alignItems: 'center', gap: 8 },
   scheduleTxt:  { fontSize: 14, fontWeight: '600', color: C.text, letterSpacing: -0.3 },
-  mapWrap:      { borderRadius: 12, overflow: 'hidden' },
+
+  // 집결 장소 card (design-wave A — canvas light map + info row)
+  meetCard:    { borderRadius: R.lg, borderWidth: 1, borderColor: C.border, overflow: 'hidden', backgroundColor: C.surface },
+  meetRow:     { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 13, paddingHorizontal: 15 },
+  meetPin:     { width: 36, height: 36, borderRadius: 11, backgroundColor: C.danger + '1A', alignItems: 'center', justifyContent: 'center' },
+  meetName:    { fontSize: 14.5, fontWeight: '700', color: C.text, letterSpacing: -0.3 },
+  meetSub:     { fontSize: 12, color: C.faint, letterSpacing: -0.2, marginTop: 2 },
+  meetOpenTxt: { fontSize: 12.5, fontWeight: '700', color: C.accentGrn, letterSpacing: -0.2 },
 
   rsvpRow:     { flexDirection: 'row', gap: 8, marginTop: 4 },
   rsvpBtn:     { flex: 1, alignItems: 'center', paddingVertical: 10, borderRadius: R.md, borderWidth: 1.5, borderColor: C.border, backgroundColor: C.surfaceAlt },
