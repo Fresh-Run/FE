@@ -30,6 +30,7 @@ import {
 import { avatarBg } from '@/lib/fr-hash';
 import { listAnnouncements, type Announcement } from '@/lib/announcements-api';
 import { getCurrentChallenge, type Challenge } from '@/lib/challenges-api';
+import { getUnread } from '@/lib/chat-api';
 import { getCrewRanking, listJoinRequests, type CrewRankingEntry } from '@/lib/crews-api';
 import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
 
@@ -189,6 +190,17 @@ export default function CrewDetailScreen() {
       .catch(() => { /* quiet — the screen itself surfaces errors */ });
     return () => { cancelled = true; };
   }, [crewId, crew?.myRole]));
+
+  // ── 채팅 unread badge (chat v1) — focus-refetch clears it after a visit ────
+  const [chatUnread, setChatUnread] = useState(0);
+  useFocusEffect(useCallback(() => {
+    if (!crewId || !isMember) { setChatUnread(0); return; }
+    let cancelled = false;
+    getUnread(crewId)
+      .then(u => { if (!cancelled) setChatUnread(u.unread_count); })
+      .catch(() => { /* quiet — the badge is garnish */ });
+    return () => { cancelled = true; };
+  }, [crewId, isMember]));
 
   // ── 챌린지 + 랭킹 (M2/M2b) — members only ───────────────────────────────────
   const [challenge, setChallenge] = useState<Challenge | null | undefined>(undefined); // undefined = loading
@@ -472,6 +484,41 @@ export default function CrewDetailScreen() {
           </View>
         )}
 
+        {/* ── 크루 채팅 entry (chat v1) — canvas: right after the 챌린지
+            section; unread badge on the icon, count line when unread ──── */}
+        {isMember && (
+          <View style={{ paddingHorizontal: S.gutter, paddingTop: S.xl }}>
+            <Pressable
+              onPress={() => router.push({
+                pathname: '/(community)/crew-chat' as never,
+                params: {
+                  crewId: crew.id,
+                  crewName: crew.name,
+                  memberCount: String(crew.member_count),
+                  role: crew.myRole ?? '',
+                },
+              })}
+              style={({ pressed }) => [st.chatBtn, shadows.sm, pressed && { opacity: 0.8 }]}
+            >
+              <View style={st.chatIcon}>
+                <Icon name="chatbubble-ellipses-outline" size={18} color={C.accentGrn} />
+                {chatUnread > 0 && (
+                  <View style={st.chatBadge}>
+                    <Text style={st.chatBadgeTxt}>{chatUnread > 99 ? '99+' : chatUnread}</Text>
+                  </View>
+                )}
+              </View>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={st.chatTitle}>크루 채팅</Text>
+                <Text style={st.chatSub} numberOfLines={1}>
+                  {chatUnread > 0 ? `새 메시지 ${chatUnread}개` : '크루원들과 이야기해 보세요'}
+                </Text>
+              </View>
+              <Icon name="chevron-forward" size={16} color={C.faint} />
+            </Pressable>
+          </View>
+        )}
+
         {/* ── 랭킹 (design-wave A) — canvas top-3 w/ medals + role badges;
             the full list moved to the 크루원 screen (door below). Server is
             이번 주 KST · GPS-verified — the caption keeps that truth next to
@@ -682,6 +729,14 @@ const st = StyleSheet.create({
   rankMedalTxt: { fontSize: 12.5, fontWeight: '800', color: '#fff', fontVariant: ['tabular-nums'] },
   rankName:     { flexShrink: 1, fontSize: 14, fontWeight: '600', color: C.text, letterSpacing: -0.3 },
   rankKm:       { fontSize: 13.5, fontWeight: '700', color: C.sub, fontVariant: ['tabular-nums'] },
+
+  // 크루 채팅 entry (chat v1)
+  chatBtn:      { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: R.lg, paddingVertical: 13, paddingHorizontal: 15 },
+  chatIcon:     { width: 36, height: 36, borderRadius: 11, backgroundColor: C.accentDim, alignItems: 'center', justifyContent: 'center' },
+  chatBadge:    { position: 'absolute', top: -4, right: -4, minWidth: 16, height: 16, paddingHorizontal: 4, borderRadius: 8, backgroundColor: C.danger, borderWidth: 1.5, borderColor: C.surface, alignItems: 'center', justifyContent: 'center' },
+  chatBadgeTxt: { fontSize: 9, fontWeight: '800', color: '#fff' },
+  chatTitle:    { fontSize: 14.5, fontWeight: '700', color: C.text, letterSpacing: -0.3 },
+  chatSub:      { fontSize: 12, color: C.faint, letterSpacing: -0.2, marginTop: 2 },
 
   // 크루원 전체 보기 door (canvas)
   rosterBtn:   { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: R.lg, paddingVertical: 13, paddingHorizontal: 15, marginTop: 10 },

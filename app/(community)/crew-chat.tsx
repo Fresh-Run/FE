@@ -1,0 +1,465 @@
+/**
+ * 크루 채팅 v1 — the room (canvas: crew-chat.jsx FrCrewChat; text + 4-emoji
+ * reactions, minimal). Transport = POLLING per the server's design (guide
+ * §214: 20~30s while active — this screen polls 20s ONLY while focused,
+ * plus refetch-on-focus and after every send). 시스템 메시지·기록 카드 =
+ * v1.5: unknown message types render their content as plain text when
+ * present, otherwise the row hides — no fake placeholders.
+ *
+ * Honesty mechanics: optimistic send renders immediately as 전송 중; failure
+ * flips to a tappable 전송 실패 · 다시 시도 row (the sacred-flow standard) —
+ * a failed bubble never silently disappears. Reactions toggle optimistically
+ * and the next poll corrects any drift. Deletes render the server's soft
+ * state ("삭제된 메시지예요"), never a gap. Manager-delete follows the
+ * server rule (본인 or 운영진; others 403) — the affordance shows only for
+ * own messages, or any message when the role param says owner/admin (the
+ * server still enforces on the deep path).
+ *
+ * Read marking: POST /read on focus and after polls that land new messages
+ * while the user is IN the room — the crew-detail badge clears on return
+ * (its focus-refetch).
+ */
+import { useFocusEffect } from '@react-navigation/native';
+import { router, useLocalSearchParams } from 'expo-router';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Image,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { Icon } from '@/components/ui';
+import {
+  CHAT_EMOJIS,
+  CHAT_PAGE,
+  deleteMessage,
+  getUnread,
+  listMessages,
+  markRead,
+  reactMessage,
+  sendMessage,
+  setMute,
+  unreactMessage,
+  type ChatEmoji,
+  type ChatMessage,
+} from '@/lib/chat-api';
+import { avatarBg } from '@/lib/fr-hash';
+import { openProfile } from '@/lib/profile-nav';
+import { fmtWhen } from '@/lib/run-format';
+import { supabase } from '@/lib/supabase';
+import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
+
+const POLL_MS = 20_000; // guide §214: 20~30s while the room is active
+
+type PendingSend = { tempId: string; content: string; failed: boolean };
+// pending sends ride the DATA array (newest-first, ahead of server rows) —
+// header/empty components in an inverted list flip differently across RN
+// versions, so nothing textual lives in them.
+type ChatRow = ChatMessage | (PendingSend & { kind: 'pending' });
+const isPending = (r: ChatRow): r is PendingSend & { kind: 'pending' } => 'kind' in r;
+
+function SenderAvatar({ name, photoUrl, onPress }: { name: string; photoUrl: string | null; onPress?: () => void }) {
+  const [broken, setBroken] = useState(false);
+  const inner = photoUrl && !broken
+    ? <Image source={{ uri: photoUrl }} onError={() => setBroken(true)} style={st.avatar} />
+    : (
+      <View style={[st.avatar, { backgroundColor: avatarBg(name), alignItems: 'center', justifyContent: 'center' }]}>
+        <Text style={st.avatarTxt}>{name[0]}</Text>
+      </View>
+    );
+  return <Pressable onPress={onPress} hitSlop={4}>{inner}</Pressable>;
+}
+
+export default function CrewChatScreen() {
+  const insets = useSafeAreaInsets();
+  const { crewId, crewName, memberCount, role } = useLocalSearchParams<{
+    crewId: string; crewName?: string; memberCount?: string; role?: string;
+  }>();
+  const canManage = role === 'owner' || role === 'admin';
+
+  const [messages, setMessages] = useState<ChatMessage[] | null>(null); // newest-first
+  const [pending, setPending]   = useState<PendingSend[]>([]);
+  const [draft, setDraft]       = useState('');
+  const [muted, setMuted]       = useState(false);
+  const [toast, setToast]       = useState<string | null>(null);
+  const [pickerFor, setPickerFor] = useState<string | null>(null);
+  const [sheetFor, setSheetFor]   = useState<ChatMessage | null>(null);
+  const [loadingOlder, setLoadingOlder] = useState(false);
+  const [myUid, setMyUid] = useState<string | null>(null);
+
+  const endReachedRef = useRef(false);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => setMyUid(user?.id ?? null));
+  }, []);
+
+  function showToast(msg: string) {
+    setToast(msg);
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(null), 1400);
+  }
+
+  /** Fresh head merge — newest CHAT_PAGE re-fetched, older tail preserved. */
+  const refreshHead = useCallback(async (opts?: { markReadOnNew?: boolean }) => {
+    if (!crewId) return;
+    try {
+      const head = await listMessages(crewId);
+      setMessages(prev => {
+        if (!prev) return head;
+        const headIds = new Set(head.map(m => m.id));
+        const merged = [...head, ...prev.filter(m => !headIds.has(m.id))];
+        if (opts?.markReadOnNew && head[0] && head[0].id !== prev[0]?.id) {
+          markRead(crewId).catch(() => {});
+        }
+        return merged;
+      });
+    } catch { /* poll miss — next tick retries; the room keeps last data */ }
+  }, [crewId]);
+
+  // Focus lifecycle: initial load + mark-read + mute state, then the poll.
+  useFocusEffect(useCallback(() => {
+    if (!crewId) return;
+    refreshHead();
+    markRead(crewId).catch(() => {});
+    getUnread(crewId).then(u => setMuted(u.muted)).catch(() => {});
+    const t = setInterval(() => refreshHead({ markReadOnNew: true }), POLL_MS);
+    return () => clearInterval(t);
+  }, [crewId, refreshHead]));
+
+  async function loadOlder() {
+    if (!crewId || !messages || messages.length === 0 || loadingOlder || endReachedRef.current) return;
+    setLoadingOlder(true);
+    try {
+      const oldest = messages[messages.length - 1].created_at;
+      const page = await listMessages(crewId, oldest);
+      if (page.length < CHAT_PAGE) endReachedRef.current = true;
+      setMessages(prev => {
+        const known = new Set((prev ?? []).map(m => m.id));
+        return [...(prev ?? []), ...page.filter(m => !known.has(m.id))];
+      });
+    } catch { /* scroll retries naturally */ } finally {
+      setLoadingOlder(false);
+    }
+  }
+
+  async function send(contentArg?: string, retryTempId?: string) {
+    if (!crewId) return;
+    const content = (contentArg ?? draft).trim();
+    if (!content) return;
+    const tempId = retryTempId ?? `tmp-${Date.now()}`;
+    if (retryTempId) {
+      setPending(p => p.map(x => x.tempId === tempId ? { ...x, failed: false } : x));
+    } else {
+      setPending(p => [{ tempId, content, failed: false }, ...p]);
+      setDraft('');
+    }
+    try {
+      const saved = await sendMessage(crewId, content);
+      setPending(p => p.filter(x => x.tempId !== tempId));
+      setMessages(prev => prev && !prev.some(m => m.id === saved.id) ? [saved, ...prev] : prev);
+      markRead(crewId).catch(() => {});
+    } catch {
+      setPending(p => p.map(x => x.tempId === tempId ? { ...x, failed: true } : x));
+    }
+  }
+
+  async function toggleReact(m: ChatMessage, emoji: ChatEmoji) {
+    if (!crewId) return;
+    setPickerFor(null);
+    const mine = m.my_reactions.includes(emoji);
+    // optimistic — the next poll corrects any drift
+    setMessages(prev => prev?.map(x => {
+      if (x.id !== m.id) return x;
+      const count = Math.max(0, (x.reactions[emoji] ?? 0) + (mine ? -1 : 1));
+      const reactions = { ...x.reactions, [emoji]: count };
+      if (count === 0) delete reactions[emoji];
+      return {
+        ...x,
+        reactions,
+        my_reactions: mine ? x.my_reactions.filter(e => e !== emoji) : [...x.my_reactions, emoji],
+      };
+    }) ?? null);
+    try {
+      await (mine ? unreactMessage(crewId, m.id, emoji) : reactMessage(crewId, m.id, emoji));
+    } catch {
+      refreshHead(); // server truth wins back
+    }
+  }
+
+  function confirmDelete(m: ChatMessage) {
+    setSheetFor(null);
+    Alert.alert('메시지를 삭제할까요?', '삭제된 메시지는 모두에게 "삭제된 메시지예요"로 보여요.', [
+      { text: '취소', style: 'cancel' },
+      {
+        text: '삭제', style: 'destructive',
+        onPress: async () => {
+          try {
+            await deleteMessage(crewId!, m.id);
+            setMessages(prev => prev?.map(x => x.id === m.id ? { ...x, deleted: true, content: null } : x) ?? null);
+          } catch (e: unknown) {
+            Alert.alert('삭제 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요.');
+          }
+        },
+      },
+    ]);
+  }
+
+  async function toggleMute() {
+    if (!crewId) return;
+    const next = !muted;
+    setMuted(next);
+    try {
+      await setMute(crewId, next);
+      showToast(next ? '이 채팅방 알림을 껐어요' : '이 채팅방 알림을 켰어요');
+    } catch {
+      setMuted(!next);
+      showToast('변경하지 못했어요');
+    }
+  }
+
+  function ReactionChips({ m }: { m: ChatMessage }) {
+    const entries = Object.entries(m.reactions).filter(([, n]) => n > 0);
+    if (m.deleted) return null;
+    return (
+      <View style={st.reactRow}>
+        {entries.map(([e, n]) => {
+          const mine = m.my_reactions.includes(e);
+          return (
+            <Pressable
+              key={e}
+              onPress={() => toggleReact(m, e as ChatEmoji)}
+              style={[st.reactChip, mine && st.reactChipMine]}
+              hitSlop={4}
+            >
+              <Text style={st.reactChipTxt}>{e} {n}</Text>
+            </Pressable>
+          );
+        })}
+        <Pressable
+          onPress={() => setPickerFor(pickerFor === m.id ? null : m.id)}
+          style={st.reactAdd}
+          hitSlop={6}
+        >
+          <Text style={st.reactAddTxt}>+</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
+  function renderMessage({ item: row }: { item: ChatRow }) {
+    if (isPending(row)) {
+      return (
+        <Pressable
+          onPress={row.failed ? () => send(row.content, row.tempId) : undefined}
+          style={[st.msgRow, st.msgRowMine]}
+        >
+          <View style={[st.msgCol, { alignItems: 'flex-end' }]}>
+            <View style={[st.bubble, st.bubbleMine, { opacity: row.failed ? 0.9 : 0.55 }]}>
+              <Text style={[st.bubbleTxt, { color: C.accentText }]}>{row.content}</Text>
+            </View>
+            <Text style={[st.pendingTxt, row.failed && { color: C.danger, fontWeight: '700' }]}>
+              {row.failed ? '전송 실패 · 눌러서 다시 시도' : '전송 중…'}
+            </Text>
+          </View>
+        </Pressable>
+      );
+    }
+    const m = row;
+    // v1.5 space: non-text types show plain content when present, else hide
+    if (m.type !== 'text' && !m.content && !m.deleted) return null;
+    const mine = m.sender_id != null && m.sender_id === myUid;
+    const name = m.sender_nickname ?? '러너';
+    const canDelete = !m.deleted && (mine || canManage);
+    const bubble = m.deleted
+      ? <Text style={st.deletedTxt}>삭제된 메시지예요</Text>
+      : <Text style={[st.bubbleTxt, mine && { color: C.accentText }]}>{m.content}</Text>;
+
+    return (
+      <View style={[st.msgRow, mine && st.msgRowMine]}>
+        {!mine && (
+          <SenderAvatar
+            name={name}
+            photoUrl={m.sender_avatar_url}
+            onPress={m.sender_id ? () => openProfile(m.sender_id!, name) : undefined}
+          />
+        )}
+        <View style={[st.msgCol, mine && { alignItems: 'flex-end' }]}>
+          {!mine && (
+            <Text style={st.senderLine}>
+              {name} <Text style={st.whenTxt}>· {fmtWhen(m.created_at)}</Text>
+            </Text>
+          )}
+          <Pressable
+            onLongPress={canDelete ? () => setSheetFor(m) : undefined}
+            delayLongPress={400}
+            style={[st.bubble, mine ? st.bubbleMine : st.bubbleOther, m.deleted && st.bubbleDeleted]}
+          >
+            {bubble}
+          </Pressable>
+          <ReactionChips m={m} />
+          {pickerFor === m.id && (
+            <View style={[st.picker, shadows.sm]}>
+              {CHAT_EMOJIS.map(e => (
+                <Pressable key={e} onPress={() => toggleReact(m, e)} hitSlop={6}>
+                  <Text style={st.pickerEmoji}>{e}</Text>
+                </Pressable>
+              ))}
+            </View>
+          )}
+        </View>
+      </View>
+    );
+  }
+
+  return (
+    <KeyboardAvoidingView
+      style={[st.root, { paddingTop: insets.top }]}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
+      {/* ── App bar: back · crew name · mute bell · member count ── */}
+      <View style={st.appBar}>
+        <Pressable onPress={() => router.back()} hitSlop={12} style={st.backBtn}>
+          <Icon name="arrow-back" size={20} color={C.text} />
+        </Pressable>
+        <Text style={st.appBarTitle} numberOfLines={1}>{crewName ?? '크루 채팅'}</Text>
+        <Pressable onPress={toggleMute} hitSlop={8} style={[st.bellBtn, !muted && { backgroundColor: C.accentDim }]}>
+          <Icon name={muted ? 'notifications-off-outline' : 'notifications-outline'} size={16} color={muted ? C.faint : C.accentGrn} />
+        </Pressable>
+        {memberCount ? <Text style={st.memberCount}>{memberCount}명</Text> : null}
+      </View>
+
+      {toast && <View style={st.toast}><Text style={st.toastTxt}>{toast}</Text></View>}
+
+      {messages === null ? (
+        <View style={st.centered}><ActivityIndicator size="large" color={C.accent} /></View>
+      ) : (
+        <View style={{ flex: 1 }}>
+          <FlatList
+            inverted
+            data={[...pending.map(p => ({ ...p, kind: 'pending' as const })), ...messages] as ChatRow[]}
+            keyExtractor={r => (isPending(r) ? r.tempId : r.id)}
+            renderItem={renderMessage}
+            onEndReached={loadOlder}
+            onEndReachedThreshold={0.4}
+            ListFooterComponent={loadingOlder
+              ? <ActivityIndicator size="small" color={C.faint} style={{ paddingVertical: 12 }} />
+              : null}
+            contentContainerStyle={{ paddingHorizontal: S.lg, paddingVertical: 12, flexGrow: 1 }}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          />
+          {messages.length === 0 && pending.length === 0 && (
+            <View style={st.emptyWrap} pointerEvents="none">
+              <Text style={st.emptyTxt}>첫 메시지를 보내 크루 채팅을 시작해 보세요</Text>
+            </View>
+          )}
+        </View>
+      )}
+
+      {/* ── Composer ── */}
+      <View style={[st.composer, { paddingBottom: Math.max(insets.bottom, 10) + 6 }]}>
+        <TextInput
+          value={draft}
+          onChangeText={v => setDraft(v.slice(0, 2000))}
+          placeholder="메시지 보내기..."
+          placeholderTextColor={C.faint}
+          style={st.input}
+          multiline
+        />
+        <Pressable
+          onPress={() => send()}
+          disabled={!draft.trim()}
+          style={[st.sendBtn, !draft.trim() && st.sendBtnOff]}
+        >
+          <Text style={[st.sendTxt, !draft.trim() && { color: C.faint }]}>전송</Text>
+        </Pressable>
+      </View>
+
+      {/* ── Long-press delete sheet ── */}
+      <Modal visible={!!sheetFor} transparent animationType="slide" onRequestClose={() => setSheetFor(null)}>
+        <Pressable style={st.sheetOverlay} onPress={() => setSheetFor(null)}>
+          <Pressable style={[st.sheet, { paddingBottom: Math.max(insets.bottom, 12) + 8 }]} onPress={() => {}}>
+            <View style={st.sheetHandleRow}><View style={st.sheetHandle} /></View>
+            <Pressable
+              onPress={() => confirmDelete(sheetFor!)}
+              style={({ pressed }) => [st.sheetRow, pressed && { opacity: 0.7 }]}
+            >
+              <Icon name="trash-outline" size={19} color={C.danger} />
+              <Text style={[st.sheetRowTxt, { color: C.danger }]}>메시지 삭제</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
+    </KeyboardAvoidingView>
+  );
+}
+
+const st = StyleSheet.create({
+  root: { flex: 1, backgroundColor: C.bg },
+
+  appBar:      { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: S.md, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: C.border, backgroundColor: C.surface },
+  backBtn:     { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
+  appBarTitle: { flex: 1, fontSize: 16, fontWeight: '700', letterSpacing: -0.3, color: C.text },
+  bellBtn:     { width: 32, height: 32, borderRadius: 16, borderWidth: 1, borderColor: C.border, alignItems: 'center', justifyContent: 'center' },
+  memberCount: { fontSize: 12.5, fontWeight: '700', color: C.faint },
+
+  toast:    { position: 'absolute', top: 110, alignSelf: 'center', zIndex: 96, backgroundColor: 'rgba(20,22,18,0.88)', borderRadius: R.pill, paddingHorizontal: 16, paddingVertical: 8 },
+  toastTxt: { fontSize: 12.5, fontWeight: '600', color: '#fff', letterSpacing: -0.2 },
+
+  centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+
+  msgRow:     { flexDirection: 'row', gap: 9, marginVertical: 7, maxWidth: '86%', alignSelf: 'flex-start' },
+  msgRowMine: { alignSelf: 'flex-end', flexDirection: 'row-reverse' },
+  msgCol:     { minWidth: 0, alignItems: 'flex-start' },
+  avatar:     { width: 30, height: 30, borderRadius: 15 },
+  avatarTxt:  { fontSize: 12, fontWeight: '700', color: '#fff' },
+
+  senderLine: { fontSize: 11.5, fontWeight: '700', color: C.sub, letterSpacing: -0.2, marginBottom: 4 },
+  whenTxt:    { fontWeight: '500', color: C.faint },
+
+  bubble:        { paddingHorizontal: 13, paddingVertical: 9 },
+  bubbleOther:   { backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderTopLeftRadius: 4, borderTopRightRadius: 16, borderBottomLeftRadius: 16, borderBottomRightRadius: 16 },
+  bubbleMine:    { backgroundColor: C.accent, borderTopLeftRadius: 16, borderTopRightRadius: 16, borderBottomLeftRadius: 16, borderBottomRightRadius: 4 },
+  bubbleDeleted: { backgroundColor: C.surfaceAlt, borderWidth: 1, borderColor: C.border },
+  bubbleTxt:     { fontSize: 13.5, lineHeight: 19, color: C.text, letterSpacing: -0.2 },
+  deletedTxt:    { fontSize: 12.5, color: C.faint, letterSpacing: -0.2, fontStyle: 'italic' },
+
+  pendingTxt: { fontSize: 10.5, color: C.faint, letterSpacing: -0.2, marginTop: 3 },
+
+  reactRow:      { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 5, flexWrap: 'wrap' },
+  reactChip:     { flexDirection: 'row', alignItems: 'center', height: 24, paddingHorizontal: 8, borderRadius: R.pill, borderWidth: 1, borderColor: C.border, backgroundColor: C.surface },
+  reactChipMine: { borderColor: C.accent, backgroundColor: C.accentDim },
+  reactChipTxt:  { fontSize: 11.5, fontWeight: '700', color: C.sub },
+  reactAdd:      { width: 24, height: 24, borderRadius: 12, borderWidth: 1, borderColor: C.border, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center' },
+  reactAddTxt:   { fontSize: 12, color: C.faint, fontWeight: '700', lineHeight: 14 },
+
+  picker:      { flexDirection: 'row', gap: 10, marginTop: 6, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: R.pill, paddingHorizontal: 12, paddingVertical: 6 },
+  pickerEmoji: { fontSize: 18 },
+
+  emptyWrap: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' },
+  emptyTxt:  { fontSize: 13.5, color: C.faint, letterSpacing: -0.2 },
+
+  composer: { flexDirection: 'row', alignItems: 'flex-end', gap: 9, paddingHorizontal: S.lg, paddingTop: 10, borderTopWidth: 1, borderTopColor: C.border, backgroundColor: C.surface },
+  input:    { flex: 1, minHeight: 42, maxHeight: 110, borderRadius: 21, borderWidth: 1.5, borderColor: C.border, backgroundColor: C.surfaceAlt, paddingHorizontal: 16, paddingTop: 11, paddingBottom: 11, fontSize: 14, color: C.text, letterSpacing: -0.2 },
+  sendBtn:    { height: 42, paddingHorizontal: 16, borderRadius: 21, backgroundColor: C.accent, alignItems: 'center', justifyContent: 'center' },
+  sendBtnOff: { backgroundColor: C.surfaceAlt, borderWidth: 1, borderColor: C.border },
+  sendTxt:    { fontSize: 13.5, fontWeight: '700', color: C.accentText, letterSpacing: -0.2 },
+
+  sheetOverlay:   { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.42)' },
+  sheet:          { backgroundColor: C.bg, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: S.gutter },
+  sheetHandleRow: { alignItems: 'center', paddingTop: 10, paddingBottom: 8 },
+  sheetHandle:    { width: 38, height: 5, borderRadius: 99, backgroundColor: C.border },
+  sheetRow:       { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 16, paddingHorizontal: 4 },
+  sheetRowTxt:    { fontSize: 15, fontWeight: '600', color: C.text, letterSpacing: -0.3 },
+});
