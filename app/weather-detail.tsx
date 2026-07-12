@@ -147,7 +147,9 @@ export default function WeatherDetailScreen() {
     // 5단계, C.uv map). Contract: null on partial outage → tile hidden.
     // Label says daily-max per 지연's ⓐ ruling: /data/2.5/uvi returns the
     // day's solar-noon UV, not a current reading (the night-9.8 finding).
-    ...(w && !w.uv ? [] : [{
+    // Night collapse (is_day, BE 2bd2855): a noon-max reading is noise at
+    // midnight — tile hides after dark.
+    ...(w && (!w.uv || !w.is_day) ? [] : [{
       iconName:  'sunny-outline',
       label:     '오늘 최고 자외선',
       value:     w?.uv ? String(w.uv.value) : '—',
@@ -198,7 +200,7 @@ export default function WeatherDetailScreen() {
             <Text style={styles.heroTemp}>{w ? `${Math.round(w.temp_c)}°` : '--°'}</Text>
             {/* Real sky icon — same weatherIcon mapping as the home strip (W2) */}
             {(() => {
-              const ic = w ? weatherIcon(w.condition_code) : { name: 'sunny', color: C.sun };
+              const ic = w ? weatherIcon(w.condition_code, w.is_day) : { name: 'sunny', color: C.sun };
               return <Icon name={ic.name as any} size={48} color={ic.color} />;
             })()}
           </View>

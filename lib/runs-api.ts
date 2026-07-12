@@ -46,6 +46,9 @@ export type SaveRunInput = {
   title?: string | null;      // ≤60 (BE 2af3715)
   notes?: string | null;      // 개인 메모, ≤2000
   visibility?: RunVisibility; // default public
+  /** ≤50자 지역명 (guide §96, front-sent — Apple subLocality ⓑ verdict);
+      best-effort: absent → 지역 라인 hidden, never blocks a save. */
+  area?: string | null;
   /** RAW received fixes (owner decision 2026-07-08) — the server filters
       independently; layer attribution needs what the client filter saw. */
   gpsTrack?: GpsPoint[];
@@ -87,6 +90,7 @@ export function saveRun(input: SaveRunInput): Promise<SavedRun> {
       title: input.title ?? null,
       notes: input.notes ?? null,
       visibility: input.visibility ?? 'public',
+      ...(input.area ? { area: input.area.slice(0, 50) } : {}),
       // Track-less saves stay contract-identical to the old manual path
       ...(track ? { gps_track: track } : {}),
     },

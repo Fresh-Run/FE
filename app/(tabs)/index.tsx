@@ -165,7 +165,7 @@ function WeatherStrip({ onPress }: { onPress: () => void }) {
   const { weather: w, placeName } = useWeather();
   const tone = w ? weatherTone(w.running_index.score) : null;
   const vc = tone ? verdictColor(tone) : null;
-  const icon = w ? weatherIcon(w.condition_code) : { name: 'sunny', color: '#E8A23D' };
+  const icon = w ? weatherIcon(w.condition_code, w.is_day) : { name: 'sunny', color: '#E8A23D' };
   return (
     <Pressable onPress={onPress} style={[wst.strip, shadows.sm]}>
       <Icon name={icon.name as any} size={26} color={icon.color} />

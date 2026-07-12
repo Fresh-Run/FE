@@ -230,6 +230,16 @@ export async function getCrewRanking(crewId: string): Promise<CrewRankingEntry[]
   return apiFetch<CrewRankingEntry[]>(`/api/crews/${crewId}/ranking`);
 }
 
+/** Owner-only (403 otherwise — probed 2026-07-15): hand ownership to a
+    member. `leave_after` keeps the old owner as a regular member when false
+    (our UI's semantics). Body shape per BE TransferRequest. */
+export function transferCrew(crewId: string, newOwnerId: string): Promise<void> {
+  return apiFetch<void>(`/api/crews/${crewId}/transfer`, {
+    method: 'PATCH',
+    body: { new_owner_id: newOwnerId, leave_after: false },
+  });
+}
+
 // ─── My join requests (Stage B, guide §197) ──────────────────────────────────
 
 export type MyJoinRequest = {

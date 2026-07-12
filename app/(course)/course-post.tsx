@@ -36,6 +36,7 @@ import { Icon } from '@/components/ui';
 import { avatarBg } from '@/lib/fr-hash';
 import { openProfile } from '@/lib/profile-nav';
 import {
+  deleteRouteComment,
   getRouteComments,
   likeRoute,
   postRouteComment,
@@ -46,6 +47,7 @@ import { fmtWhen } from '@/lib/run-format';
 import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
 import { setPendingCourse } from '@/store/pending-course';
 import { getPendingPost } from '@/store/pending-post';
+import { useStore } from '@/store/use-store';
 
 const HERO_H = 210;
 
@@ -100,6 +102,23 @@ export default function CoursePostScreen() {
   const [loadError, setLoadError] = useState(false);
   const [draft, setDraft]       = useState('');
   const [posting, setPosting]   = useState(false);
+  const myUid = useStore(s => s.session?.user.id);
+
+  // Own-comment delete (S-batch #2): long-press an own row → destructive
+  // confirm → DELETE → local filter (counts derive from comments.length)
+  function confirmDeleteComment(cm: RouteComment) {
+    Alert.alert('댓글 삭제', '이 댓글을 삭제할까요?', [
+      { text: '취소', style: 'cancel' },
+      {
+        text: '삭제', style: 'destructive',
+        onPress: () => {
+          deleteRouteComment(route!.id, cm.id)
+            .then(() => setComments(prev => (prev ?? []).filter(c => c.id !== cm.id)))
+            .catch(() => Alert.alert('삭제 실패', '잠시 후 다시 시도해 주세요'));
+        },
+      },
+    ]);
+  }
 
   useEffect(() => {
     if (!route) return;
@@ -220,7 +239,13 @@ export default function CoursePostScreen() {
           ) : (
             <View style={{ gap: 14, paddingBottom: 8 }}>
               {comments.map(cm => (
-                <View key={cm.id} style={st.commentRow}>
+                <Pressable
+                  key={cm.id}
+                  style={st.commentRow}
+                  // Own rows only: long-press → destructive confirm
+                  onLongPress={cm.user_id === myUid ? () => confirmDeleteComment(cm) : undefined}
+                  delayLongPress={400}
+                >
                   <Pressable onPress={() => openProfile(cm.user_id, cm.nickname)} hitSlop={6}>
                     <InitialAvatar name={cm.nickname} size={30} photoUrl={cm.avatar_url} />
                   </Pressable>
@@ -230,7 +255,7 @@ export default function CoursePostScreen() {
                     </Pressable>
                     <Text style={st.commentBody}>{cm.content}</Text>
                   </View>
-                </View>
+                </Pressable>
               ))}
             </View>
           )}

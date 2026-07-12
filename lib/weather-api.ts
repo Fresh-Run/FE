@@ -20,6 +20,8 @@ export type WeatherResponse = {
   /** 기상청 5단계 grade 낮음/보통/높음/매우높음/위험 (guide §62); null on
       partial upstream outage → hide the tile */
   uv: AqiBlock;
+  /** BE 2bd2855 (probed live 2026-07-15) — night icon branch + UV collapse */
+  is_day: boolean;
   running_index: {
     score: number; // 0–100
     label: string;
@@ -43,13 +45,15 @@ export function weatherTone(score: number): WeatherTone {
 
 /** OpenWeather condition_code → Ionicons name + tint (W2, home strip).
     Code families per OpenWeather docs: 2xx thunder, 3xx drizzle, 5xx rain,
-    6xx snow, 7xx atmosphere, 800 clear, 80x clouds. */
-export function weatherIcon(code: number): { name: string; color: string } {
+    6xx snow, 7xx atmosphere, 800 clear, 80x clouds. Night branch (is_day
+    false, BE 2bd2855): the sun families swap to moon variants — weather
+    with its own iconography (rain/snow/thunder/fog) stays. */
+export function weatherIcon(code: number, isDay = true): { name: string; color: string } {
   if (code >= 200 && code < 300) return { name: 'thunderstorm', color: '#8A7BD8' };
   if (code >= 300 && code < 600) return { name: 'rainy',        color: '#3BA7FF' };
   if (code >= 600 && code < 700) return { name: 'snow',         color: '#9DB2C8' };
   if (code >= 700 && code < 800) return { name: 'cloud-outline', color: '#9DA6B4' }; // mist/fog/haze
-  if (code === 800)              return { name: 'sunny',        color: '#E8A23D' };
-  if (code <= 802)               return { name: 'partly-sunny', color: '#E8A23D' };
+  if (code === 800)              return isDay ? { name: 'sunny', color: '#E8A23D' } : { name: 'moon', color: '#8FA3C8' };
+  if (code <= 802)               return isDay ? { name: 'partly-sunny', color: '#E8A23D' } : { name: 'cloudy-night', color: '#8FA3C8' };
   return { name: 'cloudy', color: '#9DA6B4' }; // 803–804 broken/overcast
 }

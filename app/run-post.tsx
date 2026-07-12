@@ -47,6 +47,7 @@ import { Icon } from '@/components/ui';
 import { avatarBg } from '@/lib/fr-hash';
 import { openProfile } from '@/lib/profile-nav';
 import {
+  deleteRunComment,
   getRunComments,
   getRunTrack,
   kudosRun,
@@ -192,7 +193,24 @@ export default function RunPostScreen() {
   // entry seed from the tapped row (sanitized detail carries no identity)
   const ownPhotoUrl = useStore(s => s.photoUrl);
   const authorPhotoUrl = isOwn ? ownPhotoUrl : (params.avatarUrl || null);
+  const myUid = useStore(s => s.session?.user.id);
   const commentCount = comments?.length ?? run?.comment_count ?? 0;
+
+  // Own-comment delete (S-batch #2): long-press an own row → destructive
+  // confirm → DELETE → local filter (counts derive from comments.length)
+  function confirmDeleteComment(cm: RunComment) {
+    Alert.alert('댓글 삭제', '이 댓글을 삭제할까요?', [
+      { text: '취소', style: 'cancel' },
+      {
+        text: '삭제', style: 'destructive',
+        onPress: () => {
+          deleteRunComment(params.runId!, cm.id)
+            .then(() => setComments(prev => (prev ?? []).filter(c => c.id !== cm.id)))
+            .catch(() => Alert.alert('삭제 실패', '잠시 후 다시 시도해 주세요'));
+        },
+      },
+    ]);
+  }
 
   return (
     <KeyboardAvoidingView style={st.root} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -281,7 +299,13 @@ export default function RunPostScreen() {
               ) : (
                 <View style={{ gap: 14, paddingBottom: 8 }}>
                   {comments.map(cm => (
-                    <View key={cm.id} style={st.commentRow}>
+                    <Pressable
+                      key={cm.id}
+                      style={st.commentRow}
+                      // Own rows only: long-press → destructive confirm
+                      onLongPress={cm.user_id === myUid ? () => confirmDeleteComment(cm) : undefined}
+                      delayLongPress={400}
+                    >
                       <Pressable onPress={() => openProfile(cm.user_id, cm.nickname)} hitSlop={6}>
                         <InitialAvatar name={cm.nickname} size={30} photoUrl={cm.avatar_url} />
                       </Pressable>
@@ -291,7 +315,7 @@ export default function RunPostScreen() {
                         </Pressable>
                         <Text style={st.commentBody}>{cm.content}</Text>
                       </View>
-                    </View>
+                    </Pressable>
                   ))}
                 </View>
               )}

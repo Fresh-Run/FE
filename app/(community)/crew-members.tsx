@@ -23,7 +23,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/ui';
-import { getCrewMembers, kickMember, setMemberRole, type CrewMember } from '@/lib/crews-api';
+import { getCrewMembers, kickMember, setMemberRole, transferCrew, type CrewMember } from '@/lib/crews-api';
 import { avatarBg } from '@/lib/fr-hash';
 import { openProfile } from '@/lib/profile-nav';
 import { supabase } from '@/lib/supabase';
@@ -100,6 +100,32 @@ export default function CrewMembersScreen() {
     );
   }
 
+  // 크루 양도 (S-batch #4): owner-only, destructive-confirm — you stop
+  // being owner (leave_after=false: you stay as a regular member).
+  function confirmTransfer(m: CrewMember) {
+    Alert.alert(
+      '크루장을 양도할까요?',
+      `${m.nickname}님이 새 크루장이 되고, 나는 일반 멤버가 돼요. 되돌리려면 새 크루장이 다시 양도해야 해요.`,
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '양도', style: 'destructive',
+          onPress: async () => {
+            setBusyUid(m.user_id);
+            try {
+              await transferCrew(crewId!, m.user_id);
+              load(); // roles re-render from server truth; my actions vanish
+            } catch (e: unknown) {
+              Alert.alert('양도 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요.');
+            } finally {
+              setBusyUid(null);
+            }
+          },
+        },
+      ],
+    );
+  }
+
   function confirmKick(m: CrewMember) {
     Alert.alert('크루에서 내보낼까요?', `${m.nickname}님을 크루에서 내보내요. 다시 가입할 수는 있어요.`, [
       { text: '취소', style: 'cancel' },
@@ -122,11 +148,11 @@ export default function CrewMembersScreen() {
 
   /** Authorization matrix → affordances. Disabled = visible but inert
       (the server's 403 semantics, surfaced honestly). */
-  function actionsFor(m: CrewMember): { role?: boolean; kick?: 'enabled' | 'disabled' } {
+  function actionsFor(m: CrewMember): { role?: boolean; kick?: 'enabled' | 'disabled'; transfer?: boolean } {
     if (m.user_id === myUid) return {};              // self — never
     if (iAmOwner) {
       if (m.role === 'owner') return {};             // cannot occur (self is owner)
-      return { role: true, kick: 'enabled' };
+      return { role: true, kick: 'enabled', transfer: true };
     }
     if (iAmAdmin) {
       if (m.role === 'member') return { kick: 'enabled' };
@@ -177,6 +203,11 @@ export default function CrewMembersScreen() {
                     {acts.role && (
                       <Pressable onPress={() => confirmRole(m)} hitSlop={6} style={({ pressed }) => [st.actBtn, pressed && { opacity: 0.7 }]}>
                         <Text style={st.actTxt}>{m.role === 'admin' ? '운영진 해제' : '운영진 지정'}</Text>
+                      </Pressable>
+                    )}
+                    {acts.transfer && (
+                      <Pressable onPress={() => confirmTransfer(m)} hitSlop={6} style={({ pressed }) => [st.actBtn, pressed && { opacity: 0.7 }]}>
+                        <Text style={st.actTxt}>양도</Text>
                       </Pressable>
                     )}
                     {acts.kick && (

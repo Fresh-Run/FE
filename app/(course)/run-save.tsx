@@ -11,6 +11,7 @@
  * pending-run) — an app kill mid-compose is recoverable at next launch.
  * Back-nav is locked; the exits are 저장 or 러닝 삭제하기 (destructive).
  */
+import * as Location from 'expo-location';
 import { router, useNavigation } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
@@ -67,6 +68,22 @@ export default function RunSaveScreen() {
   const [saving, setSaving]           = useState(false);
   const savedOnceRef = useRef(false); // duplicate-save guard (moved with the POST)
 
+  // run.area send-rider (S-batch #3, guide §96): reverse-geocode the run's
+  // START point via the existing Apple path — district = subLocality =
+  // 동-level (ⓑ verdict, probed 4/4 2026-07-13). Best-effort: failure or
+  // trackless run → no area, 지역 라인 stays hidden; never blocks a save.
+  const [area, setArea] = useState<string | null>(null);
+  useEffect(() => {
+    const p = run?.path?.[0];
+    if (!p) return;
+    let cancelled = false;
+    Location.reverseGeocodeAsync({ latitude: p.lat, longitude: p.lng })
+      .then(rs => { if (!cancelled && rs[0]?.district) setArea(rs[0].district); })
+      .catch(() => { /* offline geocoder — save proceeds without area */ });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Crash safety: typed fields persist as they change
   useEffect(() => { updatePendingDraft({ title, memo, visibility }); }, [title, memo, visibility]);
 
@@ -103,6 +120,7 @@ export default function RunSaveScreen() {
         title: (title.trim() || suggestedTitle).slice(0, 60),
         notes: memo.trim() || null,
         visibility,
+        area,
         gpsTrack: run.gpsTrack,
       });
       savedOnceRef.current = true;

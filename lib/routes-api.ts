@@ -93,3 +93,7 @@ export function postRouteComment(routeId: string, content: string): Promise<Rout
     body: { content },
   });
 }
+/** Own comments only (server-enforced; others' → 404). */
+export function deleteRouteComment(routeId: string, commentId: string): Promise<void> {
+  return apiFetch<void>(`/api/routes/${routeId}/comments/${commentId}`, { method: 'DELETE' });
+}
