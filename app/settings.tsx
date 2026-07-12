@@ -154,6 +154,16 @@ export default function SettingsScreen() {
             onPress={() => notReady('건강 데이터 연동')}
           />
         </SettingGroup>
+
+        {/* ── 계정 — 회원 탈퇴 (App-Store-mandatory; delete-account.tsx) ── */}
+        <SettingGroup title="계정">
+          <SettingRow
+            icon={<Icon name="person-remove-outline" size={19} color={C.danger} />}
+            iconBg="#EF444418"
+            label="회원 탈퇴"
+            onPress={() => router.push('/delete-account' as any)}
+          />
+        </SettingGroup>
       </ScrollView>
     </View>
   );

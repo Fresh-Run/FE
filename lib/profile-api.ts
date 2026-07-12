@@ -21,6 +21,15 @@ export function updateNickname(nickname: string): Promise<ProfileResponse> {
   });
 }
 
+/** 회원 탈퇴 (guide §241, probed 2026-07-15): 204 = account + all data
+    gone (FK cascade; backups ≤90d), old token → 401 immediately.
+    409 {error: crew_owner, crew_ids} = owns crews WITH members — transfer
+    or delete them first (solo owned crews auto-delete). 403 demo_account
+    on the seeded fixtures. Re-signup with the same email = fresh account. */
+export function deleteAccount(): Promise<void> {
+  return apiFetch<void>('/api/me', { method: 'DELETE' });
+}
+
 /** Onboarding/profile writes — ⚠️ `nickname` is REQUIRED on every
     ProfileUpdate (probed 422 without it), so all partial updates must carry
     it. A profile-less account's first PATCH CREATES the row (probed 200 —

@@ -18,11 +18,16 @@ type ApiOptions = {
 export class ApiError extends Error {
   status: number;      // 0 = network / timeout (no response)
   code: string | null; // e.g. 'already_requested', 'rsvp_closed'
-  constructor(message: string, status: number, code: string | null = null) {
+  /** Full structured detail body when the server sent one — for errors
+      that carry payload beyond {error, message} (e.g. crew_owner's
+      crew_ids on DELETE /me). */
+  detail: Record<string, unknown> | null;
+  constructor(message: string, status: number, code: string | null = null, detail: Record<string, unknown> | null = null) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
     this.code = code;
+    this.detail = detail;
   }
 }
 
@@ -60,17 +65,19 @@ export async function apiRequest<T>(path: string, opts: ApiOptions = {}): Promis
   if (!res.ok) {
     let message: string | null = null;
     let code: string | null = null;
+    let detail: Record<string, unknown> | null = null;
     try {
       const body = await res.json();
       if (typeof body?.detail === 'string') {
         message = body.detail;
       } else if (body?.detail && typeof body.detail === 'object') {
+        detail = body.detail as Record<string, unknown>;
         code = typeof body.detail.error === 'string' ? body.detail.error : null;
         message = typeof body.detail.message === 'string' ? body.detail.message : null;
       }
     } catch { /* non-JSON error body */ }
-    if (res.status === 401) throw new ApiError('로그인이 필요해요', 401, code);
-    throw new ApiError(message ?? `요청에 실패했어요 (${res.status})`, res.status, code);
+    if (res.status === 401) throw new ApiError('로그인이 필요해요', 401, code, detail);
+    throw new ApiError(message ?? `요청에 실패했어요 (${res.status})`, res.status, code, detail);
   }
 
   const data = res.status === 204 ? (undefined as T) : ((await res.json()) as T);
