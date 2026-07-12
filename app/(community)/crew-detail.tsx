@@ -606,7 +606,7 @@ export default function CrewDetailScreen() {
               <View style={{ flex: 1, minWidth: 0 }}>
                 <Text style={st.chatTitle}>크루 채팅</Text>
                 <Text style={st.chatSub} numberOfLines={1}>
-                  {chatUnread > 0 ? `새 메시지 ${chatUnread}개` : '크루원들과 이야기해 보세요'}
+                  {chatUnread > 0 ? `새 메시지 ${chatUnread}개` : '공지·참석 투표도 여기에 모여요'}
                 </Text>
               </View>
               <Icon name="chevron-forward" size={16} color={C.faint} />
