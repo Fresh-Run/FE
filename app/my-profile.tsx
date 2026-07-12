@@ -16,12 +16,11 @@
  */
 import { useFocusEffect } from '@react-navigation/native';
 import { router } from 'expo-router';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback } from 'react';
 import {
   ActivityIndicator,
   Alert,
   FlatList,
-  Image,
   Pressable,
   StyleSheet,
   Text,
@@ -29,38 +28,15 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Avatar } from '@/components/avatar';
 import { KudosSheet } from '@/components/kudos-sheet';
 import { MiniMap } from '@/components/mini-map';
 import { RealMap } from '@/components/real-map';
 import { Icon } from '@/components/ui';
 import { useMyPublicProfile, type MyRun } from '@/hooks/use-my-public-profile';
-import { avatarBg } from '@/lib/fr-hash';
 import { distUnit, fmtDist, fmtDuration, fmtPaceIn, fmtWhen, paceUnit, timeTitle } from '@/lib/run-format';
 import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
 import { useSettings } from '@/store/use-settings';
-
-function Avatar({ name, size, ring = C.accent, photoUrl }: { name: string; size: number; ring?: string; photoUrl?: string | null }) {
-  // Uploaded photo wins over initials (minimum-visibility surface; the
-  // app-wide avatar_url sweep is the ledgered follow-up).
-  // Stale-URL grace: load failure falls back to initials, never a broken image.
-  const [brokenUrl, setBrokenUrl] = useState<string | null>(null);
-  if (photoUrl && photoUrl !== brokenUrl) {
-    return (
-      <Image
-        source={{ uri: photoUrl }}
-        onError={() => setBrokenUrl(photoUrl)}
-        style={{ width: size, height: size, borderRadius: size / 2, borderWidth: 2, borderColor: ring }}
-      />
-    );
-  }
-  return (
-    <View style={[st.avatar, { width: size, height: size, borderRadius: size / 2, backgroundColor: avatarBg(name), borderColor: ring }]}>
-      <Text style={{ fontWeight: '700', fontSize: Math.round(size * 0.38), color: '#fff' }}>
-        {name.trim()[0]?.toUpperCase() ?? '?'}
-      </Text>
-    </View>
-  );
-}
 
 // Own-list visibility is never null (legacy rows = 'followers' server-side)
 const VIS_CAPTION: Record<MyRun['visibility'], string> = {
@@ -84,7 +60,7 @@ function RunCard({ run, name, photoUrl, units, mapLive, onKudos }: { run: MyRun;
       style={[st.card, shadows.sm]}
     >
       <View style={st.cardHead}>
-        <Avatar name={name} size={36} photoUrl={photoUrl} />
+        <Avatar name={name} size={36} photoUrl={photoUrl} ring={C.accent} initialsRatio={0.38} upper />
         <View style={{ flex: 1, minWidth: 0 }}>
           <Text style={st.cardName}>{name}</Text>
           <Text style={st.cardDate}>{fmtWhen(run.ran_at)}</Text>
@@ -163,7 +139,7 @@ export default function MyProfileScreen() {
     <View>
       {/* Identity */}
       <View style={st.identity}>
-        <Avatar name={profile.nickname} size={76} photoUrl={profile.avatarUrl} />
+        <Avatar name={profile.nickname} size={76} photoUrl={profile.avatarUrl} ring={C.accent} initialsRatio={0.38} upper />
         <View style={{ flex: 1, minWidth: 0 }}>
           <Text style={st.name} numberOfLines={1}>{profile.nickname}</Text>
           {profile.bio ? (
@@ -279,7 +255,6 @@ const st = StyleSheet.create({
   appBarTitle: { flex: 1, textAlign: 'center', fontSize: 16, fontWeight: '700', letterSpacing: -0.3, color: C.text },
 
   identity: { flexDirection: 'row', alignItems: 'center', gap: 16, paddingHorizontal: S.gutter, paddingTop: 20 },
-  avatar:   { alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: C.accent },
   name:     { fontSize: 22, fontWeight: '700', letterSpacing: -0.6, color: C.text },
   bioRow:   { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 5 },
   bioTxt:   { fontSize: 13.5, color: C.sub, letterSpacing: -0.2 },

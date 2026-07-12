@@ -18,7 +18,6 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Image,
   Linking,
   Platform,
   Pressable,
@@ -29,6 +28,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Avatar } from '@/components/avatar';
 import { RealMap } from '@/components/real-map';
 import { Icon } from '@/components/ui';
 import {
@@ -39,24 +39,9 @@ import {
   type RsvpStatus,
 } from '@/lib/announcements-api';
 import { getCrewMembers } from '@/lib/crews-api';
-import { avatarBg } from '@/lib/fr-hash';
 import { fmtWhen } from '@/lib/run-format';
 import { supabase } from '@/lib/supabase';
 import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
-
-// avatar wire-up (BE 5009cbe): author photo wins over initials; load
-// failure falls back to initials — never a broken image.
-function AuthorAvatar({ name, photoUrl, size }: { name: string; photoUrl?: string | null; size: number }) {
-  const [brokenUrl, setBrokenUrl] = useState<string | null>(null);
-  if (photoUrl && photoUrl !== brokenUrl) {
-    return <Image source={{ uri: photoUrl }} onError={() => setBrokenUrl(photoUrl)} style={{ width: size, height: size, borderRadius: size / 2 }} />;
-  }
-  return (
-    <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: avatarBg(name), alignItems: 'center', justifyContent: 'center' }}>
-      <Text style={{ fontSize: size * 0.5, fontWeight: '700', color: '#fff' }}>{name[0]}</Text>
-    </View>
-  );
-}
 
 const RSVP_OPTS: { value: RsvpStatus; label: string }[] = [
   { value: 'going',     label: '참석' },
@@ -195,7 +180,7 @@ export default function AnnouncementDetailScreen() {
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: S.gutter, paddingBottom: 40 }}>
           <Text style={st.title}>{ann.title}</Text>
           <View style={st.metaRow}>
-            <AuthorAvatar name={ann.author_nickname ?? '크루장'} photoUrl={ann.author_avatar_url} size={20} />
+            <Avatar name={ann.author_nickname ?? '크루장'} photoUrl={ann.author_avatar_url} size={20} initialsRatio={0.5} />
             <Text style={st.meta}>{ann.author_nickname ?? '크루장'} · {fmtWhen(ann.created_at)}</Text>
           </View>
           <Text style={st.body}>{ann.body}</Text>
@@ -263,9 +248,8 @@ export default function AnnouncementDetailScreen() {
                       const name = m.nickname ?? '러너';
                       return (
                         <View key={m.user_id} style={st.rosterChip}>
-                          <View style={[st.rosterAvatar, { backgroundColor: avatarBg(name) }]}>
-                            <Text style={st.rosterAvatarTxt}>{name[0]}</Text>
-                          </View>
+                          {/* payload carries no avatar_url — initials-only (payload truth) */}
+                          <Avatar name={name} size={22} initialsRatio={0.45} />
                           <Text style={st.rosterName} numberOfLines={1}>{name}</Text>
                         </View>
                       );
@@ -319,7 +303,5 @@ const st = StyleSheet.create({
   rosterHead: { fontSize: 12.5, fontWeight: '700', color: C.text, letterSpacing: -0.2, marginBottom: 8 },
   rosterRow:  { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   rosterChip: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: C.surfaceAlt, borderRadius: R.pill, paddingVertical: 4, paddingLeft: 4, paddingRight: 10, maxWidth: 140 },
-  rosterAvatar:    { width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
-  rosterAvatarTxt: { fontSize: 10, fontWeight: '700', color: '#fff' },
   rosterName:      { fontSize: 12, fontWeight: '600', color: C.sub, letterSpacing: -0.2, flexShrink: 1 },
 });

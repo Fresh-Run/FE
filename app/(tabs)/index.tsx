@@ -12,7 +12,6 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
-  Image,
   Pressable,
   RefreshControl,
   StyleSheet,
@@ -21,13 +20,13 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Avatar } from '@/components/avatar';
 import { MiniMap } from '@/components/mini-map';
 import { RealMap } from '@/components/real-map';
 import { PendingRunRecovery } from '@/components/pending-run-recovery';
 import { Icon } from '@/components/ui';
 import { useCurrentLocation } from '@/hooks/use-current-location';
 import { useFeed, useNearbyRoutes } from '@/hooks/use-feed';
-import { avatarBg } from '@/lib/fr-hash';
 import { getUnreadCount } from '@/lib/notifications-api';
 import { openProfile } from '@/lib/profile-nav';
 import {
@@ -90,36 +89,6 @@ function formatDate(): string {
   return `${days[d.getDay()]}, ${d.getMonth() + 1}월 ${d.getDate()}일`;
 }
 
-// ─── Avatar ───────────────────────────────────────────────────────────────────
-
-function Avatar({ name, size = 38, ring = false, photoUrl }: { name: string; size?: number; ring?: boolean; photoUrl?: string | null }) {
-  // Stale-URL grace: a photo that fails to load (deleted/expired storage
-  // object, dead cache) falls back to initials — never a broken image.
-  const [brokenUrl, setBrokenUrl] = useState<string | null>(null);
-  if (photoUrl && photoUrl !== brokenUrl) {
-    return (
-      <Image
-        source={{ uri: photoUrl }}
-        onError={() => setBrokenUrl(photoUrl)}
-        style={[
-          { width: size, height: size, borderRadius: size / 2, flexShrink: 0 },
-          ring && { borderWidth: 2, borderColor: C.border },
-        ]}
-      />
-    );
-  }
-  return (
-    <View style={[
-      { width: size, height: size, borderRadius: size / 2, backgroundColor: avatarBg(name), flexShrink: 0, alignItems: 'center', justifyContent: 'center' },
-      ring && { borderWidth: 2, borderColor: C.border },
-    ]}>
-      <RNText style={{ fontWeight: '700', fontSize: Math.round(size * 0.42), color: '#fff', letterSpacing: -0.3 }}>
-        {name[0]}
-      </RNText>
-    </View>
-  );
-}
-
 // ─── Greeting header ──────────────────────────────────────────────────────────
 
 function Greeting({ name, photoUrl, showBellDot, onBell }: { name: string; photoUrl: string | null; showBellDot: boolean; onBell: () => void }) {
@@ -138,7 +107,7 @@ function Greeting({ name, photoUrl, showBellDot, onBell }: { name: string; photo
         </Pressable>
         {/* Avatar → 내 프로필 (social profile; canvas 2026-07-07) */}
         <Pressable onPress={() => router.push('/my-profile' as any)} hitSlop={6}>
-          <Avatar name={name} size={38} ring photoUrl={photoUrl} />
+          <Avatar name={name} size={38} ring={C.border} photoUrl={photoUrl} letterSpacing={-0.3} />
         </Pressable>
       </View>
     </View>
@@ -272,7 +241,7 @@ function FeedCard({
           the item-17 walk gate) */}
       <View style={fct.header}>
         <Pressable onPress={() => openProfile(item.owner_id, item.owner_nickname)} disabled={!item.owner_id} hitSlop={6}>
-          <Avatar name={d.name} size={36} photoUrl={item.owner_avatar_url} />
+          <Avatar name={d.name} size={36} photoUrl={item.owner_avatar_url} letterSpacing={-0.3} />
         </Pressable>
         <View style={{ flex: 1, minWidth: 0 }}>
           <RNText style={fct.name} onPress={item.owner_id ? () => openProfile(item.owner_id, item.owner_nickname) : undefined}>{d.name}</RNText>

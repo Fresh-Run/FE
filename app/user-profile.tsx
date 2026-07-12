@@ -15,7 +15,6 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
-  Image,
   Pressable,
   StyleSheet,
   Text,
@@ -23,38 +22,16 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Avatar } from '@/components/avatar';
 import { MiniMap } from '@/components/mini-map';
 import { RealMap } from '@/components/real-map';
 import { Icon } from '@/components/ui';
 import { ApiError, apiFetch, apiRequest } from '@/lib/api';
-import { avatarBg } from '@/lib/fr-hash';
 import { distUnit, fmtDist, fmtDuration, fmtPaceIn, fmtWhen, paceUnit, timeTitle } from '@/lib/run-format';
 import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
 import { useUserProfile, type UserRun } from '@/hooks/use-user-profile';
 import { usePendingFollows } from '@/store/pending-follows';
 import { useSettings } from '@/store/use-settings';
-
-function Avatar({ name, size, ring = C.border, photoUrl }: { name: string; size: number; ring?: string; photoUrl?: string | null }) {
-  // avatar_url sweep (2026-07-13): photo wins over initials; load failure
-  // falls back to initials — never a broken image.
-  const [brokenUrl, setBrokenUrl] = useState<string | null>(null);
-  if (photoUrl && photoUrl !== brokenUrl) {
-    return (
-      <Image
-        source={{ uri: photoUrl }}
-        onError={() => setBrokenUrl(photoUrl)}
-        style={[st.avatar, { width: size, height: size, borderRadius: size / 2, borderColor: ring }]}
-      />
-    );
-  }
-  return (
-    <View style={[st.avatar, { width: size, height: size, borderRadius: size / 2, backgroundColor: avatarBg(name), borderColor: ring }]}>
-      <Text style={{ fontWeight: '700', fontSize: Math.round(size * 0.38), color: '#fff' }}>
-        {name.trim()[0]?.toUpperCase() ?? '?'}
-      </Text>
-    </View>
-  );
-}
 
 // Run card — other-user variant: ♥ is a real toggle (my_kudos), no 💬,
 // no visibility caption (approved deltas). Card tap → 러닝 포스트 (R3',
@@ -71,7 +48,7 @@ function RunCard({ run, units, mapLive, onKudos, kudosOff, onOpen }: {
   return (
     <Pressable onPress={onOpen} disabled={!onOpen} style={({ pressed }) => [st.card, shadows.sm, pressed && !!onOpen && { opacity: 0.85 }]}>
       <View style={st.cardHead}>
-        <Avatar name={run.nickname} size={36} photoUrl={run.avatar_url} />
+        <Avatar name={run.nickname} size={36} photoUrl={run.avatar_url} ring={C.border} initialsRatio={0.38} upper />
         <View style={{ flex: 1, minWidth: 0 }}>
           <Text style={st.cardName}>{run.nickname}</Text>
           <Text style={st.cardDate}>{fmtWhen(run.ran_at)}</Text>
@@ -252,7 +229,7 @@ export default function UserProfileScreen() {
     <View>
       {/* Identity — border ring (own profile keeps the accent ring) */}
       <View style={st.identity}>
-        <Avatar name={profile.nickname} size={76} photoUrl={profile.avatar_url} />
+        <Avatar name={profile.nickname} size={76} photoUrl={profile.avatar_url} ring={C.border} initialsRatio={0.38} upper />
         <View style={{ flex: 1, minWidth: 0 }}>
           <Text style={st.name} numberOfLines={1}>{profile.nickname}</Text>
           {profile.bio ? <Text style={st.bioTxt} numberOfLines={1}>{profile.bio}</Text> : null}
@@ -320,7 +297,7 @@ export default function UserProfileScreen() {
              the body below. Counts/CTA/runs always arrive fresh. */
           <View>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, paddingHorizontal: S.gutter, paddingTop: 20 }}>
-              <Avatar name={identity.nickname} size={76} photoUrl={identity.avatar_url} />
+              <Avatar name={identity.nickname} size={76} photoUrl={identity.avatar_url} ring={C.border} initialsRatio={0.38} upper />
               <Text style={st.name} numberOfLines={1}>{identity.nickname}</Text>
             </View>
             <View style={[st.centered, { paddingTop: 60 }]}>
@@ -412,8 +389,6 @@ const st = StyleSheet.create({
   appBar:      { flexDirection: 'row', alignItems: 'center', paddingHorizontal: S.md, paddingVertical: 10 },
   appBarBtn:   { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   appBarTitle: { flex: 1, textAlign: 'center', fontSize: 16, fontWeight: '700', letterSpacing: -0.3, color: C.text },
-
-  avatar: { alignItems: 'center', justifyContent: 'center', borderWidth: 2 },
 
   identity: { flexDirection: 'row', alignItems: 'center', gap: 16, paddingHorizontal: S.gutter, paddingTop: 20 },
   name:     { fontSize: 22, fontWeight: '700', letterSpacing: -0.6, color: C.text },

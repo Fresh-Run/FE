@@ -18,7 +18,6 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
-  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -27,9 +26,9 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Avatar } from '@/components/avatar';
 import { MiniMap } from '@/components/mini-map';
 import { Icon } from '@/components/ui';
-import { avatarBg } from '@/lib/fr-hash';
 import { getBookmarkedRoutes } from '@/lib/bookmarks-api';
 import { openProfile } from '@/lib/profile-nav';
 import { courseStats, fmtDuration } from '@/lib/run-format';
@@ -67,10 +66,6 @@ function CourseRow({ route, onOpen, onUnsave }: { route: PublicRoute; onOpen: ()
     name:  route.owner_nickname ?? undefined,
   });
   const owner = route.owner_nickname ?? '러너';
-  // avatar wire-up (BE 5009cbe): photo wins; load failure → initials
-  const [brokenUrl, setBrokenUrl] = useState<string | null>(null);
-  const photoUrl = route.owner_avatar_url;
-  const showPhoto = !!photoUrl && photoUrl !== brokenUrl;
   return (
     <Pressable onPress={onOpen} style={({ pressed }) => [st.row, shadows.sm, pressed && { opacity: 0.8 }]}>
       <View style={{ width: 82 }}>
@@ -93,13 +88,7 @@ function CourseRow({ route, onOpen, onUnsave }: { route: PublicRoute; onOpen: ()
           hitSlop={6}
           style={({ pressed }) => [st.ownerLine, pressed && { opacity: 0.7 }]}
         >
-          {showPhoto ? (
-            <Image source={{ uri: photoUrl }} onError={() => setBrokenUrl(photoUrl)} style={st.ownerAvatar} />
-          ) : (
-            <View style={[st.ownerAvatar, { backgroundColor: avatarBg(owner), alignItems: 'center', justifyContent: 'center' }]}>
-              <Text style={st.ownerAvatarTxt}>{owner.trim()[0]?.toUpperCase() ?? '?'}</Text>
-            </View>
-          )}
+          <Avatar name={owner} size={18} photoUrl={route.owner_avatar_url} upper />
           <Text style={st.ownerTxt} numberOfLines={1}>{owner} 코스</Text>
         </Pressable>
       </View>
@@ -313,8 +302,6 @@ const st = StyleSheet.create({
   statUnit:  { fontSize: 10, color: C.faint, fontWeight: '600' },
   dot:       { width: 3, height: 3, borderRadius: 2, backgroundColor: C.border },
   ownerLine: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 9 },
-  ownerAvatar:    { width: 18, height: 18, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
-  ownerAvatarTxt: { fontSize: 8, fontWeight: '700', color: '#fff' },
   ownerTxt:  { fontSize: 11.5, color: C.faint, letterSpacing: -0.2, flexShrink: 1 },
   unsaveBtn: { position: 'absolute', top: 10, right: 10, width: 30, height: 30, alignItems: 'center', justifyContent: 'center' },
 

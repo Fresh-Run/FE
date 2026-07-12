@@ -14,7 +14,6 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
-  Image,
   Pressable,
   StyleSheet,
   Text,
@@ -22,24 +21,12 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Avatar } from '@/components/avatar';
 import { Icon } from '@/components/ui';
-import { avatarBg } from '@/lib/fr-hash';
 import { listFollowRequests, respondFollowRequest, type FollowRequestItem } from '@/lib/profile-api';
 import { openProfile } from '@/lib/profile-nav';
 import { fmtWhen } from '@/lib/run-format';
 import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
-
-function RequesterAvatar({ name, photoUrl }: { name: string; photoUrl: string | null }) {
-  const [broken, setBroken] = useState(false);
-  if (photoUrl && !broken) {
-    return <Image source={{ uri: photoUrl }} onError={() => setBroken(true)} style={st.avatar} />;
-  }
-  return (
-    <View style={[st.avatar, { backgroundColor: avatarBg(name), alignItems: 'center', justifyContent: 'center' }]}>
-      <Text style={st.avatarTxt}>{name[0]}</Text>
-    </View>
-  );
-}
 
 export default function FollowRequestsScreen() {
   const insets = useSafeAreaInsets();
@@ -96,7 +83,7 @@ export default function FollowRequestsScreen() {
                   onPress={() => openProfile(item.user_id, name)}
                   style={({ pressed }) => [st.rowBody, pressed && { opacity: 0.7 }]}
                 >
-                  <RequesterAvatar name={name} photoUrl={item.avatar_url} />
+                  <Avatar name={name} size={42} photoUrl={item.avatar_url} initialsRatio={0.38} />
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <Text style={st.name} numberOfLines={1}>{name}</Text>
                     <Text style={st.sub} numberOfLines={1}>
@@ -141,8 +128,6 @@ const st = StyleSheet.create({
 
   row:     { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: R.xl, paddingVertical: 11, paddingHorizontal: 13 },
   rowBody: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 12 },
-  avatar:    { width: 42, height: 42, borderRadius: 21 },
-  avatarTxt: { fontSize: 16, fontWeight: '700', color: '#fff' },
   name: { fontSize: 14.5, fontWeight: '700', color: C.text, letterSpacing: -0.3 },
   sub:  { fontSize: 12, color: C.faint, letterSpacing: -0.2, marginTop: 2 },
 

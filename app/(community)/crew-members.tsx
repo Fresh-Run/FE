@@ -17,7 +17,6 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
-  Image,
   Modal,
   Pressable,
   StyleSheet,
@@ -26,30 +25,12 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Avatar } from '@/components/avatar';
 import { Icon } from '@/components/ui';
 import { getCrewMembers, kickMember, setMemberRole, transferCrew, type CrewMember } from '@/lib/crews-api';
-import { avatarBg } from '@/lib/fr-hash';
 import { openProfile } from '@/lib/profile-nav';
 import { supabase } from '@/lib/supabase';
 import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
-
-// avatar wire-up (BE 5009cbe): photo wins over initials; load failure
-// falls back to initials — never a broken image.
-function MemberAvatar({ name, photoUrl, style, txtStyle }: {
-  name: string | null; photoUrl?: string | null;
-  style: object; txtStyle: object;
-}) {
-  const [brokenUrl, setBrokenUrl] = useState<string | null>(null);
-  if (photoUrl && photoUrl !== brokenUrl) {
-    return <Image source={{ uri: photoUrl }} onError={() => setBrokenUrl(photoUrl)} style={style} />;
-  }
-  const n = name || '러너';
-  return (
-    <View style={[style, { backgroundColor: avatarBg(n), alignItems: 'center', justifyContent: 'center' }]}>
-      <Text style={txtStyle}>{n[0]}</Text>
-    </View>
-  );
-}
 
 const ROLE_ORDER: Record<CrewMember['role'], number> = { owner: 0, admin: 1, member: 2 };
 
@@ -195,7 +176,7 @@ export default function CrewMembersScreen() {
                   onPress={() => openProfile(m.user_id, m.nickname)}
                   style={({ pressed }) => [st.rowBody, pressed && { opacity: 0.7 }]}
                 >
-                  <MemberAvatar name={m.nickname} photoUrl={m.avatar_url} style={st.avatar} txtStyle={st.avatarTxt} />
+                  <Avatar name={m.nickname} size={42} photoUrl={m.avatar_url} initialsRatio={0.38} />
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                       <Text style={st.name} numberOfLines={1}>{m.nickname}</Text>
@@ -286,8 +267,6 @@ const st = StyleSheet.create({
 
   row:     { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: R.xl, paddingVertical: 11, paddingHorizontal: 13 },
   rowBody: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 12 },
-  avatar:    { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center' },
-  avatarTxt: { fontSize: 16, fontWeight: '700', color: '#fff' },
   name:      { flexShrink: 1, fontSize: 14.5, fontWeight: '600', color: C.text, letterSpacing: -0.3 },
   kmSub:     { fontSize: 12, color: C.faint, letterSpacing: -0.2, marginTop: 2, fontVariant: ['tabular-nums'] },
 

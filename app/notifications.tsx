@@ -22,7 +22,6 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
-  Image,
   Pressable,
   StyleSheet,
   Text,
@@ -32,8 +31,8 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Avatar } from '@/components/avatar';
 import { Icon } from '@/components/ui';
-import { avatarBg } from '@/lib/fr-hash';
 import { openProfile } from '@/lib/profile-nav';
 import {
   deleteNotification,
@@ -151,18 +150,8 @@ function deepLink(n: AppNotification): (() => void) | null {
 // ─── Row ──────────────────────────────────────────────────────────────────────
 
 function NotifIcon({ meta, actor, photoUrl }: { meta: Meta; actor: string; photoUrl?: string | null }) {
-  // avatar wire-up (BE 5009cbe): actor photo wins over initials; load
-  // failure falls back to initials — never a broken image.
-  const [brokenUrl, setBrokenUrl] = useState<string | null>(null);
   if (meta.icon === 'avatar') {
-    if (photoUrl && photoUrl !== brokenUrl) {
-      return <Image source={{ uri: photoUrl }} onError={() => setBrokenUrl(photoUrl)} style={st.avatar} />;
-    }
-    return (
-      <View style={[st.avatar, { backgroundColor: avatarBg(actor), alignItems: 'center', justifyContent: 'center' }]}>
-        <Text style={st.avatarTxt}>{actor.trim()[0]?.toUpperCase() ?? '?'}</Text>
-      </View>
-    );
+    return <Avatar name={actor} size={42} photoUrl={photoUrl} initialsRatio={0.38} upper />;
   }
   return (
     <View style={[st.iconTile, { backgroundColor: meta.icon.bg }]}>
@@ -357,8 +346,6 @@ const st = StyleSheet.create({
   cardUnread: { backgroundColor: C.accent + '0D', borderColor: C.accent + '2E' },
   unreadDot:  { position: 'absolute', top: 12, right: 12, width: 7, height: 7, borderRadius: 4, backgroundColor: C.accent },
 
-  avatar:    { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  avatarTxt: { fontWeight: '700', fontSize: 16, color: '#fff' },
   iconTile:  { width: 42, height: 42, borderRadius: 13, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
 
   rowHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },

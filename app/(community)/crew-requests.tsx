@@ -26,6 +26,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Avatar } from '@/components/avatar';
 import { Icon } from '@/components/ui';
 import { ApiError } from '@/lib/api';
 import {
@@ -34,7 +35,6 @@ import {
   rejectJoinRequest,
   type CrewJoinRequest,
 } from '@/lib/crews-api';
-import { avatarBg } from '@/lib/fr-hash';
 import { openProfile } from '@/lib/profile-nav';
 import { fmtAgo } from '@/lib/run-format';
 import { colors as C, shadows, spacing as S } from '@/lib/theme';
@@ -144,9 +144,7 @@ export default function CrewRequestsScreen() {
                   style={({ pressed }) => [st.cardHead, pressed && { opacity: 0.7 }]}
                 >
                   {/* Initials only — payload carries no avatar_url (ledgered) */}
-                  <View style={[st.avatar, { backgroundColor: avatarBg(name) }]}>
-                    <Text style={st.avatarTxt}>{name.trim()[0]?.toUpperCase() ?? '?'}</Text>
-                  </View>
+                  <Avatar name={name} size={44} ring={C.border} ringWidth={1} initialsRatio={0.38} upper />
                   <View style={{ flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 7 }}>
                     <Text style={st.name} numberOfLines={1}>{name}</Text>
                     <Text style={st.when}>{fmtAgo(item.created_at)}</Text>
@@ -191,8 +189,6 @@ const st = StyleSheet.create({
 
   card:     { backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 18, padding: 15 },
   cardHead: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  avatar:    { width: 44, height: 44, borderRadius: 22, borderWidth: 1, borderColor: C.border, alignItems: 'center', justifyContent: 'center' },
-  avatarTxt: { fontSize: 17, fontWeight: '700', color: '#fff' },
   name: { fontSize: 15, fontWeight: '700', color: C.text, letterSpacing: -0.3, flexShrink: 1 },
   when: { fontSize: 11.5, color: C.faint, flexShrink: 0 },
 

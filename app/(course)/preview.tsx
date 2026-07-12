@@ -20,9 +20,9 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Avatar } from '@/components/avatar';
 import { MiniMap } from '@/components/mini-map';
 import { Icon } from '@/components/ui';
-import { avatarBg } from '@/lib/fr-hash';
 import { copyRoute } from '@/lib/routes-api';
 import { courseStats, distUnit, fmtDist, fmtDuration, fmtPace, fmtPaceIn, paceUnit, type CourseStatsInput } from '@/lib/run-format';
 import { useSettings } from '@/store/use-settings';
@@ -39,17 +39,6 @@ import {
 function parseItem(raw: string | string[] | undefined): CourseStatsInput {
   if (typeof raw !== 'string') return {};
   try { return JSON.parse(raw) as CourseStatsInput; } catch { return {}; }
-}
-
-// Same mini avatar as the home feed (duplicated by design decision — item 10).
-function Avatar({ name, size = 26 }: { name: string; size?: number }) {
-  return (
-    <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: avatarBg(name), alignItems: 'center', justifyContent: 'center' }}>
-      <Text style={{ fontWeight: '700', fontSize: Math.round(size * 0.42), color: '#fff', letterSpacing: -0.3 }}>
-        {name[0]}
-      </Text>
-    </View>
-  );
 }
 
 export default function CoursePreviewScreen() {
@@ -130,7 +119,8 @@ export default function CoursePreviewScreen() {
             <View style={{ width: 42 }} />
           </View>
           <View style={st.authorChip}>
-            <Avatar name={s.name ?? '러너'} size={26} />
+            {/* initials-only: preview's payload carries no avatar_url */}
+            <Avatar name={s.name} size={26} letterSpacing={-0.3} />
             <Text style={st.authorTxt}>{s.name ? `${s.name}님의 코스` : '추천 코스'}</Text>
           </View>
         </View>

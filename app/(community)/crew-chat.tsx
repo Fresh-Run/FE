@@ -29,7 +29,6 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
-  Image,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -59,7 +58,7 @@ import {
   type ChatMessage,
   type RunSharePayload,
 } from '@/lib/chat-api';
-import { avatarBg } from '@/lib/fr-hash';
+import { Avatar } from '@/components/avatar';
 import { openProfile } from '@/lib/profile-nav';
 import { apiFetch } from '@/lib/api';
 import { distUnit, fmtDist, fmtDuration, fmtPaceIn, fmtWhen, paceUnit } from '@/lib/run-format';
@@ -77,16 +76,13 @@ type PendingSend = { tempId: string; content: string; failed: boolean };
 type ChatRow = ChatMessage | (PendingSend & { kind: 'pending' });
 const isPending = (r: ChatRow): r is PendingSend & { kind: 'pending' } => 'kind' in r;
 
+// Pressable idiom (sender tap → profile) stays local; the render is canonical.
 function SenderAvatar({ name, photoUrl, onPress }: { name: string; photoUrl: string | null; onPress?: () => void }) {
-  const [broken, setBroken] = useState(false);
-  const inner = photoUrl && !broken
-    ? <Image source={{ uri: photoUrl }} onError={() => setBroken(true)} style={st.avatar} />
-    : (
-      <View style={[st.avatar, { backgroundColor: avatarBg(name), alignItems: 'center', justifyContent: 'center' }]}>
-        <Text style={st.avatarTxt}>{name[0]}</Text>
-      </View>
-    );
-  return <Pressable onPress={onPress} hitSlop={4}>{inner}</Pressable>;
+  return (
+    <Pressable onPress={onPress} hitSlop={4}>
+      <Avatar name={name} size={30} photoUrl={photoUrl} initialsRatio={0.4} />
+    </Pressable>
+  );
 }
 
 export default function CrewChatScreen() {
@@ -603,8 +599,6 @@ const st = StyleSheet.create({
   msgRow:     { flexDirection: 'row', gap: 9, marginVertical: 7, maxWidth: '86%', alignSelf: 'flex-start' },
   msgRowMine: { alignSelf: 'flex-end', flexDirection: 'row-reverse' },
   msgCol:     { minWidth: 0, alignItems: 'flex-start' },
-  avatar:     { width: 30, height: 30, borderRadius: 15 },
-  avatarTxt:  { fontSize: 12, fontWeight: '700', color: '#fff' },
 
   senderLine: { fontSize: 11.5, fontWeight: '700', color: C.sub, letterSpacing: -0.2, marginBottom: 4 },
   whenTxt:    { fontWeight: '500', color: C.faint },

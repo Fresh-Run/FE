@@ -30,7 +30,6 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -42,11 +41,11 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Avatar } from '@/components/avatar';
 import { KudosSheet } from '@/components/kudos-sheet';
 import { MediaCarousel } from '@/components/media-carousel';
 import { Icon } from '@/components/ui';
 import { ApiError } from '@/lib/api';
-import { avatarBg } from '@/lib/fr-hash';
 import { openProfile } from '@/lib/profile-nav';
 import {
   deleteRunComment,
@@ -73,27 +72,6 @@ import { useStore } from '@/store/use-store';
 import type { Coordinate } from '@/types';
 
 const HERO_H = 210;
-
-function InitialAvatar({ name, size, photoUrl }: { name: string | null; size: number; photoUrl?: string | null }) {
-  const n = name?.trim() || '러너';
-  // avatar_url sweep (2026-07-13): photo wins over initials; load failure
-  // falls back to initials — never a broken image.
-  const [brokenUrl, setBrokenUrl] = useState<string | null>(null);
-  if (photoUrl && photoUrl !== brokenUrl) {
-    return (
-      <Image
-        source={{ uri: photoUrl }}
-        onError={() => setBrokenUrl(photoUrl)}
-        style={{ width: size, height: size, borderRadius: size / 2 }}
-      />
-    );
-  }
-  return (
-    <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: avatarBg(n), alignItems: 'center', justifyContent: 'center' }}>
-      <Text style={{ fontSize: size * 0.42, fontWeight: '700', color: '#fff' }}>{n[0]}</Text>
-    </View>
-  );
-}
 
 function StatTile({ label, value, unit }: { label: string; value: string; unit?: string }) {
   return (
@@ -271,7 +249,7 @@ export default function RunPostScreen() {
               disabled={isOwn}
               style={({ pressed }) => [st.authorRow, pressed && !isOwn && { opacity: 0.7 }]}
             >
-              <InitialAvatar name={nickname} size={42} photoUrl={authorPhotoUrl} />
+              <Avatar name={nickname} size={42} photoUrl={authorPhotoUrl} />
               <View style={{ flex: 1, minWidth: 0 }}>
                 <Text style={st.authorName} numberOfLines={1}>{nickname}</Text>
                 <Text style={st.authorSub}>{fmtWhen(run.ran_at)}</Text>
@@ -349,7 +327,7 @@ export default function RunPostScreen() {
                       delayLongPress={400}
                     >
                       <Pressable onPress={() => openProfile(cm.user_id, cm.nickname)} hitSlop={6}>
-                        <InitialAvatar name={cm.nickname} size={30} photoUrl={cm.avatar_url} />
+                        <Avatar name={cm.nickname} size={30} photoUrl={cm.avatar_url} />
                       </Pressable>
                       <View style={{ flex: 1, minWidth: 0 }}>
                         <Pressable onPress={() => openProfile(cm.user_id, cm.nickname)} hitSlop={4}>

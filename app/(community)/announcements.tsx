@@ -11,7 +11,6 @@ import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
-  Image,
   Pressable,
   StyleSheet,
   Text,
@@ -19,29 +18,15 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Avatar } from '@/components/avatar';
 import { Icon } from '@/components/ui';
 import { listAnnouncements, type Announcement } from '@/lib/announcements-api';
-import { avatarBg } from '@/lib/fr-hash';
 import { fmtWhen } from '@/lib/run-format';
 import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
 
 function fmtRunAt(iso: string): string {
   const d = new Date(iso);
   return `${d.getMonth() + 1}월 ${d.getDate()}일 ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-}
-
-// avatar wire-up (BE 5009cbe): author photo wins over initials; load
-// failure falls back to initials — never a broken image.
-function AuthorAvatar({ name, photoUrl, size }: { name: string; photoUrl?: string | null; size: number }) {
-  const [brokenUrl, setBrokenUrl] = useState<string | null>(null);
-  if (photoUrl && photoUrl !== brokenUrl) {
-    return <Image source={{ uri: photoUrl }} onError={() => setBrokenUrl(photoUrl)} style={{ width: size, height: size, borderRadius: size / 2 }} />;
-  }
-  return (
-    <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: avatarBg(name), alignItems: 'center', justifyContent: 'center' }}>
-      <Text style={{ fontSize: size * 0.5, fontWeight: '700', color: '#fff' }}>{name[0]}</Text>
-    </View>
-  );
 }
 
 export default function AnnouncementsScreen() {
@@ -103,7 +88,7 @@ export default function AnnouncementsScreen() {
                       <Text style={st.runAtTxt}>{fmtRunAt(item.run_at)}</Text>
                     </View>
                   ) : null}
-                  <AuthorAvatar name={item.author_nickname ?? '크루장'} photoUrl={item.author_avatar_url} size={16} />
+                  <Avatar name={item.author_nickname ?? '크루장'} photoUrl={item.author_avatar_url} size={16} initialsRatio={0.5} />
                   <Text style={st.metaTxt}>
                     {item.author_nickname ?? '크루장'} · {fmtWhen(item.created_at)}
                     {item.run_at ? ` · 참석 ${item.rsvp.going}` : ''}

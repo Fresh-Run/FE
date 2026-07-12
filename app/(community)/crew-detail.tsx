@@ -31,7 +31,7 @@ import {
   useCrewDetail,
   type Crew,
 } from '@/hooks/use-crews';
-import { avatarBg } from '@/lib/fr-hash';
+import { Avatar } from '@/components/avatar';
 import { listAnnouncements, type Announcement } from '@/lib/announcements-api';
 import { getCurrentChallenge, type Challenge } from '@/lib/challenges-api';
 import { getUnread } from '@/lib/chat-api';
@@ -42,30 +42,6 @@ import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
 
 function isFull(crew: Crew): boolean {
   return crew.max_members !== null && crew.member_count >= crew.max_members;
-}
-
-// ─── Avatar ───────────────────────────────────────────────────────────────────
-
-function Avatar({ name, size = 40, photoUrl }: { name: string; size?: number; photoUrl?: string | null }) {
-  // avatar wire-up (BE 5009cbe): photo wins over initials; load failure
-  // falls back to initials — never a broken image.
-  const [brokenUrl, setBrokenUrl] = useState<string | null>(null);
-  if (photoUrl && photoUrl !== brokenUrl) {
-    return (
-      <Image
-        source={{ uri: photoUrl }}
-        onError={() => setBrokenUrl(photoUrl)}
-        style={{ width: size, height: size, borderRadius: size / 2, flexShrink: 0 }}
-      />
-    );
-  }
-  return (
-    <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: avatarBg(name), alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-      <Text style={{ fontWeight: '700', fontSize: Math.round(size * 0.42), color: '#fff', letterSpacing: -0.3 }}>
-        {name[0]}
-      </Text>
-    </View>
-  );
 }
 
 // 랭킹 메달 — canvas FrRankMedal colors (gold = the 크루장 crown token)
@@ -636,7 +612,7 @@ export default function CrewDetailScreen() {
                           <View style={[st.rankMedal, { backgroundColor: RANK_MEDAL[r.rank] ?? C.faint }]}>
                             <Text style={st.rankMedalTxt}>{r.rank}</Text>
                           </View>
-                          <Avatar name={r.nickname ?? '러너'} size={30} photoUrl={r.avatar_url} />
+                          <Avatar name={r.nickname} size={30} photoUrl={r.avatar_url} letterSpacing={-0.3} />
                           <View style={{ flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                             <Text style={[st.rankName, r.me && { fontWeight: '700' }]} numberOfLines={1}>
                               {r.nickname ?? '러너'}

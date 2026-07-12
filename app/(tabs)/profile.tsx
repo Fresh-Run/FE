@@ -1,11 +1,10 @@
 import { useFocusEffect } from '@react-navigation/native';
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -14,48 +13,16 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Avatar } from '@/components/avatar';
 import { useTabBarInset } from '@/components/fresh-tab-bar';
 import { Icon } from '@/components/ui';
 import { useProfile, type Profile, type RunStats } from '@/hooks/use-profile';
-import { avatarBg } from '@/lib/fr-hash';
 import { distUnit, fmtDist, fmtPaceIn, type Units } from '@/lib/run-format';
 import type { RunSettings } from '@/lib/settings-api';
 import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
 import { useQuota } from '@/store/use-quota';
 import { useSettings } from '@/store/use-settings';
 import { useStore } from '@/store/use-store';
-
-// ─── Avatar ───────────────────────────────────────────────────────────────────
-
-function Avatar({ name, size = 40, ring = false, photoUrl }: { name: string; size?: number; ring?: boolean; photoUrl?: string | null }) {
-  const initial = name.trim()[0]?.toUpperCase() ?? '?';
-  // Uploaded photo wins over initials (onboarding gate slice, 2026-07-13 —
-  // minimum-visibility surfaces; the full avatar_url sweep is a follow-up).
-  // Stale-URL grace: load failure falls back to initials, never a broken image.
-  const [brokenUrl, setBrokenUrl] = useState<string | null>(null);
-  if (photoUrl && photoUrl !== brokenUrl) {
-    return (
-      <Image
-        source={{ uri: photoUrl }}
-        onError={() => setBrokenUrl(photoUrl)}
-        style={[
-          { width: size, height: size, borderRadius: size / 2 },
-          ring && { borderWidth: 2.5, borderColor: C.accent },
-        ]}
-      />
-    );
-  }
-  return (
-    <View style={[
-      { width: size, height: size, borderRadius: size / 2, backgroundColor: avatarBg(name), alignItems: 'center', justifyContent: 'center' },
-      ring && { borderWidth: 2.5, borderColor: C.accent },
-    ]}>
-      <Text style={{ fontWeight: '700', fontSize: Math.round(size * 0.4), color: '#fff', letterSpacing: -0.3 }}>
-        {initial}
-      </Text>
-    </View>
-  );
-}
 
 // ─── Toggle ───────────────────────────────────────────────────────────────────
 
@@ -161,7 +128,7 @@ function IdentityCard({ profile, stats, units, premium, onEdit }: { profile: Pro
       {/* Avatar + name row → 개인 정보 edit screen */}
       <Pressable onPress={onEdit} style={({ pressed }) => [st.identityRow, pressed && { opacity: 0.7 }]}>
         <View style={{ position: 'relative' }}>
-          <Avatar name={profile.nickname} size={62} ring photoUrl={profile.avatar_url} />
+          <Avatar name={profile.nickname} size={62} ring={C.accent} ringWidth={2.5} photoUrl={profile.avatar_url} initialsRatio={0.4} letterSpacing={-0.3} upper />
           <View style={st.editBadge}>
             <Icon name="pencil-outline" size={11} color={C.accentText} />
           </View>
