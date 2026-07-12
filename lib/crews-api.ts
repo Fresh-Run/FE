@@ -230,6 +230,37 @@ export async function getCrewRanking(crewId: string): Promise<CrewRankingEntry[]
   return apiFetch<CrewRankingEntry[]>(`/api/crews/${crewId}/ranking`);
 }
 
+// ─── Crew edit / delete (owner-only — both 403-probed 2026-07-15) ─────────────
+
+export type CrewUpdateInput = Partial<{
+  name: string;               // ≤50
+  description: string | null; // ≤500
+  area: string | null;        // ≤50
+  radius_km: number;          // 0<r≤500
+  sport: string;              // ≤30
+  level: CrewLevel;
+  max_members: number;        // ≤100000
+  is_public: boolean;
+  join_policy: 'open' | 'approval';
+  active_days: string[];      // ≤7
+  active_time: string | null;
+  color: string;
+}>;
+
+/** Partial update — only provided fields are written (BE CrewUpdate). */
+export async function updateCrew(id: string, patch: CrewUpdateInput): Promise<Crew> {
+  const row = await apiFetch<ServerCrew>(`/api/crews/${id}`, { method: 'PATCH', body: patch });
+  return mapCrew(row, 'owner');
+}
+
+/** Owner-only. Deletes WITH members — no empty-first requirement: the DB
+    cascade removes memberships, 공지, RSVP (+ crew-targeted notifications,
+    BE M10); members' RUNS are untouched (runs reference users, not crews).
+    The free-plan crew slot frees up (guide §189). */
+export function deleteCrew(id: string): Promise<void> {
+  return apiFetch<void>(`/api/crews/${id}`, { method: 'DELETE' });
+}
+
 // ─── 가입 신청 관리 (owner-only, guide §200-201) ───────────────────────────────
 // List = PENDING only, newest first; non-owner → 403 (probed 2026-07-15).
 // No avatar_url in this payload (지연-observation — the avatar batch skipped

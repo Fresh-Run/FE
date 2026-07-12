@@ -5,14 +5,13 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   Image,
   Pressable,
   ScrollView,
-  Share,
   StyleSheet,
   Text,
   View,
@@ -32,7 +31,7 @@ import {
 import { avatarBg } from '@/lib/fr-hash';
 import { listAnnouncements, type Announcement } from '@/lib/announcements-api';
 import { getCurrentChallenge, type Challenge } from '@/lib/challenges-api';
-import { getCrewRanking, getInviteCode, issueInviteCode, listJoinRequests, type CrewRankingEntry } from '@/lib/crews-api';
+import { getCrewRanking, listJoinRequests, type CrewRankingEntry } from '@/lib/crews-api';
 import { openProfile } from '@/lib/profile-nav';
 import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
 
@@ -212,59 +211,6 @@ export default function CrewDetailScreen() {
     return () => { cancelled = true; };
   }, [crewId, crew?.myRole]));
 
-  // ── 초대 코드 (S-batch2 #8, owner-only) ─────────────────────────────────────
-  const isOwnerRole = crew?.myRole === 'owner';
-  const [inviteCode, setInviteCode] = useState<string | null>(null);
-  const [inviteBusy, setInviteBusy] = useState(false);
-  useEffect(() => {
-    if (!crewId || !isOwnerRole) { setInviteCode(null); return; }
-    let cancelled = false;
-    getInviteCode(crewId)
-      .then(code => { if (!cancelled) setInviteCode(code); })
-      .catch(() => { /* quiet — 공유 press issues on demand */ });
-    return () => { cancelled = true; };
-  }, [crewId, isOwnerRole]);
-
-  async function shareInvite() {
-    if (!crewId || !crew || inviteBusy) return;
-    setInviteBusy(true);
-    try {
-      const code = inviteCode ?? await issueInviteCode(crewId);
-      setInviteCode(code);
-      await Share.share({
-        message: `FreshRun 크루 '${crew.name}'에 초대해요!\n초대 코드: ${code}\n앱 커뮤니티 탭의 '코드로 가입'에서 입력해 주세요.`,
-      });
-    } catch (e: unknown) {
-      Alert.alert('초대 코드 오류', e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요');
-    } finally {
-      setInviteBusy(false);
-    }
-  }
-
-  function confirmRegenInvite() {
-    if (!crewId) return;
-    Alert.alert(
-      '초대 코드를 재생성할까요?',
-      '기존 초대 링크가 무효화됩니다 — 이미 공유한 코드로는 더 이상 가입할 수 없어요.',
-      [
-        { text: '취소', style: 'cancel' },
-        {
-          text: '재생성', style: 'destructive',
-          onPress: async () => {
-            setInviteBusy(true);
-            try {
-              setInviteCode(await issueInviteCode(crewId));
-            } catch (e: unknown) {
-              Alert.alert('재생성 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요');
-            } finally {
-              setInviteBusy(false);
-            }
-          },
-        },
-      ],
-    );
-  }
-
   // ── 챌린지 + 랭킹 (M2/M2b) — members only ───────────────────────────────────
   const [challenge, setChallenge] = useState<Challenge | null | undefined>(undefined); // undefined = loading
   const [ranking, setRanking]     = useState<CrewRankingEntry[] | null>(null);
@@ -390,18 +336,46 @@ export default function CrewDetailScreen() {
             style={StyleSheet.absoluteFillObject}
           />
           <View style={[StyleSheet.absoluteFillObject, { paddingTop: insets.top + S.md, paddingHorizontal: S.lg, paddingBottom: S.lg }]}>
-            {/* Top controls */}
+            {/* Top controls — 크루 관리 pill is THE management door (canvas
+                FrCrewDetail redesign): owner + admin see it (hub role-gates
+                its rows), members don't */}
             <View style={st.heroControls}>
               <Pressable onPress={() => router.back()} hitSlop={12} style={st.backBtn}>
                 <Icon name="arrow-back" size={20} color="#fff" />
               </Pressable>
-              {crew.color && <View style={[st.colorDot, { backgroundColor: crew.color }]} />}
+              {canManage ? (
+                <Pressable
+                  onPress={() => router.push({
+                    pathname: '/(community)/crew-admin' as never,
+                    params: { crewId: crew.id, role: crew.myRole! },
+                  })}
+                  hitSlop={8}
+                  style={st.managePill}
+                >
+                  <Icon name="settings-outline" size={14} color="#fff" />
+                  <Text style={st.managePillTxt}>크루 관리</Text>
+                  {crew.myRole === 'owner' && pendingReqCount > 0 && <View style={st.managePillDot} />}
+                </Pressable>
+              ) : (
+                crew.color ? <View style={[st.colorDot, { backgroundColor: crew.color }]} /> : null
+              )}
             </View>
 
             {/* Crew info pinned to bottom */}
             <View style={{ flex: 1, justifyContent: 'flex-end' }}>
               <Text style={st.heroName}>{crew.name}</Text>
               <View style={st.heroMeta}>
+                {/* Role badge (canvas: 크루장 amber / 운영진 accent) */}
+                {crew.myRole === 'owner' && (
+                  <View style={[st.roleBadge, { backgroundColor: '#E8B53D' }]}>
+                    <Text style={st.roleBadgeTxt}>크루장</Text>
+                  </View>
+                )}
+                {crew.myRole === 'admin' && (
+                  <View style={[st.roleBadge, { backgroundColor: C.accent }]}>
+                    <Text style={st.roleBadgeTxt}>운영진</Text>
+                  </View>
+                )}
                 <View style={st.levelBadge}>
                   <Text style={st.levelTxt}>{crew.level}</Text>
                 </View>
@@ -415,6 +389,46 @@ export default function CrewDetailScreen() {
             </View>
           </View>
         </View>
+
+        {/* ── Quick actions (canvas redesign ②) — shortcuts INTO existing
+               flows, role-gated per admin v1: 공지·챌린지 = owner||admin,
+               운영진 관리 = owner ── */}
+        {canManage && (
+          <View style={st.quickRow}>
+            <Pressable
+              onPress={() => router.push({
+                pathname: '/(community)/announcement-compose' as never,
+                params: { crewId: crew.id },
+              })}
+              style={({ pressed }) => [st.quickTile, shadows.sm, pressed && { opacity: 0.8 }]}
+            >
+              <Icon name="megaphone-outline" size={19} color={C.accentGrn} />
+              <Text style={st.quickTxt}>공지 올리기</Text>
+            </Pressable>
+            {crew.myRole === 'owner' && (
+              <Pressable
+                onPress={() => router.push({
+                  pathname: '/(community)/crew-members' as never,
+                  params: { crewId: crew.id },
+                })}
+                style={({ pressed }) => [st.quickTile, shadows.sm, pressed && { opacity: 0.8 }]}
+              >
+                <Icon name="shield-outline" size={19} color={C.accentGrn} />
+                <Text style={st.quickTxt}>운영진 관리</Text>
+              </Pressable>
+            )}
+            <Pressable
+              onPress={() => router.push({
+                pathname: '/(community)/challenge-create' as never,
+                params: { crewId: crew.id },
+              })}
+              style={({ pressed }) => [st.quickTile, shadows.sm, pressed && { opacity: 0.8 }]}
+            >
+              <Icon name="trophy-outline" size={19} color={C.accentGrn} />
+              <Text style={st.quickTxt}>챌린지 생성</Text>
+            </Pressable>
+          </View>
+        )}
 
         {/* ── Activity schedule ────────────────────────────────────────── */}
         {(activeDays.length > 0 || crew.active_time) && (
@@ -565,18 +579,7 @@ export default function CrewDetailScreen() {
           <View style={st.sectionHead}>
             <Text style={st.sectionTitle}>크루원</Text>
             <Text style={st.memberCount}>{members.length}명</Text>
-            {canManage && (
-              <Pressable
-                onPress={() => router.push({
-                  pathname: '/(community)/crew-members' as never,
-                  params: { crewId: crew.id },
-                })}
-                hitSlop={8}
-                style={{ marginLeft: 'auto' }}
-              >
-                <Text style={st.annMoreTxt}>관리</Text>
-              </Pressable>
-            )}
+            {/* 관리 folded into the 크루 관리 hub (redesign ③) */}
           </View>
 
           {members.length === 0 ? (
@@ -594,59 +597,6 @@ export default function CrewDetailScreen() {
             </View>
           )}
         </View>
-
-        {/* ── 가입 요청 (M-tier 신청 관리, owner-only) — the approver side;
-               the owner's join_requested notification lands on this crew,
-               so the entry lives here. Count badge from the pending list. ── */}
-        {crew.myRole === 'owner' && (
-          <View style={{ paddingHorizontal: S.gutter, paddingTop: S.xl }}>
-            <Pressable
-              onPress={() => router.push({
-                pathname: '/(community)/crew-requests' as never,
-                params: { crewId: crew.id },
-              })}
-              style={({ pressed }) => [st.requestsRow, shadows.sm, pressed && { opacity: 0.8 }]}
-            >
-              <View style={st.requestsIcon}>
-                <Icon name="person-add-outline" size={17} color={C.accentGrn} />
-              </View>
-              <Text style={st.requestsTxt}>가입 요청</Text>
-              {pendingReqCount > 0 && (
-                <View style={st.requestsBadge}><Text style={st.requestsBadgeTxt}>{pendingReqCount}</Text></View>
-              )}
-              <Icon name="chevron-forward" size={16} color={C.faint} />
-            </Pressable>
-          </View>
-        )}
-
-        {/* ── 초대 (S-batch2 #8, owner-only) — code display + share sheet +
-               재생성 (kills the old code + every shared link: guide §204).
-               Share text is CODE-ONLY (recommendation): the recorded deep
-               link freshrun://crew-invite?code= only resolves post-native-
-               build — a dead link in 카톡 is worse than none. Flip to
-               link+code when the dev build ships. ── */}
-        {crew.myRole === 'owner' && (
-          <View style={{ paddingHorizontal: S.gutter, paddingTop: S.xl }}>
-            <View style={st.sectionHead}>
-              <Text style={st.sectionTitle}>초대</Text>
-            </View>
-            <View style={[st.inviteCard, shadows.sm]}>
-              <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={st.inviteLbl}>초대 코드</Text>
-                <Text style={st.inviteCode}>{inviteCode ?? '미발급'}</Text>
-              </View>
-              <Pressable onPress={shareInvite} disabled={inviteBusy} style={[st.inviteShareBtn, inviteBusy && { opacity: 0.5 }]}>
-                <Icon name="share-outline" size={15} color={C.accentText} />
-                <Text style={st.inviteShareTxt}>{inviteCode ? '공유' : '발급·공유'}</Text>
-              </Pressable>
-              {inviteCode && (
-                <Pressable onPress={confirmRegenInvite} disabled={inviteBusy} hitSlop={8} style={st.inviteRegenBtn}>
-                  <Icon name="refresh" size={16} color={C.sub} />
-                </Pressable>
-              )}
-            </View>
-          </View>
-        )}
 
       </ScrollView>
 
@@ -692,6 +642,14 @@ const st = StyleSheet.create({
   heroMetaTxt:  { fontSize: 13, color: 'rgba(255,255,255,0.78)', letterSpacing: -0.2 },
   heroDesc:     { fontSize: 13.5, lineHeight: 20, color: 'rgba(255,255,255,0.88)', letterSpacing: -0.2, marginTop: 10 },
   levelBadge:   { backgroundColor: 'rgba(255,255,255,0.22)', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
+  managePill:    { flexDirection: 'row', alignItems: 'center', gap: 6, height: 40, paddingHorizontal: 14, borderRadius: R.pill, backgroundColor: 'rgba(255,255,255,0.16)' },
+  managePillTxt: { fontSize: 13, fontWeight: '700', color: '#fff', letterSpacing: -0.2 },
+  managePillDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: C.danger },
+  roleBadge:     { borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2 },
+  roleBadgeTxt:  { fontSize: 10.5, fontWeight: '800', color: '#0D1A06', letterSpacing: 0.2 },
+  quickRow:      { flexDirection: 'row', gap: 9, paddingHorizontal: S.gutter, paddingTop: 16 },
+  quickTile:     { flex: 1, alignItems: 'center', gap: 6, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 14, paddingVertical: 12, paddingHorizontal: 4 },
+  quickTxt:      { fontSize: 12, fontWeight: '700', color: C.text, letterSpacing: -0.2 },
   levelTxt:     { fontSize: 11, fontWeight: '800', color: '#fff', letterSpacing: -0.1 },
 
   // Activity meta card
@@ -710,20 +668,6 @@ const st = StyleSheet.create({
   // Member list
   memberList:     { backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 18, overflow: 'hidden' },
 
-  // 가입 요청 entry (M-tier 신청 관리)
-  requestsRow:      { flexDirection: 'row', alignItems: 'center', gap: 11, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 18, padding: 14 },
-  requestsIcon:     { width: 34, height: 34, borderRadius: 10, backgroundColor: C.accentDim, alignItems: 'center', justifyContent: 'center' },
-  requestsTxt:      { flex: 1, fontSize: 14.5, fontWeight: '700', color: C.text, letterSpacing: -0.3 },
-  requestsBadge:    { minWidth: 22, height: 22, borderRadius: 11, backgroundColor: C.danger, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 7 },
-  requestsBadgeTxt: { fontSize: 12, fontWeight: '800', color: '#fff' },
-
-  // 초대 (S-batch2 #8)
-  inviteCard:     { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 18, padding: 14 },
-  inviteLbl:      { fontSize: 11, fontWeight: '600', color: C.faint, letterSpacing: -0.1 },
-  inviteCode:     { fontSize: 20, fontWeight: '800', color: C.text, letterSpacing: 2, marginTop: 2, fontVariant: ['tabular-nums'] },
-  inviteShareBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: C.accent, borderRadius: R.pill, paddingHorizontal: 14, height: 38 },
-  inviteShareTxt: { fontSize: 13, fontWeight: '800', color: C.accentText, letterSpacing: -0.2 },
-  inviteRegenBtn: { width: 38, height: 38, borderRadius: R.pill, borderWidth: 1, borderColor: C.border, alignItems: 'center', justifyContent: 'center' },
   memberRow:      { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 14 },
   memberRowOwner: { backgroundColor: C.accentDim },
   memberRank:     { fontSize: 13, fontWeight: '700', color: C.faint, width: 22, textAlign: 'center', flexShrink: 0 },

@@ -29,13 +29,13 @@ import { createCrew, type Crew, type CrewLevel } from '@/lib/crews-api';
 import { useCurrentLocation } from '@/hooks/use-current-location';
 import { accentShadow, colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
 
-const CREW_COLORS = ['#74E827', '#2F8FE8', '#E8703D', '#A24DE8', '#E8B53D'];
-const SPORTS = ['러닝', '라이딩', '워킹'] as const;
-const LEVELS: CrewLevel[] = ['입문', '중급', '고급', '무관'];
-const DAYS = ['월', '화', '수', '목', '금', '토', '일'] as const;
+export const CREW_COLORS = ['#74E827', '#2F8FE8', '#E8703D', '#A24DE8', '#E8B53D'];
+export const SPORTS = ['러닝', '라이딩', '워킹'] as const;
+export const LEVELS: CrewLevel[] = ['입문', '중급', '고급', '무관'];
+export const DAYS = ['월', '화', '수', '목', '금', '토', '일'] as const;
 
-type Privacy = '공개' | '승인제' | '비공개';
-const PRIVACY_OPTIONS: [Privacy, string][] = [
+export type Privacy = '공개' | '승인제' | '비공개';
+export const PRIVACY_OPTIONS: [Privacy, string][] = [
   ['공개',   '누구나 바로 가입할 수 있어요'],
   ['승인제', '크루장이 가입 요청을 확인해요'],
   ['비공개', '초대 링크로만 가입 가능해요'],
@@ -43,7 +43,7 @@ const PRIVACY_OPTIONS: [Privacy, string][] = [
 
 /** 공개 범위 → backend fields (비공개 rejects direct joins server-side;
     invite-code join bypasses policy). */
-function privacyToFields(p: Privacy): { is_public: boolean; join_policy: 'open' | 'approval' } {
+export function privacyToFields(p: Privacy): { is_public: boolean; join_policy: 'open' | 'approval' } {
   if (p === '승인제') return { is_public: true, join_policy: 'approval' };
   if (p === '비공개') return { is_public: false, join_policy: 'open' };
   return { is_public: true, join_policy: 'open' };
@@ -51,7 +51,7 @@ function privacyToFields(p: Privacy): { is_public: boolean; join_policy: 'open' 
 
 // ─── Local form primitives (screen-local per app pattern) ─────────────────────
 
-function Group({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
+export function Group({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
   return (
     <View style={{ paddingHorizontal: S.gutter }}>
       <Text style={st.groupTitle}>{title}</Text>
@@ -61,7 +61,7 @@ function Group({ title, hint, children }: { title: string; hint?: string; childr
   );
 }
 
-function FieldRow({ label, value, onChange, placeholder, maxLength }: {
+export function FieldRow({ label, value, onChange, placeholder, maxLength }: {
   label: string; value: string; onChange: (v: string) => void; placeholder?: string; maxLength?: number;
 }) {
   return (
@@ -79,7 +79,7 @@ function FieldRow({ label, value, onChange, placeholder, maxLength }: {
   );
 }
 
-function Chip({ label, on, onPress }: { label: string; on: boolean; onPress: () => void }) {
+export function Chip({ label, on, onPress }: { label: string; on: boolean; onPress: () => void }) {
   return (
     <Pressable onPress={onPress} style={[st.chip, on && st.chipOn]}>
       <Text style={[st.chipTxt, on && { color: C.accentGrn }]}>{label}</Text>
@@ -87,7 +87,7 @@ function Chip({ label, on, onPress }: { label: string; on: boolean; onPress: () 
   );
 }
 
-function StepperRow({ label, value, min, max, step, suffix, onChange }: {
+export function StepperRow({ label, value, min, max, step, suffix, onChange }: {
   label: string; value: number; min: number; max: number; step: number; suffix: string; onChange: (v: number) => void;
 }) {
   const bump = (dir: 1 | -1) => onChange(Math.min(max, Math.max(min, value + dir * step)));
@@ -103,7 +103,7 @@ function StepperRow({ label, value, min, max, step, suffix, onChange }: {
   );
 }
 
-function SelectRow({ label, sub, selected, onSelect }: { label: string; sub: string; selected: boolean; onSelect: () => void }) {
+export function SelectRow({ label, sub, selected, onSelect }: { label: string; sub: string; selected: boolean; onSelect: () => void }) {
   return (
     <Pressable onPress={onSelect} style={st.selectRow}>
       <View style={{ flex: 1, minWidth: 0 }}>
@@ -363,7 +363,7 @@ export default function CrewCreateScreen() {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const st = StyleSheet.create({
+export const st = StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
 
   appBar:      { flexDirection: 'row', alignItems: 'center', paddingHorizontal: S.gutter, paddingVertical: 12 },
