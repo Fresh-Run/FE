@@ -1,6 +1,6 @@
 import { useFocusEffect } from '@react-navigation/native';
 import { router } from 'expo-router';
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -21,43 +21,9 @@ import { Icon } from '@/components/ui';
 import { useRuns, type Run } from '@/hooks/use-runs';
 import { distUnit, fmtDate, fmtDist, fmtDuration, fmtPaceIn, fmtWhen, timeTitle } from '@/lib/run-format';
 import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
+import { getMonthlyStats, type MonthlyStats } from '@/lib/stats-api';
 import { useQuota } from '@/store/use-quota';
 import { useSettings } from '@/store/use-settings';
-
-// ─── Month utilities ──────────────────────────────────────────────────────────
-
-type MonthEntry = { year: number; month: number; key: string };
-
-function monthKey(year: number, month: number): string {
-  return `${year}-${String(month).padStart(2, '0')}`;
-}
-
-// Returns distinct months newest-first (runs must be ordered by ran_at desc).
-function getDistinctMonths(runs: Run[]): MonthEntry[] {
-  const seen = new Set<string>();
-  const result: MonthEntry[] = [];
-  for (const run of runs) {
-    const d = new Date(run.ran_at);
-    const year = d.getFullYear();
-    const month = d.getMonth() + 1;
-    const key = monthKey(year, month);
-    if (!seen.has(key)) { seen.add(key); result.push({ year, month, key }); }
-  }
-  return result;
-}
-
-// Days 1-7, 8-14, 15-21, 22-end (handles 28/29/30/31-day months correctly).
-function weekBuckets(runs: Run[], year: number, month: number): [number, number, number, number] {
-  const b: [number, number, number, number] = [0, 0, 0, 0];
-  for (const run of runs) {
-    const d = new Date(run.ran_at);
-    if (d.getFullYear() !== year || d.getMonth() + 1 !== month) continue;
-    const day = d.getDate();
-    const w = day <= 7 ? 0 : day <= 14 ? 1 : day <= 21 ? 2 : 3;
-    b[w] += run.distance_km;
-  }
-  return b;
-}
 
 // ─── Sparkline path ───────────────────────────────────────────────────────────
 
@@ -83,63 +49,66 @@ function sparkPaths(vals: readonly number[], W: number, H: number) {
 // ─── MonthStats ───────────────────────────────────────────────────────────────
 // All hooks are called unconditionally; early return is placed after the last hook.
 
-function MonthStats({ runs }: { runs: Run[] }) {
+function MonthStats() {
   const units = useSettings(s => s.settings.units);
-  const months = useMemo(() => getDistinctMonths(runs), [runs]);
-  const [idx, setIdx] = useState(0);
-  // 월 picker (canvas FrMonthPicker) — the month label is the trigger
+  // Server month stats (stats-api swap): client aggregation over fetched
+  // runs went quietly wrong once cursor pagination landed (only page one
+  // in memory) — GET /me/stats/monthly is the authoritative source.
+  // Stepper is now free-calendar (any past month; forward capped at the
+  // current month) like the 월간 리포트 — empty months render zeros.
+  const now = new Date();
+  const [ym, setYm] = useState({ year: now.getFullYear(), month: now.getMonth() + 1 });
   const [pickerOpen, setPickerOpen] = useState(false);
+  const isCurrentMonth = ym.year === now.getFullYear() && ym.month === now.getMonth() + 1;
 
-  // Clamp idx in case runs change and the months list shrinks.
-  const safeIdx = months.length > 0 ? Math.min(idx, months.length - 1) : 0;
-  const cur = months.length > 0 ? months[safeIdx] : null;
-
-  const curRuns = useMemo(() => {
-    if (!cur) return [] as Run[];
-    return runs.filter(r => {
-      const d = new Date(r.ran_at);
-      return d.getFullYear() === cur.year && d.getMonth() + 1 === cur.month;
-    });
-  }, [runs, cur?.key]);
-
-  // Calendar-previous month total distance — null means no data, hide delta chip.
-  const prevDist = useMemo(() => {
-    if (!cur) return null;
-    const py = cur.month === 1 ? cur.year - 1 : cur.year;
-    const pm = cur.month === 1 ? 12 : cur.month - 1;
-    const pk = monthKey(py, pm);
-    if (!months.some(m => m.key === pk)) return null;
-    const dist = runs
-      .filter(r => {
-        const d = new Date(r.ran_at);
-        return d.getFullYear() === py && d.getMonth() + 1 === pm;
+  const [data, setData] = useState<MonthlyStats | null>(null);
+  const cacheRef = useRef<Record<string, MonthlyStats>>({});
+  useFocusEffect(useCallback(() => {
+    const key = `${ym.year}-${ym.month}`;
+    // Cached month paints instantly; the fetch corrects it silently
+    if (cacheRef.current[key]) setData(cacheRef.current[key]);
+    let cancelled = false;
+    getMonthlyStats(ym.year, ym.month)
+      .then(res => {
+        if (cancelled) return;
+        cacheRef.current[key] = res;
+        setData(res);
       })
-      .reduce((s, r) => s + r.distance_km, 0);
-    return dist > 0 ? dist : null;
-  }, [runs, cur?.key, months]);
+      .catch(() => { /* offline — cached/last data stands (quiet) */ });
+    return () => { cancelled = true; };
+  }, [ym.year, ym.month]));
 
-  const buckets = useMemo((): [number, number, number, number] => {
-    if (!cur) return [0, 0, 0, 0];
-    return weekBuckets(runs, cur.year, cur.month);
-  }, [runs, cur?.key]);
+  const step = (dir: -1 | 1) => {
+    setYm(({ year, month }) => {
+      const m = month + dir;
+      if (m < 1) return { year: year - 1, month: 12 };
+      if (m > 12) return { year: year + 1, month: 1 };
+      return { year, month: m };
+    });
+  };
 
-  // All hooks done — safe to early-return.
-  if (!cur) return null;
+  const showing = data && data.year === ym.year && data.month === ym.month ? data : null;
+  const s = showing?.stats ?? null;
 
-  const totalDist = curRuns.reduce((s, r) => s + r.distance_km, 0);
-  const sessions  = curRuns.length;
-  const totalSec  = curRuns.reduce((s, r) => s + r.duration_sec, 0);
-  const withPace  = curRuns.filter(r => r.avg_pace_sec_per_km != null);
-  const avgPace   = withPace.length > 0
-    ? withPace.reduce((s, r) => s + r.avg_pace_sec_per_km!, 0) / withPace.length
-    : null;
+  // Weekly sparkline buckets from the server's per-day breakdown (KST days
+  // 1-7 / 8-14 / 15-21 / 22+ — same buckets as the old client math)
+  const buckets: [number, number, number, number] = [0, 0, 0, 0];
+  for (const d of showing?.days ?? []) {
+    const day = Number(d.date.slice(8, 10));
+    const w = day <= 7 ? 0 : day <= 14 ? 1 : day <= 21 ? 2 : 3;
+    buckets[w] += d.distance_km;
+  }
+
+  const totalDist = s?.total_distance_km ?? 0;
+  const totalSec  = s?.total_duration_sec ?? 0;
   const totalH    = Math.floor(totalSec / 3600);
   const totalMRem = Math.floor((totalSec % 3600) / 60);
   const timeStr   = `${totalH}:${String(totalMRem).padStart(2, '0')}`;
 
-  // Delta only shown when the calendar-previous month has run data.
-  const delta = prevDist != null
-    ? Math.round(((totalDist - prevDist) / prevDist) * 100)
+  // Server delta is km vs previous month → % against the derived prev total
+  const prevTotal = s?.delta_distance_km != null ? totalDist - s.delta_distance_km : null;
+  const delta = prevTotal != null && prevTotal > 0
+    ? Math.round(((totalDist - prevTotal) / prevTotal) * 100)
     : null;
 
   const CHART_W = 340, CHART_H = 90;
@@ -147,33 +116,28 @@ function MonthStats({ runs }: { runs: Run[] }) {
 
   const stats: [string, string, string][] = [
     ['총 거리',     fmtDist(totalDist, units, 1),          distUnit(units)],
-    ['세션',        String(sessions),                       '회'],
-    ['평균 페이스', avgPace != null ? fmtPaceIn(avgPace, units) : '--', ''],
+    ['세션',        String(s?.run_count ?? 0),              '회'],
+    ['평균 페이스', s?.avg_pace_sec_per_km != null ? fmtPaceIn(s.avg_pace_sec_per_km, units) : '--', ''],
     ['총 시간',     timeStr,                                'h'],
   ];
 
   return (
     <View style={{ paddingTop: S.lg }}>
 
-      {/* Month stepper — only steps between months that actually have runs */}
+      {/* Month stepper — free calendar, forward capped at the current month */}
       <View style={st.monthRow}>
-        <Pressable
-          onPress={() => setIdx(i => Math.min(months.length - 1, i + 1))}
-          disabled={safeIdx >= months.length - 1}
-          hitSlop={10}
-          style={[st.monthBtn, safeIdx >= months.length - 1 && st.btnDisabled]}
-        >
+        <Pressable onPress={() => step(-1)} hitSlop={10} style={st.monthBtn}>
           <Icon name="chevron-back" size={18} color={C.text} />
         </Pressable>
         <Pressable onPress={() => setPickerOpen(true)} hitSlop={8} style={st.monthLabelBtn}>
-          <Text style={st.monthLabel}>{cur.year}년 {cur.month}월</Text>
+          <Text style={st.monthLabel}>{ym.year}년 {ym.month}월</Text>
           <Icon name="chevron-down" size={15} color={C.sub} />
         </Pressable>
         <Pressable
-          onPress={() => setIdx(i => Math.max(0, i - 1))}
-          disabled={safeIdx <= 0}
+          onPress={() => step(1)}
+          disabled={isCurrentMonth}
           hitSlop={10}
-          style={[st.monthBtn, safeIdx <= 0 && st.btnDisabled]}
+          style={[st.monthBtn, isCurrentMonth && st.btnDisabled]}
         >
           <Icon name="chevron-forward" size={18} color={C.text} />
         </Pressable>
@@ -181,13 +145,12 @@ function MonthStats({ runs }: { runs: Run[] }) {
 
       <MonthPicker
         visible={pickerOpen}
-        year={cur.year}
-        month={cur.month}
-        isEnabled={(y, m) => months.some(e => e.year === y && e.month === m)}
-        onSelect={(y, m) => {
-          const j = months.findIndex(e => e.year === y && e.month === m);
-          if (j >= 0) setIdx(j);
-        }}
+        year={ym.year}
+        month={ym.month}
+        // Server stats exist for any month — non-future is the only gate
+        isEnabled={(y, m) =>
+          y < now.getFullYear() || (y === now.getFullYear() && m <= now.getMonth() + 1)}
+        onSelect={(y, m) => setYm({ year: y, month: m })}
         onClose={() => setPickerOpen(false)}
       />
 
@@ -385,7 +348,7 @@ export default function RecordsScreen() {
         <Text style={[st.screenTitle, st.headerPad]}>기록</Text>
 
         <View style={{ paddingHorizontal: S.gutter }}>
-          <MonthStats runs={runs} />
+          <MonthStats />
         </View>
 
         <View style={{ paddingHorizontal: S.gutter, paddingTop: S.lg }}>
