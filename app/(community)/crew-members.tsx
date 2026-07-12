@@ -7,9 +7,14 @@
  * with it — the canvas label is finally true.
  *
  * Manage actions re-housed per the new design: 내보내기 stays inline
- * (disabled = the 403 made visible, admin targets); owner's 운영진 지정/해제
- * + 크루장 양도 move into a per-member bottom sheet (⋯) — same capabilities
- * as before (admin v1, BE f68a48f), new furniture. Self never shows actions.
+ * (disabled = the 403 made visible); the per-member bottom sheet (⋯) holds
+ * 운영진 지정/해제 · 권한 설정 · 크루장 양도. Self never shows actions.
+ *
+ * v2 permission gating (BE 28a5c25, guide §207): capabilities read MY
+ * member row's permission set (owner arrives all-true synthesized) —
+ * 내보내기 = kick_members, sheet(지정/해제·권한 설정) = manage_admins,
+ * 양도 stays owner-only. Target rules keep the v1 conservative matrix
+ * (admin targets kick-disabled unless I'm owner); server 403s enforce.
  */
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
@@ -59,9 +64,11 @@ export default function CrewMembersScreen() {
     supabase.auth.getUser().then(({ data: { user } }) => setMyUid(user?.id ?? null));
   }, []);
 
-  const myRole = rows?.find(m => m.user_id === myUid)?.role;
-  const iAmOwner = myRole === 'owner';
-  const iAmAdmin = myRole === 'admin';
+  const myRow = rows?.find(m => m.user_id === myUid);
+  const iAmOwner = myRow?.role === 'owner';
+  // v2: capabilities come from my permission set (owner = all-true synthesized)
+  const canKick   = !!myRow?.permissions?.kick_members;
+  const canManageAdmins = !!myRow?.permissions?.manage_admins;
 
   async function changeRole(m: CrewMember, role: 'admin' | 'member') {
     setBusyUid(m.user_id);
@@ -80,7 +87,9 @@ export default function CrewMembersScreen() {
     Alert.alert(
       promoting ? '운영진으로 지정할까요?' : '운영진을 해제할까요?',
       promoting
-        ? `${m.nickname}님이 공지 작성·수정·삭제, 챌린지 생성, 멤버 강퇴를 할 수 있게 돼요.`
+        // v2 defaults (server-side: 공지·챌린지 ON, 나머지 OFF) — the promote
+        // flow needs no FE change; 세부 조정은 권한 설정에서
+        ? `${m.nickname}님이 공지와 챌린지 관리를 할 수 있게 돼요. 세부 권한은 '권한 설정'에서 조정할 수 있어요.`
         : `${m.nickname}님의 운영진 권한을 해제해요.`,
       [
         { text: '취소', style: 'cancel' },
@@ -136,18 +145,17 @@ export default function CrewMembersScreen() {
   }
 
   /** Authorization matrix → affordances. Disabled = visible but inert
-      (the server's 403 semantics, surfaced honestly). */
+      (the server's 403 semantics, surfaced honestly). v2: capability by
+      permission key, target rules stay the conservative v1 matrix. */
   function actionsFor(m: CrewMember): { more?: boolean; kick?: 'enabled' | 'disabled' } {
     if (m.user_id === myUid) return {};              // self — never
-    if (iAmOwner) {
-      if (m.role === 'owner') return {};             // cannot occur (self is owner)
-      return { more: true, kick: 'enabled' };        // 지정/해제·양도 in the sheet
-    }
-    if (iAmAdmin) {
-      if (m.role === 'member') return { kick: 'enabled' };
-      return { kick: 'disabled' };                   // admin/owner target → 403
-    }
-    return {};                                       // plain member — read-only
+    if (m.role === 'owner') return {};               // owner target — untouchable
+    const kick = canKick
+      ? ((m.role === 'member' || iAmOwner) ? 'enabled' as const : 'disabled' as const)
+      : undefined;
+    // sheet: 지정/해제 + 권한 설정 (manage_admins); 양도 rides for owner
+    const more = canManageAdmins;
+    return { more: more || undefined, kick };
   }
 
   return (
@@ -219,15 +227,16 @@ export default function CrewMembersScreen() {
           ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
           contentContainerStyle={{ padding: S.gutter, paddingBottom: 40 }}
           ListFooterComponent={
-            iAmAdmin ? (
-              <Text style={st.footNote}>운영진은 멤버만 내보낼 수 있어요 · 운영진 지정은 크루장만</Text>
+            myRow?.role === 'admin' ? (
+              <Text style={st.footNote}>내 권한에 없는 동작은 비활성화돼요 · 주의 권한은 크루장만 부여해요</Text>
             ) : null
           }
           showsVerticalScrollIndicator={false}
         />
       )}
 
-      {/* ── owner's per-member sheet — 지정/해제 + 양도 (kudos-sheet furniture) ── */}
+      {/* ── per-member sheet (manage_admins holders) — 지정/해제 · 권한 설정
+             (admin targets; member 대상은 서버 422라 문이 없음) · 양도 (owner) ── */}
       <Modal visible={!!sheetFor} transparent animationType="slide" onRequestClose={() => setSheetFor(null)}>
         <Pressable style={st.sheetOverlay} onPress={() => setSheetFor(null)}>
           <Pressable style={[st.sheet, { paddingBottom: Math.max(insets.bottom, 12) + 8 }]} onPress={() => {}}>
@@ -240,14 +249,36 @@ export default function CrewMembersScreen() {
               <Icon name="shield-outline" size={19} color={C.text} />
               <Text style={st.sheetRowTxt}>{sheetFor?.role === 'admin' ? '운영진 해제' : '운영진 지정'}</Text>
             </Pressable>
-            <View style={st.sheetDivider} />
-            <Pressable
-              onPress={() => { const m = sheetFor!; setSheetFor(null); confirmTransfer(m); }}
-              style={({ pressed }) => [st.sheetRow, pressed && { opacity: 0.7 }]}
-            >
-              <Icon name="swap-horizontal-outline" size={19} color={C.danger} />
-              <Text style={[st.sheetRowTxt, { color: C.danger }]}>크루장 양도</Text>
-            </Pressable>
+            {sheetFor?.role === 'admin' && (
+              <>
+                <View style={st.sheetDivider} />
+                <Pressable
+                  onPress={() => {
+                    const m = sheetFor!; setSheetFor(null);
+                    router.push({
+                      pathname: '/(community)/crew-perms' as never,
+                      params: { crewId: crewId!, userId: m.user_id },
+                    });
+                  }}
+                  style={({ pressed }) => [st.sheetRow, pressed && { opacity: 0.7 }]}
+                >
+                  <Icon name="options-outline" size={19} color={C.text} />
+                  <Text style={st.sheetRowTxt}>권한 설정</Text>
+                </Pressable>
+              </>
+            )}
+            {iAmOwner && (
+              <>
+                <View style={st.sheetDivider} />
+                <Pressable
+                  onPress={() => { const m = sheetFor!; setSheetFor(null); confirmTransfer(m); }}
+                  style={({ pressed }) => [st.sheetRow, pressed && { opacity: 0.7 }]}
+                >
+                  <Icon name="swap-horizontal-outline" size={19} color={C.danger} />
+                  <Text style={[st.sheetRowTxt, { color: C.danger }]}>크루장 양도</Text>
+                </Pressable>
+              </>
+            )}
           </Pressable>
         </Pressable>
       </Modal>

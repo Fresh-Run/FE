@@ -115,8 +115,9 @@ export default function AnnouncementDetailScreen() {
         getCrewMembers(crewId),
       ]);
       if (cancelled) return;
-      const role = members.find(m => m.user_id === user?.id)?.role;
-      setCanManage(role === 'owner' || role === 'admin');
+      // v2 (guide §207): 공지 CRUD keys off the announcements permission
+      // (owner arrives all-true synthesized), not the role pair.
+      setCanManage(!!members.find(m => m.user_id === user?.id)?.permissions?.announcements);
     })().catch(() => { /* refocus retries; buttons appear then */ });
     return () => { cancelled = true; };
   }, [crewId]));

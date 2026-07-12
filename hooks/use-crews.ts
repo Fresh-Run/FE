@@ -14,6 +14,7 @@ import {
   mapCrew,
   type Crew,
   type CrewMember,
+  type CrewPermissions,
   type JoinRequestStatus,
   type ListCrewsParams,
 } from '@/lib/crews-api';
@@ -118,6 +119,10 @@ export function useMyCrews() {
 export function useCrewDetail(crewId: string | null) {
   const [crew, setCrew]       = useState<Crew | null>(null);
   const [members, setMembers] = useState<CrewMember[]>([]);
+  // v2 세부 권한 — my member row's permission set (owner arrives all-true
+  // synthesized from the server, so gates read this uniformly; member/
+  // non-member = null → every can() is false).
+  const [myPerms, setMyPerms] = useState<CrewPermissions | null>(null);
   const [myRequestStatus, setMyRequestStatus] = useState<JoinRequestStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState<string | null>(null);
@@ -131,6 +136,7 @@ export function useCrewDetail(crewId: string | null) {
     setError(null);
     setCrew(null);
     setMembers([]);
+    setMyPerms(null);
     setMyRequestStatus(null);
 
     (async () => {
@@ -145,12 +151,13 @@ export function useCrewDetail(crewId: string | null) {
         const userId = user?.id ?? null;
         // Server role is truth (3-valued since BE f68a48f admin v1);
         // owner_id check stays as the fallback for consistency.
-        const serverRole = memberRows.find(m => m.user_id === userId)?.role;
-        const myRole = serverRole
+        const myRow = memberRows.find(m => m.user_id === userId);
+        const myRole = myRow?.role
           ?? (userId && crewRow.owner_id === userId ? 'owner' as const : undefined);
 
         setCrew(mapCrew(crewRow, myRole));
         setMembers(memberRows);
+        setMyPerms(myRow?.permissions ?? null);
 
         // Non-members of approval crews: the authoritative pending/rejected
         // check (guide: rejection sends no notification — this IS the signal).
@@ -176,5 +183,5 @@ export function useCrewDetail(crewId: string | null) {
   }, [crewId, key]);
 
   const refetch = useCallback(() => setKey(k => k + 1), []);
-  return { crew, members, myRequestStatus, loading, error, refetch };
+  return { crew, members, myPerms, myRequestStatus, loading, error, refetch };
 }

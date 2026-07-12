@@ -94,6 +94,8 @@ export default function CrewChatScreen() {
   const { crewId, crewName, memberCount, role } = useLocalSearchParams<{
     crewId: string; crewName?: string; memberCount?: string; role?: string;
   }>();
+  // Deliberately ROLE-based, not permission-keyed: chat delete is her v2
+  // carve-out (본인 or 운영진 — "not a key"; guide §207 keeps it off the set).
   const canManage = role === 'owner' || role === 'admin';
   const units = useSettings(st_ => st_.settings.units);
 

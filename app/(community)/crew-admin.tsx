@@ -3,15 +3,22 @@
  * identity card + stats row + management rows. Opened by the hero's 크루
  * 관리 pill on crew-detail.
  *
- * Role gating = the LIVE admin-v1 permission table (guide §203), not the
- * canvas's v2 per-permission model: owner sees everything; admin sees
- * 공지 관리 / 크루원 관리(kick-only, screen self-scopes) / 챌린지 관리.
- * Server 403s remain the real enforcement — the hub only hides doors.
+ * Row gating = the v2 per-permission model (BE 28a5c25, guide §207): rows
+ * key off MY member row's permission set (owner arrives all-true
+ * synthesized) — 공지 관리 = announcements, 챌린지 관리 = challenges,
+ * 크루 정보 편집 = edit_crew (owner-only until v2), 크루원·운영진 관리 =
+ * every 운영진 (the screen self-scopes its actions). owner-only stays:
+ * 가입 요청 · 초대 코드 (guide: 위임·삭제·초대코드·가입신청은 owner 전용).
+ * Server 403s remain the real enforcement — the hub only hides doors
+ * (the capability MAP with disabled-with-reason lives in 권한 설정).
+ * Stats row consumes the server's admin_count (v2 field, EXCL. owner —
+ * same semantic the hub displayed before, now server-sourced).
  *
  * Canvas parity notes: canvas splits 운영진 관리/크루원 관리 into two
- * screens — admin v1 has ONE crew-members screen, so one consolidated row;
- * canvas hub has no 초대 코드 row — added per owner spec (the S-batch2
- * invite card moved here from crew-detail's body).
+ * screens — one consolidated crew-members screen here, so one row; canvas
+ * hub has no 초대 코드 row — added per owner spec (the S-batch2 invite
+ * card moved here from crew-detail's body); canvas stats count 운영진
+ * owner-INclusive — the live hub has always shown admins-only, kept.
  */
 import { useFocusEffect } from '@react-navigation/native';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -39,7 +46,9 @@ import {
   listJoinRequests,
   mapCrew,
   type Crew,
+  type CrewPermissions,
 } from '@/lib/crews-api';
+import { supabase } from '@/lib/supabase';
 import { accentShadow, colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
 
 export default function CrewAdminScreen() {
@@ -52,18 +61,25 @@ export default function CrewAdminScreen() {
   const [crew, setCrew] = useState<Crew | null>(null);
   const [memberCount, setMemberCount] = useState<number | null>(null);
   const [adminCount, setAdminCount] = useState<number | null>(null);
+  const [myPerms, setMyPerms] = useState<CrewPermissions | null>(null);
+  const [permsLoaded, setPermsLoaded] = useState(false); // rows wait — no gate pop-in
   const [pending, setPending] = useState<number | null>(null);
   const [challenge, setChallenge] = useState<Challenge | null | undefined>(undefined);
 
   useFocusEffect(useCallback(() => {
     if (!crewId) return;
     let cancelled = false;
-    getCrew(crewId).then(row => { if (!cancelled) setCrew(mapCrew(row, role)); }).catch(() => {});
-    getCrewMembers(crewId).then(ms => {
+    getCrew(crewId).then(row => {
+      if (cancelled) return;
+      setCrew(mapCrew(row, role));
+      setAdminCount(row.admin_count ?? null); // v2 server field (EXCL. owner)
+    }).catch(() => {});
+    Promise.all([supabase.auth.getUser(), getCrewMembers(crewId)]).then(([{ data: { user } }, ms]) => {
       if (cancelled) return;
       setMemberCount(ms.length);
-      setAdminCount(ms.filter(m => m.role === 'admin').length);
-    }).catch(() => {});
+      setMyPerms(ms.find(m => m.user_id === user?.id)?.permissions ?? null);
+      setPermsLoaded(true);
+    }).catch(() => { if (!cancelled) setPermsLoaded(true); }); // fail-open to the hub shell; rows stay honest
     getCurrentChallenge(crewId).then(ch => { if (!cancelled) setChallenge(ch); }).catch(() => {});
     if (isOwner) {
       listJoinRequests(crewId).then(rows => { if (!cancelled) setPending(rows.length); }).catch(() => {});
@@ -124,12 +140,14 @@ export default function CrewAdminScreen() {
   const go = (pathname: string) =>
     router.push({ pathname: pathname as never, params: { crewId: crewId! } });
 
+  const can = (k: keyof CrewPermissions) => !!myPerms?.[k];
+
   type Row = { icon: string; label: string; sub: string; onPress: () => void; badge?: number };
   const rows: Row[] = [
-    {
+    ...(can('announcements') ? [{
       icon: 'megaphone-outline', label: '공지 관리', sub: '공지 목록·작성',
       onPress: () => router.push({ pathname: '/(community)/announcements' as never, params: { crewId: crewId!, canManage: '1' } }),
-    },
+    }] : []),
     {
       icon: 'people-outline', label: '크루원·운영진 관리',
       sub: memberCount != null ? `크루원 ${memberCount}명 · 운영진 ${adminCount ?? 0}명` : '크루원·역할·내보내기',
@@ -141,14 +159,15 @@ export default function CrewAdminScreen() {
       onPress: () => go('/(community)/crew-requests'),
       badge: pending ?? 0,
     }] : []),
-    {
+    ...(can('challenges') ? [{
       icon: 'trophy-outline', label: '챌린지 관리',
       sub: challenge === undefined ? '챌린지' : challenge === null ? '챌린지 없음' : challenge.title,
       onPress: () => go('/(community)/challenge-create'),
-    },
-    ...(isOwner ? [{
+    }] : []),
+    ...(can('edit_crew') ? [{
       icon: 'create-outline', label: '크루 정보 편집', sub: '이름·지역·공개 범위',
-      onPress: () => go('/(community)/crew-edit'),
+      // owner param gates the 위험 구역 (크루 삭제 stays owner-only under v2)
+      onPress: () => router.push({ pathname: '/(community)/crew-edit' as never, params: { crewId: crewId!, owner: isOwner ? '1' : '0' } }),
     }] : []),
   ];
 
@@ -162,7 +181,7 @@ export default function CrewAdminScreen() {
         <View style={{ width: 36 }} />
       </View>
 
-      {!crew ? (
+      {!crew || !permsLoaded ? (
         <View style={st.centered}><ActivityIndicator size="large" color={C.accent} /></View>
       ) : (
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: S.gutter, paddingBottom: 40 }}>

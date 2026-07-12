@@ -33,7 +33,20 @@ export type Crew = {
   sigungu: string | null;
   tags: string[];
   distance_km: number | null;
+  admin_count: number | null; // v2 (BE 28a5c25) — admins EXCL. owner; null pre-v2
   myRole?: 'owner' | 'admin' | 'member';
+};
+
+/** 세부 권한 5키 (v2, BE 28a5c25 — guide §207). role은 표시·정렬용,
+    행동 판별은 이 키들. owner는 멤버 응답에 all-true 합성(암묵 전권),
+    member는 null. 승격 기본값: announcements·challenges ON, 나머지 OFF
+    (probed 2026-07-13). */
+export type CrewPermissions = {
+  announcements: boolean;
+  challenges: boolean;
+  edit_crew: boolean;
+  kick_members: boolean;
+  manage_admins: boolean;
 };
 
 export type CrewMember = {
@@ -43,6 +56,7 @@ export type CrewMember = {
   nickname: string;
   avatar_url: string | null; // served since BE 5009cbe (avatar wire-up)
   challenge_km: number;      // BE 7ec4a96 — 현재 챌린지 per-member aggregate
+  permissions: CrewPermissions | null; // v2 — null for plain members
 };
 
 export type JoinRequestStatus = 'pending' | 'approved' | 'rejected';
@@ -75,6 +89,7 @@ type ServerCrew = {
   lng?: number | null;
   tags?: string[];
   distance_km?: number | null;
+  admin_count?: number | null; // v2 (BE 28a5c25)
 };
 
 type ServerMember = {
@@ -84,6 +99,7 @@ type ServerMember = {
   role: string;
   joined_at: string;
   challenge_km?: number;
+  permissions?: CrewPermissions | null; // v2 (BE 28a5c25)
 };
 
 export function mapCrew(row: ServerCrew, myRole?: 'owner' | 'admin' | 'member'): Crew {
@@ -110,6 +126,7 @@ export function mapCrew(row: ServerCrew, myRole?: 'owner' | 'admin' | 'member'):
     sigungu:     row.sigungu ?? null,
     tags:        row.tags ?? [],
     distance_km: row.distance_km ?? null,
+    admin_count: row.admin_count ?? null,
     myRole,
   };
 }
@@ -122,6 +139,7 @@ function mapMember(row: ServerMember): CrewMember {
     nickname:   row.nickname ?? '러너',
     challenge_km: row.challenge_km ?? 0,
     avatar_url: row.avatar_url ?? null,
+    permissions: row.permissions ?? null,
   };
 }
 
@@ -210,11 +228,26 @@ export async function leaveCrew(id: string): Promise<void> {
 
 // ─── Member management (M3, BE f68a48f admin v1) ─────────────────────────────
 
-/** Owner-only, 멱등; target=owner → 422 (ownership moves via transfer only). */
+/** v2: owner OR manage_admins admin, 멱등; target=owner → 422 (transfer only).
+    승격은 서버가 기본 permissions를 자동 부여(공지·챌린지 ON), 강등은 null. */
 export async function setMemberRole(crewId: string, userId: string, role: 'admin' | 'member'): Promise<void> {
   await apiFetch<void>(`/api/crews/${crewId}/members/${userId}/role`, {
     method: 'PATCH',
     body: { role },
+  });
+}
+
+/** 세부 권한 PATCH (v2, probed 2026-07-13): partial — send ONLY changed keys.
+    위임 사슬 §3: manage_admins admin은 자기 보유 키만 부여 가능, 주의 2키
+    (kick_members·manage_admins)는 owner만, 셀프 manage_admins 회수 불가 —
+    위반은 403 "Cannot grant this permission". target=owner 422, member 대상
+    422. 200 = updated row. */
+export async function updateMemberPermissions(
+  crewId: string, userId: string, patch: Partial<CrewPermissions>,
+): Promise<void> {
+  await apiFetch<void>(`/api/crews/${crewId}/members/${userId}/permissions`, {
+    method: 'PATCH',
+    body: patch,
   });
 }
 

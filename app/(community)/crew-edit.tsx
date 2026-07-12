@@ -3,7 +3,10 @@
  * PATCH on save, plus the owner-only 위험 구역 danger card → 크루 삭제 confirm
  * modal (canvas FrCrewDelete, centered, run-save modal precedent).
  *
- * Contract (probed 2026-07-15): PATCH/DELETE owner-only (non-owner 403 ×2).
+ * Contract: PATCH = edit_crew-permission admins OR owner since v2 (BE
+ * 28a5c25 — the 07-15 owner-only probe superseded); DELETE stays owner-only.
+ * The 위험 구역 renders only for owner (the `owner` param from crew-admin,
+ * the sole entry; server enforces deep regardless).
  * DELETE cascades WITH members — no empty-first/transfer-first requirement:
  * memberships·공지·RSVP die with the crew (BE delete_crew docstring; crew-
  * targeted notifications cleaned, M10), members' RUNS survive (runs
@@ -62,7 +65,9 @@ function fieldsToPrivacy(isPublic: boolean, joinPolicy: 'open' | 'approval'): Pr
 
 export default function CrewEditScreen() {
   const insets = useSafeAreaInsets();
-  const { crewId } = useLocalSearchParams<{ crewId: string }>();
+  const { crewId, owner } = useLocalSearchParams<{ crewId: string; owner?: string }>();
+  // absent param (stale deep link) fails CLOSED — delete is the dangerous door
+  const isOwner = owner !== '0' && owner !== undefined;
 
   const [crew, setCrew] = useState<Crew | null>(null);
   const [loadError, setLoadError] = useState(false);
@@ -285,19 +290,22 @@ export default function CrewEditScreen() {
           <FieldRow label="시간" value={time} onChange={setTime} placeholder="예: 오전 6:30" maxLength={20} />
         </Group>
 
-        {/* ── 위험 구역 (canvas danger zone) ── */}
-        <View style={{ paddingHorizontal: S.gutter, paddingTop: 24 }}>
-          <Text style={est.dangerTitle}>위험 구역</Text>
-          <Pressable onPress={() => setDeleteOpen(true)} style={({ pressed }) => [est.dangerCard, pressed && { opacity: 0.8 }]}>
-            <View style={est.dangerIcon}>
-              <Icon name="trash-outline" size={18} color={C.danger} />
-            </View>
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={est.dangerLbl}>크루 삭제</Text>
-              <Text style={est.dangerSub}>크루와 공지·챌린지가 사라져요</Text>
-            </View>
-          </Pressable>
-        </View>
+        {/* ── 위험 구역 (canvas danger zone) — owner-only under v2 (edit_crew
+               admins edit but never delete; server enforces deep) ── */}
+        {isOwner && (
+          <View style={{ paddingHorizontal: S.gutter, paddingTop: 24 }}>
+            <Text style={est.dangerTitle}>위험 구역</Text>
+            <Pressable onPress={() => setDeleteOpen(true)} style={({ pressed }) => [est.dangerCard, pressed && { opacity: 0.8 }]}>
+              <View style={est.dangerIcon}>
+                <Icon name="trash-outline" size={18} color={C.danger} />
+              </View>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={est.dangerLbl}>크루 삭제</Text>
+                <Text style={est.dangerSub}>크루와 공지·챌린지가 사라져요</Text>
+              </View>
+            </Pressable>
+          </View>
+        )}
       </ScrollView>
 
       {/* Sticky save CTA */}

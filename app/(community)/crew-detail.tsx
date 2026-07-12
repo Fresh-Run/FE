@@ -142,14 +142,17 @@ const HERO_H = 220;
 export default function CrewDetailScreen() {
   const insets = useSafeAreaInsets();
   const { crewId } = useLocalSearchParams<{ crewId: string }>();
-  const { crew, members, myRequestStatus, loading, error, refetch } = useCrewDetail(crewId ?? null);
+  const { crew, members, myPerms, myRequestStatus, loading, error, refetch } = useCrewDetail(crewId ?? null);
 
   const [busy, setBusy]       = useState(false);
   const [mutErr, setMutErr]   = useState<string | null>(null);
 
   // ── 공지 preview (M1) — members only (server 403s outside) ──────────────────
   const isMember = crew?.myRole != null;
+  // 관리 hub door stays ROLE-based (any 운영진 enters; rows self-gate inside);
+  // ACTION gates read the v2 permission set (owner = all-true synthesized).
   const canManage = crew?.myRole === 'owner' || crew?.myRole === 'admin';
+  const can = (k: keyof NonNullable<typeof myPerms>) => !!myPerms?.[k];
   const [annPreview, setAnnPreview] = useState<Announcement[] | null>(null);
   useFocusEffect(useCallback(() => {
     if (!crewId || !isMember) { setAnnPreview(null); return; }
@@ -182,13 +185,14 @@ export default function CrewDetailScreen() {
     return () => { cancelled = true; };
   }, [crewId, isMember]));
 
-  // ── 크루 이미지 (⑤⑥) — OWNER-only end-to-end (probed: admin upload-url
-  // 200 but the attach PATCH 403s — no half-flows offered). icon → 1:1
-  // avatar-crop stage (output already re-encoded/EXIF-free); cover → skip
-  // crop (render-time cover-fit composes; a dedicated aspect crop is a
-  // design follow-up), reencodeForUpload strips EXIF. PUBLIC bucket — the
-  // hard rule applies doubly.
-  const isOwner = crew?.myRole === 'owner';
+  // ── 크루 이미지 (⑤⑥) — edit_crew-gated since v2 (BE 28a5c25 moved 크루
+  // 수정·이미지 from owner-only to the edit_crew key; the old admin
+  // attach-PATCH 403 gap resolved by design). icon → 1:1 avatar-crop stage
+  // (output already re-encoded/EXIF-free); cover → skip crop (render-time
+  // cover-fit composes; a dedicated aspect crop is a design follow-up),
+  // reencodeForUpload strips EXIF. PUBLIC bucket — the hard rule applies
+  // doubly.
+  const canEditCrew = !!myPerms?.edit_crew;
   const [imgBusy, setImgBusy] = useState<'cover' | 'icon' | null>(null);
   const [iconCropSrc, setIconCropSrc] = useState<CropSource | null>(null);
 
@@ -391,8 +395,8 @@ export default function CrewDetailScreen() {
               {/* Ringed identity icon (canvas) — owner taps to change */}
               <View style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' }}>
                 <Pressable
-                  onPress={isOwner && !imgBusy ? () => pickCrewImage('icon') : undefined}
-                  disabled={!isOwner || !!imgBusy}
+                  onPress={canEditCrew && !imgBusy ? () => pickCrewImage('icon') : undefined}
+                  disabled={!canEditCrew || !!imgBusy}
                   style={st.heroIconWrap}
                 >
                   {crew.icon_url ? (
@@ -402,7 +406,7 @@ export default function CrewDetailScreen() {
                       <Icon name="people" size={26} color="#0D1A06" />
                     </View>
                   )}
-                  {isOwner && (
+                  {canEditCrew && (
                     <View style={st.heroIconEdit}>
                       {imgBusy === 'icon'
                         ? <ActivityIndicator size="small" color={C.accentText} />
@@ -410,9 +414,9 @@ export default function CrewDetailScreen() {
                     </View>
                   )}
                 </Pressable>
-                {/* 커버 변경 chip — owner only (운영진 upload-url works but the
-                    attach PATCH is 크루장만: probed 403; 지연 flag ledgered) */}
-                {isOwner && (
+                {/* 커버 변경 chip — edit_crew (v2; the v1 attach-PATCH 403
+                    gap resolved: 크루 수정·이미지 moved onto the key) */}
+                {canEditCrew && (
                   <Pressable
                     onPress={!imgBusy ? () => pickCrewImage('cover') : undefined}
                     disabled={!!imgBusy}
@@ -453,21 +457,25 @@ export default function CrewDetailScreen() {
         </View>
 
         {/* ── Quick actions (canvas redesign ②) — shortcuts INTO existing
-               flows, role-gated per admin v1: 공지·챌린지 = owner||admin,
-               운영진 관리 = owner ── */}
-        {canManage && (
+               flows, permission-keyed per v2 (guide §207): 공지 = announcements,
+               운영진 관리 = manage_admins, 챌린지 = challenges. Un-permitted
+               tiles HIDE here (shortcut row, not the capability map — the
+               권한 설정 screen is where powers stay visible-but-locked). ── */}
+        {(can('announcements') || can('manage_admins') || can('challenges')) && (
           <View style={st.quickRow}>
-            <Pressable
-              onPress={() => router.push({
-                pathname: '/(community)/announcement-compose' as never,
-                params: { crewId: crew.id },
-              })}
-              style={({ pressed }) => [st.quickTile, shadows.sm, pressed && { opacity: 0.8 }]}
-            >
-              <Icon name="megaphone-outline" size={19} color={C.accentGrn} />
-              <Text style={st.quickTxt}>공지 올리기</Text>
-            </Pressable>
-            {crew.myRole === 'owner' && (
+            {can('announcements') && (
+              <Pressable
+                onPress={() => router.push({
+                  pathname: '/(community)/announcement-compose' as never,
+                  params: { crewId: crew.id },
+                })}
+                style={({ pressed }) => [st.quickTile, shadows.sm, pressed && { opacity: 0.8 }]}
+              >
+                <Icon name="megaphone-outline" size={19} color={C.accentGrn} />
+                <Text style={st.quickTxt}>공지 올리기</Text>
+              </Pressable>
+            )}
+            {can('manage_admins') && (
               <Pressable
                 onPress={() => router.push({
                   pathname: '/(community)/crew-members' as never,
@@ -479,16 +487,18 @@ export default function CrewDetailScreen() {
                 <Text style={st.quickTxt}>운영진 관리</Text>
               </Pressable>
             )}
-            <Pressable
-              onPress={() => router.push({
-                pathname: '/(community)/challenge-create' as never,
-                params: { crewId: crew.id },
-              })}
-              style={({ pressed }) => [st.quickTile, shadows.sm, pressed && { opacity: 0.8 }]}
-            >
-              <Icon name="trophy-outline" size={19} color={C.accentGrn} />
-              <Text style={st.quickTxt}>챌린지 생성</Text>
-            </Pressable>
+            {can('challenges') && (
+              <Pressable
+                onPress={() => router.push({
+                  pathname: '/(community)/challenge-create' as never,
+                  params: { crewId: crew.id },
+                })}
+                style={({ pressed }) => [st.quickTile, shadows.sm, pressed && { opacity: 0.8 }]}
+              >
+                <Icon name="trophy-outline" size={19} color={C.accentGrn} />
+                <Text style={st.quickTxt}>챌린지 생성</Text>
+              </Pressable>
+            )}
           </View>
         )}
 
@@ -515,7 +525,7 @@ export default function CrewDetailScreen() {
               <Text style={st.sectionTitle}>챌린지</Text>
             </View>
             {challenge === null ? (
-              canManage ? (
+              can('challenges') ? (
                 <Pressable
                   onPress={() => router.push({
                     pathname: '/(community)/challenge-create' as never,
@@ -654,7 +664,7 @@ export default function CrewDetailScreen() {
               <Pressable
                 onPress={() => router.push({
                   pathname: '/(community)/announcements' as never,
-                  params: { crewId: crew.id, canManage: canManage ? '1' : '0' },
+                  params: { crewId: crew.id, canManage: can('announcements') ? '1' : '0' },
                 })}
                 hitSlop={8}
               >
@@ -666,14 +676,14 @@ export default function CrewDetailScreen() {
               <View style={st.emptyBox}><ActivityIndicator size="small" color={C.faint} /></View>
             ) : annPreview.length === 0 ? (
               <Pressable
-                onPress={canManage ? () => router.push({
+                onPress={can('announcements') ? () => router.push({
                   pathname: '/(community)/announcement-compose' as never,
                   params: { crewId: crew.id },
                 }) : undefined}
                 style={st.emptyBox}
               >
                 <Text style={st.emptyTxt}>
-                  {canManage ? '공지를 올려 크루원에게 소식을 전해보세요 →' : '아직 공지가 없어요'}
+                  {can('announcements') ? '공지를 올려 크루원에게 소식을 전해보세요 →' : '아직 공지가 없어요'}
                 </Text>
               </Pressable>
             ) : (
