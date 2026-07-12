@@ -217,7 +217,7 @@ export default function AnnouncementDetailScreen() {
               {ann.place_name && meetCoords ? (
                 // canvas 집결 장소 card: light map + info row + 지도 앱에서 보기
                 <View style={st.meetCard}>
-                  <RealMap height={150} center={meetCoords} borderRadius={0} />
+                  <RealMap height={150} center={meetCoords} marker borderRadius={0} />
                   <Pressable onPress={openInMaps} style={({ pressed }) => [st.meetRow, pressed && { opacity: 0.7 }]}>
                     <View style={st.meetPin}><Icon name="location" size={17} color={C.danger} /></View>
                     <View style={{ flex: 1, minWidth: 0 }}>

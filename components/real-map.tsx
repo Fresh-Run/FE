@@ -46,11 +46,15 @@ type Props = {
   polyline?: Coordinate[] | null;
   /** Region-only mode — used when no polyline is given. */
   center?: Coordinate | null;
+  /** point marker at `center` (집결 장소 previews/detail — a centered-but-
+      unmarked map reads as pinless; the native Marker stays truthful under
+      any future interactivity) */
+  marker?: boolean;
   /** Interactive map (slice-2+ surfaces); card mode when false (default). */
   interactive?: boolean;
 };
 
-export function RealMap({ height, borderRadius = 0, polyline, center, interactive = false }: Props) {
+export function RealMap({ height, borderRadius = 0, polyline, center, marker = false, interactive = false }: Props) {
   const line = polyline && polyline.length >= 2 ? polyline : null;
 
   const region = useMemo(() => {
@@ -75,6 +79,9 @@ export function RealMap({ height, borderRadius = 0, polyline, center, interactiv
         showsPointsOfInterest={false}
         toolbarEnabled={false}
       >
+        {marker && center && !line && (
+          <Marker coordinate={{ latitude: center.lat, longitude: center.lng }} />
+        )}
         {line && (
           <>
             <Polyline

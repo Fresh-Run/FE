@@ -25,8 +25,10 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { PlacePickSheet } from '@/components/place-pick-sheet';
+import { RealMap } from '@/components/real-map';
 import { Icon } from '@/components/ui';
-import { TimeWheelRow } from '@/components/wheel-sheet';
+import { DateWheelRow, TimeWheelRow } from '@/components/wheel-sheet';
 import {
   createAnnouncement,
   getAnnouncement,
@@ -57,6 +59,11 @@ export default function AnnouncementComposeScreen() {
   const [date, setDate]   = useState('');
   const [time, setTime]   = useState('');
   const [place, setPlace] = useState('');
+  // 집결 좌표 (#6 map-pick): picked pin rides POST/PATCH as place_lat/lng;
+  // the NAME stays hand-editable (the human label; the pin is the location).
+  // Geocode-era 공지 (name-only) open with no pin until picked.
+  const [placeCoords, setPlaceCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [loadedForEdit, setLoadedForEdit] = useState(!editing);
   const [submitting, setSubmitting] = useState(false);
 
@@ -76,6 +83,9 @@ export default function AnnouncementComposeScreen() {
           setTime(p.time);
         }
         setPlace(a.place_name ?? '');
+        if (a.place_lat != null && a.place_lng != null) {
+          setPlaceCoords({ lat: a.place_lat, lng: a.place_lng }); // edit prefill
+        }
         setLoadedForEdit(true);
       })
       .catch(() => {
@@ -85,8 +95,24 @@ export default function AnnouncementComposeScreen() {
     return () => { cancelled = true; };
   }, [editing, crewId, announcementId]);
 
+  // 러닝 일정 toggle-on seeds BOTH wheels valid (date = today, time = the
+  // canvas 오전 6:30 default) — invalid schedules are inexpressible by
+  // construction, so the typed-era validator + its error DIED. (The old
+  // "날짜는 2026-07-20 형식으로" message was a Wave B regression in
+  // attribution: an untouched 시각 wheel nulled runAtIso and the copy
+  // blamed the date.)
+  function toggleScheduled(v: boolean) {
+    setScheduled(v);
+    if (v) {
+      if (!date.trim()) {
+        const n = new Date();
+        setDate(`${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`);
+      }
+      if (!time.trim()) setTime('06:30');
+    }
+  }
+
   const runAtIso = scheduled ? toKstIso(date, time) : null;
-  const scheduleInvalid = scheduled && (date.trim() !== '' || time.trim() !== '') && runAtIso === null;
   const canSubmit = title.trim().length > 0 && body.trim().length > 0
     && (!scheduled || runAtIso !== null) && !submitting && loadedForEdit;
 
@@ -98,8 +124,8 @@ export default function AnnouncementComposeScreen() {
       body: body.trim(),
       run_at: runAtIso,
       place_name: scheduled && place.trim() ? place.trim() : null,
-      place_lat: null,
-      place_lng: null,
+      place_lat: scheduled && place.trim() ? placeCoords?.lat ?? null : null,
+      place_lng: scheduled && place.trim() ? placeCoords?.lng ?? null : null,
       rsvp_closes_at: null,
     };
     try {
@@ -153,7 +179,7 @@ export default function AnnouncementComposeScreen() {
           />
 
           {/* 러닝 일정 — optional; creates the RSVP poll server-side */}
-          <Pressable onPress={() => setScheduled(v => !v)} style={st.scheduleToggle}>
+          <Pressable onPress={() => toggleScheduled(!scheduled)} style={st.scheduleToggle}>
             <Icon name={scheduled ? 'checkbox' : 'square-outline'} size={19} color={scheduled ? C.accentGrn : C.faint} />
             <View style={{ flex: 1 }}>
               <Text style={st.scheduleToggleTxt}>러닝 일정 추가</Text>
@@ -163,18 +189,7 @@ export default function AnnouncementComposeScreen() {
 
           {scheduled && (
             <View style={st.scheduleFields}>
-              <View style={st.fieldRow}>
-                <Text style={st.fieldLabel}>날짜</Text>
-                <TextInput
-                  value={date}
-                  onChangeText={setDate}
-                  placeholder="2026-07-20"
-                  placeholderTextColor={C.faint}
-                  style={st.fieldInput}
-                  keyboardType="numbers-and-punctuation"
-                  autoCorrect={false}
-                />
-              </View>
+              <DateWheelRow label="날짜" value={date} onChange={setDate} />
               <TimeWheelRow label="시각" value={time} onChange={setTime} />
               <View style={st.fieldRow}>
                 <Text style={st.fieldLabel}>장소</Text>
@@ -185,9 +200,22 @@ export default function AnnouncementComposeScreen() {
                   placeholderTextColor={C.faint}
                   style={st.fieldInput}
                 />
+                <Pressable onPress={() => setPickerOpen(true)} hitSlop={8} style={st.pinBtn}>
+                  <Icon name={placeCoords ? 'location' : 'location-outline'} size={17} color={placeCoords ? C.danger : C.sub} />
+                </Pressable>
               </View>
-              {scheduleInvalid && (
-                <Text style={st.fieldError}>날짜는 2026-07-20 형식으로 입력해 주세요</Text>
+              {placeCoords && (
+                <View style={st.pinPreviewWrap}>
+                  {/* key= remounts on re-pick — RealMap uses initialRegion,
+                      which ignores prop updates (the stale-preview bug) */}
+                  <RealMap key={`${placeCoords.lat},${placeCoords.lng}`} height={110} center={placeCoords} marker borderRadius={12} />
+                  <View style={st.pinPreviewRow}>
+                    <Text style={st.pinPreviewTxt}>핀 지정됨 — 상세에서 지도로 열려요</Text>
+                    <Pressable onPress={() => setPlaceCoords(null)} hitSlop={8}>
+                      <Text style={st.pinRemoveTxt}>핀 제거</Text>
+                    </Pressable>
+                  </View>
+                </View>
               )}
               {runAtIso && (
                 <Text style={st.fieldPreview}>한국 시간 기준으로 저장돼요</Text>
@@ -196,6 +224,13 @@ export default function AnnouncementComposeScreen() {
           )}
         </ScrollView>
       )}
+
+      <PlacePickSheet
+        visible={pickerOpen}
+        initial={placeCoords}
+        onClose={() => setPickerOpen(false)}
+        onPick={coords => { setPlaceCoords(coords); setPickerOpen(false); }}
+      />
     </KeyboardAvoidingView>
   );
 }
@@ -223,6 +258,11 @@ const st = StyleSheet.create({
   fieldRow:    { flexDirection: 'row', alignItems: 'center', gap: 12 },
   fieldLabel:  { width: 40, fontSize: 13, fontWeight: '600', color: C.faint, letterSpacing: -0.2 },
   fieldInput:  { flex: 1, height: 44, borderRadius: R.md, borderWidth: 1, borderColor: C.border, backgroundColor: C.surfaceAlt, paddingHorizontal: 12, fontSize: 14.5, color: C.text },
+  pinBtn:         { width: 40, height: 44, alignItems: 'center', justifyContent: 'center', borderRadius: R.md, borderWidth: 1, borderColor: C.border, backgroundColor: C.surfaceAlt },
+  pinPreviewWrap: { borderRadius: 12, borderWidth: 1, borderColor: C.border, overflow: 'hidden', marginBottom: 10 },
+  pinPreviewRow:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, paddingVertical: 8, backgroundColor: C.surface },
+  pinPreviewTxt:  { fontSize: 11.5, color: C.faint, letterSpacing: -0.2 },
+  pinRemoveTxt:   { fontSize: 11.5, fontWeight: '700', color: C.danger, letterSpacing: -0.2 },
   fieldError:  { fontSize: 12, color: C.danger, letterSpacing: -0.2, paddingLeft: 52 },
   fieldPreview:{ fontSize: 12, color: C.faint, letterSpacing: -0.2, paddingLeft: 52 },
 });

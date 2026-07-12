@@ -158,6 +158,91 @@ export function TimeWheelRow({ label = '시간', value, onChange }: {
   );
 }
 
+// ─── 3-column date wheel — 년·월·일 (owner ruling: typed dates die) ─────────
+// Range: this year → +1 (two-year horizon covers any real 공지 scheduling).
+// min = today CLIENT policy (server accepts past — probed 201; nonsense for
+// 공지 regardless). Floors cascade: current year → months from now, current
+// month → days from today; day clamps to the month's real length.
+
+function daysInMonth(y: number, m: number): number {
+  return new Date(y, m, 0).getDate();
+}
+
+function fmtYmd(y: number, m: number, d: number): string {
+  return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+}
+
+export function DateWheelRow({ label, value, onChange }: {
+  label: string;
+  /** 'YYYY-MM-DD' (always valid by construction once touched) */
+  value: string;
+  onChange: (ymd: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const now = new Date();
+  const tY = now.getFullYear(), tM = now.getMonth() + 1, tD = now.getDate();
+
+  const parse = (v: string) => {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v.trim());
+    if (!m) return { y: tY, m: tM, d: tD };
+    return { y: Number(m[1]), m: Number(m[2]), d: Number(m[3]) };
+  };
+  const [sel, setSel] = useState(() => parse(value));
+
+  const years = [tY, tY + 1];
+  const months = sel.y === tY ? Array.from({ length: 12 - tM + 1 }, (_, i) => tM + i)
+    : Array.from({ length: 12 }, (_, i) => i + 1);
+  const dayFloor = sel.y === tY && sel.m === tM ? tD : 1;
+  const dayMax = daysInMonth(sel.y, sel.m);
+  const days = Array.from({ length: dayMax - dayFloor + 1 }, (_, i) => dayFloor + i);
+
+  function clamp(next: { y: number; m: number; d: number }) {
+    // cascade the floors + month-length clamp so the selection stays legal
+    const mFloor = next.y === tY ? tM : 1;
+    const m2 = Math.max(next.m, mFloor);
+    const dFloor = next.y === tY && m2 === tM ? tD : 1;
+    const d2 = Math.min(Math.max(next.d, dFloor), daysInMonth(next.y, m2));
+    return { y: next.y, m: m2, d: d2 };
+  }
+
+  return (
+    <>
+      <TriggerRow
+        label={label}
+        display={value.trim() ? value : '선택'}
+        onPress={() => { setSel(clamp(parse(value))); setOpen(true); }}
+      />
+      <WheelSheet
+        visible={open} title={label}
+        onClose={() => setOpen(false)}
+        onDone={() => { onChange(fmtYmd(sel.y, sel.m, sel.d)); setOpen(false); }}
+      >
+        <Picker
+          selectedValue={sel.y}
+          onValueChange={(v: number) => setSel(s_ => clamp({ ...s_, y: v }))}
+          style={st.col} itemStyle={st.item}
+        >
+          {years.map(y => <Picker.Item key={y} label={`${y}년`} value={y} />)}
+        </Picker>
+        <Picker
+          selectedValue={sel.m}
+          onValueChange={(v: number) => setSel(s_ => clamp({ ...s_, m: v }))}
+          style={[st.col, { flex: 0.7 }]} itemStyle={st.item}
+        >
+          {months.map(m => <Picker.Item key={m} label={`${m}월`} value={m} />)}
+        </Picker>
+        <Picker
+          selectedValue={sel.d}
+          onValueChange={(v: number) => setSel(s_ => clamp({ ...s_, d: v }))}
+          style={[st.col, { flex: 0.7 }]} itemStyle={st.item}
+        >
+          {days.map(d => <Picker.Item key={d} label={`${d}일`} value={d} />)}
+        </Picker>
+      </WheelSheet>
+    </>
+  );
+}
+
 const st = StyleSheet.create({
   overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.4)' },
   sheet:   { backgroundColor: C.bg, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: S.gutter },
