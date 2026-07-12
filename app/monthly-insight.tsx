@@ -9,7 +9,7 @@
  *    stays typed in insights-api.ts, deliberately unrendered; the
  *    replacement (꾸준함/패턴 심화) is slice I2;
  *  - empty state keys on stats.run_count === 0;
- *  - share → 준비 중 (native share is a later pass).
+ *  - share → LIVE text share (PB pattern; the designed CARD stays docketed).
  * Entry: 기록 tab premium card. Free users never navigate here; the 403
  * premium_required path is handled defensively anyway.
  */
@@ -17,9 +17,9 @@ import { router } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Pressable,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   View,
@@ -154,6 +154,27 @@ export default function MonthlyInsightScreen() {
 
   const s = data?.stats;
   const emptyMonth = !!data && data.stats.run_count === 0;
+
+  // 리포트 텍스트 공유 (debt top-10 #7) — the PB-share pattern: composed
+  // from the report's LIVE fields, units-aware; the designed share CARD
+  // stays on the design-session docket. Empty months: DISABLED (owner
+  // lean — sharing a zero-run month is noise, not honesty).
+  const canShare = !!s && !emptyMonth;
+  function shareReport() {
+    if (!s) return;
+    const lines = [
+      `FreshRun ${ym.month}월 리포트 🏃`,
+      `총 ${fmtDist(s.total_distance_km, units, 1)}${distUnit(units)} · ${s.run_count}회 러닝`,
+      `평균 페이스 ${s.avg_pace_sec_per_km != null ? `${fmtPaceIn(s.avg_pace_sec_per_km, units)}${paceUnit(units)}` : '—'} · 최장 ${fmtDist(s.longest_run_km, units, 1)}${distUnit(units)}`,
+    ];
+    if (s.delta_distance_km != null) {
+      const d = s.delta_distance_km;
+      lines.push(d === 0
+        ? '지난달과 같은 거리를 달렸어요'
+        : `지난달보다 ${d > 0 ? '+' : '−'}${fmtDist(Math.abs(d), units, 1)}${distUnit(units)}`);
+    }
+    Share.share({ message: lines.join('\n') }).catch(() => {}); // dismiss = clean
+  }
   const wMax = data ? Math.max(...data.weeks.map(w => w.distance_km), 0.001) : 1;
   const wdMax = data ? Math.max(...data.pattern.weekday_counts, 1) : 1;
 
@@ -166,9 +187,10 @@ export default function MonthlyInsightScreen() {
         </Pressable>
         <Text style={st.appBarTitle}>월간 리포트</Text>
         <Pressable
-          onPress={() => Alert.alert('준비 중', '리포트 공유는 다음 업데이트에서 지원돼요.')}
+          onPress={canShare ? shareReport : undefined}
+          disabled={!canShare}
           hitSlop={12}
-          style={st.appBarBtn}
+          style={[st.appBarBtn, !canShare && { opacity: 0.35 }]}
         >
           <Icon name="share-outline" size={20} color={C.text} />
         </Pressable>
