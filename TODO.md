@@ -506,3 +506,15 @@ Validated live: backfill PATCH (sido/sigungu/lat/lng/tags) → 200 → 삭제테
 ## PUBLISH — 2026-07-13 [post-22:15]
 
 `eas update --channel main` — "크루 지역·태그 + 둘러보기 발견성 (37981ac)". Update group `71f1ce92-c3eb-4e04-8a66-d26c0e792284` (android `019f5ba1-df06-7351-9880-832d175503c1`, ios `019f5ba1-df06-708e-bdd7-1b96ee6f4be7`), runtime `exposdk:54.0.0`, embedded commit `37981ac` = HEAD = origin/main at publish. Env guard read-verified staging. New aboard since group `6488a401`: crew location+tags 둘러보기 decay fix (`37981ac`). **Tier 1 complete** through this publish.
+
+## Live Activity — ARCHITECTURE (지연-confirmed 2026-07-13; ledger-only, hard-blocked on the native build)
+
+**LOCAL-ONLY. Zero server involvement.** The Live Activity is driven by `Activity.update()` called from INSIDE the app's own background-location callback. The backend holds **no run-in-progress state** — no live/progress/heartbeat endpoint, no active-session table. The phone computes distance/pace/kcal locally and POSTs the *finished* run once at the end (the existing `POST /runs`). 지연's handoff phrase "distance/pace/calories pushed on each background location update" = pushed **TO THE WIDGET**, not from a server.
+
+**EXPLICITLY NOT IN SCOPE — remote-push Live Activity updates.** Those need a server-side live-session pipeline (active-run table, heartbeats, APNs push-to-start tokens) = 지연's **L3 roadmap** item — the same streaming infra rejected for chat (which is poll-based). **If anyone later assumes remote updates are "already there," THIS ENTRY is the correction.** Live Activity itself needs nothing from 지연.
+
+**Design spec (build #1):** three states — **compact** (glyph + time-left / distance-right), **minimal** (circular glyph), **expanded** (route + stats + controls). **Time via `Text(timerInterval:)` so the SYSTEM counts it** (not per-tick pushes); distance/pace/kcal updated from the background-location callback; **pause/stop via App Intents** driving the run session. Colors: lime `#74E827` on ink `#0D1A06`, system-dark background.
+
+**BUILD-#1 native requirements:** a WidgetKit extension target · the **ActivityKit entitlement** · the **background-location capability** · a **JS↔native bridge** for start/update/end. Rides the **runtimeVersion switch** (sdkVersion → appVersion in that same commit — Expo Go compatibility factually ends there; see [[runtime-version-rule]]). The Live Activity is one of the features that makes the switch worth it.
+
+**BUILD-#1's ONLY backend gate:** **push-token registration E2E** — device token → `POST /me/push-token` → APNs round trip. The endpoint already exists; needs one **real-device verification** once the custom build lives (Expo Go can't get a real APNs token). Live Activity itself = no backend gate.
