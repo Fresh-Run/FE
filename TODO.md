@@ -396,3 +396,9 @@ BUILT: `lib/crews-api.ts` CrewRunItem + getCrewRuns (offset). **crew-runs.tsx** 
 **L1 forward-wire (지연 shipping crew-run tagging → 정기런 badge + "N명이 함께 뛰었어요")**: badge slot marked in both card headers (comment). **Field NOT in CrewRunItem yet — nothing rendered, not faked.** When crew_id-tag lands: add to CrewRunItem + fill the slot.
 
 Supersedes the "edge ⓑ contract-noted for the future crew-feed slice" ledger line (that slice IS this) and the "GET /crews/{id}/runs orphaned" inventory item.
+
+## Owner rulings — found-issues ②③⑦⑧ (2026-07-13, logged; no build)
+
+- **② Calendar pickers — Tier 2.** Date-only → calendar GRID: replace `DateWheelRow` at its ONE consumer (announcement-compose 공지 날짜). Wheels STAY for everything else — `TimeWheelRow` (시각) + `NumberWheelRow` (체중/키/목표 거리/기간/최대 인원) are magnitudes/time, not dates. Scope is a single field + a new calendar-grid component.
+- **③ Crew cover crop — Tier 2.** Wide-aspect adjust: parameterize `avatar-crop.tsx` with an aspectRatio prop (it's 1:1-only today) + rectangular mask; wire the cover path through it. **Ratio = derive from the hero band (~16:9).** (icon stays 1:1.)
+- **⑦ i18n / English + ⑧ dark mode — POST-BETA.** Korean-only beta is defensible; both are week-eating L-sweeps (string extraction + English pass; two-theme-system convergence) better spent on Tier 1. The 언어/테마 settings keep their honest 준비 중 notices until then. Revisit after beta.
