@@ -476,3 +476,7 @@ Retires the "유저 검색 orphaned" + "invite send half" watch items — **the 
 
 ## 지연 ask (2026-07-13) — no run-delete endpoint
 `DELETE /runs/{id}` → **405** (method not allowed). Users can only privatize a run (PATCH visibility), never delete it. Surfaced during L1 probe cleanup (a tagged test run couldn't be removed, only PATCHed to private). Raise with 지연: is a run-delete endpoint planned? Until then any "삭제" affordance on runs must be honest (privatize, not delete) or absent.
+
+## PUBLISH — 2026-07-13 [post-21:25]
+
+`eas update --channel main` — "정기런 + 유저 검색 + 크루 초대 (c114172)". Update group `b32075f6-165b-423d-9605-e1790a2964ac` (android `019f5b75-8ac9-7b76-878f-903d0af06797`, ios `019f5b75-8ac9-7d85-a094-19e3ed442dc2`), runtime `exposdk:54.0.0`, embedded commit `c114172` = HEAD = origin/main at publish. Env guard read-verified staging. New aboard since group `ec64f866`: 유저 검색 + 초대 sender (`cf8255b`), leave-fix + 공지-top (`1946a9a`), L1 크루 러닝 badge+entry+map-fix (`c114172`).
