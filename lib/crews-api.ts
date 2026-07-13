@@ -294,8 +294,10 @@ export type CrewRankingEntry = {
 //   (프로필/히스토리는 잠겨도 "서피스에 보이는 카드는 상세까지").
 // ⚠️ payload에 kudos_count/my_kudos 없음 (활동 피드와 달리) — 카드는 kudos
 //   미표시, 상세(run-post)가 kudos를 직접 fetch. comment_count는 있음.
-// L1 forward-wire: crew_id 태그(정기런 뱃지·함께 뛰었어요 그룹)는 아직 payload에
-//   없음 — 필드 랜딩 시 CrewRunItem에 추가 + 카드 뱃지 슬롯 채움. 지금은 미표시.
+// L1 크루 러닝 세션 태깅 (BE 09d7af0, guide §217 — probed live 2026-07-13):
+//   is_crew_session=true → "정기런" 배지 + session_participant_count("N명 참여",
+//   같은 세션 distinct 참여자). 참여자 수 = 참석 집계(verified 무관·수동 러닝도
+//   카운트)·private 제외·차단 전역 카운트(명단은 L2). 미태그 run은 false/null.
 export type CrewRunItem = {
   run_id: string;
   user_id: string;
@@ -315,6 +317,10 @@ export type CrewRunItem = {
   /** pre-render feed-hint flags (BE 4fd5b66): true=on, false=off, null=locked/unknown */
   allow_likes: boolean | null;
   allow_comments: boolean | null;
+  /** L1 정기런 태그 (BE 09d7af0): true → "정기런" 배지; false = 일반 러닝 */
+  is_crew_session: boolean;
+  /** 같은 세션 참여자 수 ("N명 참여"); null = 미태그 run */
+  session_participant_count: number | null;
 };
 
 export const CREW_FEED_PAGE = 20;

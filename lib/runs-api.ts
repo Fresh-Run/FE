@@ -52,6 +52,12 @@ export type SaveRunInput = {
   /** RAW received fixes (owner decision 2026-07-08) — the server filters
       independently; layer attribution needs what the client filter saw. */
   gpsTrack?: GpsPoint[];
+  /** L1 크루 정기런 태깅 (guide §96): crew_id set when started via "크루 러닝
+      시작" (server validates membership — non-member → 400, unreachable by
+      construction). announcement_id links a 집결 공지 (optional, precise
+      grouping). Untagged run omits both. */
+  crewId?: string | null;
+  announcementId?: string | null;
 };
 
 // Contract hard cap: >5,000 points → 422. Uniform stride keeps the shape
@@ -99,6 +105,9 @@ export function saveRun(input: SaveRunInput): Promise<SavedRun> {
       ...(input.area ? { area: input.area.slice(0, 50) } : {}),
       // Track-less saves stay contract-identical to the old manual path
       ...(track ? { gps_track: track } : {}),
+      // L1 정기런 태그 — omitted entirely when untagged (untagged = normal run)
+      ...(input.crewId ? { crew_id: input.crewId } : {}),
+      ...(input.announcementId ? { announcement_id: input.announcementId } : {}),
     },
   });
 }

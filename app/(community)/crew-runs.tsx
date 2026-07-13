@@ -60,10 +60,17 @@ function RunCard({ run, units, mapLive, onOpen }: {
           <Avatar name={run.nickname} size={36} photoUrl={run.avatar_url} ring={C.border} initialsRatio={0.38} upper />
         </Pressable>
         <View style={{ flex: 1, minWidth: 0 }}>
-          {/* L1 badge slot: when crew_id-tagged 정기런 lands on CrewRunItem,
-              render a 정기런 chip beside the name here. Nothing until then. */}
           <Text style={st.cardName} numberOfLines={1}>{run.nickname ?? '러너'}</Text>
           <View style={st.cardSubRow}>
+            {/* L1 정기런 배지 — null/false renders nothing (old runs untouched) */}
+            {run.is_crew_session && (
+              <View style={st.sessionChip}>
+                <Icon name="people" size={10} color={C.accentGrn} />
+                <Text style={st.sessionChipTxt}>
+                  정기런{run.session_participant_count != null ? ` · ${run.session_participant_count}명 참여` : ''}
+                </Text>
+              </View>
+            )}
             <Text style={st.cardDate}>{fmtAgo(run.ran_at)}</Text>
             {run.area ? (
               <>
@@ -218,9 +225,11 @@ const st = StyleSheet.create({
   card:      { backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 18, overflow: 'hidden' },
   cardHead:  { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 13 },
   cardName:  { fontSize: 14.5, fontWeight: '700', color: C.text, letterSpacing: -0.3 },
-  cardSubRow:{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 },
+  cardSubRow:{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 3 },
   cardDate:  { fontSize: 12, color: C.faint, letterSpacing: -0.2 },
   cardArea:  { fontSize: 12, color: C.faint, letterSpacing: -0.2, flexShrink: 1 },
+  sessionChip:    { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: C.accentDim, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, marginRight: 1 },
+  sessionChipTxt: { fontSize: 10.5, fontWeight: '800', color: C.accentGrn, letterSpacing: -0.2 },
   dot:       { width: 3, height: 3, borderRadius: 2, backgroundColor: C.border },
 
   cardBody:  { paddingHorizontal: 14, paddingTop: 12, paddingBottom: 4 },

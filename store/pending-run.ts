@@ -9,6 +9,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import type { GpsPoint, SavedRun } from '@/lib/runs-api';
+import type { CrewSessionTag } from '@/store/active-course';
 import { useSettings } from '@/store/use-settings';
 import type { Coordinate } from '@/types';
 
@@ -27,6 +28,8 @@ export type PendingRun = {
   endedAt: number;
   /** Present when the run was started from a course ("이 코스 달리기"). */
   course?: { id: string | null; title: string };
+  /** L1: present when started via "크루 러닝 시작" — the 정기런 tag rides to save */
+  crewSession?: CrewSessionTag;
 };
 
 export type RunVisibility = 'public' | 'followers' | 'private';

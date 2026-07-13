@@ -86,6 +86,11 @@ export default function RunResultScreen() {
         avgPaceSecPerKm: run.avgPaceSecPerKm,
         routeId: run.course?.id ?? null,
         gpsTrack: run.gpsTrack,
+        // L1 정기런 tag — safety-net save (rare; the normal path saves in
+        // run-save where the tag is removable). Here it's non-removable.
+        ...(run.crewSession
+          ? { crewId: run.crewSession.crewId, announcementId: run.crewSession.announcementId }
+          : {}),
       });
       savedRunRef.current = saved;
       setSaveState('saved');

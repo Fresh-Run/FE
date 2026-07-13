@@ -282,15 +282,23 @@ export default function TrackingScreen() {
   // Center on the USER's RESOLVED location (T-B correction ②): the hook's
   // coordinate is Seoul-fallback-initialized (never null), so truthiness
   // fired the old center-once on the fallback at mount. status === 'granted'
-  // is the real resolution signal — center once when it lands (free-run;
-  // course mode fits to the course bounds in onMapReady instead).
+  // is the real resolution signal — center once when it lands.
+  //
+  // L1 fix: skip user-centering only when there's real course GEOMETRY to
+  // fit to (onMapReady fits those bounds) — NOT merely when a `course`
+  // OBJECT exists. A 크루 러닝 sets `course` with polyline: null, so the old
+  // `if (course ...)` guard skipped user-centering AND fit-to-bounds (empty
+  // coords) → the map latched the Seoul fallback (the Jongno bug). Gate on
+  // hasCoursePath so a geometry-less crew run centers on the user like a
+  // free run does.
+  const hasCoursePath = courseCoords.length > 1;
   const centeredOnUserRef = useRef(false);
   useEffect(() => {
-    if (course || centeredOnUserRef.current) return;
+    if (hasCoursePath || centeredOnUserRef.current) return;
     if (locStatus !== 'granted' || !hereCoord) return;
     centeredOnUserRef.current = true;
     mapRef.current?.animateCamera({ center: { latitude: hereCoord.lat, longitude: hereCoord.lng } }, { duration: 400 });
-  }, [course, locStatus, hereCoord]);
+  }, [hasCoursePath, locStatus, hereCoord]);
 
   const onMapReady = () => {
     if (courseCoords.length > 1) {
@@ -390,7 +398,13 @@ export default function TrackingScreen() {
     exitingRef.current = true;
     if (!snapshot) { router.back(); return; }
     // setPendingRun also persists to disk — crash-safe from this moment
-    setPendingRun(course ? { ...snapshot, course: { id: course.id, title: course.title } } : snapshot);
+    setPendingRun(course
+      ? {
+          ...snapshot,
+          course: { id: course.id, title: course.title },
+          ...(course.crewSession ? { crewSession: course.crewSession } : {}), // L1 정기런 tag
+        }
+      : snapshot);
     // replace: back must never land on a dead tracking screen
     router.replace('/(course)/run-save' as any);
   };

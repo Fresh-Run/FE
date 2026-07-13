@@ -78,6 +78,12 @@ export default function RunSaveScreen() {
   const [saving, setSaving]           = useState(false);
   const savedOnceRef = useRef(false); // duplicate-save guard (moved with the POST)
 
+  // L1 정기런 tag — a FACT about this run (started via 크루 러닝 시작), not a
+  // setting. Shown as a removable line; × revokes it for this save (removal
+  // sticks). Removed → crew_id/announcement_id omitted → saves as a normal run.
+  const crewSession = run?.crewSession;
+  const [tagKept, setTagKept] = useState(true);
+
   // run.area send-rider (S-batch #3, guide §96): reverse-geocode the run's
   // START point via the existing Apple path — district = subLocality =
   // 동-level (ⓑ verdict, probed 4/4 2026-07-13). Best-effort: failure or
@@ -158,6 +164,10 @@ export default function RunSaveScreen() {
         visibility,
         area,
         gpsTrack: run.gpsTrack,
+        // L1 정기런 tag — only when kept (× removed → normal run)
+        ...(crewSession && tagKept
+          ? { crewId: crewSession.crewId, announcementId: crewSession.announcementId }
+          : {}),
       });
       savedOnceRef.current = true;
       markSaved(saved); // disk copy dropped — server has it now
@@ -213,6 +223,33 @@ export default function RunSaveScreen() {
         contentContainerStyle={{ paddingBottom: 120 }}
         keyboardShouldPersistTaps="handled"
       >
+        {/* ── L1 정기런 tag line — a fact about this run, removable (×), undoable ── */}
+        {crewSession && (
+          <View style={{ paddingHorizontal: S.gutter, paddingTop: 10 }}>
+            {tagKept ? (
+              <View style={st.tagRow}>
+                <View style={st.tagIcon}><Icon name="people" size={14} color={C.accentGrn} /></View>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={st.tagTxt} numberOfLines={2}>
+                    이 러닝은 <Text style={st.tagStrong}>{crewSession.crewName}</Text> 정기런으로 기록돼요
+                  </Text>
+                  {crewSession.announcementTitle ? (
+                    <Text style={st.tagSub} numberOfLines={1}>{`'${crewSession.announcementTitle}' 모임`}</Text>
+                  ) : null}
+                </View>
+                <Pressable onPress={() => setTagKept(false)} hitSlop={8} style={st.tagRemove}>
+                  <Icon name="close" size={15} color={C.faint} />
+                </Pressable>
+              </View>
+            ) : (
+              <Pressable onPress={() => setTagKept(true)} style={st.tagRemovedRow}>
+                <Text style={st.tagRemovedTxt}>정기런으로 기록하지 않아요</Text>
+                <Text style={st.tagUndo}>되돌리기</Text>
+              </Pressable>
+            )}
+          </View>
+        )}
+
         {/* ── Title hero ── */}
         <View style={{ paddingHorizontal: S.gutter, paddingTop: 8 }}>
           <TextInput
@@ -386,6 +423,16 @@ const st = StyleSheet.create({
   savePill:    { height: 38, paddingHorizontal: 18, borderRadius: R.pill, backgroundColor: C.accent, alignItems: 'center', justifyContent: 'center' },
   savePillOff: { backgroundColor: C.surfaceAlt },
   savePillTxt: { fontSize: 14.5, fontWeight: '700', color: C.accentText, letterSpacing: -0.3 },
+
+  tagRow:       { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: C.accentDim, borderWidth: 1, borderColor: C.accent + '33', borderRadius: 14, paddingVertical: 11, paddingHorizontal: 13 },
+  tagIcon:      { width: 28, height: 28, borderRadius: 9, backgroundColor: C.surface, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  tagTxt:       { fontSize: 13, color: C.sub, letterSpacing: -0.2, lineHeight: 18 },
+  tagStrong:    { fontWeight: '800', color: C.text },
+  tagSub:       { fontSize: 11.5, color: C.accentGrn, letterSpacing: -0.2, marginTop: 2, fontWeight: '600' },
+  tagRemove:    { width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  tagRemovedRow:{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 10, paddingHorizontal: 4 },
+  tagRemovedTxt:{ fontSize: 12.5, color: C.faint, letterSpacing: -0.2 },
+  tagUndo:      { fontSize: 12.5, fontWeight: '700', color: C.accentGrn, letterSpacing: -0.2 },
 
   titleInput: { fontSize: 27, fontWeight: '700', letterSpacing: -0.7, color: C.text, paddingVertical: 6 },
   caption:    { fontSize: 12.5, color: C.faint, letterSpacing: -0.2, marginTop: 2 },

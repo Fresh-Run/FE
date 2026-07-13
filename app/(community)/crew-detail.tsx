@@ -37,7 +37,8 @@ import { getCurrentChallenge, type Challenge } from '@/lib/challenges-api';
 import { getUnread } from '@/lib/chat-api';
 import { getCrewRanking, getCrewRuns, listJoinRequests, uploadCrewImage, type CrewRankingEntry, type CrewRunItem } from '@/lib/crews-api';
 import { distUnit, fmtAgo, fmtDist, fmtDuration, fmtPaceIn, paceUnit } from '@/lib/run-format';
-import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
+import { accentShadow, colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
+import { setActiveCourse } from '@/store/active-course';
 import { useSettings } from '@/store/use-settings';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -230,6 +231,47 @@ export default function CrewDetailScreen() {
       .catch(() => { if (!cancelled) setFeedPreview([]); });
     return () => { cancelled = true; };
   }, [crewId, isMember]));
+
+  // ── 크루 러닝 시작 (L1) — ANY member (canvas gates can('crewRun'), but
+  // crewRun is not a real server key [박제 금지]; contract = "크루원이면
+  // 누구나"). Auto-suggest linking a 집결 공지 whose meetup is near now
+  // (−6h early / +3h after — owner window): the sheet is the safety net,
+  // a wrong guess costs one tap on 그냥 크루런. Non-member 400 is
+  // unreachable — the button only renders for members. ─────────────────
+  function beginCrewRun(announcementId: string | null, announcementTitle: string | null) {
+    if (!crew) return;
+    setActiveCourse({
+      id: null, title: `${crew.name} 크루런`, distanceKm: 0, polyline: null,
+      crewSession: { crewId: crew.id, crewName: crew.name, announcementId, announcementTitle },
+    });
+    router.push('/(course)/tracking' as never);
+  }
+
+  function startCrewRun() {
+    if (!crew) return;
+    const H = 3600_000;
+    const near = (annPreview ?? [])
+      .filter(a => {
+        if (!a.run_at) return false;
+        const ahead = new Date(a.run_at).getTime() - Date.now();
+        return ahead >= -3 * H && ahead <= 6 * H; // ≤6h early, ≤3h after
+      })
+      .sort((a, b) =>
+        Math.abs(new Date(a.run_at!).getTime() - Date.now()) - Math.abs(new Date(b.run_at!).getTime() - Date.now()))[0];
+    if (near) {
+      Alert.alert(
+        '크루 러닝 시작',
+        `'${near.title}' 정기런에 참여하나요?`,
+        [
+          { text: '취소', style: 'cancel' },
+          { text: '그냥 크루런', onPress: () => beginCrewRun(null, null) },
+          { text: '이 모임으로 시작', onPress: () => beginCrewRun(near.id, near.title) },
+        ],
+      );
+    } else {
+      beginCrewRun(null, null);
+    }
+  }
 
   function openCrewRun(run: CrewRunItem) {
     // Edge ⓑ: no lock pre-check — surfaced card's detail serves (probed 200
@@ -628,10 +670,24 @@ export default function CrewDetailScreen() {
           </View>
         )}
 
+        {/* ── 크루 러닝 시작 (L1, canvas FrCrewDetail) — any member; tags the
+               saved run as this crew's 정기런. ───────────────────────────── */}
+        {isMember && (
+          <View style={{ paddingHorizontal: S.gutter, paddingTop: S.xl }}>
+            <Pressable
+              onPress={startCrewRun}
+              style={({ pressed }) => [st.crewRunBtn, accentShadow(C.accent), pressed && { opacity: 0.9 }]}
+            >
+              <Icon name="walk-outline" size={20} color={C.accentText} />
+              <Text style={st.crewRunTxt}>크루 러닝 시작</Text>
+            </Pressable>
+          </View>
+        )}
+
         {/* ── 크루 채팅 entry (chat v1) — canvas: right after the 챌린지
             section; unread badge on the icon, count line when unread ──── */}
         {isMember && (
-          <View style={{ paddingHorizontal: S.gutter, paddingTop: S.xl }}>
+          <View style={{ paddingHorizontal: S.gutter, paddingTop: S.md }}>
             <Pressable
               onPress={() => router.push({
                 pathname: '/(community)/crew-chat' as never,
@@ -766,6 +822,14 @@ export default function CrewDetailScreen() {
                         <View style={st.feedHeadRow}>
                           <Avatar name={run.nickname} size={18} initialsRatio={0.5} />
                           <Text style={st.feedName} numberOfLines={1}>{run.nickname ?? '러너'}</Text>
+                          {/* L1 정기런 배지 (compact — full 참여 count on the full-screen card) */}
+                          {run.is_crew_session && (
+                            <View style={st.feedSessionChip}>
+                              <Text style={st.feedSessionTxt}>
+                                정기런{run.session_participant_count != null ? ` · ${run.session_participant_count}명` : ''}
+                              </Text>
+                            </View>
+                          )}
                           <Text style={st.feedWhen}>{fmtAgo(run.ran_at)}</Text>
                         </View>
                         <View style={st.feedStatsRow}>
@@ -893,8 +957,10 @@ const st = StyleSheet.create({
   feedRow:      { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12 },
   feedThumb:    { width: 48, height: 48, borderRadius: 13, overflow: 'hidden', flexShrink: 0 },
   feedHeadRow:  { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  feedName:     { flex: 1, fontSize: 13.5, fontWeight: '700', color: C.text, letterSpacing: -0.3 },
-  feedWhen:     { fontSize: 11.5, color: C.faint, flexShrink: 0 },
+  feedName:     { flexShrink: 1, fontSize: 13.5, fontWeight: '700', color: C.text, letterSpacing: -0.3 },
+  feedSessionChip: { backgroundColor: C.accentDim, borderRadius: 5, paddingHorizontal: 5, paddingVertical: 1.5, flexShrink: 0 },
+  feedSessionTxt:  { fontSize: 9.5, fontWeight: '800', color: C.accentGrn, letterSpacing: -0.2 },
+  feedWhen:     { fontSize: 11.5, color: C.faint, flexShrink: 0, marginLeft: 'auto' },
   feedStatsRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 6 },
   feedKm:       { fontSize: 13, fontWeight: '700', color: C.accentGrn, letterSpacing: -0.2, fontVariant: ['tabular-nums'] },
   feedKmUnit:   { fontSize: 10, color: C.faint, fontWeight: '600' },
@@ -919,6 +985,8 @@ const st = StyleSheet.create({
   coverChipTxt: { fontSize: 11.5, fontWeight: '700', color: '#fff', letterSpacing: -0.2 },
 
   // 크루 채팅 entry (chat v1)
+  crewRunBtn:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, height: 54, borderRadius: 16, backgroundColor: C.accent },
+  crewRunTxt:   { fontSize: 15.5, fontWeight: '700', color: C.accentText, letterSpacing: -0.3 },
   chatBtn:      { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: R.lg, paddingVertical: 13, paddingHorizontal: 15 },
   chatIcon:     { width: 36, height: 36, borderRadius: 11, backgroundColor: C.accentDim, alignItems: 'center', justifyContent: 'center' },
   chatBadge:    { position: 'absolute', top: -4, right: -4, minWidth: 16, height: 16, paddingHorizontal: 4, borderRadius: 8, backgroundColor: C.danger, borderWidth: 1.5, borderColor: C.surface, alignItems: 'center', justifyContent: 'center' },
