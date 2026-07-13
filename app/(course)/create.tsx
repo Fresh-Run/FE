@@ -293,7 +293,9 @@ export default function CreateScreen() {
                  MiniMap stays as the no-geometry fallback ── */}
           <View style={[st.hero, { height: HERO_H + insets.top }]}>
             {route.polyline && route.polyline.length >= 2 ? (
-              <RealMap height={HERO_H + insets.top} polyline={route.polyline} />
+              // hero (not a list thumbnail) — cache=false for live tiles, same
+              // class as the run-detail hero (지연 blank-tile fix 2026-07-13)
+              <RealMap height={HERO_H + insets.top} polyline={route.polyline} cache={false} />
             ) : (
               <MiniMap seed={route.summary} height={HERO_H + insets.top} borderRadius={0} polyline={route.polyline} />
             )}

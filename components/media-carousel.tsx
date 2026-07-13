@@ -25,7 +25,9 @@ type Props = {
 
 function MapSlide({ polyline, seed, height }: { polyline: Coordinate[] | null; seed: string; height: number }) {
   return polyline && polyline.length >= 2
-    ? <RealMap height={height} polyline={polyline} />
+    // cache={false}: this is a single async-mounted HERO, not a list thumbnail
+    // — live tiles avoid the blank-snapshot race (지연 bug 2026-07-13).
+    ? <RealMap height={height} polyline={polyline} cache={false} />
     : <MiniMap seed={seed} height={height} borderRadius={0} polyline={polyline ?? undefined} />;
 }
 

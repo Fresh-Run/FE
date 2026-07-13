@@ -12,7 +12,7 @@
  *    auto-fit region + route line + start/end markers;
  *  - center: single {lat,lng} → region-only view (e.g. current location).
  */
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef } from 'react';
 import { View } from 'react-native';
 import MapView, { Marker, Polyline } from 'react-native-maps';
 
@@ -52,10 +52,17 @@ type Props = {
   marker?: boolean;
   /** Interactive map (slice-2+ surfaces); card mode when false (default). */
   interactive?: boolean;
+  /** Static-snapshot optimization (iOS renders once → freezes to an image).
+      Great for LISTS of thumbnails (scroll perf), but on an async-mounted
+      HERO it can freeze a blank frame before Apple tiles load (polyline over
+      blank tiles). Pass false on single hero maps. Default true; forced off
+      when interactive. */
+  cache?: boolean;
 };
 
-export function RealMap({ height, borderRadius = 0, polyline, center, marker = false, interactive = false }: Props) {
+export function RealMap({ height, borderRadius = 0, polyline, center, marker = false, interactive = false, cache = true }: Props) {
   const line = polyline && polyline.length >= 2 ? polyline : null;
+  const mapRef = useRef<MapView>(null);
 
   const region = useMemo(() => {
     if (line) return fitRegion(line);
@@ -63,19 +70,36 @@ export function RealMap({ height, borderRadius = 0, polyline, center, marker = f
     return { latitude: c.lat, longitude: c.lng, latitudeDelta: CENTER_DELTA, longitudeDelta: CENTER_DELTA };
   }, [line, center]);
 
+  // Frame the track AFTER the map is ready (the tracking-screen pattern).
+  // initialRegion alone is a one-shot mount hint that races the async tile
+  // load — on the detail hero (async-mounted, larger, cacheEnabled) the iOS
+  // static snapshot could freeze BEFORE Apple tiles rendered → polyline over
+  // blank tiles. fitToCoordinates on ready forces a post-init camera set that
+  // renders tiles into the (re)snapshot. No-op-equivalent for the feed cards
+  // that already framed correctly.
+  const onMapReady = () => {
+    if (!line) return;
+    mapRef.current?.fitToCoordinates(line.map(toLatLng), {
+      edgePadding: { top: 24, right: 24, bottom: 24, left: 24 },
+      animated: false,
+    });
+  };
+
   return (
     <View
       style={{ height, borderRadius, overflow: 'hidden' }}
       pointerEvents={interactive ? 'auto' : 'none'}
     >
       <MapView
+        ref={mapRef}
         style={{ flex: 1 }}
         initialRegion={region}
+        onMapReady={onMapReady}
         scrollEnabled={interactive}
         zoomEnabled={interactive}
         pitchEnabled={interactive}
         rotateEnabled={interactive}
-        cacheEnabled={!interactive}
+        cacheEnabled={cache && !interactive}
         showsPointsOfInterest={false}
         toolbarEnabled={false}
       >
