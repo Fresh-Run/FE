@@ -15,6 +15,7 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  Modal,
   Pressable,
   StyleSheet,
   Text,
@@ -27,11 +28,13 @@ import { MiniMap } from '@/components/mini-map';
 import { RealMap } from '@/components/real-map';
 import { Icon } from '@/components/ui';
 import { ApiError, apiFetch, apiRequest } from '@/lib/api';
+import { blockUser } from '@/lib/blocks-api';
 import { distUnit, fmtDist, fmtDuration, fmtPaceIn, fmtWhen, paceUnit, timeTitle } from '@/lib/run-format';
 import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
 import { useUserProfile, type UserRun } from '@/hooks/use-user-profile';
 import { usePendingFollows } from '@/store/pending-follows';
 import { useSettings } from '@/store/use-settings';
+import { useStore } from '@/store/use-store';
 
 // Run card — other-user variant: ♥ is a real toggle (my_kudos), no 💬,
 // no visibility caption (approved deltas). Card tap → 러닝 포스트 (R3',
@@ -225,6 +228,40 @@ export default function UserProfileScreen() {
 
   const title = profile?.nickname ?? nickParam ?? '프로필';
 
+  // ⋯ overflow — keyed off the ROUTE uid, not the fetched payload: self never
+  // lands on this screen by construction (openProfile routes my uid to 내
+  // 프로필), so any uid here is presumptively not mine. FAIL OPEN: unknown
+  // identity (session not hydrated) still shows the ⋯ — its only job is
+  // cosmetic self-hiding; the server enforces self-block (400, probed).
+  // Gating on `profile` was the on-device bug (2026-07-14): the cached-
+  // identity loading view + error/hung fetches kept profile null → the ⋯
+  // never mounted. Block must not require a loaded payload — a profile that
+  // errors must still be blockable. 차단 후 프로필은 나에게 404 → back out.
+  const myId = useStore(s => s.session?.user.id);
+  const isSelf = !!myId && !!uid && uid === myId;
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  function confirmBlock() {
+    if (!uid) return;
+    setMenuOpen(false);
+    const who = profile?.nickname ?? nickParam ?? '이 사용자';
+    Alert.alert(
+      `${who}님을 차단할까요?`,
+      '서로의 프로필과 러닝이 안 보이게 되고, 지금의 팔로우 관계가 사라져요. 차단을 풀어도 팔로우는 자동으로 복구되지 않아요. (신고와는 별개예요.)',
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '차단하기', style: 'destructive',
+          onPress: () => {
+            blockUser(uid)
+              .then(() => router.back()) // profile now 404s to me — bounce out
+              .catch((e: unknown) => Alert.alert('차단 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요.'));
+          },
+        },
+      ],
+    );
+  }
+
   const header = profile && (
     <View>
       {/* Identity — border ring (own profile keeps the accent ring) */}
@@ -287,7 +324,13 @@ export default function UserProfileScreen() {
           <Icon name="chevron-back" size={22} color={C.text} />
         </Pressable>
         <Text style={st.appBarTitle} numberOfLines={1}>{title}</Text>
-        <View style={{ width: 40 }} />
+        {!isSelf ? (
+          <Pressable onPress={() => setMenuOpen(true)} hitSlop={12} style={st.appBarBtn}>
+            <Icon name="ellipsis-horizontal" size={20} color={C.text} />
+          </Pressable>
+        ) : (
+          <View style={{ width: 40 }} />
+        )}
       </View>
 
       {loading ? (
@@ -373,12 +416,35 @@ export default function UserProfileScreen() {
           showsVerticalScrollIndicator={false}
         />
       )}
+
+      {/* ⋯ overflow sheet (app idiom: crew-members). 차단하기 only — 신고하기는
+          지연 POST /reports 배포 시 여기 1줄 추가 (line-132 rule: 서버 기능
+          없으면 렌더 안 함 · '준비 중' row 두지 않음). */}
+      <Modal visible={menuOpen} transparent animationType="slide" onRequestClose={() => setMenuOpen(false)}>
+        <Pressable style={st.sheetOverlay} onPress={() => setMenuOpen(false)}>
+          <Pressable style={[st.sheet, { paddingBottom: Math.max(insets.bottom, 12) + 8 }]} onPress={() => {}}>
+            <View style={st.sheetHandleRow}><View style={st.sheetHandle} /></View>
+            <Pressable onPress={confirmBlock} style={({ pressed }) => [st.sheetRow, pressed && { opacity: 0.7 }]}>
+              <Icon name="ban-outline" size={19} color={C.danger} />
+              <Text style={[st.sheetRowTxt, { color: C.danger }]}>차단하기</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
 
 const st = StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
+
+  // ⋯ overflow sheet (mirrors crew-members)
+  sheetOverlay:   { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.42)' },
+  sheet:          { backgroundColor: C.bg, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: S.gutter },
+  sheetHandleRow: { alignItems: 'center', paddingTop: 10, paddingBottom: 2 },
+  sheetHandle:    { width: 38, height: 5, borderRadius: 99, backgroundColor: C.border },
+  sheetRow:       { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 16, paddingHorizontal: 4 },
+  sheetRowTxt:    { fontSize: 15, fontWeight: '600', color: C.text, letterSpacing: -0.3 },
 
   // 비공개 프로필 lock box (canvas: dashed rounded, lock circle, follow hint)
   lockBox:    { marginHorizontal: S.gutter, marginTop: 18, alignItems: 'center', gap: 13, backgroundColor: C.surfaceAlt, borderWidth: 1, borderStyle: 'dashed', borderColor: C.border, borderRadius: 20, paddingVertical: 36, paddingHorizontal: 24 },

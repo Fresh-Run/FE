@@ -550,3 +550,13 @@ She's adding the same 422-on-unknown-fields guard to **run submission** (higher-
 ## PUBLISH — 2026-07-13 [post-23:50]
 
 `eas update --channel main` — "크루 정기런 피드 + 팔로워 삭제 (c65a724)". Update group `caae0c70-2e6d-4679-a3bf-8dd95b61b7ac` (android `019f5bf7-eb26-7ed9-a37b-d9da583b9e4e`, ios `019f5bf7-eb26-7f35-b6be-cad5a767db92`), runtime `exposdk:54.0.0`, embedded commit `c65a724` = HEAD = origin/main at publish. Env guard read-verified staging (`https://freshrun-api.fly.dev`). New aboard since group `9b7cdca7`: 크루 피드 정기런-only (no toggle, N명 참여 배지, CTA 빈 상태) + 팔로워 삭제 (`c65a724`).
+
+## 차단 (block) + 프로필 ⋯ 메뉴 (BUILT + verified 2026-07-14 [00:28])
+
+**Contract (지연 block stack, probed staging with full read-back, world restored):** `POST /users/{id}/block` 204 멱등 · self 400 · **양방향 404-은닉** (서로의 프로필·검색에서 사라짐) · **양방향 팔로우+pending 자동 정리** (service source: follows 2행 + follow_requests 2행 삭제) · `DELETE .../block` 204 멱등, 해제 후 프로필 200 복귀하지만 **팔로우는 복구 안 됨(one-way destructive, 정책 — 재팔로우 필요)** · `GET /me/blocks` = FollowUserItem[] 최신순 (followed_at = 차단 시각, is_following 항상 false).
+
+**BUILT (4 files):** `lib/blocks-api.ts` (blockUser/unblockUser/listBlocks) · **user-profile ⋯** → crew-members 시트 idiom, 차단하기(destructive) with honest confirm (상호 은닉 + 팔로우 소실 + 해제해도 미복구 명시); 성공 → `router.back()` (프로필이 내게 404가 되므로); 404 재진입은 hook error state로 graceful · **block-list.tsx** = 차단 관리 (per-row 차단 해제, optimistic+rollback, 미복구 고지, honest empty) · **profile-settings** 차단 관리 row 라이브 (⑨ 마지막 parity row — roadmap 종결).
+
+**On-device bug → FAIL-OPEN ruling (owner-verified in airplane mode):** first build gated the ⋯ on `!!profile` — the cached-identity loading view + error/hung fetches kept profile null → ⋯ never mounted (fail-closed on the payload term). Fix: guard keys off the **route uid** (`isSelf = !!myId && uid===myId`, ⋯ on `!isSelf`) — self never lands here by construction (openProfile routes self to 내 프로필), **unknown identity → SHOW** (server 400 backs self-block), block targets uid so **error/hung profiles stay blockable** (harassment-resilient). Truth-table proven.
+
+**신고하기 — NOT rendered** (지연 designing POST /reports; line-132 rule). **Wiring point:** one `sheetRow` below 차단하기 in user-profile's ⋯ Modal when she ships.

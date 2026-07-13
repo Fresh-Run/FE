@@ -245,6 +245,8 @@ export default function ProfileSettingsScreen() {
         <Group title="관리">
           <NavRow icon="person-outline" label="프로필 편집" value="이름 · 소개 · 신체 정보" onPress={() => router.push('/personal-info' as any)} />
           <NavRow icon="options-outline" label="앱 설정" value="단위 · 테마 · 러닝 동작" onPress={() => router.push('/settings' as any)} />
+          {/* 차단 관리 — goes live with 지연's block stack (was a server gap) */}
+          <NavRow icon="ban-outline" label="차단 관리" value="차단한 사용자" onPress={() => router.push('/block-list' as any)} />
         </Group>
 
         {/* 회원 탈퇴 — canvas bottom danger button; destination is the shipped
