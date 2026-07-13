@@ -35,8 +35,10 @@ import { Avatar } from '@/components/avatar';
 import { listAnnouncements, type Announcement } from '@/lib/announcements-api';
 import { getCurrentChallenge, type Challenge } from '@/lib/challenges-api';
 import { getUnread } from '@/lib/chat-api';
-import { getCrewRanking, listJoinRequests, uploadCrewImage, type CrewRankingEntry } from '@/lib/crews-api';
+import { getCrewRanking, getCrewRuns, listJoinRequests, uploadCrewImage, type CrewRankingEntry, type CrewRunItem } from '@/lib/crews-api';
+import { distUnit, fmtAgo, fmtDist, fmtDuration, fmtPaceIn, paceUnit } from '@/lib/run-format';
 import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
+import { useSettings } from '@/store/use-settings';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -209,11 +211,13 @@ export default function CrewDetailScreen() {
     }
   }
 
-  // ── 챌린지 + 랭킹 (M2/M2b) — members only ───────────────────────────────────
+  // ── 챌린지 + 랭킹 + 러닝 피드 (M2/M2b) — members only ─────────────────────────
+  const units = useSettings(s => s.settings.units);
   const [challenge, setChallenge] = useState<Challenge | null | undefined>(undefined); // undefined = loading
   const [ranking, setRanking]     = useState<CrewRankingEntry[] | null>(null);
+  const [feedPreview, setFeedPreview] = useState<CrewRunItem[] | null>(null);
   useFocusEffect(useCallback(() => {
-    if (!crewId || !isMember) { setChallenge(undefined); setRanking(null); return; }
+    if (!crewId || !isMember) { setChallenge(undefined); setRanking(null); setFeedPreview(null); return; }
     let cancelled = false;
     getCurrentChallenge(crewId)
       .then(ch => { if (!cancelled) setChallenge(ch); })
@@ -221,8 +225,26 @@ export default function CrewDetailScreen() {
     getCrewRanking(crewId)
       .then(rows => { if (!cancelled) setRanking(rows); })
       .catch(() => { if (!cancelled) setRanking([]); });
+    getCrewRuns(crewId, 0, 3) // section preview — 전체 보기 opens the full feed
+      .then(rows => { if (!cancelled) setFeedPreview(rows); })
+      .catch(() => { if (!cancelled) setFeedPreview([]); });
     return () => { cancelled = true; };
   }, [crewId, isMember]));
+
+  function openCrewRun(run: CrewRunItem) {
+    // Edge ⓑ: no lock pre-check — surfaced card's detail serves (probed 200
+    // for a locked-profile member). Seed nickname/avatar + allow_* (hide-first).
+    router.push({
+      pathname: '/run-post' as never,
+      params: {
+        runId: run.run_id,
+        nickname: run.nickname ?? '러너',
+        avatarUrl: run.avatar_url ?? '',
+        allowLikes: run.allow_likes === true ? '1' : '0',
+        allowComments: run.allow_comments === true ? '1' : '0',
+      },
+    });
+  }
 
   async function handleJoin() {
     if (!crew) return;
@@ -653,6 +675,57 @@ export default function CrewDetailScreen() {
           </View>
         )}
 
+        {/* ── 크루 러닝 피드 (canvas FrCrewDetail section) — members only.
+               Compact preview cards (48px route-shaped mini) + 전체 보기 →
+               full feed screen. Tap → run-post (edge ⓑ, no lock pre-check). ── */}
+        {isMember && feedPreview !== null && (
+          <View style={{ paddingHorizontal: S.gutter, paddingTop: S.xl }}>
+            <View style={st.sectionHead}>
+              <Text style={st.sectionTitle}>크루 러닝 피드</Text>
+              {feedPreview.length > 0 && (
+                <Pressable
+                  onPress={() => router.push({ pathname: '/(community)/crew-runs' as never, params: { crewId: crew.id } })}
+                  hitSlop={8}
+                >
+                  <Text style={st.annMoreTxt}>전체 보기</Text>
+                </Pressable>
+              )}
+            </View>
+            {feedPreview.length === 0 ? (
+              <View style={st.emptyBox}>
+                <Text style={st.emptyTxt}>아직 크루 러닝 기록이 없어요</Text>
+              </View>
+            ) : (
+              <View style={[st.feedList, shadows.sm]}>
+                {feedPreview.map((run, i) => (
+                  <React.Fragment key={run.run_id}>
+                    {i > 0 && <View style={st.divider} />}
+                    <Pressable onPress={() => openCrewRun(run)} style={({ pressed }) => [st.feedRow, pressed && { opacity: 0.7 }]}>
+                      <View style={st.feedThumb}>
+                        <MiniMap seed={run.run_id} height={48} borderRadius={13} polyline={run.polyline_thumb ?? undefined} />
+                      </View>
+                      <View style={{ flex: 1, minWidth: 0 }}>
+                        <View style={st.feedHeadRow}>
+                          <Avatar name={run.nickname} size={18} initialsRatio={0.5} />
+                          <Text style={st.feedName} numberOfLines={1}>{run.nickname ?? '러너'}</Text>
+                          <Text style={st.feedWhen}>{fmtAgo(run.ran_at)}</Text>
+                        </View>
+                        <View style={st.feedStatsRow}>
+                          <Text style={st.feedKm}>{fmtDist(run.distance_km, units, 1)}<Text style={st.feedKmUnit}> {distUnit(units)}</Text></Text>
+                          <Text style={st.feedStat}>{fmtDuration(run.duration_sec)}</Text>
+                          {run.avg_pace_sec_per_km != null && (
+                            <Text style={st.feedStat}>{fmtPaceIn(run.avg_pace_sec_per_km, units)}{paceUnit(units)}</Text>
+                          )}
+                        </View>
+                      </View>
+                    </Pressable>
+                  </React.Fragment>
+                ))}
+              </View>
+            )}
+          </View>
+        )}
+
         {/* ── 공지 (M1) — members only ─────────────────────────────────── */}
         {isMember && (
           <View style={{ paddingHorizontal: S.gutter, paddingTop: S.xl }}>
@@ -812,6 +885,19 @@ const st = StyleSheet.create({
 
   // 랭킹 (design-wave A — canvas top-3)
   rankList:     { backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: R.xl, overflow: 'hidden' },
+
+  // 크루 러닝 피드 preview (canvas compact card)
+  feedList:     { backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: R.xl, overflow: 'hidden' },
+  feedRow:      { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12 },
+  feedThumb:    { width: 48, height: 48, borderRadius: 13, overflow: 'hidden', flexShrink: 0 },
+  feedHeadRow:  { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  feedName:     { flex: 1, fontSize: 13.5, fontWeight: '700', color: C.text, letterSpacing: -0.3 },
+  feedWhen:     { fontSize: 11.5, color: C.faint, flexShrink: 0 },
+  feedStatsRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 6 },
+  feedKm:       { fontSize: 13, fontWeight: '700', color: C.accentGrn, letterSpacing: -0.2, fontVariant: ['tabular-nums'] },
+  feedKmUnit:   { fontSize: 10, color: C.faint, fontWeight: '600' },
+  feedStat:     { fontSize: 12.5, fontWeight: '600', color: C.sub, letterSpacing: -0.2, fontVariant: ['tabular-nums'] },
+
   rankEmpty:      { backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: R.xl, alignItems: 'center', paddingVertical: 22, paddingHorizontal: 20, gap: 8 },
   rankEmptyIcon:  { width: 46, height: 46, borderRadius: 14, backgroundColor: C.surfaceAlt, borderWidth: 1, borderColor: C.border, alignItems: 'center', justifyContent: 'center', marginBottom: 2 },
   rankEmptyTitle: { fontSize: 14, fontWeight: '700', color: C.text, letterSpacing: -0.3 },

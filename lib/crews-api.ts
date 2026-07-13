@@ -268,6 +268,45 @@ export type CrewRankingEntry = {
   me: boolean;
 };
 
+// ─── 크루 러닝 피드 (BE, guide §217 — probed 2026-07-13) ─────────────────────
+// 크루원들의 최근 run, ran_at 최신순. 크루원만(비크루원 403). visibility 적용:
+// private만 제외, public·followers는 크루원에게 노출 (크루=활동 공유 관계).
+// 탈퇴 멤버 run 자동 제외. v3.6: 차단 상대 카드 서버 제외 (zero FE).
+// Pagination = limit&offset (활동 피드와 동형, chat before= 커서 아님).
+// 엣지 ⓑ (probed): 잠금 프로필 멤버의 run도 카드로 뜨고, 탭 → 상세 200
+//   (프로필/히스토리는 잠겨도 "서피스에 보이는 카드는 상세까지").
+// ⚠️ payload에 kudos_count/my_kudos 없음 (활동 피드와 달리) — 카드는 kudos
+//   미표시, 상세(run-post)가 kudos를 직접 fetch. comment_count는 있음.
+// L1 forward-wire: crew_id 태그(정기런 뱃지·함께 뛰었어요 그룹)는 아직 payload에
+//   없음 — 필드 랜딩 시 CrewRunItem에 추가 + 카드 뱃지 슬롯 채움. 지금은 미표시.
+export type CrewRunItem = {
+  run_id: string;
+  user_id: string;
+  nickname: string | null;
+  avatar_url: string | null;
+  ran_at: string;
+  title: string | null;
+  distance_km: number;
+  duration_sec: number;
+  avg_pace_sec_per_km: number | null;
+  route_id: string | null;
+  area: string | null;
+  photo_thumb: string | null;   // PATH (signed 1h) — never render raw; card uses map
+  polyline_thumb: { lat: number; lng: number }[] | null;
+  route_summary: string | null;
+  comment_count: number;
+  /** pre-render feed-hint flags (BE 4fd5b66): true=on, false=off, null=locked/unknown */
+  allow_likes: boolean | null;
+  allow_comments: boolean | null;
+};
+
+export const CREW_FEED_PAGE = 20;
+
+/** Crew run feed — members only (403 hides for non-members). offset-paginated. */
+export function getCrewRuns(crewId: string, offset = 0, limit = CREW_FEED_PAGE): Promise<CrewRunItem[]> {
+  return apiFetch<CrewRunItem[]>(`/api/crews/${crewId}/runs?limit=${limit}&offset=${offset}`);
+}
+
 // ─── 크루 이미지 (BE 87a4026, guide "크루 이미지 업로드" — probed 2026-07-13) ──
 // Avatar-isomorphic 3-step: upload-url → PUT → PATCH {cover_url|icon_url}
 // w/ ?v= cache-bust. Fixed path per crew (re-upload overwrites). 운영진 get

@@ -386,3 +386,13 @@ Contract probed verbatim on staging: owner all-true synthesis ✓, member null �
 ## PUBLISH — 2026-07-13 [post-17:25]
 
 `eas update --channel main` — "운영진 권한 + 홈·알림·크루 수정 (5619147)". Update group `e8d615ce-7519-4167-aed5-f96366e3332d` (android `019f5aa2-4327-7705-9443-53425003a7e6`, ios `019f5aa2-4327-7f08-903e-58d93097f5e4`), runtime `exposdk:54.0.0`, embedded commit `5619147` = HEAD = origin/main at publish. Env guard read-verified staging. New aboard since group `298bddd8`: permissions v2 (`b4cf956`) + Tier 0 fixes (`5619147`) + ledgers.
+
+## Tier 1 #1 — 크루 러닝 피드 + 엣지 ⓑ (BUILT 2026-07-13, awaiting verification)
+
+Consumed the orphaned `GET /crews/{id}/runs` (guide §217). **Schema richer than the guide text**: CrewRunItem carries polyline_thumb, photo_thumb, area, comment_count, allow_likes/allow_comments — but **NO kudos_count/my_kudos** (unlike /feed/activities). Pagination = **limit&offset** (활동 피드 동형, not the chat before= cursor) — probed. **Edge ⓑ PROVEN live**: unfollowed test1→test2 (A′ locks test2 to test1 as crew-mate non-follower, locked=true) → test2's run still surfaces as a crew-feed card → tap → `GET /runs/{run}` **200** (not 404), kudos+comments both 200, while the locked profile's `/users/{id}/runs` is empty. "서피스에 보이는 카드는 상세까지." v3.6 block-exclusion is server-side (zero FE).
+
+BUILT: `lib/crews-api.ts` CrewRunItem + getCrewRuns (offset). **crew-runs.tsx** (new full screen, canvas 크루 러닝 피드 → 전체 보기): feed-card-language cards (real map viewability-bounded from polyline_thumb, author→profile, title, stats, area line, 💬 comment_count — NO ♥ since no kudos_count), offset pagination + dedup + honest empty state. **crew-detail.tsx** 크루 러닝 피드 SECTION (canvas compact 48px cards, first 3, + 전체 보기), matches 공지/랭킹 idiom. Tap (both surfaces) → run-post with **NO lock pre-check** (edge ⓑ) + nickname/avatar/allow_* seeds. **run-post.tsx**: added allowLikes/allowComments entry params → hide-first seed of kudosOff/commentsOff before the detail lands (null/false → hidden; absent → shown, backward-compatible; detail truth still wins). kudos state fully resolved by run-post's own fetch (no kudos_count to seed).
+
+**L1 forward-wire (지연 shipping crew-run tagging → 정기런 badge + "N명이 함께 뛰었어요")**: badge slot marked in both card headers (comment). **Field NOT in CrewRunItem yet — nothing rendered, not faked.** When crew_id-tag lands: add to CrewRunItem + fill the slot.
+
+Supersedes the "edge ⓑ contract-noted for the future crew-feed slice" ledger line (that slice IS this) and the "GET /crews/{id}/runs orphaned" inventory item.

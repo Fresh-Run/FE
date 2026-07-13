@@ -93,6 +93,11 @@ export default function RunPostScreen() {
     myKudos?: string;   // '1' | '0' — viewer's state from the tapped row
     kudosCount?: string;
     own?: string;       // '1' = own-run social mode (♥ count-only → likers sheet)
+    // pre-render hide-first seeds (crew-feed card forwards allow_*): '1'=on,
+    // '0'=off/locked — hides the affordance BEFORE the detail lands (no flash);
+    // the detail response is still the source of truth once it resolves.
+    allowLikes?: string;
+    allowComments?: string;
   }>();
   const isOwn = params.own === '1';
   const units = useSettings(s => s.settings.units);
@@ -162,10 +167,15 @@ export default function RunPostScreen() {
   // pre-render seeds (her flags on the detail payload). NEVER in own mode:
   // the server allows own kudos-view/comments regardless, and own detail
   // serves the raw flag (deviation from her always-true contract — flagged).
+  // Before the detail lands (run == null) fall back to the entry-param seed
+  // (crew-feed forwards allow_*): '0' → hide-first; absent → shown (unchanged
+  // for callers that don't seed). The detail truth wins the moment it resolves.
+  const seedKudosOff = params.allowLikes === '0';
+  const seedCommentsOff = params.allowComments === '0';
   const kudosOff = kudosOff403
-    || (!isOwn && run != null && (run.allow_likes === false || run.allow_likes === null));
+    || (!isOwn && (run != null ? (run.allow_likes === false || run.allow_likes === null) : seedKudosOff));
   const commentsOff = commentsOff403
-    || (!isOwn && run != null && (run.allow_comments === false || run.allow_comments === null));
+    || (!isOwn && (run != null ? (run.allow_comments === false || run.allow_comments === null) : seedCommentsOff));
 
   function toggleKudos() {
     if (!run || kudosOff) return;
