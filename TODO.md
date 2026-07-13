@@ -430,3 +430,7 @@ Both types were falling to FALLBACK_META (generic, inert). Probed live + wired:
 Retires the "pb_achieved TYPE_META" + "crew_invited invitations recon" watch-list riders. Probe fixtures restored (test2 left the crew + notification deleted + mutual follow verified; throwaway disposable).
 
 **Invite-loop RULINGS + gap (verified [18:40]):** pb_achieved tab = **전체-only** (ruling (a), as built — challenge_completed precedent). **REMAINING HALF — no SEND UI**: there is no in-app affordance to invite a specific member (`POST /crews/{id}/invitations {user_id}`); this run's invite was fired via API. A 초대 sender (member picker / user search → invite) is the loop's other half — pairs naturally with 유저 검색 (`GET /users/search`, orphaned). The RECEIVE half (notification → preview → join) is now complete. Probe fixtures restored (test2 left 삭제테스트크루 + notification deleted; throwaway disposable).
+
+## PUBLISH — 2026-07-13 [post-18:40]
+
+`eas update --channel main` — "크루 초대 + 개인 기록 알림 + 크루 피드 (cab0580)". Update group `ec64f866-4a2e-4b59-b7f7-699d57c07955` (android `019f5ade-ea3a-7a2a-9530-5ef771071f62`, ios `019f5ade-ea3a-7132-af1c-978d3a43f3f3`), runtime `exposdk:54.0.0`, embedded commit `cab0580` = HEAD = origin/main at publish. Env guard read-verified staging. New aboard since group `813ff160`: invite-loop receive half (`cab0580`). Crew 러닝 피드 + 월간 인사이트 rode `813ff160` and remain aboard.
