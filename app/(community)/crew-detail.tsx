@@ -5,7 +5,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -23,7 +23,6 @@ import * as ImagePicker from 'expo-image-picker';
 import { AvatarCrop, type CropSource } from '@/components/avatar-crop';
 import { MiniMap } from '@/components/mini-map';
 import { Icon } from '@/components/ui';
-import { reencodeForUpload } from '@/lib/run-photos';
 import {
   cancelJoinRequest,
   joinCrew,
@@ -164,14 +163,14 @@ export default function CrewDetailScreen() {
 
   // ── 크루 이미지 (⑤⑥) — edit_crew-gated since v2 (BE 28a5c25 moved 크루
   // 수정·이미지 from owner-only to the edit_crew key; the old admin
-  // attach-PATCH 403 gap resolved by design). icon → 1:1 avatar-crop stage
-  // (output already re-encoded/EXIF-free); cover → skip crop (render-time
-  // cover-fit composes; a dedicated aspect crop is a design follow-up),
-  // reencodeForUpload strips EXIF. PUBLIC bucket — the hard rule applies
-  // doubly.
+  // attach-PATCH 403 gap resolved by design). BOTH channels now route through
+  // the avatar-crop framing stage: icon → 1:1 circle, cover → 16:9 rounded-rect
+  // (matching the hero band). Crop output is re-encoded JPEG (EXIF-free) — the
+  // PUBLIC-bucket rule holds without a separate reencodeForUpload pass.
   const canEditCrew = !!myPerms?.edit_crew;
   const [imgBusy, setImgBusy] = useState<'cover' | 'icon' | null>(null);
-  const [iconCropSrc, setIconCropSrc] = useState<CropSource | null>(null);
+  const [cropSrc, setCropSrc] = useState<{ src: CropSource; kind: 'cover' | 'icon' } | null>(null);
+  const lastCropKind = useRef<'cover' | 'icon'>('icon'); // survives onClose for retake
 
   async function pickCrewImage(kind: 'cover' | 'icon') {
     let res: ImagePicker.ImagePickerResult;
@@ -183,30 +182,19 @@ export default function CrewDetailScreen() {
     }
     if (res.canceled || !res.assets[0]) return;
     const a = res.assets[0];
-    if (kind === 'icon') {
-      setIconCropSrc({ uri: a.uri, width: a.width ?? 1, height: a.height ?? 1 });
-      return; // upload continues in onConfirm
-    }
-    setImgBusy('cover');
-    try {
-      const clean = await reencodeForUpload(a.uri, a.width, a.height);
-      await uploadCrewImage(crew!.id, 'cover', clean);
-      refetch();
-    } catch (e: unknown) {
-      Alert.alert('커버 업로드 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요.');
-    } finally {
-      setImgBusy(null);
-    }
+    lastCropKind.current = kind;
+    setCropSrc({ src: { uri: a.uri, width: a.width ?? 1, height: a.height ?? 1 }, kind }); // upload continues in onCropped
   }
 
-  async function onIconCropped(croppedUri: string) {
-    setIconCropSrc(null);
-    setImgBusy('icon');
+  async function onCropped(croppedUri: string) {
+    const kind = cropSrc?.kind ?? lastCropKind.current;
+    setCropSrc(null);
+    setImgBusy(kind);
     try {
-      await uploadCrewImage(crew!.id, 'icon', croppedUri); // crop output = re-encoded, EXIF-free
+      await uploadCrewImage(crew!.id, kind, croppedUri); // crop output = re-encoded, EXIF-free
       refetch();
     } catch (e: unknown) {
-      Alert.alert('아이콘 업로드 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요.');
+      Alert.alert(kind === 'cover' ? '커버 업로드 실패' : '아이콘 업로드 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요.');
     } finally {
       setImgBusy(null);
     }
@@ -861,12 +849,13 @@ export default function CrewDetailScreen() {
         </View>
       )}
 
-      {/* ── 아이콘 crop (1:1, avatar-crop reuse) ─────────────────────── */}
+      {/* ── 이미지 crop — 아이콘 1:1 원형 · 커버 16:9 (avatar-crop reuse) ── */}
       <AvatarCrop
-        src={iconCropSrc}
-        onClose={() => setIconCropSrc(null)}
-        onConfirm={onIconCropped}
-        onRetake={() => { setIconCropSrc(null); pickCrewImage('icon'); }}
+        src={cropSrc?.src ?? null}
+        aspect={cropSrc?.kind === 'cover' ? 16 / 9 : 1}
+        onClose={() => setCropSrc(null)}
+        onConfirm={onCropped}
+        onRetake={() => { setCropSrc(null); pickCrewImage(lastCropKind.current); }}
       />
 
       {/* ── Sticky CTA — non-members only (join/request/full). Members leave

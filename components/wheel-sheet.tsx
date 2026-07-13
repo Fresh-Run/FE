@@ -158,11 +158,12 @@ export function TimeWheelRow({ label = '시간', value, onChange }: {
   );
 }
 
-// ─── 3-column date wheel — 년·월·일 (owner ruling: typed dates die) ─────────
-// Range: this year → +1 (two-year horizon covers any real 공지 scheduling).
-// min = today CLIENT policy (server accepts past — probed 201; nonsense for
-// 공지 regardless). Floors cascade: current year → months from now, current
-// month → days from today; day clamps to the month's real length.
+// ─── Date CALENDAR grid — 월 그리드 (owner ruling 2026-07-13: date-only →
+// calendar; wheels stay for magnitudes/time). The WheelSheet housing is
+// unchanged — only the contents swapped from the 년·월·일 drum to a month
+// grid. min = today CLIENT policy (past days disabled by construction);
+// range = this month → +12 months. The trigger row + serialized YYYY-MM-DD
+// contract are identical, so announcement-compose needs no change.
 
 function daysInMonth(y: number, m: number): number {
   return new Date(y, m, 0).getDate();
@@ -171,6 +172,8 @@ function daysInMonth(y: number, m: number): number {
 function fmtYmd(y: number, m: number, d: number): string {
   return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
 }
+
+const WEEKDAYS_KO = ['일', '월', '화', '수', '목', '금', '토'];
 
 export function DateWheelRow({ label, value, onChange }: {
   label: string;
@@ -187,57 +190,81 @@ export function DateWheelRow({ label, value, onChange }: {
     if (!m) return { y: tY, m: tM, d: tD };
     return { y: Number(m[1]), m: Number(m[2]), d: Number(m[3]) };
   };
-  const [sel, setSel] = useState(() => parse(value));
+  const [sel, setSel]   = useState(() => parse(value));   // selected day
+  const [view, setView] = useState(() => { const p = parse(value); return { y: p.y, m: p.m }; }); // shown month
 
-  const years = [tY, tY + 1];
-  const months = sel.y === tY ? Array.from({ length: 12 - tM + 1 }, (_, i) => tM + i)
-    : Array.from({ length: 12 }, (_, i) => i + 1);
-  const dayFloor = sel.y === tY && sel.m === tM ? tD : 1;
-  const dayMax = daysInMonth(sel.y, sel.m);
-  const days = Array.from({ length: dayMax - dayFloor + 1 }, (_, i) => dayFloor + i);
+  // Month range as absolute month indices: [this month, +12 months]
+  const minIdx  = tY * 12 + (tM - 1);
+  const maxIdx  = minIdx + 12;
+  const viewIdx = view.y * 12 + (view.m - 1);
+  const step = (delta: number) => {
+    const ni = viewIdx + delta;
+    if (ni < minIdx || ni > maxIdx) return;
+    setView({ y: Math.floor(ni / 12), m: (ni % 12) + 1 });
+  };
 
-  function clamp(next: { y: number; m: number; d: number }) {
-    // cascade the floors + month-length clamp so the selection stays legal
-    const mFloor = next.y === tY ? tM : 1;
-    const m2 = Math.max(next.m, mFloor);
-    const dFloor = next.y === tY && m2 === tM ? tD : 1;
-    const d2 = Math.min(Math.max(next.d, dFloor), daysInMonth(next.y, m2));
-    return { y: next.y, m: m2, d: d2 };
-  }
+  const firstDow = new Date(view.y, view.m - 1, 1).getDay(); // 0 = Sun (header is Sun-first → matches)
+  const dim = daysInMonth(view.y, view.m);
+  const inCurMonth = view.y === tY && view.m === tM;
+  const cells: (number | null)[] = [];
+  for (let i = 0; i < firstDow; i++) cells.push(null);       // leading blanks push day 1 under its weekday
+  for (let d = 1; d <= dim; d++) cells.push(d);
+  while (cells.length % 7 !== 0) cells.push(null);            // trailing blanks fill the last row to 7
+  const weeks: (number | null)[][] = [];
+  for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7)); // exact rows of 7
 
   return (
     <>
       <TriggerRow
         label={label}
         display={value.trim() ? value : '선택'}
-        onPress={() => { setSel(clamp(parse(value))); setOpen(true); }}
+        onPress={() => { const p = parse(value); setSel(p); setView({ y: p.y, m: p.m }); setOpen(true); }}
       />
       <WheelSheet
         visible={open} title={label}
         onClose={() => setOpen(false)}
         onDone={() => { onChange(fmtYmd(sel.y, sel.m, sel.d)); setOpen(false); }}
       >
-        <Picker
-          selectedValue={sel.y}
-          onValueChange={(v: number) => setSel(s_ => clamp({ ...s_, y: v }))}
-          style={st.col} itemStyle={st.item}
-        >
-          {years.map(y => <Picker.Item key={y} label={`${y}년`} value={y} />)}
-        </Picker>
-        <Picker
-          selectedValue={sel.m}
-          onValueChange={(v: number) => setSel(s_ => clamp({ ...s_, m: v }))}
-          style={[st.col, { flex: 0.7 }]} itemStyle={st.item}
-        >
-          {months.map(m => <Picker.Item key={m} label={`${m}월`} value={m} />)}
-        </Picker>
-        <Picker
-          selectedValue={sel.d}
-          onValueChange={(v: number) => setSel(s_ => clamp({ ...s_, d: v }))}
-          style={[st.col, { flex: 0.7 }]} itemStyle={st.item}
-        >
-          {days.map(d => <Picker.Item key={d} label={`${d}일`} value={d} />)}
-        </Picker>
+        <View style={st.cal}>
+          <View style={st.calHead}>
+            <Pressable onPress={() => step(-1)} disabled={viewIdx <= minIdx} hitSlop={10} style={[st.calArrow, viewIdx <= minIdx && { opacity: 0.25 }]}>
+              <Icon name="chevron-back" size={17} color={C.text} />
+            </Pressable>
+            <Text style={st.calMonth}>{view.y}년 {view.m}월</Text>
+            <Pressable onPress={() => step(1)} disabled={viewIdx >= maxIdx} hitSlop={10} style={[st.calArrow, viewIdx >= maxIdx && { opacity: 0.25 }]}>
+              <Icon name="chevron-forward" size={17} color={C.text} />
+            </Pressable>
+          </View>
+          <View style={st.calWeekRow}>
+            {WEEKDAYS_KO.map((w, i) => (
+              <Text key={w} style={[st.calWeekTxt, i === 0 && { color: C.danger }]}>{w}</Text>
+            ))}
+          </View>
+          <View style={st.calGrid}>
+            {weeks.map((week, wi) => (
+              <View key={wi} style={st.calWeekLine}>
+                {week.map((d, di) => {
+                  if (d === null) return <View key={`b${wi}-${di}`} style={st.calCell} />;
+                  const past = inCurMonth && d < tD;
+                  const selected = sel.y === view.y && sel.m === view.m && sel.d === d;
+                  const today = inCurMonth && d === tD;
+                  return (
+                    <Pressable key={d} disabled={past} onPress={() => setSel({ y: view.y, m: view.m, d })} style={st.calCell}>
+                      <View style={[st.calDay, selected && st.calDaySel]}>
+                        <Text style={[
+                          st.calDayTxt,
+                          past && st.calDayPast,
+                          today && !selected && st.calDayToday,
+                          selected && st.calDaySelTxt,
+                        ]}>{d}</Text>
+                      </View>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            ))}
+          </View>
+        </View>
       </WheelSheet>
     </>
   );
@@ -254,6 +281,23 @@ const st = StyleSheet.create({
   wheelRow: { flexDirection: 'row', justifyContent: 'center' },
   col:      { flex: 1 },
   item:     { fontSize: 19, fontWeight: '600', color: C.text },
+
+  // Calendar grid (date picker)
+  cal:        { width: '100%', paddingTop: 2, paddingBottom: 6 },
+  calHead:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 6, paddingBottom: 10 },
+  calArrow:   { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center', backgroundColor: C.surfaceAlt },
+  calMonth:   { fontSize: 16, fontWeight: '800', color: C.text, letterSpacing: -0.4 },
+  calWeekRow:  { flexDirection: 'row', paddingBottom: 4 },
+  calWeekTxt:  { flex: 1, textAlign: 'center', fontSize: 12, fontWeight: '700', color: C.faint, letterSpacing: -0.2 },
+  calGrid:     {},
+  calWeekLine: { flexDirection: 'row' },
+  calCell:     { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 3 },
+  calDay:     { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
+  calDaySel:  { backgroundColor: C.accent },
+  calDayTxt:  { fontSize: 15, fontWeight: '600', color: C.text, letterSpacing: -0.3, fontVariant: ['tabular-nums'] },
+  calDayPast: { color: C.faint, opacity: 0.4 },
+  calDayToday:{ color: C.accentGrn, fontWeight: '800' },
+  calDaySelTxt:{ color: C.accentText, fontWeight: '800' },
 
   doneBtn: { height: 52, borderRadius: 15, backgroundColor: C.accent, alignItems: 'center', justifyContent: 'center', marginTop: 10 },
   doneTxt: { fontSize: 15.5, fontWeight: '700', color: C.accentText, letterSpacing: -0.3 },
