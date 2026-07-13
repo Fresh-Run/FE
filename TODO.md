@@ -414,3 +414,7 @@ Canvas-vs-payload: canvas is the pre-contract design (goal ring · 누적 고도
 **Sparse/empty rule (uniform, stated):** empty month (run_count 0) → ONE empty state, not a dash-grid. Sparse (1 run) → every tile shows REAL values; the ONLY thing that hides is month_rank (null below 2 runs/dimension — its own contract, not a dash) + records/pace_trend (hide when empty/all-null). Within-tile null scalars → dashes (avg_pace "--", delta fallback copy). No fabricated data anywhere.
 
 Records-label alignment (owner ruling, folded into this commit): RECORD_LABEL best_5k "최고 5K" → **"최고 5K 환산"** — same pace-equivalent ambiguity, and mixed "5K"/"5K 환산" within one screen is worse than either alone. Value renders as a 5K-equivalent time (fmtDuration), so "최고 5K 환산 · 27:30" reads honestly. Screen now uses "5K 환산" uniformly (records + month_rank).
+
+## PUBLISH — 2026-07-13 [post-18:22]
+
+`eas update --channel main` — "크루 러닝 피드 + 월간 인사이트 + 운영진 권한 (5e860da)". Update group `813ff160-5323-44dc-bd5e-2a182eb62c10` (android `019f5aca-9cb4-77eb-8c04-49df7a816608`, ios `019f5aca-9cb4-7ac7-b9da-243a72b318e4`), runtime `exposdk:54.0.0`, embedded commit `5e860da` = HEAD = origin/main at publish. Env guard read-verified staging. New aboard since group `e8d615ce`: crew 러닝 피드 (`21d9456`) + 월간 인사이트 month_rank/run_days (`5e860da`) + owner-rulings ledger. Permissions v2 + Tier 0 rode `e8d615ce` and remain aboard.
