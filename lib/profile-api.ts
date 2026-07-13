@@ -81,3 +81,20 @@ export function updateProfile(input: {
 }, timeoutMs?: number): Promise<ProfileResponse> {
   return apiFetch<ProfileResponse>('/api/me/profile', { method: 'PATCH', body: input, timeoutMs });
 }
+
+// ─── 유저 검색 (BE af8708b, guide §183 — probed 2026-07-13) ──────────────────
+// 닉네임 부분 일치(대소문자 무관). q 최소 2자(1자 422), limit ≤50(초과 422).
+// 프라이버시(서버측): ① 차단 상대(양방향) 제외 ② 본인 제외 ③ 잠금 계정은
+// 결과에 뜨되 bio=null(닉네임·아바타만) — 프론트는 그대로 노출, 프로필 진입 시
+// 🔒(A′). 결과에 is_following 없음 — 행 팔로우 상태는 표시 불가(진입 시 확인).
+export type UserSearchItem = {
+  user_id: string;
+  nickname: string;
+  avatar_url: string | null;
+  bio: string | null; // null when the account is locked to the searcher
+};
+
+/** q must be ≥2 chars (server 422 below); callers floor the debounce at 2. */
+export function searchUsers(q: string, limit = 20): Promise<UserSearchItem[]> {
+  return apiFetch<UserSearchItem[]>(`/api/users/search?q=${encodeURIComponent(q.trim())}&limit=${limit}`);
+}

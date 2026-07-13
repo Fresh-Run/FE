@@ -257,6 +257,23 @@ export async function kickMember(crewId: string, userId: string): Promise<void> 
   await apiFetch<void>(`/api/crews/${crewId}/members/${userId}`, { method: 'DELETE' });
 }
 
+// ─── 인앱 개인 초대 (BE 23d2936, guide §215 — probed 2026-07-13) ─────────────
+// 크루원이면 누구나 비크루원을 초대 (NOT a permission key — any-member confirmed
+// live: a non-owner admin sent 204). 204 = 대상에게 crew_invited 알림(초대코드).
+// 이미 크루원 409. 비크루원 발송자·차단 관계·프로필 없는 유저 404 은닉. RE-INVITE
+// = 204 멱등(중복 dedup 없음 — 그냥 재알림, probed). 초대코드 없으면 자동 발급.
+export type InviteResult = 'sent' | 'already_member';
+
+export async function inviteToCrew(crewId: string, userId: string): Promise<InviteResult> {
+  try {
+    await apiFetch<void>(`/api/crews/${crewId}/invitations`, { method: 'POST', body: { user_id: userId } });
+    return 'sent';
+  } catch (e: unknown) {
+    if (e instanceof ApiError && e.status === 409) return 'already_member';
+    throw e; // 404 은닉 (차단·비크루원 발송자·프로필 없음) → caller shows a friendly line
+  }
+}
+
 // ─── Ranking (M2b) — 이번 주 KST 거리순; verified GPS runs only ───────────────
 
 export type CrewRankingEntry = {

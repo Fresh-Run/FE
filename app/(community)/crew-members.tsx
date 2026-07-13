@@ -165,7 +165,14 @@ export default function CrewMembersScreen() {
           <Icon name="arrow-back" size={20} color={C.text} />
         </Pressable>
         <Text style={st.appBarTitle}>크루원</Text>
-        <Text style={st.appBarCount}>{rows ? `${rows.length}명` : ''}</Text>
+        {/* 초대하기 — any member can invite (probed; not a permission key) */}
+        <Pressable
+          onPress={() => router.push({ pathname: '/(community)/user-search' as never, params: { crewId: crewId! } })}
+          hitSlop={10}
+          style={st.backBtn}
+        >
+          <Icon name="person-add-outline" size={20} color={C.accentGrn} />
+        </Pressable>
       </View>
 
       {rows === null ? (

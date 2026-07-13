@@ -449,3 +449,13 @@ The delete modal was **extracted to `components/crew-delete-modal.tsx`** (reuse,
 ## PUBLISH — 2026-07-13 [post-19:00]
 
 `eas update --channel main` — "크루 초대 + 공지 상단 + 크루 해체 (1946a9a)". Update group `e4868082-3953-4294-8e01-52ccbe80323e` (android `019f5aee-6a83-7a67-b338-7711a66f78c1`, ios `019f5aee-6a83-7d35-b295-073cd8bd4ed5`), runtime `exposdk:54.0.0`, embedded commit `1946a9a` = HEAD = origin/main at publish. Env guard read-verified staging. New aboard since group `ec64f866`: leave-fix + 공지-to-top (`1946a9a`). Invite receive-half rode `ec64f866` and remains aboard.
+
+## Tier 1 — 유저 검색 + 초대 sender (one slice, BUILT 2026-07-13, awaiting verification)
+
+Consumed the orphaned `GET /users/search` AND built the invite loop's SEND half — search someone → invite them, one feature.
+
+**Contract (probed live):** users/search `{user_id, nickname, avatar_url, bio}` — **NO is_following** (rows can't show follow state; consistent with the "노출하고 진입 시 🔒" design). q ≥2 chars (1→422), limit ≤50 (51→422). Privacy server-side: self excluded ✓, **locked accounts appear with bio=null** (identity-only, avatar present — probed via unfollow→A′ lock) ✓, **blocked users excluded** (v3.6 — probed block→gone) ✓. invitations `POST /crews/{id}/invitations {user_id}`: **any member invites** (NOT a permission key — probed: non-owner admin sent 204) ✓, 204/sent, **409 already_member**, 404 은닉 (비크루원 발송자·차단·프로필 없는 유저 — testrun's null-profile 404 confirmed the 없는 유저 branch), **RE-INVITE = 204 idempotent** (no dedup).
+
+**BUILT:** `lib/profile-api.ts` searchUsers + UserSearchItem; `lib/crews-api.ts` inviteToCrew (204→'sent', 409→'already_member', 404→throw). **user-search.tsx** (new, canvas FrUserSearch): BROWSE mode (유저/크루 segments — 유저→profile, 크루→crew-detail via existing searchCrews) reached from a NEW 커뮤니티 header search icon; INVITE mode (crewId param, from 크루원 관리's NEW 초대하기 app-bar icon) — 유저-only, per-row 초대/초대됨/이미 멤버 feedback from the actual server response. Debounce 400ms + 2-char floor + monotonic seq guard (출발지-picker house pattern). Honest empty/short/no-result states. End-to-end probed: search 테스트2 → invite 204 → notification lands → (accept via the crew_invited receive-half).
+
+Retires the "유저 검색 orphaned" + "invite send half" watch items — **the invite loop is now fully closed** (send ↔ receive). Note: search rows show no follow state (no is_following in payload) — by design; profile entry resolves it.

@@ -654,8 +654,14 @@ export default function CommunityScreen() {
   return (
     <View style={[st.root, { paddingTop: insets.top }]}>
       <View style={st.header}>
-        <Text style={st.title}>커뮤니티</Text>
-        <Text style={st.subtitle}>내 크루와 함께 목표를 달려요</Text>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text style={st.title}>커뮤니티</Text>
+          <Text style={st.subtitle}>내 크루와 함께 목표를 달려요</Text>
+        </View>
+        {/* 검색 (canvas FrUserSearch entry) — 유저/크루 통합 검색 */}
+        <Pressable onPress={() => router.push('/(community)/user-search' as never)} hitSlop={10} style={st.searchIconBtn}>
+          <Icon name="search" size={20} color={C.text} />
+        </Pressable>
       </View>
 
       <CommTabs active={tab} onChange={v => setTab(v as 'crew' | 'discover')} />
@@ -675,7 +681,8 @@ export default function CommunityScreen() {
 const st = StyleSheet.create({
   root:     { flex: 1, backgroundColor: C.bg },
 
-  header:   { paddingHorizontal: S.gutter, paddingTop: 12, paddingBottom: 4 },
+  header:   { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: S.gutter, paddingTop: 12, paddingBottom: 4 },
+  searchIconBtn: { width: 42, height: 42, borderRadius: 999, borderWidth: 1, borderColor: C.border, backgroundColor: C.surface, alignItems: 'center', justifyContent: 'center', flexShrink: 0, ...shadows.sm },
   title:    { fontSize: 26, fontWeight: '700', letterSpacing: -0.7, color: C.text },
   subtitle: { fontSize: 13.5, color: C.sub, letterSpacing: -0.3, marginTop: 5 },
 
