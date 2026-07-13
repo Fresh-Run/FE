@@ -561,6 +561,12 @@ She's adding the same 422-on-unknown-fields guard to **run submission** (higher-
 
 **신고하기 — NOT rendered** (지연 designing POST /reports; line-132 rule). **Wiring point:** one `sheetRow` below 차단하기 in user-profile's ⋯ Modal when she ships.
 
+## ⑥ 팔로우 202 fix — transport + follow-list 3-state (BUILT + verified 2026-07-14 [00:52])
+
+**Root cause (owner found-issue ⑥, "비공개 팔로우 → 실패 alert"):** the follow POST returns **202 with an EMPTY body** (`Response(status_code=202)`, her source) and `lib/api.ts` special-cased only 204 → `res.json()` on the empty 202 THREW → user-profile's correct 3-state 202 branch never ran → generic 실패 alert **on a succeeded request**. **Fix A (api.ts):** parse tail = `text()` → `JSON.parse` only when `text.trim()` non-empty — fixes the whole empty-2xx class; non-empty bodies (incl. joinCrew's 승인제 202) parse identically (truth-table + live-probe proven). **Fix B (follow-list.tsx):** rows had cloned the pre-승인제 2-state toggle — now full 3-state (202 → 요청됨 + pending-cache, 409 `follow_request_pending` → adopt, 요청됨 tap → cancel with rollback), matching user-profile; row pill label 요청됨 (narrow pill — tap semantics identical). Audit note: these were the ONLY two follow-POST sites (search rows/kudos list carry no follow affordance — grep-proven).
+
+**SERVER BUG C (discovered mid-probe, relay SENT to 지연 [00:52]):** re-following a private account that once APPROVED you is hard-stuck — decide leaves `status='approved'` rows, the re-request revive branch covers only `'rejected'` → **409 forever**, cancel no-ops (pending-only), approve 404s. Reproduced live; **repaired via block→unblock** (block deletes all request rows between a pair) → re-follow 202 → approve → world restored. Every once-approved pair carries this landmine until her fix (revive `approved` too, or delete on decide). 승인제 phantom-join re-flagged in the same relay.
+
 ## PUBLISH — 2026-07-14 [post-00:28]
 
 `eas update --channel main` — "차단 + 프로필 메뉴 + 차단 관리 (7efdce4)". Update group `9ab1ffb6-8376-41ef-bb2e-593270611649` (android `019f5c1b-05e7-7e67-8853-f2421ac70511`, ios `019f5c1b-05e7-7d11-a91e-52311a7c3021`), runtime `exposdk:54.0.0`, embedded commit `7efdce4` = HEAD = origin/main at publish. Env guard read-verified staging (`https://freshrun-api.fly.dev`). New aboard since group `caae0c70`: 차단 + 프로필 ⋯ 메뉴 (fail-open guard) + 차단 관리 (`7efdce4`).

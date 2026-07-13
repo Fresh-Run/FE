@@ -8,7 +8,7 @@
  * idempotent per guide §5).
  */
 import { router, useLocalSearchParams } from 'expo-router';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -23,9 +23,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Avatar } from '@/components/avatar';
 import { Icon } from '@/components/ui';
 import { useFollowList, type FollowUser } from '@/hooks/use-follow-list';
-import { apiFetch } from '@/lib/api';
+import { ApiError, apiFetch, apiRequest } from '@/lib/api';
 import { openProfile } from '@/lib/profile-nav';
 import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
+import { usePendingFollows } from '@/store/pending-follows';
 import { useStore } from '@/store/use-store';
 
 type Tab = 'following' | 'followers';
@@ -39,29 +40,71 @@ export default function FollowListScreen() {
   const { following, followers, loading, error, refetch } = useFollowList(params.uid ?? null);
 
   const [tab, setTab] = useState<Tab>(params.tab === 'followers' ? 'followers' : 'following');
-  // Optimistic follow-state overlay by user_id — applies across both tabs
-  const [overlay, setOverlay] = useState<Record<string, boolean>>({});
+  // Optimistic follow-state overlay by user_id — applies across both tabs.
+  // 3-state (⑥ fix, 2026-07-14 — the rows had cloned the pre-승인제 2-state
+  // toggle): 202 → 요청됨, 409 follow_request_pending → adopt, matching
+  // user-profile; 요청됨 persists via the pending-follows cache.
+  type FollowBtnState = 'following' | 'requested' | 'none';
+  const [overlay, setOverlay] = useState<Record<string, FollowBtnState>>({});
+  const pendingIds = usePendingFollows(st_ => st_.ids);
+  useEffect(() => { usePendingFollows.getState().hydrate(); }, []);
   // 팔로워 삭제 (DELETE /me/followers/{id}) — MY 팔로워 tab ONLY. Optimistic
   // removal by user_id with rollback; others' lists never expose it.
   const isOwnList = !params.uid;
   const [removed, setRemoved] = useState<Set<string>>(new Set());
 
-  const isFollowing = useCallback(
-    (u: FollowUser) => overlay[u.user_id] ?? u.is_following,
-    [overlay],
+  const stateFor = useCallback(
+    (u: FollowUser): FollowBtnState =>
+      overlay[u.user_id]
+      ?? (u.is_following ? 'following' : pendingIds[u.user_id] ? 'requested' : 'none'),
+    [overlay, pendingIds],
   );
 
   const toggle = useCallback((u: FollowUser) => {
-    const cur = overlay[u.user_id] ?? u.is_following;
-    setOverlay(p => ({ ...p, [u.user_id]: !cur }));
-    (cur
-      ? apiFetch<void>(`/api/users/${u.user_id}/follow`, { method: 'DELETE' })
-      : apiFetch<void>(`/api/users/${u.user_id}/follow`, { method: 'POST' })
-    ).catch((e: unknown) => {
-      setOverlay(p => ({ ...p, [u.user_id]: cur })); // rollback
-      Alert.alert('실패했어요', e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요');
-    });
-  }, [overlay]);
+    const cur = stateFor(u);
+    if (cur === 'requested') {
+      // 요청됨 → 취소 (DELETE /follow-request, idempotent-204)
+      setOverlay(p => ({ ...p, [u.user_id]: 'none' }));
+      usePendingFollows.getState().remove(u.user_id);
+      apiFetch<void>(`/api/users/${u.user_id}/follow-request`, { method: 'DELETE' })
+        .catch((e: unknown) => {
+          setOverlay(p => ({ ...p, [u.user_id]: cur })); // rollback
+          usePendingFollows.getState().add(u.user_id);
+          Alert.alert('실패했어요', e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요');
+        });
+      return;
+    }
+    if (cur === 'following') {
+      setOverlay(p => ({ ...p, [u.user_id]: 'none' }));
+      apiFetch<void>(`/api/users/${u.user_id}/follow`, { method: 'DELETE' })
+        .catch((e: unknown) => {
+          setOverlay(p => ({ ...p, [u.user_id]: cur })); // rollback
+          Alert.alert('실패했어요', e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요');
+        });
+      return;
+    }
+    // 팔로우: 200/204 = followed (open account) · 202 = 승인 대기 →
+    // 요청됨 · 409 follow_request_pending = already pending → adopt
+    setOverlay(p => ({ ...p, [u.user_id]: 'following' }));
+    apiRequest<void>(`/api/users/${u.user_id}/follow`, { method: 'POST' })
+      .then(({ status }) => {
+        if (status === 202) {
+          setOverlay(p => ({ ...p, [u.user_id]: 'requested' }));
+          usePendingFollows.getState().add(u.user_id); // survives re-entry
+          return;
+        }
+        usePendingFollows.getState().remove(u.user_id); // stale pending cleared
+      })
+      .catch((e: unknown) => {
+        if (e instanceof ApiError && e.code === 'follow_request_pending') {
+          setOverlay(p => ({ ...p, [u.user_id]: 'requested' })); // server knew better
+          usePendingFollows.getState().add(u.user_id);
+          return;
+        }
+        setOverlay(p => ({ ...p, [u.user_id]: cur })); // rollback
+        Alert.alert('실패했어요', e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요');
+      });
+  }, [stateFor]);
 
   // 삭제 ≠ 차단: removal just drops them; they can re-follow freely — and if my
   // account is private now, that re-follow lands as a REQUEST (approval-unified).
@@ -135,7 +178,7 @@ export default function FollowListScreen() {
           contentContainerStyle={{ paddingHorizontal: S.gutter, paddingTop: 16, paddingBottom: 28, gap: 10 }}
           showsVerticalScrollIndicator={false}
           renderItem={({ item }) => {
-            const isF = isFollowing(item);
+            const fs = stateFor(item);
             return (
               <View style={[st.row, shadows.sm]}>
                 {/* Row body navigates (canvas: tappable-name zone); pill stays
@@ -149,11 +192,11 @@ export default function FollowListScreen() {
                 </Pressable>
                 <Pressable
                   onPress={() => toggle(item)}
-                  style={[st.followBtn, isF ? st.followBtnOn : st.followBtnOff]}
+                  style={[st.followBtn, fs !== 'none' ? st.followBtnOn : st.followBtnOff]}
                   hitSlop={6}
                 >
-                  <Text style={[st.followTxt, { color: isF ? C.sub : C.accentText }]}>
-                    {isF ? '팔로잉' : '팔로우'}
+                  <Text style={[st.followTxt, { color: fs !== 'none' ? C.sub : C.accentText }]}>
+                    {fs === 'following' ? '팔로잉' : fs === 'requested' ? '요청됨' : '팔로우'}
                   </Text>
                 </Pressable>
                 {showRemove && (

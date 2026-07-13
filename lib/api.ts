@@ -97,7 +97,13 @@ export async function apiRequest<T>(path: string, opts: ApiOptions = {}): Promis
     throw new ApiError(message ?? `요청에 실패했어요 (${res.status})`, res.status, code, detail);
   }
 
-  const data = res.status === 204 ? (undefined as T) : ((await res.json()) as T);
+  // Empty-2xx-safe parse (⑥ fix, 2026-07-14): FastAPI returns bodyless
+  // successes beyond 204 — the follow POST's 202 is `Response(status_code=202)`
+  // with content-length 0, and `res.json()` on an empty body THROWS, turning a
+  // succeeded request into the generic failure alert. text() → parse only when
+  // non-empty fixes the whole class; non-empty bodies parse exactly as before.
+  const text = res.status === 204 ? '' : await res.text();
+  const data = (text.trim() ? JSON.parse(text) : undefined) as T;
   return { status: res.status, data };
 }
 
