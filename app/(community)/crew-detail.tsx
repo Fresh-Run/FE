@@ -49,42 +49,16 @@ const RANK_MEDAL: Record<number, string> = { 1: C.crown, 2: '#AEB6BE', 3: '#D08B
 
 // ─── CTA footer ───────────────────────────────────────────────────────────────
 
+// Non-member CTA only. Members have no bottom CTA — leaving moved to the
+// hero-corner icon (plain members) / the manage hub (staff), per the canvas
+// redesign (a joined member's primary action is never "leave").
 function CtaButton({
   crew, requestPending, busy,
-  onJoin, onLeave, onCancelRequest,
+  onJoin, onCancelRequest,
 }: {
   crew: Crew; requestPending: boolean; busy: boolean;
-  onJoin: () => void; onLeave: () => void; onCancelRequest: () => void;
+  onJoin: () => void; onCancelRequest: () => void;
 }) {
-  if (crew.myRole === 'owner') {
-    return (
-      <View style={[st.ctaBtn, st.ctaDisabled]} pointerEvents="none">
-        <Icon name="shield-checkmark-outline" size={18} color={C.sub} />
-        <Text style={[st.ctaTxt, { color: C.sub }]}>크루장</Text>
-      </View>
-    );
-  }
-
-  if (crew.myRole === 'member' || crew.myRole === 'admin') {
-    return (
-      <Pressable
-        onPress={onLeave}
-        disabled={busy}
-        style={({ pressed }) => [st.ctaBtn, st.ctaDanger, pressed && { opacity: 0.75 }]}
-      >
-        {busy
-          ? <ActivityIndicator size="small" color={C.danger} />
-          : (
-            <>
-              <Icon name="exit-outline" size={18} color={C.danger} />
-              <Text style={[st.ctaTxt, { color: C.danger }]}>탈퇴하기</Text>
-            </>
-          )
-        }
-      </Pressable>
-    );
-  }
-
   // Pending join request (approval crew) — cancellable
   if (requestPending) {
     return (
@@ -292,25 +266,27 @@ export default function CrewDetailScreen() {
     ]);
   }
 
+  // Plain-member leave (hero-corner icon). Owner/admin leave lives in the
+  // manage hub (crew-admin) with role-aware copy; a plain member is never an
+  // owner, so no 양도 path is needed here. Pop out on success (canvas: nav.pop).
   function handleLeave() {
     if (!crew) return;
     Alert.alert(
-      '크루 탈퇴',
-      `'${crew.name}'에서 탈퇴하시겠어요?`,
+      '크루 나가기',
+      `'${crew.name}'에서 나가시겠어요?`,
       [
         { text: '취소', style: 'cancel' },
         {
-          text: '탈퇴',
+          text: '나가기',
           style: 'destructive',
           onPress: async () => {
             setBusy(true);
             setMutErr(null);
             try {
               await leaveCrew(crew.id);
-              refetch();
+              router.back();
             } catch (e: unknown) {
-              setMutErr(e instanceof Error ? e.message : '탈퇴에 실패했어요');
-            } finally {
+              setMutErr(e instanceof Error ? e.message : '나가기에 실패했어요');
               setBusy(false);
             }
           },
@@ -350,7 +326,7 @@ export default function CrewDetailScreen() {
 
   return (
     <View style={st.root}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 110 }}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: isMember ? 40 : 110 }}>
 
         {/* ── Dark hero header — cover photo (staff-set) or the MiniMap
             fallback; imageless crews render exactly as before ─────────── */}
@@ -367,7 +343,10 @@ export default function CrewDetailScreen() {
           <View style={[StyleSheet.absoluteFillObject, { paddingTop: insets.top + S.md, paddingHorizontal: S.lg, paddingBottom: S.lg }]}>
             {/* Top controls — 크루 관리 pill is THE management door (canvas
                 FrCrewDetail redesign): owner + admin see it (hub role-gates
-                its rows), members don't */}
+                its rows, incl. 크루 나가기). A PLAIN member gets the quiet
+                leave icon here (canvas hero-corner) — their only leave path
+                now that the prominent bottom 탈퇴 CTA is retired. Non-members
+                see the color dot. */}
             <View style={st.heroControls}>
               <Pressable onPress={() => router.back()} hitSlop={12} style={st.backBtn}>
                 <Icon name="arrow-back" size={20} color="#fff" />
@@ -384,6 +363,10 @@ export default function CrewDetailScreen() {
                   <Icon name="settings-outline" size={14} color="#fff" />
                   <Text style={st.managePillTxt}>크루 관리</Text>
                   {crew.myRole === 'owner' && pendingReqCount > 0 && <View style={st.managePillDot} />}
+                </Pressable>
+              ) : isMember ? (
+                <Pressable onPress={handleLeave} hitSlop={12} style={st.leaveIconBtn} disabled={busy}>
+                  <Icon name="exit-outline" size={19} color="#fff" />
                 </Pressable>
               ) : (
                 crew.color ? <View style={[st.colorDot, { backgroundColor: crew.color }]} /> : null
@@ -606,12 +589,26 @@ export default function CrewDetailScreen() {
             the canvas's bare "크루 랭킹" title. ───────────────────────── */}
         {isMember && (
           <View style={{ paddingHorizontal: S.gutter, paddingTop: S.xl }}>
+            {/* Header shows once loaded (ranking !== null) so the section never
+                silently vanishes on an empty week — the empty state carries the
+                honest weekly-reset semantics (KST 월요일, verified-GPS only). */}
+            {ranking !== null && (
+              <View style={st.sectionHead}>
+                <Text style={st.sectionTitle}>크루 랭킹</Text>
+                <Text style={st.memberCount}>이번 주 · GPS 기준</Text>
+              </View>
+            )}
+            {ranking !== null && ranking.length === 0 && (
+              <View style={[st.rankEmpty, shadows.sm]}>
+                <View style={st.rankEmptyIcon}>
+                  <Icon name="trophy-outline" size={22} color={C.faint} />
+                </View>
+                <Text style={st.rankEmptyTitle}>이번 주 기록이 아직 없어요</Text>
+                <Text style={st.rankEmptySub}>첫 러닝의 주인공이 되어보세요 · 랭킹은 매주 월요일 새로 시작돼요</Text>
+              </View>
+            )}
             {ranking !== null && ranking.length > 0 && (
               <>
-                <View style={st.sectionHead}>
-                  <Text style={st.sectionTitle}>크루 랭킹</Text>
-                  <Text style={st.memberCount}>이번 주 · GPS 기준</Text>
-                </View>
                 <View style={[st.rankList, shadows.sm]}>
                   {ranking.slice(0, 3).map((r, i) => {
                     const role = members.find(m => m.user_id === r.user_id)?.role;
@@ -733,17 +730,19 @@ export default function CrewDetailScreen() {
         onRetake={() => { setIconCropSrc(null); pickCrewImage('icon'); }}
       />
 
-      {/* ── Sticky CTA ────────────────────────────────────────────────── */}
-      <View style={[st.footer, { paddingBottom: Math.max(insets.bottom, S.lg) + S.sm }]}>
-        <CtaButton
-          crew={crew}
-          requestPending={myRequestStatus === 'pending'}
-          busy={busy}
-          onJoin={handleJoin}
-          onLeave={handleLeave}
-          onCancelRequest={handleCancelRequest}
-        />
-      </View>
+      {/* ── Sticky CTA — non-members only (join/request/full). Members leave
+             via the hero icon / manage hub, so no bottom action remains. ── */}
+      {!isMember && (
+        <View style={[st.footer, { paddingBottom: Math.max(insets.bottom, S.lg) + S.sm }]}>
+          <CtaButton
+            crew={crew}
+            requestPending={myRequestStatus === 'pending'}
+            busy={busy}
+            onJoin={handleJoin}
+            onCancelRequest={handleCancelRequest}
+          />
+        </View>
+      )}
     </View>
   );
 }
@@ -767,6 +766,7 @@ const st = StyleSheet.create({
   managePill:    { flexDirection: 'row', alignItems: 'center', gap: 6, height: 40, paddingHorizontal: 14, borderRadius: R.pill, backgroundColor: 'rgba(255,255,255,0.16)' },
   managePillTxt: { fontSize: 13, fontWeight: '700', color: '#fff', letterSpacing: -0.2 },
   managePillDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: C.danger },
+  leaveIconBtn:  { width: 40, height: 40, borderRadius: R.pill, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center' },
   roleBadge:     { borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2 },
   roleBadgeTxt:  { fontSize: 10.5, fontWeight: '800', color: '#0D1A06', letterSpacing: 0.2 },
   quickRow:      { flexDirection: 'row', gap: 9, paddingHorizontal: S.gutter, paddingTop: 16 },
@@ -812,6 +812,10 @@ const st = StyleSheet.create({
 
   // 랭킹 (design-wave A — canvas top-3)
   rankList:     { backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: R.xl, overflow: 'hidden' },
+  rankEmpty:      { backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: R.xl, alignItems: 'center', paddingVertical: 22, paddingHorizontal: 20, gap: 8 },
+  rankEmptyIcon:  { width: 46, height: 46, borderRadius: 14, backgroundColor: C.surfaceAlt, borderWidth: 1, borderColor: C.border, alignItems: 'center', justifyContent: 'center', marginBottom: 2 },
+  rankEmptyTitle: { fontSize: 14, fontWeight: '700', color: C.text, letterSpacing: -0.3 },
+  rankEmptySub:   { fontSize: 12, color: C.faint, letterSpacing: -0.2, textAlign: 'center', lineHeight: 17 },
   rankRow:      { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 11, paddingHorizontal: 14 },
   rankRowMe:    { backgroundColor: C.accentDim },
   rankMedal:    { width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
@@ -860,6 +864,5 @@ const st = StyleSheet.create({
   ctaBtn:      { height: 56, borderRadius: R.lg, backgroundColor: C.accent, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9 },
   ctaTxt:      { fontSize: 16, fontWeight: '700', color: C.accentText, letterSpacing: -0.3 },
   ctaDisabled: { backgroundColor: C.surfaceAlt, borderWidth: 1, borderColor: C.border },
-  ctaDanger:   { backgroundColor: '#EF444414', borderWidth: 1, borderColor: C.danger },
   ctaPending:  { backgroundColor: C.accentDim, borderWidth: 1.5, borderColor: C.accent + '77' },
 });

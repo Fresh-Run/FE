@@ -43,6 +43,7 @@ import {
   getCrewMembers,
   getInviteCode,
   issueInviteCode,
+  leaveCrew,
   listJoinRequests,
   mapCrew,
   type Crew,
@@ -139,6 +140,46 @@ export default function CrewAdminScreen() {
 
   const go = (pathname: string) =>
     router.push({ pathname: pathname as never, params: { crewId: crewId! } });
+
+  const [leaving, setLeaving] = useState(false);
+  // Staff leave lives in the hub (canvas 크루 나가기). Owner can't leave with a
+  // live crew (server 409 crew_owner) — never a bare error: explain 양도 먼저
+  // and tap through to 크루원 관리 (the 회원 탈퇴 precedent). Admin leave warns
+  // that 운영진 권한 vanishes (her permissions-handoff copy).
+  function confirmLeave() {
+    if (!crew || leaving) return;
+    if (isOwner) {
+      Alert.alert(
+        '크루장은 바로 나갈 수 없어요',
+        '먼저 다른 멤버에게 크루장을 양도해야 크루를 나갈 수 있어요.',
+        [
+          { text: '취소', style: 'cancel' },
+          { text: '크루원 관리로 이동', onPress: () => go('/(community)/crew-members') },
+        ],
+      );
+      return;
+    }
+    Alert.alert(
+      '크루 나가기',
+      `'${crew.name}'에서 나가시겠어요? 운영진 권한도 함께 사라져요.`,
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '나가기', style: 'destructive',
+          onPress: async () => {
+            setLeaving(true);
+            try {
+              await leaveCrew(crewId!);
+              router.dismissAll?.(); // pop hub + crew-detail → 커뮤니티 (focus-refetch drops the crew; crew-edit delete precedent)
+            } catch (e: unknown) {
+              Alert.alert('나가기 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요.');
+              setLeaving(false);
+            }
+          },
+        },
+      ],
+    );
+  }
 
   const can = (k: keyof CrewPermissions) => !!myPerms?.[k];
 
@@ -262,6 +303,23 @@ export default function CrewAdminScreen() {
               </View>
             </>
           )}
+
+          {/* 크루 나가기 (canvas hub danger button) — staff leave path. Owner
+              taps → 양도 먼저 guidance; admin → confirm w/ 권한 소멸 warning. */}
+          <Pressable
+            onPress={confirmLeave}
+            disabled={leaving}
+            style={({ pressed }) => [st.leaveBtn, pressed && { opacity: 0.75 }, leaving && { opacity: 0.5 }]}
+          >
+            {leaving
+              ? <ActivityIndicator size="small" color={C.danger} />
+              : (
+                <>
+                  <Icon name="exit-outline" size={17} color={C.danger} />
+                  <Text style={st.leaveTxt}>크루 나가기</Text>
+                </>
+              )}
+          </Pressable>
         </ScrollView>
       )}
     </View>
@@ -298,6 +356,9 @@ const st = StyleSheet.create({
   rowSub:   { fontSize: 12, color: C.faint, letterSpacing: -0.2, marginTop: 2 },
   rowBadge:    { minWidth: 22, height: 22, borderRadius: 11, backgroundColor: C.danger, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 7 },
   rowBadgeTxt: { fontSize: 12, fontWeight: '800', color: '#fff' },
+
+  leaveBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, height: 52, borderRadius: 14, borderWidth: 1, borderColor: C.danger + '44', backgroundColor: 'transparent', marginTop: 28 },
+  leaveTxt: { fontSize: 15, fontWeight: '700', color: C.danger, letterSpacing: -0.3 },
 
   sectionTitle: { fontSize: 11.5, fontWeight: '700', letterSpacing: 0.6, color: C.faint, textTransform: 'uppercase', paddingHorizontal: 4, paddingTop: 22, paddingBottom: 8 },
   inviteCard:     { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 18, padding: 14 },

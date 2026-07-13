@@ -21,6 +21,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/avatar';
+import { useTabBarInset } from '@/components/fresh-tab-bar';
 import { MiniMap } from '@/components/mini-map';
 import { RealMap } from '@/components/real-map';
 import { PendingRunRecovery } from '@/components/pending-run-recovery';
@@ -411,6 +412,7 @@ const lst = StyleSheet.create({
 
 export default function HomeScreen() {
   const insets      = useSafeAreaInsets();
+  const tabBarInset = useTabBarInset(); // 홈 was the last clipper — floating pill overlap
   const displayName = useStore((s) => s.displayName);
   const photoUrl    = useStore((s) => s.photoUrl);
   const signOut     = useStore((s) => s.signOut);
@@ -518,7 +520,7 @@ export default function HomeScreen() {
         }
         onEndReached={tab === '친구' ? feed.loadMore : undefined}
         onEndReachedThreshold={0.4}
-        contentContainerStyle={{ paddingBottom: 8 }}
+        contentContainerStyle={{ paddingBottom: tabBarInset }}
         ItemSeparatorComponent={() => <View style={{ height: 16 }} />}
         renderItem={({ item }) => {
           const like = effLiked(item);
