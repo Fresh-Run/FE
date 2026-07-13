@@ -539,7 +539,13 @@ Validated live: backfill PATCH (sido/sigungu/lat/lng/tags) → 200 → 삭제테
 
 ## 지연 asks (2026-07-13, armed — not blocking)
 - **① crew 전체-feed semantics / served session hint (from the 정기런-only ruling):** the crew feed is now 정기런-only, so this is moot for the crew page. BUT if a 데이터 기반 default is ever wanted elsewhere, the clean enabler is a **served `session_run_count` / `has_sessions`** on the crew object (client can't know the tagged count without an extra `session_only=true` fetch). Low priority — logged, not requested.
-- **② POST/PATCH crews 422-on-unknown-fields (HER deploy gate — answered [pre-build], relayed):** audit was CLEAN against the current schema (all 17 field names match; owner_nickname is response-only, not sent). **Open flag for her:** crew-create + crew-edit send **`area`, `active_time`, `color`** — present in the current `CrewCreate`/`CrewUpdate` but ABSENT from her stated valid-fields list. If the 422 tightening drops those three, both POST/PATCH break → needs a coordinated FE slice (stop sending + migrate UI). Awaiting her confirm: stay valid, or remove?
+- **② ~~POST/PATCH crews 422-on-unknown-fields~~ CLOSED 2026-07-13:** audit was CLEAN (all 17 field names match `CrewCreate`/`CrewUpdate`; owner_nickname is response-only, not sent). The `area`/`active_time`/`color` flag RESOLVED — 지연 confirmed her stated valid-fields list was **abbreviated**; those three stay in the whitelist. She **smoke-tested our 17-field payload against the deployed server (clean, 200)** and shipped the 422 typo-guard. No FE change needed.
+
+## POST /runs field audit (for 지연's runs typo-guard, 2026-07-13 — CLEAN, relayed)
+
+She's adding the same 422-on-unknown-fields guard to **run submission** (higher-stakes: a typo'd `"visibilty":"private"` currently drops silently → run saves PUBLIC, the silent-privacy-failure class on the core path). Audited every key we POST to `/api/runs`. **Single construction site: `saveRun` (lib/runs-api.ts:97)** — both save paths (run-save normal, run-result safety-net) + retries funnel through it; no path POSTs directly. Cross-checked against the **DEPLOYED** `RunRequest` (staging `/openapi.json`, not a hand list).
+
+**Keys sent (11 top-level + 5 nested GpsPoint), ALL present in deployed schema — zero offenders, zero silent drops:** `route_id`, `distance_km`(req), `duration_sec`(req), `avg_pace_sec_per_km`, `title`, `notes`, `visibility` (always in body); `area`, `gps_track`, `crew_id`, `announcement_id` (conditional). `gps_track[]` = `lat`(req)·`lng`(req)·`t`(req,int-rounded)·`acc`·`alt`. **Notes to her:** no `photos`/`splits` on the create path (photos = separate `PATCH /runs/{id} {photos}`; splits not sent); required fields (`distance_km`·`duration_sec`) always present; int fields already comply. **Relay sent — she'll ship the runs typo-guard.** No FE change needed.
 
 ## PUBLISH — 2026-07-13 [post-23:50]
 
