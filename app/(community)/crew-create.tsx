@@ -108,7 +108,12 @@ export function SelectRow({ label, sub, selected, onSelect }: { label: string; s
 
 // ─── 둘러보기 discovery — region row + tags picker (shared with crew-edit) ─────
 
-export function RegionRow({ sido, sigungu, onPress }: { sido: string | null; sigungu: string | null; onPress: () => void }) {
+// onClear (optional): when a region is set, shows a quiet × to unset it. Only
+// crew-edit passes it — the region-null-clear is now server-supported (지연
+// exclude_none fix, staging 2026-07-13); crew-create never needs unset.
+export function RegionRow({ sido, sigungu, onPress, onClear }: {
+  sido: string | null; sigungu: string | null; onPress: () => void; onClear?: () => void;
+}) {
   const label = sido ? (sigungu ? `${sido} ${sigungu}` : sido) : '지역 선택';
   return (
     <Pressable onPress={onPress} style={st.regionRow}>
@@ -117,7 +122,13 @@ export function RegionRow({ sido, sigungu, onPress }: { sido: string | null; sig
         <Text style={st.areaLabel}>지역 (시/도·구/군)</Text>
         <Text style={[st.regionValue, !sido && { color: C.faint }]} numberOfLines={1}>{label}</Text>
       </View>
-      <Icon name="chevron-forward" size={16} color={C.faint} />
+      {onClear && sido ? (
+        <Pressable onPress={onClear} hitSlop={10} style={st.regionClear} accessibilityLabel="지역 해제">
+          <Icon name="close" size={15} color={C.faint} />
+        </Pressable>
+      ) : (
+        <Icon name="chevron-forward" size={16} color={C.faint} />
+      )}
     </Pressable>
   );
 }
@@ -463,6 +474,7 @@ export const st = StyleSheet.create({
   areaLabel: { fontSize: 12, fontWeight: '600', color: C.faint },
   regionRow:   { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 13, paddingHorizontal: 4 },
   regionValue: { fontSize: 15, fontWeight: '600', color: C.text, letterSpacing: -0.3, marginTop: 2 },
+  regionClear: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: C.surfaceAlt, flexShrink: 0 },
   tagHead:     { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
   tagCount:    { fontSize: 12.5, fontWeight: '700', color: C.faint },
   tagGroupLabel: { fontSize: 12, fontWeight: '600', color: C.faint, letterSpacing: -0.2, marginBottom: 8 },

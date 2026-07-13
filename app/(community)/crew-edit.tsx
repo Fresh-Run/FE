@@ -161,12 +161,15 @@ export default function CrewEditScreen() {
         active_days: days,
         active_time: time.trim() || null,
         color,
-        // 둘러보기 backfill — sido/sigungu/tags always sent (a location-less
-        // crew gets found); lat/lng only when the region was re-picked this
-        // session (omitted = server keeps the existing coord).
-        sido, sigungu,
-        tags,
-        ...(regionCoord ? { lat: regionCoord.lat, lng: regionCoord.lng } : {}),
+        tags, // [] clears; state is never null (deselect-all emits [], not null)
+        // 둘러보기 지역 — the 4 whitelisted null-clear fields (지연 exclude_none
+        // fix). No region → send explicit null for ALL FOUR together (server
+        // deletes only these; omitting lat/lng would orphan stale coords).
+        // Region set → sido/sigungu round-trip; lat/lng only when re-picked
+        // this session (omitted = server keeps the existing coord).
+        ...(sido == null
+          ? { sido: null, sigungu: null, lat: null, lng: null }
+          : { sido, sigungu, ...(regionCoord ? { lat: regionCoord.lat, lng: regionCoord.lng } : {}) }),
       });
       router.back(); // crew-detail refetches on focus
     } catch (e: unknown) {
@@ -235,8 +238,13 @@ export default function CrewEditScreen() {
         </View>
 
         <Group title="활동 지역" hint="지역을 정하면 둘러보기에서 그 지역 러너에게 크루가 보여요.">
-          {/* 시/도·구/군 — backfill for location-less crews (the decay fix) */}
-          <RegionRow sido={sido} sigungu={sigungu} onPress={() => router.push({ pathname: '/region-picker' as never, params: { target: 'form' } })} />
+          {/* 시/도·구/군 — backfill for location-less crews (the decay fix);
+              × unsets it (지역 해제 — clears all 4 region fields on save) */}
+          <RegionRow
+            sido={sido} sigungu={sigungu}
+            onPress={() => router.push({ pathname: '/region-picker' as never, params: { target: 'form' } })}
+            onClear={() => { setSido(null); setSigungu(null); setRegionCoord(null); }}
+          />
           <View style={st.divider} />
           <View style={st.fieldRow}>
             <View style={st.areaIcon}><Icon name="location" size={18} color={C.accentGrn} /></View>
