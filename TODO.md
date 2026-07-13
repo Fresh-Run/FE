@@ -502,3 +502,7 @@ Validated live: backfill PATCH (sido/sigungu/lat/lng/tags) → 200 → 삭제테
 ## 지연 notes + rider (2026-07-13)
 - **① sido null-clear (ledgered)**: `PATCH /crews/{id} {sido:null}` does NOT clear it — omit-keep semantics extend to null for sido (tags[]=[] DOES clear). Consequence: a crew's region can be **set, never unset**. Fine for the decay fix (backfill only sets). Note to 지연 if unset should ever be possible.
 - **② ARMED RIDER — crew feed firehose (owner ruling → 지연):** `GET /crews/{id}/runs` currently returns **every** member run, so the L1 정기런 badge decorates a list of solo jogs. Owner ruling sent to 지연: the crew running feed should show **ONLY crew-tagged runs** (crew_id via 크루 러닝 시작), not the firehose. Her deploy = a filter param (e.g. `?sessions_only=true`) or a default change. **Our consumption is one line** — when it lands: add the param to `getCrewRuns` (lib/crews-api.ts) OR drop it if the default changes; the badge then decorates a feed that's actually all 정기런. Re-probe her shape on announcement, wire, re-checkpoint the crew feed.
+
+## PUBLISH — 2026-07-13 [post-22:15]
+
+`eas update --channel main` — "크루 지역·태그 + 둘러보기 발견성 (37981ac)". Update group `71f1ce92-c3eb-4e04-8a66-d26c0e792284` (android `019f5ba1-df06-7351-9880-832d175503c1`, ios `019f5ba1-df06-708e-bdd7-1b96ee6f4be7`), runtime `exposdk:54.0.0`, embedded commit `37981ac` = HEAD = origin/main at publish. Env guard read-verified staging. New aboard since group `6488a401`: crew location+tags 둘러보기 decay fix (`37981ac`). **Tier 1 complete** through this publish.
