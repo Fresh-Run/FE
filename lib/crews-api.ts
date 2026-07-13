@@ -345,9 +345,14 @@ export type CrewRunItem = {
 
 export const CREW_FEED_PAGE = 20;
 
-/** Crew run feed — members only (403 hides for non-members). offset-paginated. */
+/** Crew run feed — members only (403 hides for non-members). offset-paginated.
+    ALWAYS crew-tagged 정기런 only (owner ruling 2026-07-13 [final]): a crew feed
+    of members' unrelated solo runs isn't a crew feed — the firehose reads worse
+    than an honest empty state. `session_only=true` is hard-coded (probed staging:
+    omit=full feed, true=tagged only, empty → [] 200); no caller wants the
+    firehose, so there's no arg to pass wrong. */
 export function getCrewRuns(crewId: string, offset = 0, limit = CREW_FEED_PAGE): Promise<CrewRunItem[]> {
-  return apiFetch<CrewRunItem[]>(`/api/crews/${crewId}/runs?limit=${limit}&offset=${offset}`);
+  return apiFetch<CrewRunItem[]>(`/api/crews/${crewId}/runs?limit=${limit}&offset=${offset}&session_only=true`);
 }
 
 // ─── 크루 이미지 (BE 87a4026, guide "크루 이미지 업로드" — probed 2026-07-13) ──

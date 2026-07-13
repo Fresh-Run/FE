@@ -62,13 +62,13 @@ function RunCard({ run, units, mapLive, onOpen }: {
         <View style={{ flex: 1, minWidth: 0 }}>
           <Text style={st.cardName} numberOfLines={1}>{run.nickname ?? '러너'}</Text>
           <View style={st.cardSubRow}>
-            {/* L1 정기런 배지 — null/false renders nothing (old runs untouched) */}
-            {run.is_crew_session && (
+            {/* Every card here is a 정기런 (session_only feed), so the word is
+                noise — the participant count is what's informative. Chip keyed
+                on the count; no count → no chip. */}
+            {run.session_participant_count != null && (
               <View style={st.sessionChip}>
                 <Icon name="people" size={10} color={C.accentGrn} />
-                <Text style={st.sessionChipTxt}>
-                  정기런{run.session_participant_count != null ? ` · ${run.session_participant_count}명 참여` : ''}
-                </Text>
+                <Text style={st.sessionChipTxt}>{run.session_participant_count}명 참여</Text>
               </View>
             )}
             <Text style={st.cardDate}>{fmtAgo(run.ran_at)}</Text>
@@ -185,9 +185,20 @@ export default function CrewRunsScreen() {
         <View style={st.centered}><ActivityIndicator size="large" color={C.accent} /></View>
       ) : rows.length === 0 ? (
         <View style={st.centered}>
-          <View style={st.emptyIcon}><Icon name="footsteps-outline" size={28} color={C.faint} /></View>
-          <Text style={st.emptyTxt}>{error ? '피드를 불러오지 못했어요' : '아직 크루 러닝 기록이 없어요'}</Text>
-          {!error && <Text style={st.emptySub}>크루원이 러닝을 기록하면 여기에 모여요</Text>}
+          <View style={st.emptyIcon}><Icon name={error ? 'footsteps-outline' : 'people-outline'} size={28} color={C.faint} /></View>
+          {error ? (
+            <Text style={st.emptyTxt}>피드를 불러오지 못했어요</Text>
+          ) : (
+            <>
+              {/* Normal early state for a session-only feed — teaches the feature */}
+              <Text style={st.emptyTxt}>아직 함께한 러닝이 없어요</Text>
+              <Text style={st.emptySub}>크루 러닝 시작으로 첫 정기런을 기록해 보세요</Text>
+              <Pressable onPress={() => router.back()} style={({ pressed }) => [st.emptyCta, pressed && { opacity: 0.9 }]} hitSlop={6}>
+                <Icon name="people" size={15} color={C.accentText} />
+                <Text style={st.emptyCtaTxt}>크루 러닝 시작</Text>
+              </Pressable>
+            </>
+          )}
         </View>
       ) : (
         <FlatList
@@ -221,6 +232,8 @@ const st = StyleSheet.create({
   emptyIcon: { width: 60, height: 60, borderRadius: 18, backgroundColor: C.surfaceAlt, borderWidth: 1, borderColor: C.border, alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
   emptyTxt:  { fontSize: 14.5, fontWeight: '600', color: C.sub, letterSpacing: -0.3 },
   emptySub:  { fontSize: 12.5, color: C.faint, letterSpacing: -0.2, textAlign: 'center' },
+  emptyCta:    { flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: 14, backgroundColor: C.accent, borderRadius: 14, paddingHorizontal: 18, height: 44 },
+  emptyCtaTxt: { fontSize: 14, fontWeight: '800', color: C.accentText, letterSpacing: -0.3 },
 
   card:      { backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 18, overflow: 'hidden' },
   cardHead:  { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 13 },

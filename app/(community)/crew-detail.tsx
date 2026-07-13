@@ -794,8 +794,11 @@ export default function CrewDetailScreen() {
               )}
             </View>
             {feedPreview.length === 0 ? (
+              // Session-only feed's normal early state. No CTA button here —
+              // the 크루 러닝 시작 primary button is on this same screen, above.
               <View style={st.emptyBox}>
-                <Text style={st.emptyTxt}>아직 크루 러닝 기록이 없어요</Text>
+                <Text style={st.emptyTxt}>아직 함께한 러닝이 없어요</Text>
+                <Text style={st.emptyBoxSub}>크루 러닝 시작으로 첫 정기런을 기록해 보세요</Text>
               </View>
             ) : (
               <View style={[st.feedList, shadows.sm]}>
@@ -810,12 +813,11 @@ export default function CrewDetailScreen() {
                         <View style={st.feedHeadRow}>
                           <Avatar name={run.nickname} size={18} initialsRatio={0.5} />
                           <Text style={st.feedName} numberOfLines={1}>{run.nickname ?? '러너'}</Text>
-                          {/* L1 정기런 배지 (compact — full 참여 count on the full-screen card) */}
-                          {run.is_crew_session && (
+                          {/* Every card is a 정기런 now (session_only) — the word
+                              is redundant; the 참여 count is the informative part. */}
+                          {run.session_participant_count != null && (
                             <View style={st.feedSessionChip}>
-                              <Text style={st.feedSessionTxt}>
-                                정기런{run.session_participant_count != null ? ` · ${run.session_participant_count}명` : ''}
-                              </Text>
+                              <Text style={st.feedSessionTxt}>{run.session_participant_count}명 참여</Text>
                             </View>
                           )}
                           <Text style={st.feedWhen}>{fmtAgo(run.ran_at)}</Text>
@@ -925,6 +927,7 @@ const st = StyleSheet.create({
 
   // Empty / error states
   emptyBox: { backgroundColor: C.surfaceAlt, borderWidth: 1, borderColor: C.border, borderRadius: R.lg, padding: 20, alignItems: 'center' },
+  emptyBoxSub: { fontSize: 12, color: C.faint, letterSpacing: -0.2, fontWeight: '500', marginTop: 5, textAlign: 'center' },
 
   // 챌린지 (M2)
   chCard:     { backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: R.xl, padding: 15 },

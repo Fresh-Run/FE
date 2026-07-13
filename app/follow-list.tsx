@@ -41,6 +41,10 @@ export default function FollowListScreen() {
   const [tab, setTab] = useState<Tab>(params.tab === 'followers' ? 'followers' : 'following');
   // Optimistic follow-state overlay by user_id — applies across both tabs
   const [overlay, setOverlay] = useState<Record<string, boolean>>({});
+  // 팔로워 삭제 (DELETE /me/followers/{id}) — MY 팔로워 tab ONLY. Optimistic
+  // removal by user_id with rollback; others' lists never expose it.
+  const isOwnList = !params.uid;
+  const [removed, setRemoved] = useState<Set<string>>(new Set());
 
   const isFollowing = useCallback(
     (u: FollowUser) => overlay[u.user_id] ?? u.is_following,
@@ -59,7 +63,33 @@ export default function FollowListScreen() {
     });
   }, [overlay]);
 
-  const list = tab === 'following' ? following : followers;
+  // 삭제 ≠ 차단: removal just drops them; they can re-follow freely — and if my
+  // account is private now, that re-follow lands as a REQUEST (approval-unified).
+  const confirmRemove = useCallback((u: FollowUser) => {
+    Alert.alert(
+      '팔로워를 삭제할까요?',
+      `${u.nickname ?? '이 러너'}님을 내 팔로워에서 삭제해요. 차단이 아니라서 상대는 다시 팔로우할 수 있어요 (내 계정이 비공개면 팔로우 요청으로 도착해요).`,
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '삭제', style: 'destructive',
+          onPress: () => {
+            setRemoved(p => new Set(p).add(u.user_id)); // optimistic
+            apiFetch<void>(`/api/me/followers/${u.user_id}`, { method: 'DELETE' })
+              .catch((e: unknown) => {
+                setRemoved(p => { const n = new Set(p); n.delete(u.user_id); return n; }); // rollback
+                Alert.alert('삭제 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요');
+              });
+          },
+        },
+      ],
+    );
+  }, []);
+
+  // MY 팔로워 tab shows the 삭제 affordance; the count follows the optimistic list.
+  const visibleFollowers = followers.filter(u => !removed.has(u.user_id));
+  const showRemove = isOwnList && tab === 'followers';
+  const list = tab === 'following' ? following : visibleFollowers;
 
   return (
     <View style={[st.root, { paddingTop: insets.top }]}>
@@ -76,7 +106,7 @@ export default function FollowListScreen() {
       <View style={st.tabRow}>
         {([
           ['following', '팔로잉', following.length],
-          ['followers', '팔로워', followers.length],
+          ['followers', '팔로워', visibleFollowers.length],
         ] as [Tab, string, number][]).map(([id, label, n]) => {
           const on = tab === id;
           return (
@@ -126,6 +156,11 @@ export default function FollowListScreen() {
                     {isF ? '팔로잉' : '팔로우'}
                   </Text>
                 </Pressable>
+                {showRemove && (
+                  <Pressable onPress={() => confirmRemove(item)} style={st.removeBtn} hitSlop={6}>
+                    <Text style={st.removeTxt}>삭제</Text>
+                  </Pressable>
+                )}
               </View>
             );
           }}
@@ -161,6 +196,8 @@ const st = StyleSheet.create({
   followBtnOn:  { backgroundColor: C.surfaceAlt, borderWidth: 1, borderColor: C.border },
   followBtnOff: { backgroundColor: C.accent },
   followTxt:    { fontSize: 12.5, fontWeight: '700', letterSpacing: -0.2 },
+  removeBtn:    { flexShrink: 0, height: 34, paddingHorizontal: 13, borderRadius: R.pill, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: C.danger },
+  removeTxt:    { fontSize: 12.5, fontWeight: '700', color: C.danger, letterSpacing: -0.2 },
 
   centered: { alignItems: 'center', gap: 12, paddingVertical: 60 },
   stateTxt: { fontSize: 14, fontWeight: '600', color: C.faint, letterSpacing: -0.2 },
