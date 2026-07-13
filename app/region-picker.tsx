@@ -6,7 +6,7 @@
  * from the bundled dataset (세종 has none → sido-only). Selection lands in
  * store/crew-filter; the community tab reads it on focus.
  */
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import React, { useState } from 'react';
 import {
   FlatList,
@@ -22,9 +22,19 @@ import { Icon } from '@/components/ui';
 import { SIDO_LIST, SIGUNGU, type Sido } from '@/lib/korea-regions';
 import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
 import { setCrewFilter } from '@/store/crew-filter';
+import { setPendingCrewRegion } from '@/store/pending-crew-region';
 
 export default function RegionPickerScreen() {
   const insets = useSafeAreaInsets();
+  // target=form → crew create/edit (writes pending-crew-region); default →
+  // the 둘러보기 filter (crew-filter). One picker, two consumers.
+  const { target } = useLocalSearchParams<{ target?: string }>();
+  const forForm = target === 'form';
+  const commit = (sido: Sido, sigungu: string | null) => {
+    if (forForm) setPendingCrewRegion({ sido, sigungu });
+    else setCrewFilter(sigungu ? { mode: 'region', sido, sigungu } : { mode: 'region', sido });
+    router.back();
+  };
   const [drill, setDrill] = useState<Sido | null>(null); // null = sido level
   const [query, setQuery] = useState('');
 
@@ -42,19 +52,14 @@ export default function RegionPickerScreen() {
     if (!drill) {
       const sido = name as Sido;
       if (SIGUNGU[sido].length === 0) {
-        // 세종 — no sigungu level; sido-only selection
-        setCrewFilter({ mode: 'region', sido });
-        router.back();
+        commit(sido, null); // 세종 — no sigungu level; sido-only
         return;
       }
       setDrill(sido);
       setQuery('');
       return;
     }
-    setCrewFilter(name === '전체'
-      ? { mode: 'region', sido: drill }
-      : { mode: 'region', sido: drill, sigungu: name });
-    router.back();
+    commit(drill, name === '전체' ? null : name);
   }
 
   return (
@@ -71,8 +76,9 @@ export default function RegionPickerScreen() {
         <View style={{ width: 40 }} />
       </View>
 
-      {/* 현재 위치 사용 — 자동 (lat/lng mode) */}
-      {!drill && (
+      {/* 현재 위치 사용 — 자동 (lat/lng mode). Filter-only: a crew's region
+          must be an explicit admin area, so hidden in form mode. */}
+      {!drill && !forForm && (
         <Pressable onPress={pickCurrent} style={({ pressed }) => [st.currentRow, shadows.sm, pressed && { opacity: 0.8 }]}>
           <View style={st.currentIcon}>
             <Icon name="locate" size={17} color={C.accentGrn} />

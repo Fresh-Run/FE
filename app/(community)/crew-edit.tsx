@@ -15,8 +15,10 @@
  * constants, and styles are shared imports from crew-create (no duplication).
  */
 import Slider from '@react-native-community/slider';
+import { useFocusEffect } from '@react-navigation/native';
+import * as Location from 'expo-location';
 import { router, useLocalSearchParams } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -40,6 +42,7 @@ import {
   type CrewLevel,
 } from '@/lib/crews-api';
 import { accentShadow, colors as C, shadows, spacing as S } from '@/lib/theme';
+import { takePendingCrewRegion } from '@/store/pending-crew-region';
 
 import {
   Chip,
@@ -50,11 +53,14 @@ import {
   LEVELS,
   PRIVACY_OPTIONS,
   privacyToFields,
+  RegionRow,
   SelectRow,
   SPORTS,
   st,
+  TagPicker,
   type Privacy,
 } from './crew-create';
+import { CREW_TAG_MAX } from '@/lib/crews-api';
 
 /** Inverse of privacyToFields — seed the 3-way selector from server fields. */
 function fieldsToPrivacy(isPublic: boolean, joinPolicy: 'open' | 'approval'): Privacy {
@@ -83,6 +89,14 @@ export default function CrewEditScreen() {
   const [privacy, setPrivacy] = useState<Privacy>('공개');
   const [days, setDays]       = useState<string[]>([]);
   const [time, setTime]       = useState('');
+  // 둘러보기 backfill — seeded from server truth; re-picking a region
+  // forward-geocodes to coords (best-effort). tags = 13-item vocabulary, ≤5.
+  const [sido, setSido]       = useState<string | null>(null);
+  const [sigungu, setSigungu] = useState<string | null>(null);
+  const [regionCoord, setRegionCoord] = useState<{ lat: number; lng: number } | null>(null);
+  const [tags, setTags]       = useState<string[]>([]);
+  const toggleTag = (t: string) =>
+    setTags(prev => prev.includes(t) ? prev.filter(x => x !== t) : (prev.length >= CREW_TAG_MAX ? prev : [...prev, t]));
 
   const [busy, setBusy]           = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -107,10 +121,25 @@ export default function CrewEditScreen() {
         setPrivacy(fieldsToPrivacy(c.is_public, c.join_policy));
         setDays(c.active_days ?? []);
         setTime(c.active_time ?? '');
+        setSido(c.sido);
+        setSigungu(c.sigungu);
+        setTags(c.tags ?? []);
       })
       .catch(() => { if (!cancelled) setLoadError(true); });
     return () => { cancelled = true; };
   }, [crewId]);
+
+  // Region-picker return (target=form) → set + forward-geocode to coords.
+  useFocusEffect(useCallback(() => {
+    const r = takePendingCrewRegion();
+    if (!r) return;
+    setSido(r.sido);
+    setSigungu(r.sigungu);
+    setRegionCoord(null);
+    Location.geocodeAsync([r.sido, r.sigungu].filter(Boolean).join(' '))
+      .then(g => { if (g[0]) setRegionCoord({ lat: g[0].latitude, lng: g[0].longitude }); })
+      .catch(() => { /* offline/failed — sido/sigungu still make it findable */ });
+  }, []));
 
   const valid = name.trim().length >= 2;
   const toggleDay = (d: string) =>
@@ -132,6 +161,12 @@ export default function CrewEditScreen() {
         active_days: days,
         active_time: time.trim() || null,
         color,
+        // 둘러보기 backfill — sido/sigungu/tags always sent (a location-less
+        // crew gets found); lat/lng only when the region was re-picked this
+        // session (omitted = server keeps the existing coord).
+        sido, sigungu,
+        tags,
+        ...(regionCoord ? { lat: regionCoord.lat, lng: regionCoord.lng } : {}),
       });
       router.back(); // crew-detail refetches on focus
     } catch (e: unknown) {
@@ -199,7 +234,10 @@ export default function CrewEditScreen() {
           </View>
         </View>
 
-        <Group title="활동 지역" hint="대표 출발지를 중심으로 활동 반경 안의 러너에게 크루가 추천돼요.">
+        <Group title="활동 지역" hint="지역을 정하면 둘러보기에서 그 지역 러너에게 크루가 보여요.">
+          {/* 시/도·구/군 — backfill for location-less crews (the decay fix) */}
+          <RegionRow sido={sido} sigungu={sigungu} onPress={() => router.push({ pathname: '/region-picker' as never, params: { target: 'form' } })} />
+          <View style={st.divider} />
           <View style={st.fieldRow}>
             <View style={st.areaIcon}><Icon name="location" size={18} color={C.accentGrn} /></View>
             <View style={{ flex: 1, minWidth: 0 }}>
@@ -231,6 +269,9 @@ export default function CrewEditScreen() {
             />
           </View>
         </Group>
+
+        {/* 태그 (둘러보기 필터·카드) — 13-item vocabulary, ≤5 */}
+        <TagPicker selected={tags} onToggle={toggleTag} />
 
         <View style={{ paddingHorizontal: S.gutter }}>
           <Text style={st.groupTitle}>주 종목</Text>

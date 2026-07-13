@@ -145,6 +145,26 @@ function mapMember(row: ServerMember): CrewMember {
 
 // ─── Create ───────────────────────────────────────────────────────────────────
 
+// 둘러보기 필드 (guide §202): tags = 서버 정의 어휘 13종 (자유입력 아님 —
+// 목록 밖 값은 422), 저장 ≤5개·카드엔 2개. sido = 17개 표준명(korea-regions),
+// sigungu = 자유 문자열. lat/lng = 한국 bbox (거리순 정렬용).
+export const CREW_TAG_GROUPS: { label: string; tags: string[] }[] = [
+  { label: '시간대', tags: ['새벽', '아침', '저녁', '야간', '주말'] },
+  { label: '지형',   tags: ['평지', '트레일', '언덕'] },
+  { label: '분위기', tags: ['입문환영', '기록도전', '친목', '여성전용', '페이스그룹'] },
+];
+export const CREW_TAG_MAX = 5;
+
+/** 둘러보기 discovery fields — sending sido/sigungu makes a crew findable in
+    the region filter (the decay fix); lat/lng adds distance sort. */
+type CrewDiscoveryFields = {
+  sido?: string | null;
+  sigungu?: string | null;
+  lat?: number | null;
+  lng?: number | null;
+  tags?: string[];
+};
+
 export type CrewCreateInput = {
   name: string;                       // server min 1; client enforces ≥2 per design
   description?: string | null;
@@ -158,7 +178,7 @@ export type CrewCreateInput = {
   active_days?: string[];
   active_time?: string | null;
   color?: string | null;
-};
+} & CrewDiscoveryFields;
 
 /** POST /crews — free tier: 1 owned crew (403 premium_required beyond);
     returns the full crew, creator auto-membered. */
@@ -387,7 +407,7 @@ export type CrewUpdateInput = Partial<{
   active_days: string[];      // ≤7
   active_time: string | null;
   color: string;
-}>;
+}> & CrewDiscoveryFields; // 둘러보기 backfill — an owner can add location/tags to a location-less crew
 
 /** Partial update — only provided fields are written (BE CrewUpdate). */
 export async function updateCrew(id: string, patch: CrewUpdateInput): Promise<Crew> {

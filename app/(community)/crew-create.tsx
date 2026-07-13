@@ -9,8 +9,10 @@
  * display); success 초대하기 → 준비 중 (owner-invite UI is its own item).
  */
 import Slider from '@react-native-community/slider';
+import { useFocusEffect } from '@react-navigation/native';
+import * as Location from 'expo-location';
 import { router } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -27,9 +29,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/ui';
 import { NumberWheelRow } from '@/components/wheel-sheet';
-import { createCrew, issueInviteCode, type Crew, type CrewLevel } from '@/lib/crews-api';
+import { createCrew, issueInviteCode, CREW_TAG_GROUPS, CREW_TAG_MAX, type Crew, type CrewLevel } from '@/lib/crews-api';
 import { useCurrentLocation } from '@/hooks/use-current-location';
 import { accentShadow, colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
+import { takePendingCrewRegion } from '@/store/pending-crew-region';
 
 export const CREW_COLORS = ['#74E827', '#2F8FE8', '#E8703D', '#A24DE8', '#E8B53D'];
 export const SPORTS = ['러닝', '라이딩', '워킹'] as const;
@@ -103,6 +106,42 @@ export function SelectRow({ label, sub, selected, onSelect }: { label: string; s
   );
 }
 
+// ─── 둘러보기 discovery — region row + tags picker (shared with crew-edit) ─────
+
+export function RegionRow({ sido, sigungu, onPress }: { sido: string | null; sigungu: string | null; onPress: () => void }) {
+  const label = sido ? (sigungu ? `${sido} ${sigungu}` : sido) : '지역 선택';
+  return (
+    <Pressable onPress={onPress} style={st.regionRow}>
+      <View style={st.areaIcon}><Icon name="map-outline" size={18} color={C.accentGrn} /></View>
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text style={st.areaLabel}>지역 (시/도·구/군)</Text>
+        <Text style={[st.regionValue, !sido && { color: C.faint }]} numberOfLines={1}>{label}</Text>
+      </View>
+      <Icon name="chevron-forward" size={16} color={C.faint} />
+    </Pressable>
+  );
+}
+
+/** 13-item server vocabulary, grouped; ≤5 enforced by the caller's onToggle. */
+export function TagPicker({ selected, onToggle }: { selected: string[]; onToggle: (tag: string) => void }) {
+  return (
+    <View style={{ paddingHorizontal: S.gutter }}>
+      <View style={st.tagHead}>
+        <Text style={st.groupTitle}>태그</Text>
+        <Text style={st.tagCount}>{selected.length}/{CREW_TAG_MAX}</Text>
+      </View>
+      {CREW_TAG_GROUPS.map(g => (
+        <View key={g.label} style={{ marginTop: 6 }}>
+          <Text style={st.tagGroupLabel}>{g.label}</Text>
+          <View style={st.chipRow}>
+            {g.tags.map(t => <Chip key={t} label={t} on={selected.includes(t)} onPress={() => onToggle(t)} />)}
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+}
+
 // ─── Success modal (bundle: FrCrewCreated) ────────────────────────────────────
 
 function CreatedModal({ crew, onInvite, onLater, onDismiss }: {
@@ -153,6 +192,29 @@ export default function CrewCreateScreen() {
   const [privacy, setPrivacy] = useState<Privacy>('공개');
   const [days, setDays]       = useState<string[]>([]);
   const [time, setTime]       = useState('');
+  // 둘러보기 discovery — sido/sigungu make the crew findable in the region
+  // filter (the decay fix); regionCoord (best-effort forward-geocode) adds
+  // distance sort; tags = 13-item vocabulary, ≤5.
+  const [sido, setSido]       = useState<string | null>(null);
+  const [sigungu, setSigungu] = useState<string | null>(null);
+  const [regionCoord, setRegionCoord] = useState<{ lat: number; lng: number } | null>(null);
+  const [tags, setTags]       = useState<string[]>([]);
+  const toggleTag = (t: string) =>
+    setTags(prev => prev.includes(t) ? prev.filter(x => x !== t) : (prev.length >= CREW_TAG_MAX ? prev : [...prev, t]));
+
+  // On return from the region-picker (target=form), consume the pick and
+  // forward-geocode it to coords (best-effort — a resolved region gives the
+  // crew a distance_km; a failed geocode still filters by sido/sigungu).
+  useFocusEffect(useCallback(() => {
+    const r = takePendingCrewRegion();
+    if (!r) return;
+    setSido(r.sido);
+    setSigungu(r.sigungu);
+    setRegionCoord(null);
+    Location.geocodeAsync([r.sido, r.sigungu].filter(Boolean).join(' '))
+      .then(g => { if (g[0]) setRegionCoord({ lat: g[0].latitude, lng: g[0].longitude }); })
+      .catch(() => { /* offline/failed — sido/sigungu still make it findable */ });
+  }, []));
 
   const [busy, setBusy]       = useState(false);
   const [created, setCreated] = useState<Crew | null>(null);
@@ -183,6 +245,10 @@ export default function CrewCreateScreen() {
         active_days: days,
         active_time: time.trim() || null,
         color,
+        // 둘러보기 discovery (all optional; omitted when unset)
+        ...(sido ? { sido, sigungu } : {}),
+        ...(regionCoord ? { lat: regionCoord.lat, lng: regionCoord.lng } : {}),
+        ...(tags.length ? { tags } : {}),
       });
       setCreated(crew);
     } catch (e: unknown) {
@@ -256,7 +322,10 @@ export default function CrewCreateScreen() {
         </View>
 
         {/* 활동 지역 */}
-        <Group title="활동 지역" hint="대표 출발지를 중심으로 활동 반경 안의 러너에게 크루가 추천돼요.">
+        <Group title="활동 지역" hint="지역을 정하면 둘러보기에서 그 지역 러너에게 크루가 보여요.">
+          {/* 시/도·구/군 — the region filter's key (the decay fix) */}
+          <RegionRow sido={sido} sigungu={sigungu} onPress={() => router.push({ pathname: '/region-picker' as never, params: { target: 'form' } })} />
+          <View style={st.divider} />
           <View style={st.fieldRow}>
             <View style={st.areaIcon}><Icon name="location" size={18} color={C.accentGrn} /></View>
             <View style={{ flex: 1, minWidth: 0 }}>
@@ -288,6 +357,9 @@ export default function CrewCreateScreen() {
             />
           </View>
         </Group>
+
+        {/* 태그 (둘러보기 필터·카드) — 13-item vocabulary, ≤5 */}
+        <TagPicker selected={tags} onToggle={toggleTag} />
 
         {/* 주 종목 / 페이스 레벨 */}
         <View style={{ paddingHorizontal: S.gutter }}>
@@ -389,6 +461,11 @@ export const st = StyleSheet.create({
 
   areaIcon:  { width: 36, height: 36, borderRadius: 11, backgroundColor: C.accentDim, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   areaLabel: { fontSize: 12, fontWeight: '600', color: C.faint },
+  regionRow:   { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 13, paddingHorizontal: 4 },
+  regionValue: { fontSize: 15, fontWeight: '600', color: C.text, letterSpacing: -0.3, marginTop: 2 },
+  tagHead:     { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
+  tagCount:    { fontSize: 12.5, fontWeight: '700', color: C.faint },
+  tagGroupLabel: { fontSize: 12, fontWeight: '600', color: C.faint, letterSpacing: -0.2, marginBottom: 8 },
 
   sliderBlock: { paddingVertical: 10 },
   sliderHead:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingRight: 4 },
