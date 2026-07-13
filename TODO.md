@@ -402,3 +402,15 @@ Supersedes the "edge ⓑ contract-noted for the future crew-feed slice" ledger l
 - **② Calendar pickers — Tier 2.** Date-only → calendar GRID: replace `DateWheelRow` at its ONE consumer (announcement-compose 공지 날짜). Wheels STAY for everything else — `TimeWheelRow` (시각) + `NumberWheelRow` (체중/키/목표 거리/기간/최대 인원) are magnitudes/time, not dates. Scope is a single field + a new calendar-grid component.
 - **③ Crew cover crop — Tier 2.** Wide-aspect adjust: parameterize `avatar-crop.tsx` with an aspectRatio prop (it's 1:1-only today) + rectangular mask; wire the cover path through it. **Ratio = derive from the hero band (~16:9).** (icon stays 1:1.)
 - **⑦ i18n / English + ⑧ dark mode — POST-BETA.** Korean-only beta is defensible; both are week-eating L-sweeps (string extraction + English pass; two-theme-system convergence) better spent on Tier 1. The 언어/테마 settings keep their honest 준비 중 notices until then. Revisit after beta.
+
+## Tier 1 — 월간 인사이트: month_rank + run_days (BUILT 2026-07-13, awaiting verification)
+
+The insights screen was already built to canvas (I1) with 8 of the 9 tiles + pace_trend (the "pace_trend unrendered" ledger note was STALE — it renders). Two real gaps closed:
+- **month_rank tile (NEW, BE e422468, post-canvas)** — highlight card after the hero, honest copy per guide §137: rank==1 → "이번 달 가장 빠른/긴 {축}", else "N번째로". **best_5k phrased as "5K 환산 페이스" in BOTH headline and sub** (never implies a 5K distance run — it's a pace-equivalent). null → tile HIDDEN (server omits sub-2-run dimensions; no "1st of 1" noise). Probed live: type longest_distance/rank 4/total 8 → "이번 달 4번째로 긴 거리 · 이번 달 8회 중".
+- **run_days (served `4`, was missing from the type)** — added to InsightPattern + rendered as the 러닝 패턴 lead line ("이번 달 N일 러닝했어요", 꾸준함 지표). Footer kept its clean 2-cell (주 활동 시간 · 연속 러닝) — a 3-cell inline-icon footer risked cramping.
+
+Canvas-vs-payload: canvas is the pre-contract design (goal ring · 누적 고도 · 칼로리 · 평균/최대 심박 · HR zones · 지형 분석 · AI 코칭 · 추천 플랜) — ALL unserved, ALL already cut in I1 per line-132. month_rank is post-canvas (my minimal-insert design). No unserved tile is rendered.
+
+**Sparse/empty rule (uniform, stated):** empty month (run_count 0) → ONE empty state, not a dash-grid. Sparse (1 run) → every tile shows REAL values; the ONLY thing that hides is month_rank (null below 2 runs/dimension — its own contract, not a dash) + records/pace_trend (hide when empty/all-null). Within-tile null scalars → dashes (avg_pace "--", delta fallback copy). No fabricated data anywhere.
+
+Records-label alignment (owner ruling, folded into this commit): RECORD_LABEL best_5k "최고 5K" → **"최고 5K 환산"** — same pace-equivalent ambiguity, and mixed "5K"/"5K 환산" within one screen is worse than either alone. Value renders as a 5K-equivalent time (fmtDuration), so "최고 5K 환산 · 27:30" reads honestly. Screen now uses "5K 환산" uniformly (records + month_rank).

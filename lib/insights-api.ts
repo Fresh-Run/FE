@@ -35,6 +35,21 @@ export type InsightPattern = {
   time_of_day: 'dawn' | 'morning' | 'day' | 'evening' | 'night';
   time_of_day_pct: number;
   longest_streak_days: number;
+  run_days: number; // 이번 달 러닝한 날 수 (꾸준함 지표) — served, probed 2026-07-13
+};
+
+// month_rank (BE e422468, guide §137) — "이번 달 {rank}번째로 빠른/긴 {축}"
+// 타일 재료. verified run만 집계. 서버가 4차원 중 가장 인상적 1개 선정.
+// ⚠️ null이면 타일 미표시 (각 종목 verified 러닝 2회 미만 = 정보량 0).
+export type MonthRank = {
+  /** best_5k는 페이스 환산 5K — 별도 5K 거리 버킷 아님 (절대 5K 주행 암시 금지) */
+  type: 'best_pace' | 'best_5k' | 'longest_distance' | 'longest_duration';
+  rank: number;   // 이번 달 가장 최근 러닝의 순위 (1 = 최고)
+  total: number;  // 그 종목 이번 달 러닝 수
+  value: number;
+  distance_km: number;
+  ran_at: string;
+  run_id: string;
 };
 
 export type InsightPlanItem = {
@@ -60,6 +75,8 @@ export type MonthlyInsight = {
   /** 최근 3개월 (조회 월 포함, 오래된 달부터; BE 9e61bef) — last point ==
       stats.avg_pace_sec_per_km by contract. */
   pace_trend: PaceTrendPoint[];
+  /** 이번 달 순위 하이라이트 (BE e422468) — null이면 타일 미표시 */
+  month_rank: MonthRank | null;
   // NOTE (2026-07-09, owner + backend decision): the ai block is typed
   // because the server still sends it, but the app deliberately renders
   // NONE of it (coaching card + 추천 플랜 removed from the report screen;

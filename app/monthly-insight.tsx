@@ -30,7 +30,7 @@ import Svg, { Circle, Line } from 'react-native-svg';
 import { MonthPicker } from '@/components/month-picker';
 import { Icon } from '@/components/ui';
 import { ApiError } from '@/lib/api';
-import { getMonthlyInsight, type MonthlyInsight, type PaceTrendPoint } from '@/lib/insights-api';
+import { getMonthlyInsight, type MonthlyInsight, type MonthRank, type PaceTrendPoint } from '@/lib/insights-api';
 import { distUnit, fmtDist, fmtDuration, fmtPaceIn, paceUnit } from '@/lib/run-format';
 import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
 import { useSettings } from '@/store/use-settings';
@@ -39,7 +39,9 @@ import { useSettings } from '@/store/use-settings';
 
 const RECORD_LABEL: Record<string, string> = {
   best_pace: '최고 페이스',
-  best_5k: '최고 5K',
+  // 5K 환산 시간 (pace-equivalent, not an actual 5K distance) — phrasing aligned
+  // with the month_rank tile so the screen never mixes "5K" and "5K 환산".
+  best_5k: '최고 5K 환산',
   longest_distance: '최장 거리',
   longest_duration: '최장 러닝',
 };
@@ -49,6 +51,23 @@ const TIME_OF_DAY_LABEL: Record<string, string> = {
 };
 
 const WEEKDAYS = ['월', '화', '수', '목', '금', '토', '일'];
+
+// month_rank → honest copy (guide §137). rank==1 → "가장 …", else "{rank}번째로 …".
+// best_5k is a PACE-EQUIVALENT — never imply a 5K distance was run; the axis
+// says "5K 환산 페이스" and the sub reiterates 환산 기준.
+function monthRankCopy(mr: MonthRank): { headline: string; sub: string } {
+  const nth = mr.rank === 1 ? '가장' : `${mr.rank}번째로`;
+  const AXIS: Record<MonthRank['type'], string> = {
+    best_pace: `${nth} 빠른 페이스`,
+    best_5k: `${nth} 빠른 5K 환산 페이스`,
+    longest_distance: `${nth} 긴 거리`,
+    longest_duration: `${nth} 긴 시간`,
+  };
+  const sub = mr.type === 'best_5k'
+    ? `5K 환산 페이스 기준 · 이번 달 ${mr.total}회 중`
+    : `이번 달 ${mr.total}회 중`;
+  return { headline: `이번 달 ${AXIS[mr.type]}`, sub };
+}
 
 function fmtRecordValue(type: string, value: number, units: 'km' | 'mi'): string {
   if (type === 'best_pace') return fmtPaceIn(value, units);
@@ -265,6 +284,21 @@ export default function MonthlyInsightScreen() {
             </View>
           </View>
 
+          {/* 이번 달 순위 하이라이트 (month_rank, BE e422468) — null → HIDDEN
+              (no "1st of 1" noise; the server omits sub-2-run dimensions). */}
+          {data.month_rank && (() => {
+            const { headline, sub } = monthRankCopy(data.month_rank);
+            return (
+              <View style={st.rankCard}>
+                <View style={st.rankMedal}><Icon name="ribbon-outline" size={19} color={C.accentGrn} /></View>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={st.rankHeadline}>{headline}</Text>
+                  <Text style={st.rankSub}>{sub}</Text>
+                </View>
+              </View>
+            );
+          })()}
+
           {/* 4-tile metric grid (locked recomposition) */}
           <View style={st.grid}>
             {([
@@ -332,6 +366,11 @@ export default function MonthlyInsightScreen() {
                 );
               })}
             </View>
+            {/* run_days lead (꾸준함 지표) — served, probed 2026-07-13 */}
+            <View style={st.runDaysRow}>
+              <Icon name="calendar-outline" size={14} color={C.accentGrn} />
+              <Text style={st.runDaysTxt}>이번 달 <Text style={st.runDaysNum}>{data.pattern.run_days}일</Text> 러닝했어요</Text>
+            </View>
             <View style={st.patternFoot}>
               <View style={st.patternCell}>
                 <View style={st.patternIcon}><Icon name="sparkles" size={15} color={C.accentGrn} /></View>
@@ -395,6 +434,16 @@ const st = StyleSheet.create({
   heroDist:   { fontSize: 34, fontWeight: '800', color: '#fff', letterSpacing: -1.2 },
   heroUnit:   { fontSize: 15, fontWeight: '700', color: 'rgba(255,255,255,0.55)' },
   heroSub:    { fontSize: 12.5, color: 'rgba(255,255,255,0.7)', letterSpacing: -0.2, marginTop: 5 },
+
+  // month_rank highlight card
+  rankCard:     { flexDirection: 'row', alignItems: 'center', gap: 12, marginHorizontal: S.gutter, marginTop: 12, backgroundColor: C.accentDim, borderWidth: 1, borderColor: C.accent + '44', borderRadius: 16, paddingHorizontal: 15, paddingVertical: 13 },
+  rankMedal:    { width: 38, height: 38, borderRadius: 12, backgroundColor: C.surface, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  rankHeadline: { fontSize: 15, fontWeight: '800', color: C.text, letterSpacing: -0.3 },
+  rankSub:      { fontSize: 12, color: C.sub, letterSpacing: -0.2, marginTop: 2 },
+
+  runDaysRow:   { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 14, marginBottom: 2 },
+  runDaysTxt:   { fontSize: 12.5, color: C.sub, letterSpacing: -0.2 },
+  runDaysNum:   { fontWeight: '800', color: C.text },
 
   grid:        { flexDirection: 'row', flexWrap: 'wrap', gap: 10, paddingHorizontal: S.gutter, paddingTop: 14 },
   metricTile:  { width: '48%', flexGrow: 1, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 16, paddingHorizontal: 14, paddingVertical: 13 },
