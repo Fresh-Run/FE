@@ -1,7 +1,8 @@
 /**
  * 크루 편집 — canvas FrCrewEdit (crew-create.jsx): the create form pre-filled,
- * PATCH on save, plus the owner-only 위험 구역 danger card → 크루 삭제 confirm
- * modal (canvas FrCrewDelete, centered, run-save modal precedent).
+ * PATCH on save, plus the owner-only 위험 구역 danger card → 크루 해체 confirm
+ * modal. The modal is the SHARED CrewDeleteModal (components/crew-delete-modal),
+ * reused by crew-admin's owner 크루 해체하기 slot — one modal, both surfaces.
  *
  * Contract: PATCH = edit_crew-permission admins OR owner since v2 (BE
  * 28a5c25 — the 07-15 owner-only probe superseded); DELETE stays owner-only.
@@ -19,7 +20,6 @@ import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -29,17 +29,17 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { CrewDeleteModal } from '@/components/crew-delete-modal';
 import { Icon } from '@/components/ui';
 import { NumberWheelRow } from '@/components/wheel-sheet';
 import {
-  deleteCrew,
   getCrew,
   mapCrew,
   updateCrew,
   type Crew,
   type CrewLevel,
 } from '@/lib/crews-api';
-import { accentShadow, colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
+import { accentShadow, colors as C, shadows, spacing as S } from '@/lib/theme';
 
 import {
   Chip,
@@ -86,7 +86,6 @@ export default function CrewEditScreen() {
 
   const [busy, setBusy]           = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const [deleting, setDeleting]     = useState(false);
 
   // Pre-fill from server truth (edit must not seed from a stale list row)
   useEffect(() => {
@@ -139,21 +138,6 @@ export default function CrewEditScreen() {
       Alert.alert('저장 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요');
     } finally {
       setBusy(false);
-    }
-  }
-
-  async function doDelete() {
-    if (deleting || !crewId) return;
-    setDeleting(true);
-    try {
-      await deleteCrew(crewId);
-      setDeleteOpen(false);
-      // The crew (and this stack's screens for it) no longer exist
-      router.dismissAll?.();
-      router.replace('/(tabs)/community' as any);
-    } catch (e: unknown) {
-      setDeleting(false);
-      Alert.alert('삭제 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요');
     }
   }
 
@@ -300,8 +284,8 @@ export default function CrewEditScreen() {
                 <Icon name="trash-outline" size={18} color={C.danger} />
               </View>
               <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={est.dangerLbl}>크루 삭제</Text>
-                <Text style={est.dangerSub}>크루와 공지·챌린지가 사라져요</Text>
+                <Text style={est.dangerLbl}>크루 해체</Text>
+                <Text style={est.dangerSub}>크루원들과 함께 크루가 사라져요</Text>
               </View>
             </Pressable>
           </View>
@@ -323,29 +307,13 @@ export default function CrewEditScreen() {
 
       {/* 크루 삭제 confirm — canvas FrCrewDelete (centered modal); copy states
           the PROBED consequences: cascade with members, runs survive. */}
-      <Modal visible={deleteOpen} transparent animationType="fade" onRequestClose={() => !deleting && setDeleteOpen(false)}>
-        <View style={est.modalRoot}>
-          <Pressable style={est.modalBackdrop} onPress={() => !deleting && setDeleteOpen(false)} />
-          <View style={est.modalCard}>
-            <View style={est.modalIconWrap}>
-              <Icon name="trash-outline" size={26} color={C.danger} />
-            </View>
-            <Text style={est.modalTitle}>크루를 삭제할까요?</Text>
-            <Text style={est.modalBody}>
-              <Text style={{ fontWeight: '700', color: C.text }}>{crew.name}</Text>
-              {' 크루가 크루원 '}{crew.member_count}{'명과 함께 즉시 삭제되고, 공지·챌린지·참석 기록도 사라져요. 크루원들의 러닝 기록은 남아요. 되돌릴 수 없어요.'}
-            </Text>
-            <Pressable onPress={doDelete} disabled={deleting} style={est.modalDeleteBtn}>
-              {deleting
-                ? <ActivityIndicator size="small" color="#fff" />
-                : <Text style={est.modalDeleteTxt}>삭제하기</Text>}
-            </Pressable>
-            <Pressable onPress={() => !deleting && setDeleteOpen(false)} style={est.modalCancelBtn}>
-              <Text style={est.modalCancelTxt}>취소</Text>
-            </Pressable>
-          </View>
-        </View>
-      </Modal>
+      <CrewDeleteModal
+        visible={deleteOpen}
+        crewId={crewId!}
+        crewName={crew.name}
+        memberCount={crew.member_count}
+        onClose={() => setDeleteOpen(false)}
+      />
     </View>
   );
 }
@@ -361,15 +329,4 @@ const est = StyleSheet.create({
   dangerIcon:  { width: 36, height: 36, borderRadius: 11, backgroundColor: C.danger + '1A', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   dangerLbl:   { fontSize: 14.5, fontWeight: '700', color: C.danger, letterSpacing: -0.3 },
   dangerSub:   { fontSize: 12, color: C.faint, letterSpacing: -0.2, marginTop: 2 },
-
-  modalRoot:     { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28 },
-  modalBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.5)' },
-  modalCard:     { width: '100%', backgroundColor: C.surface, borderRadius: 22, paddingHorizontal: 22, paddingTop: 24, paddingBottom: 18 },
-  modalIconWrap: { alignSelf: 'center', width: 54, height: 54, borderRadius: R.pill, backgroundColor: C.danger + '1A', alignItems: 'center', justifyContent: 'center' },
-  modalTitle:    { fontSize: 19, fontWeight: '700', color: C.text, letterSpacing: -0.5, textAlign: 'center', marginTop: 16 },
-  modalBody:     { fontSize: 13.5, lineHeight: 20, color: C.sub, textAlign: 'center', letterSpacing: -0.3, marginTop: 8, marginHorizontal: 8 },
-  modalDeleteBtn: { height: 52, borderRadius: 14, backgroundColor: C.danger, alignItems: 'center', justifyContent: 'center', marginTop: 20 },
-  modalDeleteTxt: { fontSize: 16, fontWeight: '700', color: '#fff', letterSpacing: -0.3 },
-  modalCancelBtn: { height: 50, alignItems: 'center', justifyContent: 'center', marginTop: 6 },
-  modalCancelTxt: { fontSize: 15, fontWeight: '700', color: C.sub, letterSpacing: -0.3 },
 });

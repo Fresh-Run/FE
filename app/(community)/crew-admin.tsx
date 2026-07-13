@@ -36,6 +36,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { CrewDeleteModal } from '@/components/crew-delete-modal';
 import { Icon } from '@/components/ui';
 import { getCurrentChallenge, type Challenge } from '@/lib/challenges-api';
 import {
@@ -142,23 +143,13 @@ export default function CrewAdminScreen() {
     router.push({ pathname: pathname as never, params: { crewId: crewId! } });
 
   const [leaving, setLeaving] = useState(false);
-  // Staff leave lives in the hub (canvas 크루 나가기). Owner can't leave with a
-  // live crew (server 409 crew_owner) — never a bare error: explain 양도 먼저
-  // and tap through to 크루원 관리 (the 회원 탈퇴 precedent). Admin leave warns
-  // that 운영진 권한 vanishes (her permissions-handoff copy).
-  function confirmLeave() {
+  const [dissolveOpen, setDissolveOpen] = useState(false);
+  // Role-split leave action (지연 catch 2026-07-13): each role sees the action
+  // it CAN take. OWNER → 크루 해체하기 (the shared delete modal; can't leave a
+  // live crew — 양도 lives inside that modal now). ADMIN → 크루 나가기 with the
+  // 권한 소멸 warning. (Plain members leave via the crew-detail hero icon.)
+  function confirmLeaveAdmin() {
     if (!crew || leaving) return;
-    if (isOwner) {
-      Alert.alert(
-        '크루장은 바로 나갈 수 없어요',
-        '먼저 다른 멤버에게 크루장을 양도해야 크루를 나갈 수 있어요.',
-        [
-          { text: '취소', style: 'cancel' },
-          { text: '크루원 관리로 이동', onPress: () => go('/(community)/crew-members') },
-        ],
-      );
-      return;
-    }
     Alert.alert(
       '크루 나가기',
       `'${crew.name}'에서 나가시겠어요? 운영진 권한도 함께 사라져요.`,
@@ -304,10 +295,11 @@ export default function CrewAdminScreen() {
             </>
           )}
 
-          {/* 크루 나가기 (canvas hub danger button) — staff leave path. Owner
-              taps → 양도 먼저 guidance; admin → confirm w/ 권한 소멸 warning. */}
+          {/* Role-split danger action: OWNER → 크루 해체하기 (delete modal);
+              ADMIN → 크루 나가기 (leave w/ 권한 소멸 warning). Each role sees
+              only what it can actually do (지연 catch — no dead affordance). */}
           <Pressable
-            onPress={confirmLeave}
+            onPress={isOwner ? () => setDissolveOpen(true) : confirmLeaveAdmin}
             disabled={leaving}
             style={({ pressed }) => [st.leaveBtn, pressed && { opacity: 0.75 }, leaving && { opacity: 0.5 }]}
           >
@@ -315,12 +307,24 @@ export default function CrewAdminScreen() {
               ? <ActivityIndicator size="small" color={C.danger} />
               : (
                 <>
-                  <Icon name="exit-outline" size={17} color={C.danger} />
-                  <Text style={st.leaveTxt}>크루 나가기</Text>
+                  <Icon name={isOwner ? 'trash-outline' : 'exit-outline'} size={17} color={C.danger} />
+                  <Text style={st.leaveTxt}>{isOwner ? '크루 해체하기' : '크루 나가기'}</Text>
                 </>
               )}
           </Pressable>
         </ScrollView>
+      )}
+
+      {/* Owner-only 해체 modal — the SAME modal as crew-edit's 위험 구역
+          (honest consequences + 양도 tap-through). */}
+      {crew && (
+        <CrewDeleteModal
+          visible={dissolveOpen}
+          crewId={crew.id}
+          crewName={crew.name}
+          memberCount={crew.member_count}
+          onClose={() => setDissolveOpen(false)}
+        />
       )}
     </View>
   );

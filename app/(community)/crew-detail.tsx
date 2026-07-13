@@ -523,6 +523,64 @@ export default function CrewDetailScreen() {
           </View>
         )}
 
+        {/* ── 공지 (M1) — members only. TOP of the section stack (owner ruling
+               + canvas FrCrewDetail order): 공지 is the crew's most time-
+               sensitive content; 챌린지/랭킹/피드 are browse-y and follow. ── */}
+        {isMember && (
+          <View style={{ paddingHorizontal: S.gutter, paddingTop: S.xl }}>
+            <View style={st.sectionHead}>
+              <Text style={st.sectionTitle}>공지</Text>
+              <Pressable
+                onPress={() => router.push({
+                  pathname: '/(community)/announcements' as never,
+                  params: { crewId: crew.id, canManage: can('announcements') ? '1' : '0' },
+                })}
+                hitSlop={8}
+              >
+                <Text style={st.annMoreTxt}>전체 보기</Text>
+              </Pressable>
+            </View>
+
+            {annPreview === null ? (
+              <View style={st.emptyBox}><ActivityIndicator size="small" color={C.faint} /></View>
+            ) : annPreview.length === 0 ? (
+              <Pressable
+                onPress={can('announcements') ? () => router.push({
+                  pathname: '/(community)/announcement-compose' as never,
+                  params: { crewId: crew.id },
+                }) : undefined}
+                style={st.emptyBox}
+              >
+                <Text style={st.emptyTxt}>
+                  {can('announcements') ? '공지를 올려 크루원에게 소식을 전해보세요 →' : '아직 공지가 없어요'}
+                </Text>
+              </Pressable>
+            ) : (
+              <View style={[st.annList, shadows.sm]}>
+                {annPreview.map((a, i) => (
+                  <React.Fragment key={a.id}>
+                    {i > 0 && <View style={st.divider} />}
+                    <Pressable
+                      onPress={() => router.push({
+                        pathname: '/(community)/announcement-detail' as never,
+                        params: { crewId: crew.id, announcementId: a.id },
+                      })}
+                      style={({ pressed }) => [st.annRow, pressed && { opacity: 0.7 }]}
+                    >
+                      <Icon name="megaphone-outline" size={16} color={C.accentGrn} />
+                      <View style={{ flex: 1, minWidth: 0 }}>
+                        <Text style={st.annTitle} numberOfLines={1}>{a.title}</Text>
+                        {a.run_at ? <Text style={st.annSub}>참석 {a.rsvp.going} · 러닝 일정 있음</Text> : null}
+                      </View>
+                      <Icon name="chevron-forward" size={15} color={C.faint} />
+                    </Pressable>
+                  </React.Fragment>
+                ))}
+              </View>
+            )}
+          </View>
+        )}
+
         {/* ── 챌린지 (M2) — members only; FrActiveChallengeRow ─────────── */}
         {isMember && challenge !== undefined && (
           <View style={{ paddingHorizontal: S.gutter, paddingTop: S.xl }}>
@@ -718,62 +776,6 @@ export default function CrewDetailScreen() {
                           )}
                         </View>
                       </View>
-                    </Pressable>
-                  </React.Fragment>
-                ))}
-              </View>
-            )}
-          </View>
-        )}
-
-        {/* ── 공지 (M1) — members only ─────────────────────────────────── */}
-        {isMember && (
-          <View style={{ paddingHorizontal: S.gutter, paddingTop: S.xl }}>
-            <View style={st.sectionHead}>
-              <Text style={st.sectionTitle}>공지</Text>
-              <Pressable
-                onPress={() => router.push({
-                  pathname: '/(community)/announcements' as never,
-                  params: { crewId: crew.id, canManage: can('announcements') ? '1' : '0' },
-                })}
-                hitSlop={8}
-              >
-                <Text style={st.annMoreTxt}>전체 보기</Text>
-              </Pressable>
-            </View>
-
-            {annPreview === null ? (
-              <View style={st.emptyBox}><ActivityIndicator size="small" color={C.faint} /></View>
-            ) : annPreview.length === 0 ? (
-              <Pressable
-                onPress={can('announcements') ? () => router.push({
-                  pathname: '/(community)/announcement-compose' as never,
-                  params: { crewId: crew.id },
-                }) : undefined}
-                style={st.emptyBox}
-              >
-                <Text style={st.emptyTxt}>
-                  {can('announcements') ? '공지를 올려 크루원에게 소식을 전해보세요 →' : '아직 공지가 없어요'}
-                </Text>
-              </Pressable>
-            ) : (
-              <View style={[st.annList, shadows.sm]}>
-                {annPreview.map((a, i) => (
-                  <React.Fragment key={a.id}>
-                    {i > 0 && <View style={st.divider} />}
-                    <Pressable
-                      onPress={() => router.push({
-                        pathname: '/(community)/announcement-detail' as never,
-                        params: { crewId: crew.id, announcementId: a.id },
-                      })}
-                      style={({ pressed }) => [st.annRow, pressed && { opacity: 0.7 }]}
-                    >
-                      <Icon name="megaphone-outline" size={16} color={C.accentGrn} />
-                      <View style={{ flex: 1, minWidth: 0 }}>
-                        <Text style={st.annTitle} numberOfLines={1}>{a.title}</Text>
-                        {a.run_at ? <Text style={st.annSub}>참석 {a.rsvp.going} · 러닝 일정 있음</Text> : null}
-                      </View>
-                      <Icon name="chevron-forward" size={15} color={C.faint} />
                     </Pressable>
                   </React.Fragment>
                 ))}

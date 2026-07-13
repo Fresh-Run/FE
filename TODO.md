@@ -434,3 +434,14 @@ Retires the "pb_achieved TYPE_META" + "crew_invited invitations recon" watch-lis
 ## PUBLISH — 2026-07-13 [post-18:40]
 
 `eas update --channel main` — "크루 초대 + 개인 기록 알림 + 크루 피드 (cab0580)". Update group `ec64f866-4a2e-4b59-b7f7-699d57c07955` (android `019f5ade-ea3a-7a2a-9530-5ef771071f62`, ios `019f5ade-ea3a-7132-af1c-978d3a43f3f3`), runtime `exposdk:54.0.0`, embedded commit `cab0580` = HEAD = origin/main at publish. Env guard read-verified staging. New aboard since group `813ff160`: invite-loop receive half (`cab0580`). Crew 러닝 피드 + 월간 인사이트 rode `813ff160` and remain aboard.
+
+## Correction — owner leave was a dead affordance (지연 catch, BUILT 2026-07-13, awaiting verification)
+
+Tier 0's hub 크루 나가기 opened a "you can't, transfer first" guidance modal for owners — a button promising what it can never do. Fixed the role split so each role sees the action it CAN take:
+- **Member** → quiet hero-corner exit icon (unchanged).
+- **Admin/운영진** → 크루 나가기 in the hub (unchanged, "운영진 권한도 함께 사라져요" confirm).
+- **Owner** → the same slot now renders **크루 해체하기** → the EXISTING delete flow.
+
+The delete modal was **extracted to `components/crew-delete-modal.tsx`** (reuse, not rebuild) — ONE modal now serves crew-edit's 위험 구역 card AND crew-admin's owner slot. The **양도 alternative moved INTO the modal** (owner ruling): a tap-through row "크루를 넘기고 싶다면 크루원 관리에서 양도할 수 있어요" → 크루원 관리 (where 크루장 양도 lives) — an owner who wants OUT but not to destroy the crew finds 양도 exactly at the 해체 modal. The Tier 0 409-guidance Alert is **fully removed** (grep-proven 0 refs; nothing else routed there — owner-leave was its only path). Wording aligned to **해체** across the hub button, crew-edit danger card, and the modal (the 5K-alignment principle — no 삭제/해체 mix). crew-edit's inline modal + doDelete + modal styles deleted (moved to the shared component).
+
+**공지-to-top (folded into the same slice, owner ruling — did NOT previously land):** 공지 was the LAST section (below 피드); moved to the TOP content section (below hero, above 챌린지/랭킹/피드). **Canvas check: CONFIRMS the ruling** — FrCrewDetail orders 크루 공지 → 챌린지 → 랭킹 → 피드, so our bottom placement was itself a canvas deviation (no deviation to flag against the ruling). New order: quick-actions → schedule → 공지 → 챌린지 → 랭킹 → 피드.
