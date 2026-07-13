@@ -560,3 +560,7 @@ She's adding the same 422-on-unknown-fields guard to **run submission** (higher-
 **On-device bug → FAIL-OPEN ruling (owner-verified in airplane mode):** first build gated the ⋯ on `!!profile` — the cached-identity loading view + error/hung fetches kept profile null → ⋯ never mounted (fail-closed on the payload term). Fix: guard keys off the **route uid** (`isSelf = !!myId && uid===myId`, ⋯ on `!isSelf`) — self never lands here by construction (openProfile routes self to 내 프로필), **unknown identity → SHOW** (server 400 backs self-block), block targets uid so **error/hung profiles stay blockable** (harassment-resilient). Truth-table proven.
 
 **신고하기 — NOT rendered** (지연 designing POST /reports; line-132 rule). **Wiring point:** one `sheetRow` below 차단하기 in user-profile's ⋯ Modal when she ships.
+
+## PUBLISH — 2026-07-14 [post-00:28]
+
+`eas update --channel main` — "차단 + 프로필 메뉴 + 차단 관리 (7efdce4)". Update group `9ab1ffb6-8376-41ef-bb2e-593270611649` (android `019f5c1b-05e7-7e67-8853-f2421ac70511`, ios `019f5c1b-05e7-7d11-a91e-52311a7c3021`), runtime `exposdk:54.0.0`, embedded commit `7efdce4` = HEAD = origin/main at publish. Env guard read-verified staging (`https://freshrun-api.fly.dev`). New aboard since group `caae0c70`: 차단 + 프로필 ⋯ 메뉴 (fail-open guard) + 차단 관리 (`7efdce4`).
