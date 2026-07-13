@@ -528,3 +528,7 @@ Validated live: backfill PATCH (sido/sigungu/lat/lng/tags) → 200 → 삭제테
 ## PUBLISH — 2026-07-13 [post-22:44]
 
 `eas update --channel main` — "공지 날짜 캘린더 + 커버 16:9 크롭 (3f16d9f)". Update group `b1a28b25-4ce5-479a-b49b-796f6255c761` (android `019f5bbb-d1d9-7996-ae6e-ddd1f4a70f1f`, ios `019f5bbb-d1d9-796e-9f5f-4f9d4831cc68`), runtime `exposdk:54.0.0`, embedded commit `3f16d9f` = HEAD = origin/main at publish. Env guard read-verified staging (`https://freshrun-api.fly.dev`). New aboard since group `71f1ce92`: Tier 2 — 공지 날짜 캘린더 그리드 + 커버 16:9 크롭 (`3f16d9f`).
+
+## PUBLISH — 2026-07-13 [post-23:08]
+
+`eas update --channel main` — "크루 지역 해제 (b89f079)". Update group `9b7cdca7-44ed-4dfa-9561-db518e3eaa79` (android `019f5bd1-0509-7f9b-a59a-444840232f9e`, ios `019f5bd1-0509-75c2-b452-cfd59053a199`), runtime `exposdk:54.0.0`, embedded commit `b89f079` = HEAD = origin/main at publish. Env guard read-verified staging (`https://freshrun-api.fly.dev`). New aboard since group `b1a28b25`: 크루 지역 해제 (지역 null-clear consumption, `b89f079`).
