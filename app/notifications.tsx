@@ -74,7 +74,38 @@ const TYPE_META: Record<string, Meta> = {
   join_approved:       { tag: '크루 승인', tone: CREW_BLUE,   icon: { name: 'people-outline',    color: CREW_BLUE,  bg: CREW_BLUE + '22' },  copy: '님이 크루 가입을 승인했어요' },
   crew_announcement:   { tag: '공지',     tone: CREW_BLUE,   icon: { name: 'megaphone-outline', color: CREW_BLUE,  bg: CREW_BLUE + '22' },  copy: '님이 크루에 새 공지를 올렸어요' },
   challenge_completed: { tag: '챌린지',   tone: TROPHY_ORG,  icon: { name: 'trophy-outline',    color: TROPHY_ORG, bg: TROPHY_ORG + '22' }, copy: '챌린지를 달성했어요. 축하해요!', actorless: true },
+  // crew_invited (BE 23d2936) — a person invited you; actor avatar (like
+  // user_followed), 크루 tab. Copy is dynamic (crew_name); row tap → the
+  // crew-invite preview→join screen (payload.invite_code).
+  crew_invited:        { tag: '크루 초대', tone: CREW_BLUE,   icon: 'avatar', copy: '님이 크루에 초대했어요' },
+  // pb_achieved (BE 8cee8d8) — SELF-targeted (수신자==행위자); actorless per
+  // guide (actor is you). Copy is dynamic (record_types). Row tap → 활동 상세.
+  pb_achieved:         { tag: '기록',     tone: TROPHY_ORG,  icon: { name: 'ribbon-outline',    color: TROPHY_ORG, bg: TROPHY_ORG + '22' }, copy: '새 기록을 세웠어요! 🎉', actorless: true },
 };
+
+// pb_achieved record-type labels — "최고 5K 환산" aligned with the insights
+// screen (pace-equivalent, never implies a 5K distance run).
+const PB_LABEL: Record<string, string> = {
+  best_pace: '최고 페이스',
+  best_5k: '최고 5K 환산',
+  longest_distance: '최장 거리',
+  longest_duration: '최장 러닝',
+};
+
+/** Dynamic per-row copy for types whose text depends on payload; else null. */
+function dynamicCopy(n: AppNotification): string | null {
+  if (n.type === 'crew_invited') {
+    const name = n.payload?.crew_name;
+    return name ? `님이 ${name}에 초대했어요` : '님이 크루에 초대했어요';
+  }
+  if (n.type === 'pb_achieved') {
+    const types = n.payload?.record_types ?? [];
+    if (types.length === 1) return `${PB_LABEL[types[0]] ?? '개인'} 기록을 경신했어요! 🎉`;
+    if (types.length > 1) return `새 기록 ${types.length}개를 세웠어요! 🎉`;
+    return '새 기록을 세웠어요! 🎉'; // defensive: missing/empty record_types
+  }
+  return null;
+}
 
 // Unknown future types still render, generically
 const FALLBACK_META: Meta = { tag: '알림', tone: C.faint, icon: { name: 'notifications-outline', color: C.sub, bg: C.surfaceAlt }, copy: '새 소식이 있어요', actorless: true };
@@ -97,7 +128,10 @@ const TABS: { key: TabKey; label: string }[] = [
 
 const FOLLOW_TYPES = new Set(['user_followed', 'follow_requested']);
 const SOCIAL_TYPES = new Set(['run_kudoed', 'run_commented', 'route_liked', 'route_commented']);
-const CREW_TYPES   = new Set(['crew_joined', 'join_requested', 'join_approved', 'crew_announcement']);
+const CREW_TYPES   = new Set(['crew_joined', 'join_requested', 'join_approved', 'crew_announcement', 'crew_invited']);
+// pb_achieved: 전체-only, mirroring challenge_completed (both self-achievements,
+// actorless). The rider said "러닝 tab" — no such tab exists; owner ruling
+// pending on whether to add a 기록 tab or fold into 소셜.
 
 function inTab(n: AppNotification, tab: TabKey): boolean {
   if (tab === 'all') return true;
@@ -115,6 +149,19 @@ function deepLink(n: AppNotification): (() => void) | null {
     case 'run_commented': // target_type "run", target_id = run id (probed)
       if (!n.target_id) return null;
       return () => router.push({ pathname: '/(records)/activity' as any, params: { runId: n.target_id! } });
+    case 'pb_achieved':
+      // self-targeted → own-run 활동 상세 (same home as run_kudoed/commented;
+      // own runs analyse in 기록 tab, not the social post). target_id = run_id.
+      if (!n.target_id) return null;
+      return () => router.push({ pathname: '/(records)/activity' as any, params: { runId: n.target_id! } });
+    case 'crew_invited':
+      // preview→join screen (payload.invite_code; the crew's shared code).
+      // No invite record to accept/decline server-side — the code IS the invite.
+      if (!n.payload?.invite_code) return null;
+      return () => router.push({
+        pathname: '/(community)/crew-invite' as any,
+        params: { code: n.payload!.invite_code!, crewName: n.payload?.crew_name ?? '' },
+      });
     case 'crew_joined':
     case 'join_requested':
     case 'join_approved':
@@ -199,7 +246,10 @@ function NotifRow({ n, onPress, onDelete }: { n: AppNotification; onPress: () =>
           <Text style={st.ago}>{fmtAgo(n.created_at)}</Text>
         </View>
         <Text style={st.body}>
-          {meta.actorless ? meta.copy : <><Text style={st.actor}>{actor}</Text>{meta.copy}</>}
+          {(() => {
+            const copy = dynamicCopy(n) ?? meta.copy;
+            return meta.actorless ? copy : <><Text style={st.actor}>{actor}</Text>{copy}</>;
+          })()}
         </Text>
       </View>
       {linked && (

@@ -13,7 +13,9 @@ export type NotificationType =
   | 'crew_announcement'
   | 'join_requested'
   | 'join_approved'
-  | 'run_kudoed';
+  | 'run_kudoed'
+  | 'crew_invited'   // BE 23d2936 — payload {crew_id, crew_name, invite_code}
+  | 'pb_achieved';   // BE 8cee8d8 — self-targeted; payload {record_types[]}, target_id=run_id
 
 export type AppNotification = {
   id: string;
@@ -27,7 +29,14 @@ export type AppNotification = {
   // Landed 2026-07-07 (staging-probed): crew_announcement rows carry the crew
   // id NESTED in payload ({crew_id}); old rows have payload: null and their
   // target_id is an ANNOUNCEMENT id (not a crew id — never navigate with it).
-  payload?: { crew_id?: string | null } | null;
+  // crew_invited (probed 2026-07-13): {crew_id, crew_name, invite_code}.
+  // pb_achieved (probed 2026-07-13): {record_types: string[]}, target_id=run_id.
+  payload?: {
+    crew_id?: string | null;
+    crew_name?: string | null;
+    invite_code?: string | null;
+    record_types?: string[] | null;
+  } | null;
   is_read: boolean;
   created_at: string;
 };
