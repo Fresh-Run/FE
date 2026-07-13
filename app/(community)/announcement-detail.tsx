@@ -95,8 +95,8 @@ export default function AnnouncementDetailScreen() {
     : geoCoords;
 
   function openInMaps() {
-    if (!meetCoords || !ann?.place_name) return;
-    const q = encodeURIComponent(ann.place_name);
+    if (!meetCoords) return;
+    const q = encodeURIComponent(ann?.place_name ?? '집결 장소');
     const url = Platform.OS === 'ios'
       ? `http://maps.apple.com/?ll=${meetCoords.lat},${meetCoords.lng}&q=${q}`
       : `geo:${meetCoords.lat},${meetCoords.lng}?q=${meetCoords.lat},${meetCoords.lng}(${q})`;
@@ -200,17 +200,30 @@ export default function AnnouncementDetailScreen() {
                   <Text style={st.scheduleTxt}>{ann.place_name}</Text>
                 </View>
               ) : null}
-              {ann.place_name && meetCoords ? (
-                // canvas 집결 장소 card: light map + info row + 지도 앱에서 보기
+              {meetCoords ? (
+                // 집결 장소 card — renders whenever the 공지 carries coords
+                // (2026-07-14 regression fix: the old `place_name &&` gate hid
+                // pin-only 공지). Row tap → full in-app map (the convention);
+                // 지도 앱에서 보기 stays as the inline external choice.
                 <View style={st.meetCard}>
                   <RealMap height={150} center={meetCoords} marker borderRadius={0} />
-                  <Pressable onPress={openInMaps} style={({ pressed }) => [st.meetRow, pressed && { opacity: 0.7 }]}>
+                  <Pressable
+                    onPress={() => router.push({
+                      pathname: '/(community)/meet-map' as never,
+                      params: { name: ann.place_name ?? '', lat: String(meetCoords.lat), lng: String(meetCoords.lng) },
+                    })}
+                    style={({ pressed }) => [st.meetRow, pressed && { opacity: 0.7 }]}
+                  >
                     <View style={st.meetPin}><Icon name="location" size={17} color={C.danger} /></View>
                     <View style={{ flex: 1, minWidth: 0 }}>
-                      <Text style={st.meetName} numberOfLines={1}>{ann.place_name}</Text>
-                      <Text style={st.meetSub} numberOfLines={1}>{fmtRunAt(ann.run_at!)} 집결</Text>
+                      <Text style={st.meetName} numberOfLines={1}>{ann.place_name ?? '집결 장소'}</Text>
+                      {ann.run_at != null && (
+                        <Text style={st.meetSub} numberOfLines={1}>{fmtRunAt(ann.run_at)} 집결</Text>
+                      )}
                     </View>
-                    <Text style={st.meetOpenTxt}>지도 앱에서 보기</Text>
+                    <Pressable onPress={openInMaps} hitSlop={10}>
+                      <Text style={st.meetOpenTxt}>지도 앱에서 보기</Text>
+                    </Pressable>
                   </Pressable>
                 </View>
               ) : null}

@@ -26,7 +26,6 @@ import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Image,
   Pressable,
   ScrollView,
   Share,
@@ -37,6 +36,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CrewDeleteModal } from '@/components/crew-delete-modal';
+import { SafeImage } from '@/components/safe-image';
 import { Icon } from '@/components/ui';
 import { getCurrentChallenge, type Challenge } from '@/lib/challenges-api';
 import {
@@ -220,13 +220,11 @@ export default function CrewAdminScreen() {
           {/* Identity card + stats (canvas) */}
           <View style={[st.idCard, shadows.sm]}>
             <View style={st.idHead}>
-              {crew.icon_url ? (
-                <Image source={{ uri: crew.icon_url }} style={[st.idTile, { overflow: 'hidden' }]} />
-              ) : (
+              <SafeImage uri={crew.icon_url} style={[st.idTile, { overflow: 'hidden' }]} fallback={
                 <View style={[st.idTile, { backgroundColor: crew.color ?? C.accent }]}>
                 <Icon name="people" size={26} color="#0D1A06" />
               </View>
-              )}
+              } />
               <View style={{ flex: 1, minWidth: 0 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                   <Text style={st.idName} numberOfLines={1}>{crew.name}</Text>

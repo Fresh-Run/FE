@@ -8,7 +8,6 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
-  Image,
   Modal,
   Pressable,
   ScrollView,
@@ -20,7 +19,8 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useTabBarInset } from '@/components/fresh-tab-bar';
-import { MiniMap } from '@/components/mini-map';
+import { CrewGlyph } from '@/components/crew-glyph';
+import { SafeImage } from '@/components/safe-image';
 import { Icon } from '@/components/ui';
 import {
   joinCrew,
@@ -141,9 +141,8 @@ function BrowseCrewCard({
   return (
     <Pressable onPress={full ? undefined : onPress} style={[st.card, { opacity: full ? 0.62 : 1 }]}>
       <View style={st.thumbWrap}>
-        {crew.icon_url
-          ? <Image source={{ uri: crew.icon_url }} style={{ width: '100%', height: 54 }} />
-          : <MiniMap seed={crew.id} height={54} borderRadius={0} />}
+        <SafeImage uri={crew.icon_url} style={{ width: '100%', height: 54 }}
+          fallback={<CrewGlyph height={54} />} />
       </View>
 
       <View style={st.cardBody}>
@@ -199,9 +198,8 @@ function MyCrewCard({ crew, onPress }: { crew: Crew; onPress: () => void }) {
   return (
     <Pressable onPress={onPress} style={[st.card, shadows.sm]}>
       <View style={st.thumbWrap}>
-        {crew.icon_url
-          ? <Image source={{ uri: crew.icon_url }} style={{ width: '100%', height: 54 }} />
-          : <MiniMap seed={crew.id} height={54} borderRadius={0} />}
+        <SafeImage uri={crew.icon_url} style={{ width: '100%', height: 54 }}
+          fallback={<CrewGlyph height={54} />} />
         {crew.color && !crew.icon_url && (
           <View style={[st.colorDot, { backgroundColor: crew.color }]} />
         )}
@@ -481,7 +479,8 @@ function InviteCodeSheet({
               {/* Crew preview card */}
               <View style={[ics.previewCard, shadows.sm]}>
                 <View style={ics.previewThumb}>
-                  <MiniMap seed={preview.id} height={54} borderRadius={0} />
+                  <SafeImage uri={preview.icon_url} style={{ width: '100%', height: 54 }}
+                    fallback={<CrewGlyph height={54} />} />
                 </View>
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <Text style={st.cardName} numberOfLines={1}>{preview.name}</Text>

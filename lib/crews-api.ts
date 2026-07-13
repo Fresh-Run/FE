@@ -34,6 +34,12 @@ export type Crew = {
   tags: string[];
   distance_km: number | null;
   admin_count: number | null; // v2 (BE 28a5c25) — admins EXCL. owner; null pre-v2
+  // 집결 장소 — crew-native standing meetup (지연 deploy, probed 2026-07-14):
+  // nullable trio; explicit null=clear / omit=keep / lat+lng together (region
+  // pattern); bbox+≤100 validation server-side. null = unset → card hides.
+  meet_place_name: string | null;
+  meet_lat: number | null;
+  meet_lng: number | null;
   myRole?: 'owner' | 'admin' | 'member';
 };
 
@@ -90,6 +96,9 @@ type ServerCrew = {
   tags?: string[];
   distance_km?: number | null;
   admin_count?: number | null; // v2 (BE 28a5c25)
+  meet_place_name?: string | null;
+  meet_lat?: number | null;
+  meet_lng?: number | null;
 };
 
 type ServerMember = {
@@ -127,6 +136,9 @@ export function mapCrew(row: ServerCrew, myRole?: 'owner' | 'admin' | 'member'):
     tags:        row.tags ?? [],
     distance_km: row.distance_km ?? null,
     admin_count: row.admin_count ?? null,
+    meet_place_name: row.meet_place_name ?? null,
+    meet_lat:        row.meet_lat ?? null,
+    meet_lng:        row.meet_lng ?? null,
     myRole,
   };
 }
@@ -163,6 +175,10 @@ type CrewDiscoveryFields = {
   lat?: number | null;
   lng?: number | null;
   tags?: string[];
+  // 집결 장소 (2026-07-14) — same null-clear semantics as the region quartet
+  meet_place_name?: string | null;
+  meet_lat?: number | null;
+  meet_lng?: number | null;
 };
 
 export type CrewCreateInput = {

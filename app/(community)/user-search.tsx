@@ -20,7 +20,6 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
-  Image,
   Pressable,
   StyleSheet,
   Text,
@@ -30,6 +29,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/avatar';
+import { SafeImage } from '@/components/safe-image';
 import { Icon } from '@/components/ui';
 import { inviteToCrew, searchCrews, type Crew } from '@/lib/crews-api';
 import { searchUsers, type UserSearchItem } from '@/lib/profile-api';
@@ -131,13 +131,11 @@ export default function UserSearchScreen() {
         style={({ pressed }) => [st.row, pressed && { opacity: 0.7 }]}
       >
         <View style={st.rowInner}>
-          {c.icon_url ? (
-            <Image source={{ uri: c.icon_url }} style={st.crewIcon} />
-          ) : (
+          <SafeImage uri={c.icon_url} style={st.crewIcon} fallback={
             <View style={[st.crewIcon, { backgroundColor: c.color ?? C.accent, alignItems: 'center', justifyContent: 'center' }]}>
               <Icon name="people" size={22} color="#0D1A06" />
             </View>
-          )}
+          } />
           <View style={{ flex: 1, minWidth: 0 }}>
             <Text style={st.rowName} numberOfLines={1}>{c.name}</Text>
             <Text style={st.rowSub} numberOfLines={1}>

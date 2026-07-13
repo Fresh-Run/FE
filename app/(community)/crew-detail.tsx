@@ -9,7 +9,6 @@ import React, { useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -21,7 +20,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 
 import { AvatarCrop, type CropSource } from '@/components/avatar-crop';
+import { CrewGlyph } from '@/components/crew-glyph';
 import { MiniMap } from '@/components/mini-map';
+import { RealMap } from '@/components/real-map';
+import { SafeImage } from '@/components/safe-image';
 import { Icon } from '@/components/ui';
 import {
   cancelJoinRequest,
@@ -129,15 +131,18 @@ export default function CrewDetailScreen() {
   // ACTION gates read the v2 permission set (owner = all-true synthesized).
   const canManage = crew?.myRole === 'owner' || crew?.myRole === 'admin';
   const can = (k: keyof NonNullable<typeof myPerms>) => !!myPerms?.[k];
-  const [annPreview, setAnnPreview] = useState<Announcement[] | null>(null);
+  // One fetch powers the 공지 preview (first 2) + the 크루 러닝 시작 meetup
+  // window scan. (The 공지-derived 집결 카드 died — owner ruling B 2026-07-14.)
+  const [anns, setAnns] = useState<Announcement[] | null>(null);
   useFocusEffect(useCallback(() => {
-    if (!crewId || !isMember) { setAnnPreview(null); return; }
+    if (!crewId || !isMember) { setAnns(null); return; }
     let cancelled = false;
-    listAnnouncements(crewId, 2)
-      .then(rows => { if (!cancelled) setAnnPreview(rows); })
-      .catch(() => { if (!cancelled) setAnnPreview([]); });
+    listAnnouncements(crewId, 20) // preview slices 2; the 크루 러닝 시작 window scan reads the rest
+      .then(rows => { if (!cancelled) setAnns(rows); })
+      .catch(() => { if (!cancelled) setAnns([]); });
     return () => { cancelled = true; };
   }, [crewId, isMember]));
+  const annPreview = anns === null ? null : anns.slice(0, 2);
 
   // ── 가입 요청 count (M-tier 신청 관리, owner-only) — badge on the entry ──────
   const [pendingReqCount, setPendingReqCount] = useState(0);
@@ -238,7 +243,7 @@ export default function CrewDetailScreen() {
   function startCrewRun() {
     if (!crew) return;
     const H = 3600_000;
-    const near = (annPreview ?? [])
+    const near = (anns ?? []) // full fetch — the window scan shouldn't miss a 공지 outside the top-2 preview
       .filter(a => {
         if (!a.run_at) return false;
         const ahead = new Date(a.run_at).getTime() - Date.now();
@@ -375,19 +380,24 @@ export default function CrewDetailScreen() {
   }
 
   const activeDays = crew.active_days ?? [];
+  const hasSchedule = activeDays.length > 0 || !!crew.active_time;
+
 
   return (
     <View style={st.root}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: isMember ? 40 : 110 }}>
 
-        {/* ── Dark hero header — cover photo (staff-set) or the MiniMap
-            fallback; imageless crews render exactly as before ─────────── */}
+        {/* ── Dark hero header — cover photo (staff-set) or the canvas
+            default-cover gradient wash (owner ruling 2026-07-14: crew
+            identity ≠ map). SafeImage: a broken cover falls back to the
+            wash, never a blank band. ── */}
         <View style={[st.hero, { height: HERO_H + insets.top }]}>
-          {crew.cover_url ? (
-            <Image source={{ uri: crew.cover_url }} style={[StyleSheet.absoluteFillObject, { width: undefined, height: undefined }]} resizeMode="cover" />
-          ) : (
-            <MiniMap seed={crew.id} height={HERO_H + insets.top} borderRadius={0} />
-          )}
+          <SafeImage
+            uri={crew.cover_url}
+            style={[StyleSheet.absoluteFillObject, { width: undefined, height: undefined }]}
+            resizeMode="cover"
+            fallback={<CrewGlyph height={HERO_H + insets.top} glyph={false} />}
+          />
           <LinearGradient
             colors={['rgba(8,12,4,0.55)', 'rgba(8,12,4,0.92)']}
             style={StyleSheet.absoluteFillObject}
@@ -434,13 +444,12 @@ export default function CrewDetailScreen() {
                   disabled={!canEditCrew || !!imgBusy}
                   style={st.heroIconWrap}
                 >
-                  {crew.icon_url ? (
-                    <Image source={{ uri: crew.icon_url }} style={st.heroIconImg} />
-                  ) : (
+                  {/* SafeImage: broken icon → color tile, not a blank square */}
+                  <SafeImage uri={crew.icon_url} style={st.heroIconImg} fallback={
                     <View style={[st.heroIconImg, { backgroundColor: crew.color ?? C.accent, alignItems: 'center', justifyContent: 'center' }]}>
                       <Icon name="people" size={26} color="#0D1A06" />
                     </View>
-                  )}
+                  } />
                   {canEditCrew && (
                     <View style={st.heroIconEdit}>
                       {imgBusy === 'icon'
@@ -537,22 +546,6 @@ export default function CrewDetailScreen() {
           </View>
         )}
 
-        {/* ── Activity schedule ────────────────────────────────────────── */}
-        {(activeDays.length > 0 || crew.active_time) && (
-          <View style={[st.metaCard, shadows.sm]}>
-            <Icon name="calendar-outline" size={15} color={C.faint} />
-            <Text style={st.metaLabel}>정기 러닝</Text>
-            <View style={st.metaDays}>
-              {activeDays.map(d => (
-                <View key={d} style={st.dayChip}>
-                  <Text style={st.dayTxt}>{d}</Text>
-                </View>
-              ))}
-              {crew.active_time && <Text style={st.metaTime}>{crew.active_time}</Text>}
-            </View>
-          </View>
-        )}
-
         {/* ── 공지 (M1) — members only. TOP of the section stack (owner ruling
                + canvas FrCrewDetail order): 공지 is the crew's most time-
                sensitive content; 챌린지/랭킹/피드 are browse-y and follow. ── */}
@@ -608,6 +601,65 @@ export default function CrewDetailScreen() {
                 ))}
               </View>
             )}
+          </View>
+        )}
+
+        {/* ── 집결 장소 — crew-native (지연 meet_* LIVE, probed 2026-07-14;
+            position beneath 공지 = owner-vs-canvas override). Canvas
+            composition: place name / region · schedule — each line only when
+            its data exists. Place half absent when meet_* null; schedule
+            also absent → whole section hides. 지도 앱에서 보기 → OS maps at
+            meet_lat/lng. ── */}
+        {isMember && (crew.meet_place_name != null || hasSchedule) && (
+          <View style={{ paddingHorizontal: S.gutter, paddingTop: S.xl }}>
+            <View style={st.sectionHead}>
+              <Text style={st.sectionTitle}>집결 장소</Text>
+            </View>
+            <View style={[st.meetCard, shadows.sm]}>
+              {crew.meet_lat != null && crew.meet_lng != null && (
+                <RealMap height={150} center={{ lat: crew.meet_lat, lng: crew.meet_lng }} marker borderRadius={0} />
+              )}
+              <Pressable
+                onPress={crew.meet_lat != null && crew.meet_lng != null ? () => router.push({
+                  pathname: '/(community)/meet-map' as never,
+                  // crewId + canEdit ride for the in-place 위치 수정 (the 커버
+                  // 변경 chip's exact gate); server enforces the PATCH deep
+                  params: {
+                    name: crew.meet_place_name ?? '', lat: String(crew.meet_lat), lng: String(crew.meet_lng),
+                    crewId: crew.id, canEdit: canEditCrew ? '1' : '0',
+                  },
+                }) : undefined}
+                disabled={crew.meet_lat == null}
+                style={({ pressed }) => [st.meetRow, pressed && crew.meet_lat != null && { opacity: 0.7 }]}
+              >
+                <View style={crew.meet_place_name != null ? st.meetPin : st.meetCal}>
+                  <Icon
+                    name={crew.meet_place_name != null ? 'location' : 'calendar-outline'}
+                    size={17}
+                    color={crew.meet_place_name != null ? C.danger : C.accentGrn}
+                  />
+                </View>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  {crew.meet_place_name != null && (
+                    <Text style={st.meetName} numberOfLines={1}>{crew.meet_place_name}</Text>
+                  )}
+                  {(crew.sigungu || hasSchedule) && (
+                    <Text style={[st.meetSchedule, crew.meet_place_name == null && { marginTop: 0 }]} numberOfLines={1}>
+                      {crew.sigungu ? `${crew.sigungu}` : ''}
+                      {crew.sigungu && hasSchedule ? ' · ' : ''}
+                      {activeDays.length > 0 ? `매주 ${activeDays.join('·')}` : ''}
+                      {activeDays.length > 0 && crew.active_time ? ' ' : ''}
+                      {crew.active_time ?? ''}
+                    </Text>
+                  )}
+                </View>
+                {/* convention (공지 상세/course detail): tap → big in-app map;
+                    지도 앱에서 보기 lives INSIDE that view now */}
+                {crew.meet_lat != null && crew.meet_lng != null && (
+                  <Icon name="chevron-forward" size={16} color={C.faint} />
+                )}
+              </Pressable>
+            </View>
           </View>
         )}
 
@@ -927,6 +979,16 @@ const st = StyleSheet.create({
 
   // Empty / error states
   emptyBox: { backgroundColor: C.surfaceAlt, borderWidth: 1, borderColor: C.border, borderRadius: R.lg, padding: 20, alignItems: 'center' },
+
+  // 집결 장소 — crew-native card (meet_* live 2026-07-14)
+  meetCard:    { borderRadius: R.lg, borderWidth: 1, borderColor: C.border, overflow: 'hidden', backgroundColor: C.surface },
+  meetRow:     { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 13, paddingHorizontal: 15 },
+  meetCal:     { width: 36, height: 36, borderRadius: 11, backgroundColor: C.accentDim, alignItems: 'center', justifyContent: 'center' },
+  meetPin:     { width: 36, height: 36, borderRadius: 11, backgroundColor: C.danger + '1A', alignItems: 'center', justifyContent: 'center' },
+  meetName:    { fontSize: 14.5, fontWeight: '700', color: C.text, letterSpacing: -0.3 },
+  meetSub:     { fontSize: 12, color: C.faint, letterSpacing: -0.2, marginTop: 2 },
+  meetOpenTxt: { fontSize: 12.5, fontWeight: '700', color: C.accentGrn, letterSpacing: -0.2 },
+  meetSchedule: { fontSize: 13, fontWeight: '700', color: C.accentGrn, letterSpacing: -0.2, marginTop: 2 },
   emptyBoxSub: { fontSize: 12, color: C.faint, letterSpacing: -0.2, fontWeight: '500', marginTop: 5, textAlign: 'center' },
 
   // 챌린지 (M2)

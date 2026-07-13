@@ -18,7 +18,6 @@ import { router, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Image,
   Pressable,
   StyleSheet,
   Text,
@@ -26,6 +25,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { SafeImage } from '@/components/safe-image';
 import { Icon } from '@/components/ui';
 import { ApiError } from '@/lib/api';
 import { joinCrewByCode, previewCrewByCode } from '@/lib/crews-api';
@@ -97,13 +97,11 @@ export default function CrewInviteScreen() {
       ) : preview ? (
         <View style={st.body}>
           <View style={[st.card, shadows.sm]}>
-            {preview.icon_url ? (
-              <Image source={{ uri: preview.icon_url }} style={st.crewIcon} />
-            ) : (
+            <SafeImage uri={preview.icon_url} style={st.crewIcon} fallback={
               <View style={[st.crewIcon, { backgroundColor: preview.color ?? C.accent, alignItems: 'center', justifyContent: 'center' }]}>
                 <Icon name="people" size={34} color="#0D1A06" />
               </View>
-            )}
+            } />
             <Text style={st.crewName} numberOfLines={2}>{preview.name || crewName || '크루'}</Text>
             <View style={st.metaRow}>
               <Icon name="people-outline" size={13} color={C.faint} />

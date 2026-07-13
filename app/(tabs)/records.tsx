@@ -4,7 +4,6 @@ import React, { useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -16,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useTabBarInset } from '@/components/fresh-tab-bar';
 import { MiniMap } from '@/components/mini-map';
+import { SafeImage } from '@/components/safe-image';
 import { MonthPicker } from '@/components/month-picker';
 import { Icon } from '@/components/ui';
 import { useRuns, type Run } from '@/hooks/use-runs';
@@ -256,11 +256,8 @@ function RunRow({ run }: { run: Run }) {
             INSTEAD-of choice: a second 62px tile beside the mini doesn't
             fit the current row; the ~110px redesign docket revisits.
             Otherwise: route-shaped mini (thumb) / seed art (trackless). */}
-        {run.photo_thumb ? (
-          <Image source={{ uri: run.photo_thumb }} style={st.photoThumb} />
-        ) : (
-          <MiniMap seed={run.id} height={62} borderRadius={14} polyline={run.polyline_thumb ?? undefined} />
-        )}
+        <SafeImage uri={run.photo_thumb} style={st.photoThumb}
+          fallback={<MiniMap seed={run.id} height={62} borderRadius={14} polyline={run.polyline_thumb ?? undefined} />} />
       </View>
       <View style={{ flex: 1, minWidth: 0 }}>
         <View style={st.runRowTop}>

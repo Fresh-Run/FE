@@ -32,6 +32,8 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CrewDeleteModal } from '@/components/crew-delete-modal';
+import { PlacePickSheet } from '@/components/place-pick-sheet';
+import { RealMap } from '@/components/real-map';
 import { Icon } from '@/components/ui';
 import { NumberWheelRow } from '@/components/wheel-sheet';
 import {
@@ -94,6 +96,16 @@ export default function CrewEditScreen() {
   const [sido, setSido]       = useState<string | null>(null);
   const [sigungu, setSigungu] = useState<string | null>(null);
   const [regionCoord, setRegionCoord] = useState<{ lat: number; lng: number } | null>(null);
+
+  // ── 집결 장소 — LIVE 2026-07-14 (지연 deploy pinged + probed: set/clear/
+  // bbox-422 verified on staging; gate = the crew PATCH gate itself, owner +
+  // edit_crew — this screen's entry gate, no extra key). Pair rule: place is
+  // SET only when name AND pin both exist (save sends the trio); anything
+  // less → explicit nulls ×3 (clear) — a typed name without a pin does NOT
+  // ride (stated: the pin is what the card's map promises).
+  const [meetName, setMeetName]   = useState('');
+  const [meetCoords, setMeetCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [meetSheetOpen, setMeetSheetOpen] = useState(false);
   const [tags, setTags]       = useState<string[]>([]);
   const toggleTag = (t: string) =>
     setTags(prev => prev.includes(t) ? prev.filter(x => x !== t) : (prev.length >= CREW_TAG_MAX ? prev : [...prev, t]));
@@ -124,6 +136,8 @@ export default function CrewEditScreen() {
         setSido(c.sido);
         setSigungu(c.sigungu);
         setTags(c.tags ?? []);
+        setMeetName(c.meet_place_name ?? '');
+        setMeetCoords(c.meet_lat != null && c.meet_lng != null ? { lat: c.meet_lat, lng: c.meet_lng } : null);
       })
       .catch(() => { if (!cancelled) setLoadError(true); });
     return () => { cancelled = true; };
@@ -170,6 +184,10 @@ export default function CrewEditScreen() {
         ...(sido == null
           ? { sido: null, sigungu: null, lat: null, lng: null }
           : { sido, sigungu, ...(regionCoord ? { lat: regionCoord.lat, lng: regionCoord.lng } : {}) }),
+        // 집결 장소 — pair rule: name+pin → set trio; else explicit nulls (clear)
+        ...(meetName.trim() && meetCoords
+          ? { meet_place_name: meetName.trim(), meet_lat: meetCoords.lat, meet_lng: meetCoords.lng }
+          : { meet_place_name: null, meet_lat: null, meet_lng: null }),
       });
       router.back(); // crew-detail refetches on focus
     } catch (e: unknown) {
@@ -245,6 +263,53 @@ export default function CrewEditScreen() {
             onPress={() => router.push({ pathname: '/region-picker' as never, params: { target: 'form' } })}
             onClear={() => { setSido(null); setSigungu(null); setRegionCoord(null); }}
           />
+          {/* 집결 장소 — name + map pin (공지 composer's picker); × clears
+              (지역 row idiom). Saved only when BOTH name and pin exist. */}
+          <View style={st.divider} />
+          <View style={st.fieldRow}>
+            <View style={st.areaIcon}><Icon name="flag-outline" size={18} color={C.accentGrn} /></View>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={st.areaLabel}>집결 장소</Text>
+              <TextInput
+                value={meetName}
+                onChangeText={setMeetName}
+                placeholder="예: 서울숲 공원 정문"
+                placeholderTextColor={C.faint}
+                style={[st.fieldInput, { paddingVertical: 4 }]}
+              />
+            </View>
+            {(meetName.length > 0 || meetCoords) && (
+              <Pressable
+                onPress={() => { setMeetName(''); setMeetCoords(null); }}
+                hitSlop={10}
+                accessibilityLabel="집결 장소 해제"
+                style={{ width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: C.surfaceAlt }}
+              >
+                <Icon name="close" size={15} color={C.faint} />
+              </Pressable>
+            )}
+          </View>
+          {/* …and gets a DEDICATED full-width row instead (2026-07-14 fix:
+              the in-row pin sat between the TextInput's touch surface and
+              the ×'s overlapping hitSlop — taps never reached it. Big
+              target, zero adjacency; composer's pin-preview idiom below). */}
+          <Pressable
+            onPress={() => setMeetSheetOpen(true)}
+            style={({ pressed }) => [est.meetPickRow, pressed && { opacity: 0.7 }]}
+          >
+            <Icon name={meetCoords ? 'location' : 'map-outline'} size={17} color={meetCoords ? C.danger : C.accentGrn} />
+            <Text style={[est.meetPickTxt, meetCoords != null && { color: C.text }]}>
+              {meetCoords ? '핀 지정됨 — 지도에서 수정' : '지도에서 위치 선택'}
+            </Text>
+            <Icon name="chevron-forward" size={15} color={C.faint} />
+          </Pressable>
+          {meetCoords && (
+            /* key= remounts on re-pick — RealMap uses initialRegion, which
+               ignores prop updates (the composer's stale-preview fix) */
+            <View style={est.meetPreview}>
+              <RealMap key={`${meetCoords.lat},${meetCoords.lng}`} height={110} center={meetCoords} marker borderRadius={12} />
+            </View>
+          )}
           <View style={st.divider} />
           <View style={st.fieldRow}>
             <View style={st.areaIcon}><Icon name="location" size={18} color={C.accentGrn} /></View>
@@ -356,6 +421,13 @@ export default function CrewEditScreen() {
 
       {/* 크루 삭제 confirm — canvas FrCrewDelete (centered modal); copy states
           the PROBED consequences: cascade with members, runs survive. */}
+      {/* 집결 장소 pin picker — the 공지 composer's PlacePickSheet verbatim */}
+      <PlacePickSheet
+        visible={meetSheetOpen}
+        initial={meetCoords}
+        onClose={() => setMeetSheetOpen(false)}
+        onPick={c2 => { setMeetCoords(c2); setMeetSheetOpen(false); }}
+      />
       <CrewDeleteModal
         visible={deleteOpen}
         crewId={crewId!}
@@ -369,6 +441,10 @@ export default function CrewEditScreen() {
 
 // Edit-only styles (form styles come from crew-create's shared st)
 const est = StyleSheet.create({
+  meetPickRow: { flexDirection: 'row', alignItems: 'center', gap: 9, paddingVertical: 12, paddingHorizontal: 4 },
+  meetPickTxt: { flex: 1, fontSize: 14, fontWeight: '600', color: C.accentGrn, letterSpacing: -0.3 },
+  meetPreview: { marginBottom: 10, borderRadius: 12, overflow: 'hidden' },
+
   rootPlain: { flex: 1, backgroundColor: C.bg },
   centered:  { paddingTop: 80, alignItems: 'center', gap: 12 },
   stateTxt:  { fontSize: 14, color: C.sub, letterSpacing: -0.2 },

@@ -123,9 +123,13 @@ export default function AnnouncementComposeScreen() {
       title: title.trim(),
       body: body.trim(),
       run_at: runAtIso,
+      // 2026-07-14 regression fix: the pin used to be GATED ON THE NAME
+      // (`place.trim()`) — a picked pin with the text left empty was silently
+      // discarded (the owner's exact on-device flow). Name and pin are now
+      // independent; either rides alone.
       place_name: scheduled && place.trim() ? place.trim() : null,
-      place_lat: scheduled && place.trim() ? placeCoords?.lat ?? null : null,
-      place_lng: scheduled && place.trim() ? placeCoords?.lng ?? null : null,
+      place_lat: scheduled && placeCoords ? placeCoords.lat : null,
+      place_lng: scheduled && placeCoords ? placeCoords.lng : null,
       rsvp_closes_at: null,
     };
     try {
