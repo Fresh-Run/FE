@@ -69,6 +69,9 @@ const TYPE_META: Record<string, Meta> = {
   // and inert (the dropped-type bug, 2026-07-13). payload is null by
   // contract → the deep-link target is the 팔로우 요청 inbox LIST.
   follow_requested:    { tag: '팔로우 요청', tone: CREW_BLUE, icon: 'avatar', copy: '님이 팔로우를 요청했어요' },
+  // v2 승인제 (지연 QA find 2026-07-14 — added 07-12, was falling to
+  // FALLBACK_META): target_id = the APPROVER's uid, payload null (probed).
+  follow_request_approved: { tag: '팔로우', tone: CREW_BLUE, icon: 'avatar', copy: '님이 팔로우 요청을 수락했어요' },
   crew_joined:         { tag: '크루',     tone: CREW_BLUE,   icon: { name: 'people-outline',    color: CREW_BLUE,  bg: CREW_BLUE + '22' },  copy: '님이 크루에 가입했어요' },
   join_requested:      { tag: '크루 신청', tone: CREW_BLUE,   icon: { name: 'people-outline',    color: CREW_BLUE,  bg: CREW_BLUE + '22' },  copy: '님이 크루 가입을 신청했어요' },
   join_approved:       { tag: '크루 승인', tone: CREW_BLUE,   icon: { name: 'people-outline',    color: CREW_BLUE,  bg: CREW_BLUE + '22' },  copy: '님이 크루 가입을 승인했어요' },
@@ -126,7 +129,7 @@ const TABS: { key: TabKey; label: string }[] = [
   { key: 'crew',   label: '크루' },
 ];
 
-const FOLLOW_TYPES = new Set(['user_followed', 'follow_requested']);
+const FOLLOW_TYPES = new Set(['user_followed', 'follow_requested', 'follow_request_approved']);
 const SOCIAL_TYPES = new Set(['run_kudoed', 'run_commented', 'route_liked', 'route_commented']);
 const CREW_TYPES   = new Set(['crew_joined', 'join_requested', 'join_approved', 'crew_announcement', 'crew_invited']);
 // pb_achieved: 전체-only, mirroring challenge_completed (both self-achievements,
@@ -171,8 +174,9 @@ function deepLink(n: AppNotification): (() => void) | null {
       // 수락/거절 lives on the inbox — the list is the target (null payload)
       return () => router.push('/follow-requests' as any);
     case 'user_followed':
-      // GRADUATED 2026-07-08: target_id = the actor's uid (probed) — the
-      // other-user profile screen now exists. Never self.
+    case 'follow_request_approved':
+      // target_id = the actor's uid (followed 07-08 / approver 07-14, both
+      // probed) → the actor's profile. Never self.
       if (!n.target_id) return null;
       return () => openProfile(n.target_id, n.actor_nickname);
     case 'crew_announcement': {
