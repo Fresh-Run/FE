@@ -44,6 +44,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Avatar } from '@/components/avatar';
 import { KudosSheet } from '@/components/kudos-sheet';
 import { MediaCarousel } from '@/components/media-carousel';
+import { setRouteMap } from '@/store/route-map';
 import { Icon } from '@/components/ui';
 import { ApiError } from '@/lib/api';
 import { openProfile } from '@/lib/profile-nav';
@@ -268,7 +269,19 @@ export default function RunPostScreen() {
 
             {/* Hero — real track when served; photos are 1h signed URLs (no caching) */}
             <View style={st.hero}>
-              <MediaCarousel polyline={track} seed={run.id} photos={run.photos ?? []} height={HERO_H} />
+              <MediaCarousel
+                // thumb-first + tap-to-enlarge (B7) — same grammar as 활동 상세
+                polyline={track ?? run.polyline_thumb ?? null}
+                seed={run.id}
+                photos={run.photos ?? []}
+                height={HERO_H}
+                onMapPress={() => {
+                  const line = track ?? run.polyline_thumb;
+                  if (!line || line.length < 2) return;
+                  setRouteMap({ title: run.title ?? timeTitle(run.ran_at), polyline: line, ...(track ? {} : { upgradeRunId: run.id }) });
+                  router.push('/(course)/route-map' as never);
+                }}
+              />
             </View>
 
             <View style={{ paddingHorizontal: S.gutter }}>

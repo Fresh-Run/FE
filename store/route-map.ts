@@ -5,7 +5,14 @@
  */
 import type { Coordinate } from '@/types';
 
-export type RouteMapPayload = { title: string; polyline: Coordinate[] };
+export type RouteMapPayload = {
+  title: string;
+  polyline: Coordinate[];
+  /** B7: set ONLY when the pushed polyline is the coarse thumb (full track
+      not yet loaded at tap time) — route-map fetches and upgrades itself.
+      Absent = the geometry is already the best available (no fetch). */
+  upgradeRunId?: string;
+};
 
 let pending: RouteMapPayload | null = null;
 

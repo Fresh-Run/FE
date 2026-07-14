@@ -13,6 +13,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { MediaCarousel } from '@/components/media-carousel';
+import { setRouteMap } from '@/store/route-map';
 import { PaceChart, SplitsTable } from '@/components/run-splits';
 import { Icon } from '@/components/ui';
 // MiniMap fallback now lives inside MediaCarousel (no polyline → seed map)
@@ -139,10 +140,20 @@ export default function ActivityScreen() {
                keep the seed-stylized fallback inside the carousel ── */}
         <View style={[st.hero, { height: HERO_H + insets.top }]}>
           <MediaCarousel
-            polyline={track}
+            // thumb-first (B7 SWR grammar): the ≤36pt thumb paints INSTANTLY
+            // from the payload; the server-simplified full track replaces it
+            // when the fetch lands. Failed/offline → the thumb stays (real
+            // geometry, just coarser — no error theater).
+            polyline={track ?? run.polyline_thumb ?? null}
             seed={run.id}
             photos={run.photos ?? []}
             height={HERO_H + insets.top}
+            onMapPress={() => {
+              const line = track ?? run.polyline_thumb;
+              if (!line || line.length < 2) return;
+              setRouteMap({ title: run.title ?? timeTitle(run.ran_at), polyline: line, ...(track ? {} : { upgradeRunId: run.id }) });
+              router.push('/(course)/route-map' as never);
+            }}
           />
           <LinearGradient
             colors={['rgba(8,12,4,0.0)', 'rgba(8,12,4,0.72)']}

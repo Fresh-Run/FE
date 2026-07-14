@@ -6,7 +6,7 @@
  * pager path ships typed but dormant.
  */
 import React, { useRef, useState } from 'react';
-import { FlatList, Image, StyleSheet, View } from 'react-native';
+import { FlatList, Pressable, Image, StyleSheet, View } from 'react-native';
 
 import { MiniMap } from '@/components/mini-map';
 import { RealMap } from '@/components/real-map';
@@ -21,24 +21,32 @@ type Props = {
   seed: string;
   photos?: string[];
   height: number;
+  /** tap-to-enlarge for the MAP slide only (B7) — absent = not tappable */
+  onMapPress?: () => void;
 };
 
-function MapSlide({ polyline, seed, height }: { polyline: Coordinate[] | null; seed: string; height: number }) {
-  return polyline && polyline.length >= 2
+function MapSlide({ polyline, seed, height, onPress }: { polyline: Coordinate[] | null; seed: string; height: number; onPress?: () => void }) {
+  const map = polyline && polyline.length >= 2
     // cache={false}: this is a single async-mounted HERO, not a list thumbnail
     // — live tiles avoid the blank-snapshot race (지연 bug 2026-07-13).
     ? <RealMap height={height} polyline={polyline} cache={false} />
     : <MiniMap seed={seed} height={height} borderRadius={0} polyline={polyline ?? undefined} />;
+  // tap-to-enlarge (B7): only the MAP slide taps — photo slides keep their
+  // own semantics; horizontal swipes are untouched (Pressable vs pan).
+  if (onPress && polyline && polyline.length >= 2) {
+    return <Pressable onPress={onPress}>{map}</Pressable>;
+  }
+  return map;
 }
 
-export function MediaCarousel({ polyline, seed, photos = [], height }: Props) {
+export function MediaCarousel({ polyline, seed, photos = [], height, onMapPress }: Props) {
   const [width, setWidth] = useState(0);
   const [idx, setIdx] = useState(0);
   const listRef = useRef<FlatList<Slide>>(null);
 
   // Canvas-exact: no photos → plain static map, no pager, no dots
   if (photos.length === 0) {
-    return <MapSlide polyline={polyline} seed={seed} height={height} />;
+    return <MapSlide polyline={polyline} seed={seed} height={height} onPress={onMapPress} />;
   }
 
   const slides: Slide[] = [
@@ -62,7 +70,7 @@ export function MediaCarousel({ polyline, seed, photos = [], height }: Props) {
           renderItem={({ item }) => (
             <View style={{ width, height }}>
               {item.type === 'map'
-                ? <MapSlide polyline={polyline} seed={seed} height={height} />
+                ? <MapSlide polyline={polyline} seed={seed} height={height} onPress={onMapPress} />
                 : <Image source={{ uri: item.uri }} style={{ width, height }} resizeMode="cover" />}
             </View>
           )}

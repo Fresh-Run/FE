@@ -7,12 +7,13 @@
  * reached without a payload (stale deep-link) → honest empty state.
  */
 import { router } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { RealMap } from '@/components/real-map';
 import { Icon } from '@/components/ui';
+import { getRunTrack } from '@/lib/run-social-api';
 import { colors as C, shadows, spacing as S } from '@/lib/theme';
 import { takeRouteMap } from '@/store/route-map';
 
@@ -20,13 +21,29 @@ export default function RouteMapScreen() {
   const insets = useSafeAreaInsets();
   const { height: winH } = useWindowDimensions();
   const [payload] = useState(() => takeRouteMap()); // one-shot; survives re-render
+  // B7 upgrade decision (owner flag): tapping the hero BEFORE the full track
+  // loads must not freeze this view on the coarse thumb — when the payload
+  // carries upgradeRunId, fetch the full track and swap it in (silent fail →
+  // the thumb stays, honest). key-remount refits the camera on swap.
+  const [line, setLine] = useState(payload?.polyline ?? null);
+  useEffect(() => {
+    const id = payload?.upgradeRunId;
+    if (!id) return;
+    let cancelled = false;
+    getRunTrack(id)
+      .then(t => { if (!cancelled && t.polyline.length >= 2) setLine(t.polyline); })
+      .catch(() => { /* coarse-but-real stands */ });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <View style={st.root}>
-      {payload && payload.polyline.length >= 2 ? (
+      {line && line.length >= 2 ? (
         <RealMap
+          key={`route-${line.length}`} // remount on the thumb→track swap (camera refit)
           height={winH}
-          polyline={payload.polyline}
+          polyline={line}
           startPin
           interactive
           cache={false}
