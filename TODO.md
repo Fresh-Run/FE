@@ -728,3 +728,12 @@ The one-way loud switch. `runtimeVersion` `sdkVersion` → **`appVersion`** (ver
 **APNs key — RECONCILED (do NOT auto-generate):** EAS GraphQL shows exactly ONE Apple push key in `freshrun1`: **`45DJ2WCYUY`, team ZSM9CJXQ8C** (matches verified Team ID), registered 2026-07-14 (지연's). But `iosAppCredentialsList: []` → account-level, NOT yet linked to com.freshrun.app. Action at the dev-build push step: **LINK 45DJ2WCYUY to com.freshrun.app; never generate a 2nd** (Apple caps at 2; duplicates = silent delivery weirdness).
 
 **Next:** dev build (both devices reinstall — the appVersion-runtime build). Then ② push logic OTAs on the `development` channel.
+
+## BUILD #1 ② — PUSH TOKEN E2E (2026-07-15, OTA→development)
+
+Client side complete. The 12 toggles + server `send_for_notification` already existed; the ONLY gap was client token registration — this OTA lands it. `push_tokens` was empty purely because no client ever registered.
+- **New:** `lib/push.ts` (foreground handler + `registerForPush` permission→Expo token + `usePushSync` session-keyed register/unregister + tap routing incl. cold start), `lib/push-api.ts` (POST/DELETE /me/push-token, 204; live-probed 204/422/204), `lib/notif-routing.ts` (`deepLink` EXTRACTED from notifications.tsx — one source shared with push taps; no drift on the degrade-to-inert contract).
+- **Wired:** `app/_layout.tsx` mounts `<PushSync/>`; `app/notifications.tsx` imports the shared `deepLink`.
+- **Decisions:** permission prompt once on login (undetermined); token registered regardless of the 12 toggles (server gates at send); no badge (no honest unread source); push data has no actor_nickname → profile fetches it.
+- **APNs LINKED:** existing key `45DJ2WCYUY` (team ZSM9CJXQ8C) attached to com.freshrun.app iOS credentials via GraphQL `setPushKey` (no duplicate — Apple caps at 2). 지연 confirms IN: EAS push security ON, `EXPO_ACCESS_TOKEN` set as Fly secret (token-first safe order), APNs registered.
+- **Verify:** tsc 0, eslint 0-err. E2E pending on-device (register phone A → kudos/follow from phone B → banner).

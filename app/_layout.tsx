@@ -7,6 +7,7 @@ import 'react-native-reanimated';
 
 import { ThemeProvider, useTheme } from '@/contexts/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { usePushSync } from '@/lib/push';
 import { useStore } from '@/store/use-store';
 
 export const unstable_settings = {
@@ -50,6 +51,14 @@ function AuthGuard() {
   return null;
 }
 
+/** Remote push (BUILD #1 ②): registers the Expo token on login / unregisters
+    on logout and routes notification taps. Null-render, mounted at the root
+    like AuthGuard. Inert until a token registers — safe on simulator/denial. */
+function PushSync() {
+  usePushSync();
+  return null;
+}
+
 function LoadingScreen() {
   const { colors } = useTheme();
   return (
@@ -85,6 +94,7 @@ export default function RootLayout() {
   return (
     <ThemeProvider>
       <AuthGuard />
+      <PushSync />
       <RootLayoutInner />
     </ThemeProvider>
   );
