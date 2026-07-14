@@ -28,14 +28,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '@/components/ui';
 import { NumberWheelRow } from '@/components/wheel-sheet';
 import { ApiError } from '@/lib/api';
-import { createChallenge, dateToKstIsoDay } from '@/lib/challenges-api';
+import { createChallenge, dateToKstIsoDay, kstDateStr } from '@/lib/challenges-api';
 import { colors as C, radius as R, spacing as S } from '@/lib/theme';
-
-/** Calendar date N days from now, in KST (the serializer's input format). */
-function kstDateStr(offsetDays: number): string {
-  const d = new Date(Date.now() + 9 * 3600e3 + offsetDays * 86400e3);
-  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
-}
 
 export default function ChallengeCreateScreen() {
   const insets = useSafeAreaInsets();

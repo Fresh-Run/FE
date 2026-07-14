@@ -24,11 +24,13 @@ import {
   Text,
   TextInput,
   View,
+  Switch,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/ui';
 import { NumberWheelRow } from '@/components/wheel-sheet';
+import { createChallenge, dateToKstIsoDay, kstDateStr } from '@/lib/challenges-api';
 import { createCrew, issueInviteCode, CREW_TAG_GROUPS, CREW_TAG_MAX, type Crew, type CrewLevel } from '@/lib/crews-api';
 import { useCurrentLocation } from '@/hooks/use-current-location';
 import { accentShadow, colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
@@ -200,6 +202,13 @@ export default function CrewCreateScreen() {
   const [sport, setSport]     = useState<string>('러닝');
   const [level, setLevel]     = useState<CrewLevel>('무관');
   const [maxMembers, setMaxMembers] = useState(30);
+  // 첫 챌린지 (선택) — canvas has a toggle + goal/period wheels. Default OFF
+  // (canvas prototype shows ON; owner lean = collapsed — a crew creation must
+  // not silently queue a challenge POST the creator didn't opt into). Chained
+  // AFTER the crew POST; a challenge failure NEVER rolls back the crew.
+  const [challengeOn, setChallengeOn]       = useState(false);
+  const [challengeGoalKm, setChallengeGoalKm] = useState(50);   // canvas default
+  const [challengePeriod, setChallengePeriod] = useState(7);
   const [privacy, setPrivacy] = useState<Privacy>('공개');
   const [days, setDays]       = useState<string[]>([]);
   const [time, setTime]       = useState('');
@@ -261,6 +270,21 @@ export default function CrewCreateScreen() {
         ...(regionCoord ? { lat: regionCoord.lat, lng: regionCoord.lng } : {}),
         ...(tags.length ? { tags } : {}),
       });
+      // 첫 챌린지 chain — crew already exists; NEVER roll it back. A challenge
+      // failure lands the user in the (real) crew with an honest note; the
+      // crew-detail challenge section then shows its create-CTA to retry.
+      if (challengeOn) {
+        try {
+          await createChallenge(crew.id, {
+            title: '첫 챌린지',
+            goal_km: challengeGoalKm,
+            starts_at: dateToKstIsoDay(kstDateStr(0), 'start')!,
+            ends_at: dateToKstIsoDay(kstDateStr(challengePeriod - 1), 'end')!,
+          });
+        } catch {
+          Alert.alert('크루는 만들어졌어요', '첫 챌린지만 저장되지 않았어요. 크루 페이지에서 다시 만들 수 있어요.');
+        }
+      }
       setCreated(crew);
     } catch (e: unknown) {
       // 403 premium_required arrives verbatim via ApiError (approved)
@@ -418,7 +442,30 @@ export default function CrewCreateScreen() {
           <FieldRow label="시간" value={time} onChange={setTime} placeholder="예: 오전 6:30" maxLength={20} />
         </Group>
 
-        {/* 첫 챌린지 — deferred to the challenge item (owner call, TODO.md) */}
+        {/* 첫 챌린지 (선택) — optional; chained after the crew POST (B7) */}
+        <Group title="첫 챌린지 (선택)">
+          <View style={st.challengeToggleRow}>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={st.challengeToggleLabel}>크루 챌린지 시작하기</Text>
+              <Text style={st.challengeToggleSub}>크루원과 함께 달릴 첫 목표를 만들어요</Text>
+            </View>
+            <Switch
+              value={challengeOn}
+              onValueChange={setChallengeOn}
+              trackColor={{ true: C.accent, false: C.border }}
+              thumbColor="#fff"
+            />
+          </View>
+          {challengeOn && (
+            <>
+              <View style={st.divider} />
+              <NumberWheelRow label="목표 거리" value={challengeGoalKm} min={5} max={100} step={1} suffix="km" onChange={setChallengeGoalKm} />
+              <View style={st.divider} />
+              <NumberWheelRow label="기간" value={challengePeriod} min={3} max={60} step={1} suffix="일" onChange={setChallengePeriod} />
+              <Text style={st.challengePreview}>오늘부터 {challengePeriod}일 · {kstDateStr(challengePeriod - 1)} 종료 · GPS 기록만 집계</Text>
+            </>
+          )}
+        </Group>
       </ScrollView>
 
       {/* Sticky CTA — gated on name ≥ 2 per design */}
@@ -494,6 +541,10 @@ export const st = StyleSheet.create({
   radioOuter:  { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: C.border, alignItems: 'center', justifyContent: 'center' },
   radioInner:  { width: 12, height: 12, borderRadius: 6, backgroundColor: C.accent },
 
+  challengeToggleRow:   { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
+  challengeToggleLabel: { fontSize: 14.5, fontWeight: '600', color: C.text, letterSpacing: -0.3 },
+  challengeToggleSub:   { fontSize: 12, color: C.faint, letterSpacing: -0.2, marginTop: 2 },
+  challengePreview:     { fontSize: 12, color: C.accentGrn, letterSpacing: -0.2, fontWeight: '600', paddingTop: 10, paddingLeft: 2 },
   daysRow:     { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 14, paddingHorizontal: 2 },
   dayCircle:   { width: 38, height: 38, borderRadius: 19, backgroundColor: C.surfaceAlt, borderWidth: 1, borderColor: C.border, alignItems: 'center', justifyContent: 'center' },
   dayCircleOn: { backgroundColor: C.accent, borderColor: C.accent },

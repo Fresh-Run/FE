@@ -37,6 +37,12 @@ export function createChallenge(crewId: string, input: {
   return apiFetch<Challenge>(`/api/crews/${crewId}/challenges`, { method: 'POST', body: input });
 }
 
+/** Calendar date N days from now, in KST (the serializer's input format). */
+export function kstDateStr(offsetDays: number): string {
+  const d = new Date(Date.now() + 9 * 3600e3 + offsetDays * 86400e3);
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
+}
+
 /** KST-offset ISO for a date-only input — challenges span whole days:
     start = 00:00 KST, end = 23:59 KST. Null on invalid format. */
 export function dateToKstIsoDay(date: string, boundary: 'start' | 'end'): string | null {
