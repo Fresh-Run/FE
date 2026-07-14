@@ -750,3 +750,5 @@ The honesty gap closed: a run survives a locked pocket. Architecture (owner-appr
 - **keep-awake finally GATED on keep_screen_on** (tracking.tsx TODO closed — ① removed its stated blocker).
 - **Verified indoors (owner):** Always-prompt once, background delivery locked (blue indicator + fresh fixes), keep-awake both ways, foreground behavior unchanged, force-quit→recovery. **HELD for the dry run: locked-pocket odometer accuracy + B2's real splits/elevation.**
 - **RECONCILIATION NOTE:** verified against the dev server; the commit+OTA lagged the verification by one turn (owner said "shipped" — it hadn't landed; this commit makes it true).
+
+**① OTA PUBLISHED 2026-07-15:** channel `development`, runtimeVersion 1.0.0, group `fe7ddf90-51a7-42e3-be50-291ddf6d1351`, commit 1e80703. (Guard catch: ④a's uncommitted 1.0.1 bump was stashed for the publish — an OTA to 1.0.1 would have reached zero devices.)
