@@ -51,7 +51,9 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "러닝 경로를 지도에 기록하기 위해 위치 정보를 사용해요."
+          "isIosBackgroundLocationEnabled": true,
+          "locationWhenInUsePermission": "러닝 경로를 지도에 기록하기 위해 위치 정보를 사용해요.",
+          "locationAlwaysAndWhenInUsePermission": "화면을 꺼도 러닝 경로를 계속 기록하려면 위치 접근을 '항상 허용'으로 설정해 주세요."
         }
       ],
       [
@@ -59,7 +61,8 @@
         {
           "photosPermission": "러닝에 사진을 첨부하고 프로필 사진을 설정할 때 사진에 접근해요."
         }
-      ]
+      ],
+      "expo-notifications"
     ],
     "experiments": {
       "typedRoutes": true,
@@ -73,7 +76,7 @@
     },
     "owner": "freshrun1",
     "runtimeVersion": {
-      "policy": "sdkVersion"
+      "policy": "appVersion"
     },
     "updates": {
       "url": "https://u.expo.dev/99f17a15-d9ba-4497-adb2-a25a8ac93c61"

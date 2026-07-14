@@ -712,3 +712,19 @@ npx eas-cli build --platform ios --profile development
 Sourcing asc.env makes Apple auth passwordless (no Apple-ID 2FA). The flow: create Distribution Cert (yes) → "no devices, register now?" (yes) → pick **Website** → open the printed URL/QR **on the iPhone** → install the profile → device registers → ad-hoc profile builds → ~15 min cloud build → install link/QR for the phone. Git is clean at b95d486 (B2 in stash) — the build archives this commit.
 
 After the device exists, subsequent dev builds CAN run headless (`--non-interactive`). B2 pops after the first successful build.
+
+## BUILD #1 — NATIVE SUBSTRATE (2026-07-15) 🔴 runtimeVersion SWITCH FIRED
+
+The one-way loud switch. `runtimeVersion` `sdkVersion` → **`appVersion`** (version "1.0.0" → runtime "1.0.0"). **From this commit 지연's Expo Go receives NOTHING** — publishes no longer match its runtime, and the JS now references native modules Expo Go lacks. SAFE: both devices are already on the dev build. Delivery is dev-build/TestFlight only from here; `main`-channel Expo-Go publishing is dead.
+
+**Deps added:** `expo-notifications ~0.32.17`, `expo-task-manager ~14.0.9` (SDK-54 pinned). These are the ①+② native substrate; ③④ deps come with their own slices/builds.
+
+**app.json:**
+- expo-location plugin: `isIosBackgroundLocationEnabled: true` (→ UIBackgroundModes gains `location`) + honest Always string `NSLocationAlwaysAndWhenInUseUsageDescription`.
+- `expo-notifications` plugin (plain) → `aps-environment` entitlement (development; Xcode→production in release). NO `enableBackgroundRemoteNotifications` → no `remote-notification` bg mode (correct — local-only Live Activity, basic push).
+- Introspect-verified: `UIBackgroundModes: ['fetch','location']`, Always string set, `aps-environment: development`.
+- **`'fetch'` note:** expo-task-manager's plugin adds `fetch` to UIBackgroundModes UNCONDITIONALLY (not our choice). We use `location`; `fetch` rides along. Standard, low review risk — revisit with a plugin override only if review flags it.
+
+**APNs key — RECONCILED (do NOT auto-generate):** EAS GraphQL shows exactly ONE Apple push key in `freshrun1`: **`45DJ2WCYUY`, team ZSM9CJXQ8C** (matches verified Team ID), registered 2026-07-14 (지연's). But `iosAppCredentialsList: []` → account-level, NOT yet linked to com.freshrun.app. Action at the dev-build push step: **LINK 45DJ2WCYUY to com.freshrun.app; never generate a 2nd** (Apple caps at 2; duplicates = silent delivery weirdness).
+
+**Next:** dev build (both devices reinstall — the appVersion-runtime build). Then ② push logic OTAs on the `development` channel.
