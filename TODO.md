@@ -693,3 +693,21 @@ Owner ruled the move off Expo Go to a native build. app.json changes (this commi
 **Order:** dev build FIRST (validates cert→provisioning→sign→install, unblocks on-device bg-GPS + Live Activity) → build native features → appVersion switch + production build → TestFlight (the cutover). B2 stash@{0} parked through the build, popped after.
 
 **PROCESS BUG FIXED (ee7edee):** B2's `git rm run-saved.tsx` pre-staged the deletion → A1's `git commit` swept it into 9fb4462 → HEAD's run-result routed to the deleted run-saved (unpublished; no device hit). Restored the file; B2 re-deletes it when it lands. **Rule: park a deletion with a working-tree `rm` (unstaged D), never `git rm` (pre-stages) — it defeats partial-staging.**
+
+## BUILD #1 — dev build reached the credential gate (2026-07-14); interactive bootstrap = owner action
+
+Done headless (all pushed):
+- **ASC API key wired** — `.p8` at `~/.freshrun-eas/` (600, OUTSIDE the repo/archive), env at `~/.freshrun-eas/asc.env` (EXPO_ASC_API_KEY_PATH / _KEY_ID / _ISSUER_ID — the exact names eas-cli 21 reads, verified against its dist). Key **validated by a direct ASC API call: HTTP 200, App Manager**. App record `com.freshrun.app | FreshRun` **already exists** on the team.
+- **expo-dev-client ~6.0.21 added + committed (b95d486)** — the `development` profile is developmentClient:true; the package was missing (audit gap). SDK-54 version via `expo install`; no app.json plugin needed.
+- **Build attempt got through Apple-side setup**: resolved env, initialized buildNumber=1, created the `development` EAS channel+branch, "Using remote iOS credentials". Then stopped: *"couldn't find any credentials suitable for internal distribution — run again in interactive mode."*
+
+**BLOCKER (predicted "cannot be done from here" item, now exact): 0 registered iOS devices.** A dev/internal build's ad-hoc profile needs ≥1 device UDID; the first-time bootstrap (create Distribution Cert → register device → create ad-hoc profile) needs a TTY + the physical iPhone. `eas device:create` is fully interactive (no flags). Headless cannot complete it.
+
+**OWNER ACTION — one interactive command in a real terminal (not the `!` prefix; it can't do the QR/multi-prompt flow):**
+```
+source ~/.freshrun-eas/asc.env
+npx eas-cli build --platform ios --profile development
+```
+Sourcing asc.env makes Apple auth passwordless (no Apple-ID 2FA). The flow: create Distribution Cert (yes) → "no devices, register now?" (yes) → pick **Website** → open the printed URL/QR **on the iPhone** → install the profile → device registers → ad-hoc profile builds → ~15 min cloud build → install link/QR for the phone. Git is clean at b95d486 (B2 in stash) — the build archives this commit.
+
+After the device exists, subsequent dev builds CAN run headless (`--non-interactive`). B2 pops after the first successful build.
