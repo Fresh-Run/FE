@@ -307,15 +307,15 @@ export default function ProfileScreen() {
             label="AI 코스 선호도"
             onPress={() => router.push('/ai-course-prefs' as any)}
           />
+          {/* 오디오 코치 v1 (2026-07-14): premium → settings screen; free →
+              the honest /premium page (the lock now has a real destination) */}
           <SettingRow
             icon={<Icon name="volume-high-outline" size={19} color={C.accentGrn} />}
             iconBg={C.accentDim}
             label="오디오 코치 설정"
             badge="Premium"
             locked={!isPremium}
-            onPress={isPremium
-              ? () => Alert.alert('준비 중', '오디오 코치는 다음 업데이트에서 지원돼요.')
-              : undefined}
+            onPress={() => router.push((isPremium ? '/audio-coach' : '/premium') as never)}
           />
         </SettingGroup>
 
@@ -343,7 +343,8 @@ export default function ProfileScreen() {
 
         {/* 러닝 동작 — persisted via PATCH /me/settings.
             Runtime effects: haptics is live (gates hold-stop feedback);
-            auto_pause / voice_cue persist-only (features unbuilt);
+            voice_cue is LIVE (오디오 코치 v1 master, 2026-07-14);
+            auto_pause persist-only (feature unbuilt);
             keep_screen_on persist-only for now (see TODO(keep-awake) in tracking.tsx). */}
         <SettingGroup title="러닝 동작">
           <ToggleRow label="자동 일시정지"  on={runSettings.auto_pause}     onChange={v => toggleRun('auto_pause',     v)} />

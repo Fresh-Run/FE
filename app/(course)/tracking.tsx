@@ -41,6 +41,9 @@ import Svg, { Circle } from 'react-native-svg';
 import { Icon } from '@/components/ui';
 import { SEOUL_FALLBACK, useCurrentLocation } from '@/hooks/use-current-location';
 import { useRunTracker } from '@/hooks/use-run-tracker';
+import { composeFinishCue, composeSplitCue, composeStartCue, speakCue, stopSpeech } from '@/lib/audio-coach';
+import { useAudioCoach } from '@/store/use-audio-coach';
+import { useQuota } from '@/store/use-quota';
 import { clearActiveCourse, getActiveCourse } from '@/store/active-course';
 import { setPendingRun } from '@/store/pending-run';
 import { useLocalProfile } from '@/store/use-local-profile';
@@ -253,6 +256,51 @@ export default function TrackingScreen() {
     start, togglePause, stop, livePath, lastFixAgeSec,
   } = useRunTracker();
 
+  // ── 오디오 코치 v1 (premium, LOCAL cues — owner scope 2026-07-14) ─────────
+  // Gate: premium (server-truth quota) AND the 음성 안내 master (server-
+  // persisted run.voice_cue) AND not muted. Split cues fire on interval-km
+  // thresholds from the tracker's own odometer (the 07-11 filter fix made it
+  // trustworthy). kcal line = honest-estimate rule (null → silently omitted).
+  const isPremium = useQuota(q => q.isPremium);
+  const voiceCue  = useSettings(s2 => s2.settings.run.voice_cue);
+  const coachSet  = useAudioCoach();
+  const [coachMuted, setCoachMuted] = useState(false);
+  useEffect(() => { useQuota.getState().hydrate(); useAudioCoach.getState().hydrate(); }, []);
+  const coachActive = isPremium && voiceCue && !coachMuted;
+  const nextCueKmRef = useRef<number>(coachSet.intervalKm);
+  const prevStateRef = useRef(state);
+
+  // run lifecycle → start cue + threshold reset; stop speech on leave/pause
+  useEffect(() => {
+    const prev = prevStateRef.current;
+    prevStateRef.current = state;
+    if (prev === 'countdown' && state === 'running') {
+      nextCueKmRef.current = useAudioCoach.getState().intervalKm; // fresh run
+      if (coachActive) speakCue(composeStartCue(), coachSet.rate);
+    }
+    if (state === 'paused' || state === 'idle') stopSpeech();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state]);
+  useEffect(() => () => stopSpeech(), []); // unmount safety
+
+  // interval-split watcher — catch-up-safe (advances past every crossed threshold)
+  useEffect(() => {
+    if (state !== 'running' || !coachActive) return;
+    if (distanceKm < nextCueKmRef.current) return;
+    const spokenAt = nextCueKmRef.current;
+    while (distanceKm >= nextCueKmRef.current) nextCueKmRef.current += coachSet.intervalKm;
+    const text = composeSplitCue({
+      km: spokenAt,
+      elapsedSec,
+      paceSecPerKm,
+      kcal, // estimateKcal-driven — null without confirmed weight (honest rule)
+      items: coachSet.items,
+    });
+    if (text) speakCue(text, coachSet.rate);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [distanceKm, state, coachActive]);
+
+
   // ── T-A: real map (consumer of the tracker's read-only surface ONLY) ──
   const { coordinate: hereCoord, status: locStatus } = useCurrentLocation();
   const mapRef = useRef<MapView>(null);
@@ -397,6 +445,8 @@ export default function TrackingScreen() {
     const snapshot = stop();
     exitingRef.current = true;
     if (!snapshot) { router.back(); return; }
+    // 종료 cue — fire-and-forget before the screen swap
+    if (coachActive) speakCue(composeFinishCue(snapshot.distanceKm, snapshot.elapsedSec), coachSet.rate);
     // setPendingRun also persists to disk — crash-safe from this moment
     setPendingRun(course
       ? {
@@ -485,6 +535,17 @@ export default function TrackingScreen() {
         {(state === 'running' || state === 'paused') && (
           <View style={{ position: 'absolute', top: insets.top + 8, right: 14, alignItems: 'flex-end', gap: 6 }}>
             <StatusBadge paused={state === 'paused'} />
+            {/* 오디오 코치 mute — premium only (free: no affordance, line-132) */}
+            {isPremium && voiceCue && (
+              <Pressable
+                onPress={() => { setCoachMuted(m => { if (!m) stopSpeech(); return !m; }); }}
+                hitSlop={8}
+                style={st.coachMuteBtn}
+                accessibilityLabel={coachMuted ? '음성 안내 켜기' : '음성 안내 끄기'}
+              >
+                <Icon name={coachMuted ? 'volume-mute-outline' : 'volume-high-outline'} size={16} color={coachMuted ? 'rgba(255,255,255,0.55)' : '#7CF03D'} />
+              </Pressable>
+            )}
             {gpsLost && (
               <View style={st.gpsChip}>
                 <Icon name="cellular-outline" size={11} color={C.sun} />
@@ -629,6 +690,7 @@ const st = StyleSheet.create({
 
   // Close (idle only)
   closeBtn: { position: 'absolute', left: 14, width: 40, height: 40, borderRadius: R.pill, backgroundColor: 'rgba(0,0,0,0.45)', alignItems: 'center', justifyContent: 'center' },
+  coachMuteBtn: { width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(0,0,0,0.45)', alignItems: 'center', justifyContent: 'center' },
   // Anchored just above the sheet's top edge; top driven by animatedPosition
   recenterWrap: { position: 'absolute', right: 14 },
   recenterBtn:  { width: 40, height: 40, borderRadius: R.pill, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, alignItems: 'center', justifyContent: 'center', ...shadows.sm },
