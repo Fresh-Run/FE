@@ -7,7 +7,7 @@
  *   result          — map preview of generated route, start/cancel
  *   tracking        — live run tracking (real GPS, foreground-only)
  *   run-result      — post-run stats + 2-tap feedback, saves via POST /api/runs
- *   run-saved       — save confirmation → records / home
+ *   (run-saved retired 2026-07-14 — B2: 수고했어요 IS the confirmation)
  *   personal-best   — PR celebration overlay
  *   challenge-done  — challenge completion
  */

@@ -1,54 +1,99 @@
 /**
- * 러닝 완료 — post-run result + 2-tap feedback (bundle: course-flow.jsx screen 6).
+ * 수고했어요 — post-run record + share (B2 redesign, canvas FrRunDone
+ * run-save.jsx; 07-07 locked decisions applied 2026-07-14).
  *
- * The run saves on entry (POST /api/runs) — skipping feedback still saves.
- * Duplicate guard: once we hold a run id we never re-POST; 다시 시도 only
- * fires from the error state. If a save times out AFTER the server wrote,
- * a retry could still duplicate — accepted risk (no idempotency key in the
- * contract yet).
+ * REMOVED BY DESIGN (07-07 owner+backend decisions, restated in the B2
+ * checkpoint): the 2-tap mood-feedback section (liked/tags — submitFeedback
+ * stays in the lib, uncalled) · the 4 platform share buttons (→ single
+ * 공유하기 → the OS share sheet) · the AI insight card (never built here) ·
+ * the run-saved confirmation screen (this screen IS the confirmation; the
+ * file retired).
  *
- * Back-navigation is blocked (gesture + hardware): the only exits are
- * 홈으로 (confirms first if the run failed to save) and 저장하고 완료.
- * Feedback chips use the server FeedbackTag vocabulary — the enum is the
- * single source of truth, superseding the bundle's chip labels.
+ * KEPT (infra invisible to the canvas but load-bearing): save-on-entry
+ * safety net + duplicate guard + honest error/retry · the 50m too-short
+ * gate · photo attach-after strip · exit lock (buttons are the only exits)
+ * · PB celebration overlay · the no-pending redirect.
+ *
+ * DATA: splits + elevation computed CLIENT-SIDE from the tracker's own raw
+ * gps track (lib/run-metrics — proven math); comparison rows from GET
+ * /me/stats fetched AFTER the save (counts include this run). Stats fetch
+ * fails → the vs-myself card and nth-line hide honestly (no theater).
  */
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useNavigation } from 'expo-router';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   Pressable,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Svg, { Line as SvgLine, Rect as SvgRect, Text as SvgText } from 'react-native-svg';
 
 import { MiniMap } from '@/components/mini-map';
-import { RealMap } from '@/components/real-map';
 import { PbCelebration } from '@/components/pb-celebration';
+import { RealMap } from '@/components/real-map';
 import { Icon } from '@/components/ui';
 import { distUnit, fmtDist, fmtDuration, fmtPaceIn, paceUnit } from '@/lib/run-format';
+import { computeElevGain, computeKmSplits } from '@/lib/run-metrics';
 import { uploadRunPhotos } from '@/lib/run-photos';
-import {
-  NEGATIVE_TAGS,
-  POSITIVE_TAGS,
-  saveRun,
-  submitFeedback,
-  type NewRecord,
-  type SavedRun,
-} from '@/lib/runs-api';
-import { accentShadow, colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
+import { saveRun, type NewRecord, type SavedRun } from '@/lib/runs-api';
+import { getMyStats, type MyStats } from '@/lib/stats-api';
+import { accentShadow, colors as C, radius as R, shadows } from '@/lib/theme';
 import { clearPendingRun, getPendingDraft, getPendingRun, getSavedResult } from '@/store/pending-run';
 import { useSettings } from '@/store/use-settings';
 import { useStore } from '@/store/use-store';
 
-type Verdict = 'good' | 'bad';
 type SaveState = 'saving' | 'saved' | 'error' | 'skipped';
 
-const MIN_SAVE_KM = 0.05; // 50m floor (owner spec, 2026-07-11 outing) — GPS noise can fake sub-50m "runs"; contract requires distance_km > 0
+const MIN_SAVE_KM = 0.05; // 50m floor (owner spec, 2026-07-11 outing)
+
+// ─── 구간 페이스 chart — canvas FrDoneSplits ported to RN Svg ─────────────────
+function SplitsChart({ splits, avg }: { splits: number[]; avg: number }) {
+  const W = 320, H = 108, padT = 16, padB = 20, padL = 4, padR = 4;
+  const n = splits.length, innerW = W - padL - padR, innerH = H - padT - padB;
+  const bw = innerW / n;
+  const pMin = Math.min(...splits), pMax = Math.max(...splits);
+  const range = Math.max(1, pMax - pMin);
+  const barH = (p: number) => { const fast = 1 - (p - pMin) / range; return innerH * (0.42 + fast * 0.58); };
+  const fastest = splits.indexOf(pMin);
+  const avgClamped = Math.min(pMax, Math.max(pMin, avg));
+  const avgY = padT + innerH - barH(avgClamped);
+  return (
+    <Svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H}>
+      {splits.map((p, i) => {
+        const h = barH(p), x = padL + bw * i + bw * 0.18, w = bw * 0.64, y = padT + innerH - h;
+        const isFast = i === fastest;
+        return (
+          <React.Fragment key={i}>
+            <SvgRect
+              x={x} y={y} width={w} height={h} rx={Math.min(6, w / 2)}
+              fill={isFast ? C.accentGrn : C.accent}
+              opacity={isFast ? 1 : 0.45 + 0.4 * (1 - (p - pMin) / range)}
+            />
+            {isFast && (
+              <SvgText x={x + w / 2} y={y - 5} textAnchor="middle" fontSize="9.5" fontWeight="800" fill={C.accentGrn}>
+                ⚡ 최고 구간
+              </SvgText>
+            )}
+          </React.Fragment>
+        );
+      })}
+      <SvgLine x1={padL} y1={avgY} x2={W - padR} y2={avgY} stroke={C.sub} strokeWidth="1.4" strokeDasharray="4 4" opacity="0.7" />
+      <SvgText x={W - padR} y={avgY - 4} textAnchor="end" fontSize="9" fontWeight="700" fill={C.faint}>평균</SvgText>
+      {splits.map((_, i) => (
+        <SvgText key={`x${i}`} x={padL + bw * (i + 0.5)} y={H - 5} textAnchor="middle" fontSize="9.5" fontWeight="600" fill={C.faint}>
+          {i + 1}km
+        </SvgText>
+      ))}
+    </Svg>
+  );
+}
 
 export default function RunResultScreen() {
   const insets = useSafeAreaInsets();
@@ -56,27 +101,26 @@ export default function RunResultScreen() {
   const displayName = useStore(s => s.displayName) ?? '러너';
 
   const [run] = useState(() => getPendingRun());
-  // 러닝 저장 (compose) now owns the POST — normal flow arrives pre-saved.
+  // 러닝 저장 (compose) owns the POST — normal flow arrives pre-saved.
   const [preSaved] = useState(() => getSavedResult());
   const units = useSettings(s => s.settings.units);
-  const tooShort = !run || run.distanceKm < MIN_SAVE_KM; // gate stays km-internal
+  const tooShort = !run || run.distanceKm < MIN_SAVE_KM;
 
-  // ── Save state (legacy save-on-entry kept as a safety net only) ─────────────
+  // ── Save state (safety net only; duplicate-guarded) ────────────────────────
   const [saveState, setSaveState] = useState<SaveState>(
     preSaved ? 'saved' : tooShort ? 'skipped' : 'saving',
   );
   const [saveError, setSaveError] = useState<string | null>(null);
   const savedRunRef = useRef<SavedRun | null>(preSaved);
   const inFlightRef = useRef(false);
-  // PB celebration — from the compose screen's save response (or legacy path)
   const [pbRecords, setPbRecords] = useState<NewRecord[] | null>(
     preSaved?.new_records && preSaved.new_records.length > 0 ? preSaved.new_records : null,
   );
 
   const doSave = useCallback(async () => {
     if (!run || tooShort) return;
-    if (savedRunRef.current) return; // duplicate guard — we already hold an id
-    if (inFlightRef.current) return; // no concurrent POSTs
+    if (savedRunRef.current) return;
+    if (inFlightRef.current) return;
     inFlightRef.current = true;
     setSaveState('saving');
     setSaveError(null);
@@ -87,8 +131,6 @@ export default function RunResultScreen() {
         avgPaceSecPerKm: run.avgPaceSecPerKm,
         routeId: run.course?.id ?? null,
         gpsTrack: run.gpsTrack,
-        // L1 정기런 tag — safety-net save (rare; the normal path saves in
-        // run-save where the tag is removable). Here it's non-removable.
         ...(run.crewSession
           ? { crewId: run.crewSession.crewId, announcementId: run.crewSession.announcementId }
           : {}),
@@ -106,11 +148,7 @@ export default function RunResultScreen() {
 
   useEffect(() => { doSave(); }, [doSave]);
 
-  // ── 사진 attach-after (R2'): the run save NEVER waits on photos. Once we
-  // hold a run id, the ≤3 pre-re-encoded draft URIs upload sequentially
-  // (3-step cycle per photo, PATCH photos[] at the end). Failure is honest
-  // and local to this strip — the run stays saved, 다시 시도 re-runs the
-  // whole cycle (upload-urls re-issue, the PATCH replaces). ─────────────────
+  // ── 사진 attach-after — unchanged carryover ─────────────────────────────────
   const [photoUris] = useState<string[]>(() => getPendingDraft().photos);
   const [photoState, setPhotoState] = useState<'idle' | 'uploading' | 'done' | 'error'>('idle');
   const [photoDone, setPhotoDone] = useState(0);
@@ -135,12 +173,50 @@ export default function RunResultScreen() {
     doAttachPhotos();
   }, [saveState, doAttachPhotos]);
 
-  // No pending run (e.g. cold navigation to this route) → nothing to show.
+  // ── /me/stats — AFTER the save so counts include this run ──────────────────
+  const [stats, setStats] = useState<MyStats | null>(null);
+  useEffect(() => {
+    if (saveState !== 'saved') return;
+    let cancelled = false;
+    getMyStats()
+      .then(sv => { if (!cancelled) setStats(sv); })
+      .catch(() => { /* comparison card hides honestly */ });
+    return () => { cancelled = true; };
+  }, [saveState]);
+
+  // ── Client-side metrics from the raw track ─────────────────────────────────
+  const splits = useMemo(() => computeKmSplits(run?.gpsTrack), [run?.gpsTrack]);
+  const elevGain = useMemo(() => computeElevGain(run?.gpsTrack), [run?.gpsTrack]);
+  const avgPace = run?.avgPaceSecPerKm
+    ?? (splits.length ? Math.round(splits.reduce((a, b) => a + b, 0) / splits.length) : 0);
+
+  // ── vs-myself derivations (stats-gated; each line only when its data exists) ─
+  const paceBase = stats?.month.avg_pace_sec_per_km ?? null;
+  const paceDiff = paceBase != null && avgPace > 0 ? paceBase - avgPace : null;
+  const pbGap = useMemo(() => {
+    // canvas framing kept with real data: within striking distance of the
+    // 5km best (records.best_5k probed live) — run must plausibly compare
+    const best5k = stats?.records.best_5k?.value;
+    if (best5k == null || !run || run.distanceKm < 4.5 || avgPace <= 0) return null;
+    const gap = Math.round(avgPace * 5 - best5k);
+    return gap > 0 && gap <= 60 ? gap : null;
+  }, [stats, run, avgPace]);
+  const negSplit = splits.length >= 2 && splits[splits.length - 1] < splits[0];
+  const nightRun = (() => { const h = new Date().getHours(); return h >= 21 || h < 4; })();
+  const monthLongest = stats?.month.longest_run_km != null && run != null && run.distanceKm >= 1
+    && run.distanceKm >= stats.month.longest_run_km; // post-save month includes this run
+  const chips = ([
+    monthLongest && ['🔥', '이번 달 최장 거리'],
+    negSplit && ['⚡', '네거티브 스플릿'],
+    nightRun && ['🌙', '야간 러닝'],
+  ].filter(Boolean) as [string, string][]).slice(0, 2);
+
+  // ── No pending run → nothing to show ───────────────────────────────────────
   useEffect(() => {
     if (!run) router.replace('/(tabs)' as any);
   }, [run]);
 
-  // ── Exit lock: back means nothing here; buttons are the only exits ─────────
+  // ── Exit lock — the buttons are the only exits ──────────────────────────────
   const exitingRef = useRef(false);
   useEffect(() => {
     navigation.setOptions({ gestureEnabled: false });
@@ -149,238 +225,196 @@ export default function RunResultScreen() {
     });
   }, [navigation]);
 
-  const exitTo = (dest: 'home' | 'saved-screen') => {
-    exitingRef.current = true;
-    if (dest === 'home') {
+  const finish = () => {
+    const leave = () => {
+      exitingRef.current = true;
       clearPendingRun();
-      router.replace('/(tabs)' as any);
-    } else {
-      const saved = savedRunRef.current!;
-      router.replace({
-        pathname: '/(course)/run-saved' as any,
-        params: {
-          runId: saved.id,
-          liked: verdict === 'good' ? '1' : '0',
-          ranAt: saved.ran_at,
-          dist: String(run?.distanceKm ?? 0),
-          durSec: String(run?.elapsedSec ?? 0),
-          title: run?.course?.title ?? '',
-        },
-      });
-    }
-  };
-
-  const goHome = () => {
+      router.replace('/(tabs)/records' as any); // canvas: 완료 → Records tab
+    };
     if (saveState === 'error') {
       Alert.alert('저장되지 않았어요', '이 러닝은 아직 저장되지 않았어요. 저장 없이 나갈까요?', [
         { text: '취소', style: 'cancel' },
-        { text: '나가기', style: 'destructive', onPress: () => exitTo('home') },
+        { text: '나가기', style: 'destructive', onPress: leave },
       ]);
       return;
     }
-    exitTo('home');
+    leave();
   };
 
-  // ── Feedback ────────────────────────────────────────────────────────────────
-  const [verdict, setVerdict] = useState<Verdict | null>(null);
-  const [tags, setTags] = useState<string[]>([]);
-  const [fbSubmitting, setFbSubmitting] = useState(false);
-  const [fbError, setFbError] = useState<string | null>(null);
-
-  const pickVerdict = (v: Verdict) => { setVerdict(v); setTags([]); };
-  const toggleTag = (t: string) =>
-    setTags(x => (x.includes(t) ? x.filter(y => y !== t) : [...x, t]));
-
-  const saveAndFinish = async () => {
-    if (!verdict || !savedRunRef.current || fbSubmitting) return;
-    setFbSubmitting(true);
-    setFbError(null);
-    try {
-      await submitFeedback(savedRunRef.current.id, verdict === 'good', tags);
-      exitTo('saved-screen');
-    } catch (e: unknown) {
-      setFbError(e instanceof Error ? e.message : '피드백 전송에 실패했어요');
-    } finally {
-      setFbSubmitting(false);
-    }
+  const shareRun = async () => {
+    if (!run) return;
+    // OS share sheet with a text summary — the canvas's branded-card image
+    // export needs a view-capture dep (not approved); stated adaptation.
+    const title = savedRunRef.current?.title ?? run.course?.title ?? '러닝';
+    const pace = avgPace > 0 ? fmtPaceIn(avgPace, units) + paceUnit(units) : null;
+    const msg = [
+      `${title} — FreshRun`,
+      `거리 ${fmtDist(run.distanceKm, units, 2)}${distUnit(units)} · 시간 ${fmtDuration(run.elapsedSec)}${pace ? ` · 페이스 ${pace}` : ''}`,
+    ].join('\n');
+    try { await Share.share({ message: msg }); } catch { /* user dismissed */ }
   };
 
   if (!run) return null;
 
-  const pool = verdict === 'good' ? POSITIVE_TAGS : NEGATIVE_TAGS;
-  const canFinish = verdict !== null && saveState === 'saved' && !fbSubmitting;
-
   return (
     <View style={st.root}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 16 }}>
-        {/* ── Hero: real recorded path on the stylized map ── */}
-        <View style={{ height: 240 }}>
-          {run.path.length >= 2
-            // hero class — cache=false for live tiles (지연 blank-tile fix)
-            ? <RealMap height={240} borderRadius={0} polyline={run.path} cache={false} />
-            : <MiniMap seed="run-result" height={240} borderRadius={0} />}
-          <LinearGradient
-            colors={['rgba(10,13,18,0.5)', 'rgba(10,13,18,0.1)', C.bg]}
-            locations={[0, 0.4, 1]}
-            style={StyleSheet.absoluteFillObject}
-          />
-          <View style={[st.donePill, { bottom: 14 }]}>
-            <Icon name="checkmark" size={14} color={C.accentGrn} />
-            <Text style={st.donePillTxt}>러닝 완료!</Text>
+        {/* ── Header — canvas: 수고했어요 🎉 + nth run ── */}
+        <View style={{ alignItems: 'center', paddingTop: insets.top + 26, paddingHorizontal: 24 }}>
+          <Text style={st.title}>수고했어요! 🎉</Text>
+          {stats != null && stats.all_time.run_count > 0 && (
+            <Text style={st.nth}>{stats.all_time.run_count}번째 러닝이에요</Text>
+          )}
+        </View>
+
+        {/* ── Record card — map + 총 거리 overlay + branding ── */}
+        <View style={{ paddingHorizontal: 24, paddingTop: 20 }}>
+          <View style={[st.recordCard, shadows.md]}>
+            {run.path.length >= 2
+              ? <RealMap height={230} borderRadius={0} polyline={run.path} cache={false} />
+              : <MiniMap seed="run-result" height={230} borderRadius={0} />}
+            <LinearGradient
+              colors={['rgba(8,12,4,0.62)', 'rgba(8,12,4,0.1)', 'rgba(8,12,4,0.85)']}
+              locations={[0, 0.42, 1]}
+              style={StyleSheet.absoluteFillObject}
+              pointerEvents="none"
+            />
+            <View style={st.cardTop} pointerEvents="none">
+              <Text style={st.cardDistLbl}>총 거리</Text>
+              <Text style={st.cardDist}>
+                {fmtDist(run.distanceKm, units, 2)}
+                <Text style={st.cardDistUnit}> {distUnit(units)}</Text>
+              </Text>
+            </View>
+            <View style={st.cardBottom} pointerEvents="none">
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                <Icon name="sparkles" size={13} color="#7CF03D" />
+                <Text style={st.cardBrand}>FreshRun</Text>
+              </View>
+              <Text style={st.cardUser}>@{displayName}</Text>
+            </View>
           </View>
         </View>
 
-        <View style={{ paddingHorizontal: S.gutter }}>
-          <Text style={st.title}>수고했어요, {displayName}님</Text>
-          <Text style={st.subtitle} numberOfLines={1}>
-            {preSaved?.title ?? (run.course ? run.course.title : `자유 러닝 · ${fmtDist(run.distanceKm, units, 2)}${distUnit(units)}`)}
-          </Text>
-
-          {/* ── Stats ── */}
-          <View style={st.statsRow}>
-            {([
-              [fmtDist(run.distanceKm, units, 2), distUnit(units), '거리'],
-              [fmtDuration(run.elapsedSec), '', '시간'],
-              [run.avgPaceSecPerKm != null ? fmtPaceIn(run.avgPaceSecPerKm, units) : "--'--\"", paceUnit(units), '페이스'],
-              [run.kcal != null ? String(run.kcal) : '—', 'kcal', '칼로리'],
-            ] as [string, string, string][]).map(([val, unit, label], i) => (
-              <View key={i} style={st.statTile}>
-                <Text style={st.statVal}>
-                  {val}{unit ? <Text style={st.statUnit}> {unit}</Text> : null}
-                </Text>
-                <Text style={st.statLbl}>{label}</Text>
-              </View>
-            ))}
-          </View>
-
-          {/* ── Save status ── */}
-          {saveState === 'saving' && (
-            <View style={st.saveRow}>
-              <ActivityIndicator size="small" color={C.faint} />
-              <Text style={st.saveRowTxt}>기록 저장 중…</Text>
+        {/* ── Stat row — 시간 / 페이스 / kcal (honest-kcal: '—' without weight) ── */}
+        <View style={st.statRow}>
+          {([
+            [fmtDuration(run.elapsedSec), '시간'],
+            [run.avgPaceSecPerKm != null ? fmtPaceIn(run.avgPaceSecPerKm, units) : "--'--\"", '페이스'],
+            [run.kcal != null ? String(run.kcal) : '—', 'kcal'],
+          ] as [string, string][]).map(([val, label], i) => (
+            <View key={label} style={[st.statCell, i > 0 && st.statCellBorder]}>
+              <Text style={st.statVal}>{val}</Text>
+              <Text style={st.statLbl}>{label}</Text>
             </View>
+          ))}
+        </View>
+
+        <View style={{ paddingHorizontal: 24 }}>
+          {/* ── Save + photo status strips (infra carryover, honest states) ── */}
+          {saveState === 'saving' && (
+            <View style={st.saveRow}><ActivityIndicator size="small" color={C.faint} /><Text style={st.saveRowTxt}>기록 저장 중…</Text></View>
           )}
           {saveState === 'saved' && (
-            <View style={st.saveRow}>
-              <Icon name="checkmark-circle" size={15} color={C.accentGrn} />
-              <Text style={[st.saveRowTxt, { color: C.accentGrn }]}>기록에 저장됨</Text>
-            </View>
+            <View style={st.saveRow}><Icon name="checkmark-circle" size={15} color={C.accentGrn} /><Text style={[st.saveRowTxt, { color: C.accentGrn }]}>기록에 저장됨</Text></View>
           )}
           {saveState === 'error' && (
             <View style={st.errCard}>
               <Icon name="alert-circle-outline" size={15} color={C.danger} />
               <Text style={st.errTxt} numberOfLines={2}>{saveError}</Text>
-              <Pressable onPress={doSave} style={st.retryBtn} hitSlop={6}>
-                <Text style={st.retryTxt}>다시 시도</Text>
-              </Pressable>
+              <Pressable onPress={doSave} style={st.retryBtn} hitSlop={6}><Text style={st.retryTxt}>다시 시도</Text></Pressable>
             </View>
           )}
           {saveState === 'skipped' && (
-            <View style={st.saveRow}>
-              <Icon name="information-circle-outline" size={15} color={C.faint} />
-              <Text style={st.saveRowTxt}>너무 짧은 러닝은 저장되지 않아요</Text>
-            </View>
+            <View style={st.saveRow}><Icon name="information-circle-outline" size={15} color={C.faint} /><Text style={st.saveRowTxt}>너무 짧은 러닝은 저장되지 않아요</Text></View>
           )}
-
-          {/* ── 사진 attach strip — independent of the run's save state ── */}
           {photoState === 'uploading' && (
-            <View style={st.saveRow}>
-              <ActivityIndicator size="small" color={C.faint} />
-              <Text style={st.saveRowTxt}>
-                사진 업로드 중 ({Math.min(photoDone + 1, photoUris.length)}/{photoUris.length})
-              </Text>
-            </View>
+            <View style={st.saveRow}><ActivityIndicator size="small" color={C.faint} /><Text style={st.saveRowTxt}>사진 업로드 중 ({Math.min(photoDone + 1, photoUris.length)}/{photoUris.length})</Text></View>
           )}
           {photoState === 'done' && (
-            <View style={st.saveRow}>
-              <Icon name="checkmark-circle" size={15} color={C.accentGrn} />
-              <Text style={[st.saveRowTxt, { color: C.accentGrn }]}>사진 {photoUris.length}장 첨부됨</Text>
-            </View>
+            <View style={st.saveRow}><Icon name="checkmark-circle" size={15} color={C.accentGrn} /><Text style={[st.saveRowTxt, { color: C.accentGrn }]}>사진 {photoUris.length}장 첨부됨</Text></View>
           )}
           {photoState === 'error' && (
             <View style={st.errCard}>
               <Icon name="alert-circle-outline" size={15} color={C.danger} />
               <Text style={st.errTxt} numberOfLines={2}>사진 업로드에 실패했어요 — 기록은 저장됐어요</Text>
-              <Pressable onPress={doAttachPhotos} style={st.retryBtn} hitSlop={6}>
-                <Text style={st.retryTxt}>다시 시도</Text>
-              </Pressable>
+              <Pressable onPress={doAttachPhotos} style={st.retryBtn} hitSlop={6}><Text style={st.retryTxt}>다시 시도</Text></Pressable>
             </View>
           )}
 
-          {/* ── Feedback card ── */}
-          {!tooShort && (
-            <View style={[st.fbCard, shadows.sm]}>
-              <Text style={st.fbTitle}>이 코스 어땠나요?</Text>
-              <Text style={st.fbSub}>다음 추천이 더 좋아져요</Text>
-              <View style={st.verdictRow}>
-                <Pressable
-                  onPress={() => pickVerdict('good')}
-                  style={[st.verdictBtn, verdict === 'good' && { borderColor: C.accent, backgroundColor: C.accentDim }]}
-                >
-                  <Icon name={verdict === 'good' ? 'heart' : 'heart-outline'} size={20} color={verdict === 'good' ? C.accentGrn : C.sub} />
-                  <Text style={[st.verdictTxt, verdict === 'good' && { color: C.accentGrn }]}>좋았어요</Text>
-                </Pressable>
-                <Pressable
-                  onPress={() => pickVerdict('bad')}
-                  style={[st.verdictBtn, verdict === 'bad' && { borderColor: C.danger, backgroundColor: C.danger + '14' }]}
-                >
-                  <View style={{ transform: [{ rotate: '180deg' }] }}>
-                    <Icon name="heart-outline" size={20} color={verdict === 'bad' ? C.danger : C.sub} />
-                  </View>
-                  <Text style={[st.verdictTxt, verdict === 'bad' && { color: C.danger }]}>별로였어요</Text>
-                </Pressable>
+          {/* ── 구간 페이스 — bars + 평균 baseline + ⚡최고 구간 ── */}
+          {splits.length >= 2 && (
+            <View style={{ marginTop: 20 }}>
+              <Text style={st.sectionLbl}>구간 페이스</Text>
+              <View style={[st.splitsCard, shadows.sm]} pointerEvents="none">
+                <SplitsChart splits={splits} avg={avgPace} />
               </View>
-              {verdict && (
-                <View style={{ marginTop: 16 }}>
-                  <Text style={st.tagPrompt}>{verdict === 'good' ? '무엇이 좋았나요?' : '무엇이 별로였나요?'}</Text>
-                  <View style={st.tagWrap}>
-                    {pool.map(t => {
-                      const on = tags.includes(t);
-                      const col = verdict === 'good' ? C.accent : C.danger;
-                      const txtCol = verdict === 'good' ? C.accentGrn : C.danger;
-                      return (
-                        <Pressable
-                          key={t}
-                          onPress={() => toggleTag(t)}
-                          style={[st.tagChip, on && { borderColor: col, backgroundColor: verdict === 'good' ? C.accentDim : C.danger + '14' }]}
-                        >
-                          <Text style={[st.tagTxt, on && { color: txtCol }]}>{t}</Text>
-                        </Pressable>
-                      );
-                    })}
-                  </View>
+            </View>
+          )}
+
+          {/* ── vs myself — stats-gated comparison rows ── */}
+          {stats != null && (
+            <View style={[st.vsCard, shadows.sm]}>
+              {paceDiff != null && (
+                <View style={[st.vsRow, { borderBottomWidth: 1, borderBottomColor: C.border }]}>
+                  <Icon name="speedometer-outline" size={15} color={C.sub} />
+                  <Text style={st.vsLbl}>평균 페이스</Text>
+                  <Text style={[st.vsVal, paceDiff > 5 && { color: C.accentGrn }]}>
+                    {paceDiff > 5 ? `평소보다 ${paceDiff}초 빨라요 ↑`
+                      : paceDiff < -5 ? '평소보다 여유 있게 달렸어요'
+                      : '평소 페이스와 비슷해요'}
+                  </Text>
                 </View>
               )}
-              {fbError && (
-                <View style={[st.errCard, { marginTop: 12 }]}>
-                  <Icon name="alert-circle-outline" size={15} color={C.danger} />
-                  <Text style={st.errTxt} numberOfLines={2}>{fbError}</Text>
+              <View style={[st.vsRow, pbGap != null && { borderBottomWidth: 1, borderBottomColor: C.border }]}>
+                <Icon name="calendar-outline" size={15} color={C.sub} />
+                <Text style={st.vsLbl}>이번 주</Text>
+                <Text style={st.vsVal}>{`이번 주 ${stats.week.total_distance_km}km · ${stats.week.run_count}회`}</Text>
+              </View>
+              {pbGap != null && (
+                <View style={st.vsRow}>
+                  <Icon name="medal-outline" size={15} color={C.accentGrn} />
+                  <Text style={st.vsLbl}>개인 기록</Text>
+                  <Text style={[st.vsVal, { color: C.accentGrn }]}>{`5km 최고 기록까지 −${pbGap}초!`}</Text>
                 </View>
               )}
+            </View>
+          )}
+
+          {/* ── highlight chips — conditional, max 2 ── */}
+          {chips.length > 0 && (
+            <View style={st.chipRow}>
+              {chips.map(([e, lbl]) => (
+                <View key={lbl} style={st.chip}><Text style={st.chipTxt}>{e} {lbl}</Text></View>
+              ))}
+            </View>
+          )}
+
+          {/* ── 누적 상승 고도 — hidden without altitude data (≥5m honesty floor) ── */}
+          {elevGain != null && elevGain >= 5 && (
+            <View style={[st.elevRow, shadows.sm]}>
+              <Icon name="trending-up-outline" size={16} color={C.sub} />
+              <Text style={st.elevLbl}>누적 상승 고도</Text>
+              <Text style={st.elevVal}>↗ {elevGain}m</Text>
             </View>
           )}
         </View>
       </ScrollView>
 
-      {/* ── Footer ── */}
-      <View style={[st.footer, { paddingBottom: Math.max(insets.bottom, 12) + 12 }]}>
-        <Pressable onPress={goHome} style={({ pressed }) => [st.homeBtn, { opacity: pressed ? 0.85 : 1 }]}>
-          <Text style={st.homeTxt}>홈으로</Text>
-        </Pressable>
+      {/* ── Actions — 공유하기 (secondary) + 완료 (primary) ── */}
+      <View style={[st.footer, { paddingBottom: Math.max(insets.bottom, 12) + 14 }]}>
         {!tooShort && (
-          <Pressable
-            onPress={saveAndFinish}
-            disabled={!canFinish}
-            style={[st.finishBtn, canFinish ? accentShadow(C.accent) : null, { opacity: canFinish ? 1 : 0.4 }]}
-          >
-            {fbSubmitting
-              ? <ActivityIndicator size="small" color={C.accentText} />
-              : <Text style={st.finishTxt}>저장하고 완료</Text>}
+          <Pressable onPress={shareRun} style={({ pressed }) => [st.shareBtn, shadows.sm, pressed && { opacity: 0.85 }]}>
+            <Icon name="share-outline" size={17} color={C.text} />
+            <Text style={st.shareTxt}>공유하기</Text>
           </Pressable>
         )}
+        <Pressable onPress={finish} style={({ pressed }) => [st.doneBtn, accentShadow(C.accent), pressed && { opacity: 0.9 }]}>
+          <Text style={st.doneTxt}>완료</Text>
+        </Pressable>
       </View>
 
-      {/* PB celebration — CTA-only dismissal, reveals run-result beneath */}
+      {/* PB celebration — CTA-only dismissal, reveals the record beneath */}
       <PbCelebration records={pbRecords} units={units} onClose={() => setPbRecords(null)} />
     </View>
   );
@@ -389,40 +423,50 @@ export default function RunResultScreen() {
 const st = StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
 
-  donePill:    { position: 'absolute', left: S.gutter, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: C.accentDim, borderWidth: 1, borderColor: C.accent + '77', borderRadius: R.pill, paddingHorizontal: 12, paddingVertical: 6 },
-  donePillTxt: { fontSize: 12.5, fontWeight: '700', color: C.accentGrn, letterSpacing: -0.2 },
+  title: { fontSize: 25, fontWeight: '700', letterSpacing: -0.7, color: C.text },
+  nth:   { fontSize: 14, color: C.sub, letterSpacing: -0.3, marginTop: 8 },
 
-  title:    { fontSize: 24, fontWeight: '700', letterSpacing: -0.6, color: C.text, marginTop: 6 },
-  subtitle: { fontSize: 14, color: C.sub, letterSpacing: -0.3, marginTop: 6 },
+  recordCard: { borderRadius: 22, overflow: 'hidden', backgroundColor: '#0C1206' },
+  cardTop:    { position: 'absolute', top: 16, left: 0, right: 0, alignItems: 'center' },
+  cardDistLbl:{ fontSize: 12.5, fontWeight: '600', color: 'rgba(255,255,255,0.75)', letterSpacing: -0.2 },
+  cardDist:   { fontSize: 40, fontWeight: '800', color: '#fff', letterSpacing: -1.5, marginTop: 2 },
+  cardDistUnit:{ fontSize: 16, fontWeight: '700', color: '#7CF03D' },
+  cardBottom: { position: 'absolute', left: 16, right: 16, bottom: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  cardBrand:  { fontSize: 12, fontWeight: '800', color: '#fff', letterSpacing: 0.2 },
+  cardUser:   { fontSize: 12, fontWeight: '600', color: 'rgba(255,255,255,0.75)' },
 
-  statsRow: { flexDirection: 'row', gap: 10, marginTop: 18 },
-  statTile: { flex: 1, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 14, paddingVertical: 13, paddingHorizontal: 4, alignItems: 'center' },
-  statVal:  { fontSize: 16, fontWeight: '700', color: C.text, letterSpacing: -0.4, fontVariant: ['tabular-nums'] },
-  statUnit: { fontSize: 9.5, color: C.faint, fontWeight: '600' },
-  statLbl:  { fontSize: 10.5, color: C.faint, marginTop: 3 },
+  statRow:  { flexDirection: 'row', paddingHorizontal: 24, paddingTop: 16 },
+  statCell: { flex: 1, alignItems: 'center' },
+  statCellBorder: { borderLeftWidth: 1, borderLeftColor: C.border },
+  statVal:  { fontSize: 17, fontWeight: '700', color: C.text, letterSpacing: -0.4, fontVariant: ['tabular-nums'] },
+  statLbl:  { fontSize: 11, color: C.faint, marginTop: 3 },
 
   saveRow:    { flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: 12, paddingHorizontal: 2 },
   saveRowTxt: { fontSize: 12.5, fontWeight: '600', color: C.faint, letterSpacing: -0.2 },
-
   errCard:  { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12, backgroundColor: C.danger + '12', borderWidth: 1, borderColor: C.danger + '30', borderRadius: R.md, paddingHorizontal: 12, paddingVertical: 10 },
   errTxt:   { flex: 1, fontSize: 12.5, color: C.danger, letterSpacing: -0.2 },
   retryBtn: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: R.sm, backgroundColor: C.surface, borderWidth: 1, borderColor: C.danger + '55' },
   retryTxt: { fontSize: 12, fontWeight: '700', color: C.danger },
 
-  fbCard:     { backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 18, padding: 18, marginTop: 16 },
-  fbTitle:    { fontSize: 15.5, fontWeight: '700', color: C.text, letterSpacing: -0.4, textAlign: 'center' },
-  fbSub:      { fontSize: 12.5, color: C.faint, letterSpacing: -0.2, textAlign: 'center', marginTop: 5 },
-  verdictRow: { flexDirection: 'row', gap: 11, marginTop: 16 },
-  verdictBtn: { flex: 1, height: 56, borderRadius: 14, borderWidth: 1.5, borderColor: C.border, backgroundColor: C.surfaceAlt, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
-  verdictTxt: { fontSize: 15, fontWeight: '700', color: C.text, letterSpacing: -0.3 },
-  tagPrompt:  { fontSize: 12.5, fontWeight: '600', color: C.sub, letterSpacing: -0.2, marginBottom: 10 },
-  tagWrap:    { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  tagChip:    { height: 38, paddingHorizontal: 14, borderRadius: R.pill, borderWidth: 1.5, borderColor: C.border, backgroundColor: C.surfaceAlt, alignItems: 'center', justifyContent: 'center' },
-  tagTxt:     { fontSize: 13, fontWeight: '600', color: C.text, letterSpacing: -0.2 },
+  sectionLbl: { fontSize: 12, fontWeight: '700', letterSpacing: 0.4, color: C.faint, textTransform: 'uppercase', paddingBottom: 8, paddingLeft: 2 },
+  splitsCard: { backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 16, paddingHorizontal: 14, paddingTop: 14, paddingBottom: 10 },
 
-  footer:    { flexDirection: 'row', gap: 10, paddingTop: 12, paddingHorizontal: S.gutter, borderTopWidth: 1, borderTopColor: C.border, backgroundColor: C.bg },
-  homeBtn:   { flex: 1, height: 54, borderRadius: 15, borderWidth: 1.5, borderColor: C.border, backgroundColor: C.surface, alignItems: 'center', justifyContent: 'center' },
-  homeTxt:   { fontSize: 15.5, fontWeight: '700', color: C.text, letterSpacing: -0.3 },
-  finishBtn: { flex: 2, height: 54, borderRadius: 15, backgroundColor: C.accent, alignItems: 'center', justifyContent: 'center' },
-  finishTxt: { fontSize: 15.5, fontWeight: '700', color: C.accentText, letterSpacing: -0.3 },
+  vsCard: { backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 16, paddingHorizontal: 15, marginTop: 12 },
+  vsRow:  { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 11 },
+  vsLbl:  { fontSize: 13, fontWeight: '600', color: C.sub, letterSpacing: -0.2 },
+  vsVal:  { marginLeft: 'auto', fontSize: 13.5, fontWeight: '700', color: C.text, letterSpacing: -0.2 },
+
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 },
+  chip:    { backgroundColor: C.accentDim, borderWidth: 1, borderColor: C.accent + '44', borderRadius: R.pill, paddingHorizontal: 12, paddingVertical: 6 },
+  chipTxt: { fontSize: 12.5, fontWeight: '700', color: C.accentGrn, letterSpacing: -0.2 },
+
+  elevRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 14, paddingHorizontal: 15, paddingVertical: 12 },
+  elevLbl: { fontSize: 13.5, fontWeight: '600', color: C.text, letterSpacing: -0.2 },
+  elevVal: { marginLeft: 'auto', fontSize: 14, fontWeight: '700', color: C.accentGrn, letterSpacing: -0.2 },
+
+  footer:   { paddingTop: 14, paddingHorizontal: 24, gap: 10, backgroundColor: C.bg },
+  shareBtn: { height: 50, borderRadius: 15, borderWidth: 1, borderColor: C.border, backgroundColor: C.surface, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  shareTxt: { fontSize: 15, fontWeight: '700', color: C.text, letterSpacing: -0.3 },
+  doneBtn:  { height: 56, borderRadius: 16, backgroundColor: C.accent, alignItems: 'center', justifyContent: 'center' },
+  doneTxt:  { fontSize: 16.5, fontWeight: '700', color: C.accentText, letterSpacing: -0.3 },
 });

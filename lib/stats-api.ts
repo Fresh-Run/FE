@@ -33,3 +33,23 @@ export type MonthlyStats = {
 export function getMonthlyStats(year: number, month: number): Promise<MonthlyStats> {
   return apiFetch<MonthlyStats>(`/api/me/stats/monthly?year=${year}&month=${month}`);
 }
+
+// ─── 전체 통계 — GET /me/stats (B2, probed live 2026-07-14) ───────────────────
+// week/month/all_time aggregates + records. 수고했어요's comparison rows:
+// fetched AFTER the save lands, so counts include the run just saved.
+export type StatsRecord = { value: number; run_id: string; ran_at: string; distance_km: number };
+export type MyStats = {
+  week: PeriodStats & { avg_pace_sec_per_km: number | null };
+  month: PeriodStats & { avg_pace_sec_per_km: number | null };
+  all_time: PeriodStats & { avg_pace_sec_per_km: number | null };
+  records: {
+    best_pace: StatsRecord | null;
+    best_5k: StatsRecord | null;
+    longest_distance: StatsRecord | null;
+    longest_duration: StatsRecord | null;
+  };
+};
+
+export function getMyStats(): Promise<MyStats> {
+  return apiFetch<MyStats>('/api/me/stats');
+}
