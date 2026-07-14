@@ -29,7 +29,7 @@ import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
 
 import type { GpsPoint } from '@/lib/runs-api';
-import { endLiveActivity, startLiveActivity } from '@/modules/live-activity';
+import { endLiveActivity, startLiveActivity, updateLiveActivity } from '@/modules/live-activity';
 import type { CrewSessionTag } from '@/store/active-course';
 import { persistActiveRun, type PendingRun } from '@/store/pending-run';
 import { estimateKcal } from '@/store/use-local-profile';
@@ -72,6 +72,15 @@ export const MOVING_MIN_M   = 10;   // window distance to count as "moving"
 
 const PERSIST_INTERVAL_MS = 8_000; // kill-recovery disk throttle
 const PERSIST_MIN_MS      = 10_000; // don't persist pure-noise micro-sessions
+
+// ④b Live-Activity update throttle. Fixes arrive every ~1.5–3s at run pace
+// (5m distance filter at ~3.3m/s); 5s caps extension wake-ups at ≤12/min
+// while the clock ticks natively (Text(timerInterval:) — zero updates) and
+// distance moves in sub-0.02km display steps. Local ActivityKit updates have
+// no OS budget, but every update re-renders the widget process — 5s keeps
+// that cost trivial. Pause/resume bypass the throttle (exact clock freeze).
+const LA_UPDATE_MS   = 5_000;
+const LA_ROUTE_MAX   = 50; // points (100 floats) — ActivityKit 4KB state cap
 
 function haversineM(a: Coordinate, b: Coordinate): number {
   const R = 6371000;
@@ -184,10 +193,84 @@ function processFix(loc: Location.LocationObject): void {
 }
 
 /** Every delivery context funnels here: gates, then the throttled
-    kill-recovery persist (state-guarded inside each). */
+    kill-recovery persist and Live-Activity push (state-guarded inside each). */
 function feedFix(loc: Location.LocationObject): void {
   processFix(loc);
-  maybePersist(Date.now());
+  const now = Date.now();
+  maybePersist(now);
+  // running only — a paused push would creep the frozen clock (pause/resume
+  // have their own exact force-pushes in togglePause)
+  if (state === 'running') pushLiveActivity(now);
+}
+
+// ── ④b: rolling pace + Live-Activity stats push ──────────────────────────────
+
+/** Rolling-window pace over the last 30s of accepted fixes; null when not
+    moving (< MOVING_MIN_M in-window) or too few samples. Single source —
+    the hook renders THIS number, the widget receives THIS number. */
+function currentPaceSecPerKm(now: number): number | null {
+  const win = paceWindow.filter(s => s.t >= now - PACE_WINDOW_MS);
+  if (win.length < 2) return null;
+  const winM = win[win.length - 1].cumM - win[0].cumM;
+  const winSec = (win[win.length - 1].t - win[0].t) / 1000;
+  if (winM < MOVING_MIN_M || winSec <= 0) return null;
+  return Math.round(winSec / (winM / 1000));
+}
+
+/** Downsample the filtered path to ≤LA_ROUTE_MAX points, normalized to 0…1
+    SCREEN space (y down), uniform scale (longitude corrected by cos(lat) so
+    the shape is true, not axis-stretched), centered, 3dp (compact JSON).
+    <2 points or a degenerate bbox → [] (the widget renders its empty grid). */
+function downsampleRoute(pts: readonly Coordinate[]): number[] {
+  if (pts.length < 2) return [];
+  const step = Math.max(1, Math.ceil(pts.length / LA_ROUTE_MAX));
+  const sel: Coordinate[] = [];
+  for (let i = 0; i < pts.length; i += step) sel.push(pts[i]);
+  const last = pts[pts.length - 1];
+  if (sel[sel.length - 1] !== last) sel.push(last);
+
+  let minLat = Infinity, maxLat = -Infinity, minLng = Infinity, maxLng = -Infinity;
+  for (const p of sel) {
+    if (p.lat < minLat) minLat = p.lat;
+    if (p.lat > maxLat) maxLat = p.lat;
+    if (p.lng < minLng) minLng = p.lng;
+    if (p.lng > maxLng) maxLng = p.lng;
+  }
+  const cosLat = Math.cos(((minLat + maxLat) / 2) * Math.PI / 180);
+  const spanY = maxLat - minLat;
+  const spanX = (maxLng - minLng) * cosLat;
+  const span = Math.max(spanX, spanY);
+  if (span < 1e-6) return []; // no real shape yet (stationary cluster)
+  const offX = (1 - spanX / span) / 2;
+  const offY = (1 - spanY / span) / 2;
+
+  const out: number[] = [];
+  for (const p of sel) {
+    const x = offX + ((p.lng - minLng) * cosLat) / span;
+    const y = offY + (maxLat - p.lat) / span; // lat up → screen y down
+    out.push(Math.round(x * 1000) / 1000, Math.round(y * 1000) / 1000);
+  }
+  return out;
+}
+
+let lastLaUpdateMs = 0;
+/** Push fresh stats to the Live Activity (running/paused only). startedAt is
+    recomputed as now − elapsed so pauses never inflate the visible clock;
+    while paused, pausedAt freezes it. kcal: MET×weight or null — the widget
+    HIDES the column without a saved weight (honest-kcal; 0 at 0km is truth). */
+function pushLiveActivity(now: number, force = false): void {
+  if (state !== 'running' && state !== 'paused') return;
+  if (!force && now - lastLaUpdateMs < LA_UPDATE_MS) return;
+  lastLaUpdateMs = now;
+  const kcal = estimateKcal(distanceM / 1000);
+  updateLiveActivity({
+    startedAtMs: now - elapsedMsNow(),
+    pausedAtMs: state === 'paused' ? now : null,
+    distanceM: Math.round(distanceM),
+    paceSecPerKm: currentPaceSecPerKm(now),
+    kcal: kcal == null ? null : Math.round(kcal),
+    route: downsampleRoute(path),
+  });
 }
 
 // ── Kill-recovery persist (①, owner-ruled in scope): the run-so-far, in the
@@ -310,17 +393,21 @@ export const runSession = {
 
   togglePause(): void {
     if (state === 'running') {
+      const now = Date.now();
       if (segmentStart != null) {
-        accumulatedMs += Date.now() - segmentStart;
+        accumulatedMs += now - segmentStart;
         segmentStart = null;
       }
       setState('paused');
       // a pause is an interruption-risk moment — persist outside the throttle
       const partial = buildPartial();
       if (partial) persistActiveRun(partial);
+      pushLiveActivity(now, true); // ④b: freeze the widget clock exactly here
     } else if (state === 'paused') {
-      segmentStart = Date.now();
+      const now = Date.now();
+      segmentStart = now;
       setState('running');
+      pushLiveActivity(now, true); // ④b: unfreeze — startedAt absorbs the pause
     }
   },
 
@@ -366,4 +453,6 @@ export const runSession = {
   getPath: () => path as readonly Coordinate[],
   getPaceWindow: () => paceWindow as readonly { t: number; cumM: number }[],
   getLastFixTs: () => lastFixTs,
+  /** Single-source rolling pace — the hook renders it, the widget receives it. */
+  currentPaceSecPerKm,
 };

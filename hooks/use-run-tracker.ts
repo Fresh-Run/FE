@@ -9,13 +9,7 @@
 import * as Location from 'expo-location';
 import { useCallback, useEffect, useState } from 'react';
 
-import {
-  MOVING_MIN_M,
-  PACE_WINDOW_MS,
-  runSession,
-  type RunContext,
-  type TrackerState,
-} from '@/store/run-session';
+import { runSession, type RunContext, type TrackerState } from '@/store/run-session';
 import { estimateKcal } from '@/store/use-local-profile';
 import type { Coordinate } from '@/types';
 
@@ -88,15 +82,14 @@ export function useRunTracker() {
 
   const elapsedSec = Math.floor(runSession.elapsedMs() / 1000);
 
-  // Rolling-window pace over the last 30s of accepted fixes.
+  // Rolling-window pace — the session's single source (④b: the widget
+  // receives the same number this hook renders; they can never disagree).
   const now = Date.now();
-  const win = runSession.getPaceWindow().filter(s => s.t >= now - PACE_WINDOW_MS);
-  const winM   = win.length >= 2 ? win[win.length - 1].cumM - win[0].cumM : 0;
-  const winSec = win.length >= 2 ? (win[win.length - 1].t - win[0].t) / 1000 : 0;
+  const pace = runSession.currentPaceSecPerKm(now);
 
   const distanceKm   = runSession.getDistanceM() / 1000;
-  const moving       = state === 'running' && winM >= MOVING_MIN_M && winSec > 0;
-  const paceSecPerKm = moving ? Math.round(winSec / (winM / 1000)) : 0;
+  const moving       = state === 'running' && pace != null;
+  const paceSecPerKm = moving ? pace : 0;
   const kcal         = estimateKcal(distanceKm); // MET×weight — null without saved weight
   const lastFixTs    = runSession.getLastFixTs();
 
