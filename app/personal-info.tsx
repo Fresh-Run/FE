@@ -110,7 +110,8 @@ export default function PersonalInfoScreen() {
   const email = session?.user.email ?? '—';
   const originalName = params.nickname ?? '';
 
-  // Local (device-persisted) fields — TODO(S2): server-backed when schema lands
+  // 신체 정보 — SERVER-backed (S2 done 2026-07-13; use-local-profile PATCHes
+  // /me/profile server-first, device = per-user cache). Re-probed 2026-07-14.
   const local = useLocalProfile(s => s.fields);
   const hydrated = useLocalProfile(s => s.hydrated);
   useEffect(() => { useLocalProfile.getState().hydrate(); }, []);
