@@ -739,3 +739,14 @@ Client side complete. The 12 toggles + server `send_for_notification` already ex
 - **Verify:** tsc 0, eslint 0-err. E2E pending on-device (register phone A → kudos/follow from phone B → banner).
 
 **② OTA PUBLISHED 2026-07-15:** channel `development`, runtimeVersion 1.0.0, update group `0ebef6bb-ed94-4e21-980c-cc764eae8cb4` (iOS `019f6151-6b1e-7464-8298-9e3744de92a9`), commit 6128b59. E2E on-device pending (register phone A → follow/kudos from phone B → lock-screen banner).
+
+## BUILD #1 ① — BACKGROUND GPS + KEEP-AWAKE + KILL-RECOVERY (2026-07-15, verified on-device, OTA→development)
+
+The honesty gap closed: a run survives a locked pocket. Architecture (owner-approved): `store/run-session.ts` module singleton owns the state machine + odometer + gates + the ONE `processFix` — TaskManager's headless context can't see React refs, so the accumulator left the hook; `use-run-tracker` is a thin render subscriber (public surface unchanged).
+- **One stream:** `startLocationUpdatesAsync` (Fitness, no auto-pause, honest blue indicator) feeds fg+bg; `watchPositionAsync` only as a fallback if the task path throws. **Filter identical by construction AND by execution:** verbatim-extracted HEAD `onFix` vs new `processFix` over 123 adversarial fixes → bitwise-equal (d=956.9280182647686 both, path 91, raw 123).
+- **Permission truth (native-verified, LocationModule.swift:165):** startLocationUpdatesAsync checks FOREGROUND only; allowsBackgroundLocationUpdates unconditional → a foreground-started run tracks in background under plain When-In-Use. The planned "While Using = dies" notice was FALSE → dropped. Always asked ONCE (undetermined-guard = the OS's own state, no flag).
+- **defineTask on every launch:** module-scope in run-session.ts, side-effect-imported by app/_layout.tsx → entry import graph → executes at bundle evaluation (incl. OS headless relaunch, where the no-live-session guard stops updates — headless continuation OUT of ① scope).
+- **Kill-recovery (owner-ruled IN):** throttled 8s persist of the run-so-far in the finished-run disk shape → the EXISTING recovery alert offers a killed run; pause persists immediately; <10s sessions skipped; course/크루 tags ride via start-context.
+- **keep-awake finally GATED on keep_screen_on** (tracking.tsx TODO closed — ① removed its stated blocker).
+- **Verified indoors (owner):** Always-prompt once, background delivery locked (blue indicator + fresh fixes), keep-awake both ways, foreground behavior unchanged, force-quit→recovery. **HELD for the dry run: locked-pocket odometer accuracy + B2's real splits/elevation.**
+- **RECONCILIATION NOTE:** verified against the dev server; the commit+OTA lagged the verification by one turn (owner said "shipped" — it hadn't landed; this commit makes it true).

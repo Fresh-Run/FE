@@ -77,6 +77,19 @@ export function updatePendingDraft(next: Partial<PendingDraft>): void {
   writeDisk();
 }
 
+/** ① kill-recovery: throttled MID-RUN persist (run-session.ts). Same disk
+    key/shape as a finished run, so the existing cold-start recovery offers a
+    killed run with zero new machinery. Never touches in-memory pending/draft
+    — a live run has no compose state yet; the stored draft carries only the
+    auto_publish visibility default (setPendingRun's rule). A clean stop
+    overwrites this with the real final via setPendingRun. */
+export function persistActiveRun(run: PendingRun): void {
+  const visibility: RunVisibility =
+    useSettings.getState().settings.feed.auto_publish ? 'public' : 'private';
+  AsyncStorage.setItem(DISK_KEY, JSON.stringify({ run, draft: { ...EMPTY_DRAFT, visibility } }))
+    .catch(() => {});
+}
+
 /** Cold-start recovery: load an unsaved run left by a killed session.
     Returns null when memory already holds a run (normal in-session flow). */
 export async function loadPendingFromDisk(): Promise<{ run: PendingRun; draft: PendingDraft } | null> {

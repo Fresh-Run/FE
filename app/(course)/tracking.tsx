@@ -263,6 +263,9 @@ export default function TrackingScreen() {
   // trustworthy). kcal line = honest-estimate rule (null → silently omitted).
   const isPremium = useQuota(q => q.isPremium);
   const voiceCue  = useSettings(s2 => s2.settings.run.voice_cue);
+  // ①: the background task keeps tracking through a sleeping screen, so
+  // 화면 항상 켜기 is now a genuine user choice, not a GPS crutch.
+  const keepScreenOn = useSettings(s2 => s2.settings.run.keep_screen_on);
   const coachSet  = useAudioCoach();
   const [coachMuted, setCoachMuted] = useState(false);
   useEffect(() => { useQuota.getState().hydrate(); useAudioCoach.getState().hydrate(); }, []);
@@ -460,7 +463,15 @@ export default function TrackingScreen() {
   };
 
   const handleStart = async () => {
-    const granted = await start();
+    // Context rides into the session so a mid-run KILL recovers the course/
+    // 크루 tags too (①'s persist) — the clean-stop path below still composes
+    // its own copy at end, unchanged.
+    const granted = await start(course
+      ? {
+          course: { id: course.id, title: course.title },
+          ...(course.crewSession ? { crewSession: course.crewSession } : {}),
+        }
+      : undefined);
     if (!granted) {
       // Repeat requests after denial never re-prompt — Settings is the only path.
       Alert.alert(
@@ -673,12 +684,12 @@ export default function TrackingScreen() {
       </BottomSheet>
 
       {state === 'countdown' && <CountdownOverlay value={countdownValue} />}
-      {/* TODO(keep-awake): gate on settings.run.keep_screen_on AFTER the
-          tracking-filter bug (TODO.md: PAUSED) is closed — letting the screen
-          sleep mid-run risks iOS GPS throttling, which would confound that
-          investigation. Until then KeepAwake stays always-on during a run,
-          regardless of the persisted toggle. */}
-      {(state === 'countdown' || state === 'running' || state === 'paused') && <KeepAwake />}
+      {/* keep-awake GATED on 화면 항상 켜기 (①, closes the always-on TODO):
+          the background location task keeps tracking through a sleeping
+          screen, so the GPS-throttling reason to force the screen on is gone
+          — the persisted toggle is finally honest. */}
+      {(state === 'countdown' || state === 'running' || state === 'paused')
+        && keepScreenOn && <KeepAwake />}
     </GestureHandlerRootView>
   );
 }

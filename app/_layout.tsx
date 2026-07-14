@@ -8,6 +8,12 @@ import 'react-native-reanimated';
 import { ThemeProvider, useTheme } from '@/contexts/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { usePushSync } from '@/lib/push';
+// ① background GPS: the location task must be DEFINED at bundle evaluation on
+// EVERY launch — including an OS relaunch into the task — or iOS invokes an
+// undefined task and crashes. This side-effect import puts run-session's
+// module-scope TaskManager.defineTask on the entry import graph, which
+// executes when the bundle loads, before any React render.
+import '@/store/run-session';
 import { useStore } from '@/store/use-store';
 
 export const unstable_settings = {
