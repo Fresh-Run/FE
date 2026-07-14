@@ -4,6 +4,8 @@ import { useFocusEffect } from '@react-navigation/native';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -18,6 +20,7 @@ import { PaceChart, SplitsTable } from '@/components/run-splits';
 import { Icon } from '@/components/ui';
 // MiniMap fallback now lives inside MediaCarousel (no polyline → seed map)
 import { useRunDetail } from '@/hooks/use-runs';
+import { deleteRun } from '@/lib/runs-api';
 import { getRunTrack } from '@/lib/run-social-api';
 import { distUnit, fmtDist, fmtDuration, fmtPaceIn, fmtWhen, timeTitle } from '@/lib/run-format';
 import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
@@ -89,6 +92,27 @@ export default function ActivityScreen() {
   // Refetch on focus (silent — useRunDetail's SWR-lite): returning from
   // 러닝 편집 shows the new title/visibility/memo without a spinner flash
   useFocusEffect(useCallback(() => { refetch(); }, [refetch]));
+
+  // ── 러닝 삭제 (own-run screen by contract, same as 편집) ────────────────────
+  // 지연's instruction: no recovery — the dialog IS the last gate, honest
+  // cascade copy. 404 = already gone = success (deleteRun's transport).
+  const [delOpen, setDelOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  async function doDelete() {
+    if (deleting || !run) return;
+    setDeleting(true);
+    try {
+      await deleteRun(run.id);
+      setDelOpen(false);
+      // The run (and this stack's screens for it) no longer exist —
+      // land on the 기록 tab (crew-delete-modal's exit grammar)
+      router.dismissAll?.();
+      router.replace('/(tabs)/records' as never);
+    } catch (e: unknown) {
+      setDeleting(false);
+      Alert.alert('삭제 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요');
+    }
+  }
 
   // ── Loading ────────────────────────────────────────────────────────────────
   if (loading) {
@@ -169,17 +193,23 @@ export default function ActivityScreen() {
               <Pressable onPress={() => router.back()} hitSlop={12} style={st.backBtn}>
                 <Icon name="arrow-back" size={20} color="#fff" />
               </Pressable>
-              {/* 편집 (edit-run slice) — own-run screen by contract */}
-              <Pressable
-                onPress={() => router.push({
-                  pathname: '/(records)/edit-run' as never,
-                  params: { runId: run.id },
-                })}
-                hitSlop={12}
-                style={st.backBtn}
-              >
-                <Icon name="create-outline" size={19} color="#fff" />
-              </Pressable>
+              {/* 편집 + 삭제 (own-run screen by contract) — the screen's
+                  action idiom is header icon buttons; delete joins it */}
+              <View style={{ flexDirection: 'row', gap: 4 }}>
+                <Pressable
+                  onPress={() => router.push({
+                    pathname: '/(records)/edit-run' as never,
+                    params: { runId: run.id },
+                  })}
+                  hitSlop={12}
+                  style={st.backBtn}
+                >
+                  <Icon name="create-outline" size={19} color="#fff" />
+                </Pressable>
+                <Pressable onPress={() => setDelOpen(true)} hitSlop={12} style={st.backBtn}>
+                  <Icon name="trash-outline" size={19} color="#fff" />
+                </Pressable>
+              </View>
             </View>
           </View>
         </View>
@@ -253,6 +283,28 @@ export default function ActivityScreen() {
           ) : null}
         </View>
       </ScrollView>
+
+      {/* 삭제 confirm — the crew-해체 modal's grammar (icon circle · honest
+          cascade body · destructive red · 취소). No recovery: this IS the
+          last gate (지연's instruction). */}
+      <Modal visible={delOpen} transparent animationType="fade" onRequestClose={() => !deleting && setDelOpen(false)}>
+        <View style={st.delRoot}>
+          <Pressable style={st.delBackdrop} onPress={() => !deleting && setDelOpen(false)} />
+          <View style={st.delCard}>
+            <View style={st.delIconWrap}>
+              <Icon name="trash-outline" size={26} color={C.danger} />
+            </View>
+            <Text style={st.delTitle}>이 러닝을 삭제할까요?</Text>
+            <Text style={st.delBody}>좋아요·댓글·사진이 함께 삭제돼요. 되돌릴 수 없어요.</Text>
+            <Pressable onPress={doDelete} disabled={deleting} style={st.delBtn}>
+              {deleting ? <ActivityIndicator size="small" color="#fff" /> : <Text style={st.delBtnTxt}>삭제하기</Text>}
+            </Pressable>
+            <Pressable onPress={() => !deleting && setDelOpen(false)} style={st.delCancelBtn}>
+              <Text style={st.delCancelTxt}>취소</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -298,4 +350,15 @@ const st = StyleSheet.create({
   stateTxt:      { fontSize: 14, fontWeight: '600', color: C.faint, letterSpacing: -0.2, textAlign: 'center' },
   retryBtn:      { paddingHorizontal: 20, paddingVertical: 10, borderRadius: R.md, backgroundColor: C.surfaceAlt, borderWidth: 1, borderColor: C.border },
   retryTxt:      { fontSize: 14, fontWeight: '700', color: C.text },
+  // 삭제 modal — style grammar mirrored from components/crew-delete-modal.tsx
+  delRoot:      { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28 },
+  delBackdrop:  { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.5)' },
+  delCard:      { width: '100%', backgroundColor: C.surface, borderRadius: 22, paddingHorizontal: 22, paddingTop: 24, paddingBottom: 18 },
+  delIconWrap:  { alignSelf: 'center', width: 54, height: 54, borderRadius: R.pill, backgroundColor: C.danger + '1A', alignItems: 'center', justifyContent: 'center' },
+  delTitle:     { fontSize: 19, fontWeight: '700', color: C.text, letterSpacing: -0.5, textAlign: 'center', marginTop: 16 },
+  delBody:      { fontSize: 13.5, lineHeight: 20, color: C.sub, textAlign: 'center', letterSpacing: -0.3, marginTop: 8, marginHorizontal: 8 },
+  delBtn:       { height: 52, borderRadius: 14, backgroundColor: C.danger, alignItems: 'center', justifyContent: 'center', marginTop: 18 },
+  delBtnTxt:    { fontSize: 16, fontWeight: '700', color: '#fff', letterSpacing: -0.3 },
+  delCancelBtn: { height: 50, alignItems: 'center', justifyContent: 'center', marginTop: 6 },
+  delCancelTxt: { fontSize: 15, fontWeight: '700', color: C.sub, letterSpacing: -0.3 },
 });

@@ -786,3 +786,10 @@ Symptom: pause→resume jumped the tracking-screen clock once then froze. Diagno
 - Both prior OTAs carried the frozen screen (① rtv 1.0.0, ④b rtv 1.0.1); LA surfaces were correct throughout. This fix = OTA below.
 
 **FIX OTA PUBLISHED 2026-07-16:** channel `development`, runtimeVersion 1.0.1, group `e11595d5-8dc0-4227-a7fa-1903883d7c46` (iOS `019f61ac-5c13-7b97-810a-64ef8e577133`), commit 4ae8ecb — published from a CLEAN tree (the unverified run-delete files were stashed for the publish, the ①-OTA guard pattern). Both phones' tracking screens unfreeze on next open+reopen.
+
+## RUN-DELETE (2026-07-16, verified on-device [02:30]) — 지연's armed rider fired
+
+DELETE /runs/{run_id} consumed. `deleteRun` (runs-api): 204 success, **404 resolves as success** ("already gone" — double-taps free; the reports-은닉 TRANSPORT twin, different rationale). Probed live full-lifecycle: create → 204 → re-DELETE 404 → GET 404 → not-owner 404 (은닉, second account) → world restored by the feature itself. Cascade is server-side (지연-confirmed): kudos/comments/track/photos/notifications die, PBs auto-succeed, stats auto-adjust, session badges clear; chat share cards keep snapshots and 404 on tap (existing contract).
+- **Affordance:** own-run 활동 상세 ONLY — trash icon joins the header action idiom (beside 편집; no ⋯ exists). Own-run contract grep-proven tree-wide (기록 tab / run-post isOwn-gated 분석 보기 / notif taps = all own; others' runs = run-post !is_mine, no delete anywhere).
+- **Confirm (지연's instruction — no recovery, the dialog IS the last gate):** crew-해체 modal grammar, "이 러닝을 삭제할까요?" + "좋아요·댓글·사진이 함께 삭제돼요. 되돌릴 수 없어요.", destructive red, locked while deleting. Success → dismissAll + 기록 tab.
+- Verified [02:30]: own-only affordance, honest-final confirm, 기록 landing with the run gone, others' runs expose nothing. PB succession her-side-verified.

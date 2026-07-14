@@ -1,7 +1,7 @@
 // Run save + feedback — POST /api/runs, POST /api/runs/{id}/feedback.
 // Shapes mirror the backend's RunRequest / RunResponse / FeedbackRequest.
 
-import { apiFetch } from '@/lib/api';
+import { ApiError, apiFetch, apiRequest } from '@/lib/api';
 
 /** PB broken by this save — POST /runs response only; first run always []. */
 export type NewRecord = {
@@ -117,4 +117,20 @@ export function submitFeedback(runId: string, liked: boolean, tags: string[]): P
     method: 'PATCH', // per docs/API_GUIDE.md — was wrongly POST (405) until 2026-07-05
     body: { liked, tags },
   });
+}
+
+/** DELETE /runs/{id} — owner-only; 204 success, 404 everything-else (guide:
+    not-mine runs are 은닉'd as 404). Probed live 2026-07-16: 204 → re-DELETE
+    404 → GET 404; not-owner delete = 404. 404 resolves as SUCCESS here —
+    "already gone" makes double-taps free (idempotent-delete semantics; the
+    reports-은닉 TRANSPORT twin, different rationale). Cascade is server-side
+    (지연-confirmed): kudos/comments/track/photos/notifications die, PBs
+    auto-succeed, stats auto-adjust, session badges clear. */
+export async function deleteRun(runId: string): Promise<void> {
+  try {
+    await apiRequest(`/api/runs/${runId}`, { method: 'DELETE' });
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 404) return; // already gone
+    throw e;
+  }
 }
