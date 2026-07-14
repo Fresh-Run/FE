@@ -638,3 +638,11 @@ Reality table (payload-level): test1 3/10 tracked, test2 **0/5** — no tracked 
 ## PUBLISH — 2026-07-14 [post-18:25]
 
 `eas update --channel main` — "풀트랙 히어로 + 알림 완결 + 위치 클래스 수정 (9e2ced8)". Update group `370d12c9-4c0e-4862-9cd2-73d806ac4886` (android `019f5ff6-3644-7747-8a38-d2a6e68cda9f`, ios `019f5ff6-3644-72b4-930e-485455c88c5c`), runtime `exposdk:54.0.0`, embedded commit `9e2ced8` = HEAD = origin/main at publish. Env guard read-verified staging. New aboard since group `3e1815f7`: Seoul-fallback occurrence-4 class close + 뛰러 가기 날씨·지도 pair (`734ee3c`) + follow_request_approved 알림 (지연 QA find, `4fee397`) + B7 full-track heroes (`9e2ced8`).
+
+## A1 도움말·약관 + A2 연결-row 제거 (BUILT + verified 2026-07-14 [19:47])
+
+**A1:** app/help-center.tsx (FrHelpCenter FAQ 아코디언 + 문의) + app/terms.tsx (FrTerms 정적 5섹션) — 정적 콘텐츠, 백엔드 0. 프로필 도움말/약관 배선 → **앱의 마지막 준비 중 dead-end 2개 사망** (notReady 헬퍼도 삭제 — 패턴 자체가 코드베이스에서 퇴장). 정직 각색: FAQ Premium 답변을 B1 /premium 기능 목록과 일치(캔버스 "심층 퍼포먼스 분석" 과대 — §132 필드 부재); FAQ #4(Apple 건강 sync)를 공개범위 Q&A로 교체(그 행은 A2에서 제거); 이메일 문의 = 실제 mailto. **이메일 주소: freshrun0609@gmail.com** (오너 정정 — help@freshrun.app 부재; 바운스 주소 = 작동 버튼 속 dead affordance). 트리 전체 스윕: 그 외 발명된 contact 문자열 0 (dev@freshrun.app는 dev-bypass mock 세션 신원, 미표시).
+
+**A2 (line-132 strict, owner ruling):** Apple 건강 + 소셜 계정 inert 행 제거 — 연결 group 사망, 알림 행은 설정 group 상단으로 이동. **RETURN CONDITIONS:** Apple 건강 = HealthKit @ build #1 (native); 소셜 계정 = 지연 social-links 백엔드. 둘 다 backing 존재 시 복귀.
+
+(B2 러닝 저장/수고했어요 재설계는 verified-BLOCKED on rain — working tree에 5파일 dirty로 대기; A1/A2는 3파일만 명시 스테이징, B2 미접촉.)

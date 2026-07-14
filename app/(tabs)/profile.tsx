@@ -212,11 +212,6 @@ export default function ProfileScreen() {
     if (!ok) Alert.alert('저장 실패', '설정을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.');
   }
 
-  // Honest placeholder for surfaces without a screen yet (house pattern;
-  // caller passes the subject WITH its particle so the copy stays grammatical).
-  const notReady = (subject: string) =>
-    Alert.alert('준비 중', `${subject} 다음 업데이트에서 지원돼요.`);
-
   // Refetch on focus so a nickname saved in 개인 정보 shows immediately
   useFocusEffect(useCallback(() => {
     refetch();
@@ -319,27 +314,11 @@ export default function ProfileScreen() {
           />
         </SettingGroup>
 
-        {/* 연결 */}
-        <SettingGroup title="연결">
-          <SettingRow
-            icon={<Icon name="heart-outline" size={19} color={C.danger} />}
-            iconBg="#EF444418"
-            label="Apple 건강"
-            value="연결 안 됨"
-          />
-          <SettingRow
-            icon={<Icon name="link-outline" size={19} color={C.sub} />}
-            label="소셜 계정"
-          />
-          {/* Push-notification SETTINGS (canvas: value "푸시 알림 설정") —
-              NOT the inbox; the inbox lives behind the home bell. */}
-          <SettingRow
-            icon={<Icon name="notifications-outline" size={19} color={C.sub} />}
-            label="알림"
-            value="푸시 알림 설정"
-            onPress={() => router.push('/notification-settings' as any)}
-          />
-        </SettingGroup>
+        {/* 연결 group REMOVED (A2 ruling 2026-07-14, line-132 strict): Apple
+            건강 + 소셜 계정 were inert rows — dead affordances. RETURN
+            CONDITIONS: Apple 건강 with HealthKit at build #1 (native);
+            소셜 계정 with her social-links backend. The 알림 row moved
+            into 설정 below. */}
 
         {/* 러닝 동작 — persisted via PATCH /me/settings.
             Runtime effects: haptics is live (gates hold-stop feedback);
@@ -355,6 +334,14 @@ export default function ProfileScreen() {
 
         {/* 설정 */}
         <SettingGroup title="설정">
+          {/* Push-notification SETTINGS (canvas: value "푸시 알림 설정") —
+              NOT the inbox; the inbox lives behind the home bell. */}
+          <SettingRow
+            icon={<Icon name="notifications-outline" size={19} color={C.sub} />}
+            label="알림"
+            value="푸시 알림 설정"
+            onPress={() => router.push('/notification-settings' as any)}
+          />
           <SettingRow
             icon={<Icon name="resize-outline" size={19} color={C.sub} />}
             label="단위"
@@ -370,8 +357,8 @@ export default function ProfileScreen() {
           <SettingRow icon={<Icon name="globe-outline"         size={19} color={C.sub} />} label="언어"       value={lang === 'en' ? 'English' : '한국어'} onPress={() => router.push('/lang' as any)} />
           {/* 도움말/약관 screens don't exist yet — honest 준비 중 (house pattern),
               not a dead row or a faked screen. Wire when the screens land. */}
-          <SettingRow icon={<Icon name="headset-outline"       size={19} color={C.sub} />} label="도움말 센터" onPress={() => notReady('도움말 센터는')} />
-          <SettingRow icon={<Icon name="document-text-outline" size={19} color={C.sub} />} label="서비스 약관" onPress={() => notReady('서비스 약관은')} />
+          <SettingRow icon={<Icon name="headset-outline"       size={19} color={C.sub} />} label="도움말 센터" onPress={() => router.push('/help-center' as any)} />
+          <SettingRow icon={<Icon name="document-text-outline" size={19} color={C.sub} />} label="서비스 약관" onPress={() => router.push('/terms' as any)} />
         </SettingGroup>
 
         {/* Logout — standalone row outside a group */}
