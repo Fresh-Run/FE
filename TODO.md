@@ -803,3 +803,23 @@ Probe (both fixture accounts, live): **zero** `has_track=true & thumb=null` rows
 ## pb_achieved TAB — RULED (owner, 2026-07-16): (a) 전체-only STANDS
 
 Same ruling as challenge_completed — a self-achievement, actorless, no 러닝 tab exists. The Tier-1 consumption entry's "TAB RULING NEEDED" line is CLOSED; current behavior is final. No build.
+
+## ③ HEALTHKIT LIBRARY FORK — RESEARCH MEMO (2026-07-16 ~3AM; RATIFICATION INPUT, decided nothing tonight — owner contract)
+
+**The question:** can a New-Arch-native library write an HKWorkout, or does ③ fall back / shrink?
+
+**FINDING 1 — the earlier "❌ write workouts" docs-skim was WRONG. kingstinct v14.0.2 has a complete write surface, settled from published source:**
+- `.d.ts` verbatim: `saveWorkoutSample: (workoutActivityType, quantities: readonly QuantitySampleForSaving[], startDate: Date, endDate: Date, totals?: WorkoutTotals, metadata?: AnyMap) => Promise<WorkoutProxyTyped>` · `WorkoutTotals { distance?: number; energyBurned?: number }`.
+- Native Swift (ios/WorkoutsModule.swift) verbatim: builds a real `HKWorkout.init(activityType:start:end:workoutEvents:totalEnergyBurned:totalDistance:…)`; kcal/meter quantities auto-fill totals, explicit `totals` override.
+- **BONUS beyond ③'s spec:** `WorkoutProxy.saveWorkoutRoute(locations) → Promise<boolean>` — native `HKWorkoutRouteBuilder.insertRouteData → finishRoute(with: workout)` → **the run's GPS route lands in Apple Fitness/Health maps.** We hold the raw track; this is nearly free at save time.
+- Read path for ③'s honest-boundary half: `HKQuantityTypeIdentifierHeartRate` + `HKQuantityTypeIdentifierBodyMass` both in the generated identifier surface.
+- Vitals: published 2026-06-05 (5 weeks old, active); Nitro modules (New-Arch native by construction); peerDeps `react >=19, react-native >=0.79, react-native-nitro-modules >=0.35` — we run react 19.1 / RN 0.81 ✓. **Cost: adds the `react-native-nitro-modules` peer** (a new native dep — rides build #4 regardless).
+
+**FINDING 2 — the fallback (react-native-health 1.19.0) is not a fallback, it's a trap:**
+- Surface: `saveWorkout(options, callback)` exists (`RCT_EXPORT_METHOD(saveWorkout:…)` legacy ObjC), so the API is there — but:
+- **New-Arch reality from source:** zero codegen/TurboModule anywhere in the package; pure legacy `RCTBridgeModule` + `NativeModules` require → interop-layer only.
+- **Issue tracker (checked, as mandated):** OPEN and maintainer-unanswered — #395 "Doesn't work with new bridgeless architecture" (Oct 2024), #399/#404 `initHealthKit is not a function` (the interop failure signature), **#443 iOS build fails on RN 0.86/New Arch (opened THIS WEEK)**. Last npm publish **2024-10-15 — 21 months stale**. Our app is `newArchEnabled: true`.
+
+**RECOMMENDATION (to ratify fresh):** kingstinct v14. Tradeoff stated: one extra native peer dep (nitro) and a younger API vs a write path that provably exists in maintained New-Arch-native code — against a fallback with 21 months of silence and open breakage on exactly our architecture. Neither-can-write is NOT the case — ③ stays the promised feature, and gains the route-in-Fitness bonus.
+
+**Build #4 shape under the recommendation:** ONE build = ④c (App Intents pause/stop) + ③ natives (`@kingstinct/react-native-healthkit` + `react-native-nitro-modules` + HealthKit entitlement + the two Korean NSHealth* strings). Then ③'s write-on-save hook + read paths are JS (OTA), like ②/④b. Under the dead alternative (if ratification rejects kingstinct): ③ shrinks to read-only via… nothing credible — the honest fallback would be deferring ③'s write, which the evidence says is unnecessary.
