@@ -34,7 +34,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { MiniMap } from '@/components/mini-map';
+import { RealMap } from '@/components/real-map';
 import { Icon } from '@/components/ui';
 import { distUnit, fmtDist, fmtDuration, fmtPaceIn, fmtWhen, paceUnit, timeTitle } from '@/lib/run-format';
 import { MAX_RUN_PHOTOS, reencodeForUpload } from '@/lib/run-photos';
@@ -291,7 +291,7 @@ export default function RunSaveScreen() {
         {/* ── Map preview (hidden < 0.3km or no route points) ── */}
         {showMap && (
           <View style={st.mapCard}>
-            <MiniMap seed={`save-${run.endedAt}`} height={150} polyline={run.path} />
+            <RealMap height={150} polyline={run.path} cache={false} />
           </View>
         )}
 

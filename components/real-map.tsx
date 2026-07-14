@@ -52,6 +52,10 @@ type Props = {
   marker?: boolean;
   /** Interactive map (slice-2+ surfaces); card mode when false (default). */
   interactive?: boolean;
+  /** 출발지 PIN (owner correction 2026-07-14): a proper native pin at the
+      route start instead of the subtle start dot — course previews looked
+      unfinished without it. Feed cards keep the dots (unchanged). */
+  startPin?: boolean;
   /** Static-snapshot optimization (iOS renders once → freezes to an image).
       Great for LISTS of thumbnails (scroll perf), but on an async-mounted
       HERO it can freeze a blank frame before Apple tiles load (polyline over
@@ -60,7 +64,7 @@ type Props = {
   cache?: boolean;
 };
 
-export function RealMap({ height, borderRadius = 0, polyline, center, marker = false, interactive = false, cache = true }: Props) {
+export function RealMap({ height, borderRadius = 0, polyline, center, marker = false, startPin = false, interactive = false, cache = true }: Props) {
   const line = polyline && polyline.length >= 2 ? polyline : null;
   const mapRef = useRef<MapView>(null);
 
@@ -115,9 +119,13 @@ export function RealMap({ height, borderRadius = 0, polyline, center, marker = f
               lineCap="round"
               lineJoin="round"
             />
-            <Marker coordinate={toLatLng(line[0])} anchor={{ x: 0.5, y: 0.5 }}>
-              <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: '#fff', borderWidth: 4, borderColor: C.accentGrn }} />
-            </Marker>
+            {startPin ? (
+              <Marker coordinate={toLatLng(line[0])} />
+            ) : (
+              <Marker coordinate={toLatLng(line[0])} anchor={{ x: 0.5, y: 0.5 }}>
+                <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: '#fff', borderWidth: 4, borderColor: C.accentGrn }} />
+              </Marker>
+            )}
             <Marker coordinate={toLatLng(line[line.length - 1])} anchor={{ x: 0.5, y: 0.5 }}>
               <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: C.accentGrn, borderWidth: 3, borderColor: '#fff' }} />
             </Marker>

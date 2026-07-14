@@ -45,6 +45,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { MiniMap } from '@/components/mini-map';
+import { RealMap } from '@/components/real-map';
 import { Icon } from '@/components/ui';
 import {
   CHAT_EMOJIS,
@@ -427,7 +428,9 @@ export default function CrewChatScreen() {
               delayLongPress={400}
               style={({ pressed }) => [st.runCard, pressed && { opacity: 0.85 }]}
             >
-              <MiniMap seed={rp.run_id} height={92} borderRadius={0} polyline={line ?? undefined} />
+              {line && line.length >= 2
+                ? <RealMap height={92} borderRadius={0} polyline={line} />
+                : <MiniMap seed={rp.run_id} height={92} borderRadius={0} />}
               <View style={st.runCardBody}>
                 <Text style={st.runCardTitle} numberOfLines={1}>{rp.title ?? '러닝 기록'}</Text>
                 <View style={st.runCardStats}>

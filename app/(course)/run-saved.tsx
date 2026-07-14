@@ -9,6 +9,7 @@ import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-nativ
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { MiniMap } from '@/components/mini-map';
+import { RealMap } from '@/components/real-map';
 import { Icon } from '@/components/ui';
 import { distUnit, fmtDist, fmtWhen } from '@/lib/run-format';
 import { useSettings } from '@/store/use-settings';
@@ -52,7 +53,9 @@ export default function RunSavedScreen() {
         {/* Summary card */}
         <View style={[st.card, shadows.sm]}>
           <View style={st.miniMapWrap}>
-            <MiniMap seed="run-saved" height={72} borderRadius={14} polyline={pending?.path} />
+            {pending?.path && pending.path.length >= 2
+              ? <RealMap height={72} borderRadius={14} polyline={pending.path} />
+              : <MiniMap seed="run-saved" height={72} borderRadius={14} />}
           </View>
           <View style={{ flex: 1, minWidth: 0 }}>
             <Text style={st.cardTitle} numberOfLines={1}>

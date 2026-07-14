@@ -22,12 +22,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/avatar';
 import { MiniMap } from '@/components/mini-map';
+import { RealMap } from '@/components/real-map';
 import { Icon } from '@/components/ui';
 import { copyRoute } from '@/lib/routes-api';
 import { courseStats, distUnit, fmtDist, fmtDuration, fmtPace, fmtPaceIn, paceUnit, type CourseStatsInput } from '@/lib/run-format';
 import { useSettings } from '@/store/use-settings';
 import { setActiveCourse } from '@/store/active-course';
 import { clearPendingCourse, getPendingCourse } from '@/store/pending-course';
+import { setRouteMap } from '@/store/route-map';
 import {
   accentShadow,
   colors as C,
@@ -103,8 +105,20 @@ export default function CoursePreviewScreen() {
       <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
         {/* ── Hero map ─────────────────────────────────────────────── */}
         <View style={st.hero}>
-          <MiniMap seed={s.seed ?? 'course-preview'} height={300} borderRadius={0} polyline={pending?.polyline ?? undefined} />
+          {pending?.polyline && pending.polyline.length >= 2 ? (
+            // real course geometry — hero class (cache=false) + 출발지 pin;
+            // tap → full route map (tap-to-enlarge grammar)
+            <Pressable onPress={() => {
+              setRouteMap({ title: pending.summary, polyline: pending.polyline! });
+              router.push('/(course)/route-map' as never);
+            }}>
+              <RealMap height={300} borderRadius={0} polyline={pending.polyline} startPin cache={false} />
+            </Pressable>
+          ) : (
+            <MiniMap seed={s.seed ?? 'course-preview'} height={300} borderRadius={0} />
+          )}
           <LinearGradient
+            pointerEvents="none"
             colors={['rgba(8,12,4,0.55)', 'rgba(8,12,4,0)']}
             style={st.heroScrim}
           />

@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useTabBarInset } from '@/components/fresh-tab-bar';
 import { MiniMap } from '@/components/mini-map';
+import { RealMap } from '@/components/real-map';
 import { SafeImage } from '@/components/safe-image';
 import { MonthPicker } from '@/components/month-picker';
 import { Icon } from '@/components/ui';
@@ -257,7 +258,9 @@ function RunRow({ run }: { run: Run }) {
             fit the current row; the ~110px redesign docket revisits.
             Otherwise: route-shaped mini (thumb) / seed art (trackless). */}
         <SafeImage uri={run.photo_thumb} style={st.photoThumb}
-          fallback={<MiniMap seed={run.id} height={62} borderRadius={14} polyline={run.polyline_thumb ?? undefined} />} />
+          fallback={run.polyline_thumb && run.polyline_thumb.length >= 2
+            ? <RealMap height={62} borderRadius={14} polyline={run.polyline_thumb} />
+            : <MiniMap seed={run.id} height={62} borderRadius={14} />} />
       </View>
       <View style={{ flex: 1, minWidth: 0 }}>
         <View style={st.runRowTop}>

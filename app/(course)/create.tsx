@@ -31,6 +31,7 @@ import { Icon } from '@/components/ui';
 import { useCurrentLocation } from '@/hooks/use-current-location';
 import { KM_PER_MI } from '@/lib/run-format';
 import { setActiveCourse } from '@/store/active-course';
+import { setRouteMap } from '@/store/route-map';
 import { useStartPoint } from '@/store/start-point';
 import { useSettings } from '@/store/use-settings';
 import {
@@ -294,16 +295,23 @@ export default function CreateScreen() {
           <View style={[st.hero, { height: HERO_H + insets.top }]}>
             {route.polyline && route.polyline.length >= 2 ? (
               // hero (not a list thumbnail) — cache=false for live tiles, same
-              // class as the run-detail hero (지연 blank-tile fix 2026-07-13)
-              <RealMap height={HERO_H + insets.top} polyline={route.polyline} cache={false} />
+              // class as the run-detail hero. startPin = 출발지 (owner ③a);
+              // tap → full route map (the app's tap-to-enlarge grammar, ③b)
+              <Pressable onPress={() => {
+                setRouteMap({ title: route.summary, polyline: route.polyline! });
+                router.push('/(course)/route-map' as never);
+              }}>
+                <RealMap height={HERO_H + insets.top} polyline={route.polyline} startPin cache={false} />
+              </Pressable>
             ) : (
               <MiniMap seed={route.summary} height={HERO_H + insets.top} borderRadius={0} polyline={route.polyline} />
             )}
             <LinearGradient
+              pointerEvents="none"
               colors={['rgba(8,12,4,0.0)', 'rgba(8,12,4,0.78)']}
               style={StyleSheet.absoluteFillObject}
             />
-            <View style={[StyleSheet.absoluteFillObject, { paddingTop: insets.top + S.sm, paddingHorizontal: S.gutter }]}>
+            <View pointerEvents="box-none" style={[StyleSheet.absoluteFillObject, { paddingTop: insets.top + S.sm, paddingHorizontal: S.gutter }]}>
               <Pressable onPress={handleBackToForm} hitSlop={12} style={st.heroBackBtn}>
                 <Icon name="arrow-back" size={20} color="#fff" />
               </Pressable>

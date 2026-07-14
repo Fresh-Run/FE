@@ -15,10 +15,13 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -29,6 +32,7 @@ import { RealMap } from '@/components/real-map';
 import { Icon } from '@/components/ui';
 import { ApiError, apiFetch, apiRequest } from '@/lib/api';
 import { blockUser } from '@/lib/blocks-api';
+import { REPORT_REASONS, reportUser, type ReportReason } from '@/lib/reports-api';
 import { distUnit, fmtDist, fmtDuration, fmtPaceIn, fmtWhen, paceUnit, timeTitle } from '@/lib/run-format';
 import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
 import { useUserProfile, type UserRun } from '@/hooks/use-user-profile';
@@ -240,10 +244,37 @@ export default function UserProfileScreen() {
   const myId = useStore(s => s.session?.user.id);
   const isSelf = !!myId && !!uid && uid === myId;
   const [menuOpen, setMenuOpen] = useState(false);
+  // 신고 flow lives INSIDE the same sheet (menu → reason picker). Report ≠
+  // block — independent rows. UX RULE (hers, law): 204 AND 404 both render
+  // 신고가 접수되었어요 — the reporter never learns target state.
+  const [sheetView, setSheetView] = useState<'menu' | 'report'>('menu');
+  const [reportReason, setReportReason] = useState<ReportReason | null>(null);
+  const [reportDetail, setReportDetail] = useState('');
+  const [reportBusy, setReportBusy] = useState(false);
+
+  function closeSheet() {
+    setMenuOpen(false);
+    setSheetView('menu'); setReportReason(null); setReportDetail(''); setReportBusy(false);
+  }
+
+  function submitReport() {
+    if (!uid || !reportReason || reportBusy) return;
+    setReportBusy(true);
+    reportUser(uid, reportReason, reportDetail)
+      .then(() => {
+        closeSheet();
+        // no toast primitive in the app — Alert is the house pattern
+        Alert.alert('신고가 접수되었어요', '검토 후 필요한 조치를 취할게요.');
+      })
+      .catch((e: unknown) => {
+        setReportBusy(false);
+        Alert.alert('신고 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요.');
+      });
+  }
 
   function confirmBlock() {
     if (!uid) return;
-    setMenuOpen(false);
+    closeSheet();
     const who = profile?.nickname ?? nickParam ?? '이 사용자';
     Alert.alert(
       `${who}님을 차단할까요?`,
@@ -417,19 +448,63 @@ export default function UserProfileScreen() {
         />
       )}
 
-      {/* ⋯ overflow sheet (app idiom: crew-members). 차단하기 only — 신고하기는
-          지연 POST /reports 배포 시 여기 1줄 추가 (line-132 rule: 서버 기능
-          없으면 렌더 안 함 · '준비 중' row 두지 않음). */}
-      <Modal visible={menuOpen} transparent animationType="slide" onRequestClose={() => setMenuOpen(false)}>
-        <Pressable style={st.sheetOverlay} onPress={() => setMenuOpen(false)}>
+      {/* ⋯ overflow sheet (app idiom: crew-members). 신고하기 (non-destructive,
+          above) + 차단하기 (destructive) — independent affordances. The report
+          flow swaps the sheet content to the reason picker (v1 user-only;
+          run/comment target_type wiring point = lib/reports-api). */}
+      <Modal visible={menuOpen} transparent animationType="slide" onRequestClose={closeSheet}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+        <Pressable style={st.sheetOverlay} onPress={closeSheet}>
           <Pressable style={[st.sheet, { paddingBottom: Math.max(insets.bottom, 12) + 8 }]} onPress={() => {}}>
             <View style={st.sheetHandleRow}><View style={st.sheetHandle} /></View>
-            <Pressable onPress={confirmBlock} style={({ pressed }) => [st.sheetRow, pressed && { opacity: 0.7 }]}>
-              <Icon name="ban-outline" size={19} color={C.danger} />
-              <Text style={[st.sheetRowTxt, { color: C.danger }]}>차단하기</Text>
-            </Pressable>
+            {sheetView === 'menu' ? (
+              <>
+                <Pressable onPress={() => setSheetView('report')} style={({ pressed }) => [st.sheetRow, pressed && { opacity: 0.7 }]}>
+                  <Icon name="flag-outline" size={19} color={C.text} />
+                  <Text style={st.sheetRowTxt}>신고하기</Text>
+                </Pressable>
+                <View style={st.sheetDivider} />
+                <Pressable onPress={confirmBlock} style={({ pressed }) => [st.sheetRow, pressed && { opacity: 0.7 }]}>
+                  <Icon name="ban-outline" size={19} color={C.danger} />
+                  <Text style={[st.sheetRowTxt, { color: C.danger }]}>차단하기</Text>
+                </Pressable>
+              </>
+            ) : (
+              <>
+                <Text style={st.sheetTitle}>신고하기</Text>
+                {REPORT_REASONS.map(r => {
+                  const on = reportReason === r.value;
+                  return (
+                    <Pressable key={r.value} onPress={() => setReportReason(r.value)} style={({ pressed }) => [st.reasonRow, pressed && { opacity: 0.7 }]}>
+                      <Icon name={on ? 'radio-button-on' : 'radio-button-off'} size={19} color={on ? C.accentGrn : C.faint} />
+                      <Text style={[st.sheetRowTxt, on && { fontWeight: '700' }]}>{r.label}</Text>
+                    </Pressable>
+                  );
+                })}
+                {/* detail — ALWAYS visible, optional (composer's "(선택)" idiom;
+                    a 기타-only reveal would hide context for other reasons) */}
+                <TextInput
+                  value={reportDetail}
+                  onChangeText={t => setReportDetail(t.slice(0, 500))}
+                  placeholder="자세한 내용 (선택)"
+                  placeholderTextColor={C.faint}
+                  multiline
+                  style={st.reportInput}
+                />
+                <Pressable
+                  onPress={submitReport}
+                  disabled={!reportReason || reportBusy}
+                  style={[st.reportSubmit, !reportReason && { backgroundColor: C.surfaceAlt }]}
+                >
+                  {reportBusy
+                    ? <ActivityIndicator size="small" color={C.accentText} />
+                    : <Text style={[st.reportSubmitTxt, !reportReason && { color: C.faint }]}>신고 제출</Text>}
+                </Pressable>
+              </>
+            )}
           </Pressable>
         </Pressable>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );
@@ -445,6 +520,12 @@ const st = StyleSheet.create({
   sheetHandle:    { width: 38, height: 5, borderRadius: 99, backgroundColor: C.border },
   sheetRow:       { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 16, paddingHorizontal: 4 },
   sheetRowTxt:    { fontSize: 15, fontWeight: '600', color: C.text, letterSpacing: -0.3 },
+  sheetDivider:   { height: 1, backgroundColor: C.border },
+  sheetTitle:     { fontSize: 16, fontWeight: '700', color: C.text, letterSpacing: -0.4, paddingVertical: 10, textAlign: 'center' },
+  reasonRow:      { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 4 },
+  reportInput:    { minHeight: 64, maxHeight: 120, borderWidth: 1, borderColor: C.border, borderRadius: 12, backgroundColor: C.surfaceAlt, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, color: C.text, letterSpacing: -0.2, textAlignVertical: 'top', marginTop: 6 },
+  reportSubmit:   { height: 50, borderRadius: 14, backgroundColor: C.accent, alignItems: 'center', justifyContent: 'center', marginTop: 12 },
+  reportSubmitTxt:{ fontSize: 15, fontWeight: '700', color: C.accentText, letterSpacing: -0.3 },
 
   // 비공개 프로필 lock box (canvas: dashed rounded, lock circle, follow hint)
   lockBox:    { marginHorizontal: S.gutter, marginTop: 18, alignItems: 'center', gap: 13, backgroundColor: C.surfaceAlt, borderWidth: 1, borderStyle: 'dashed', borderColor: C.border, borderRadius: 20, paddingVertical: 36, paddingHorizontal: 24 },

@@ -28,6 +28,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/avatar';
 import { MiniMap } from '@/components/mini-map';
+import { RealMap } from '@/components/real-map';
 import { Icon } from '@/components/ui';
 import { getBookmarkedRoutes } from '@/lib/bookmarks-api';
 import { openProfile } from '@/lib/profile-nav';
@@ -69,7 +70,9 @@ function CourseRow({ route, onOpen, onUnsave }: { route: PublicRoute; onOpen: ()
   return (
     <Pressable onPress={onOpen} style={({ pressed }) => [st.row, shadows.sm, pressed && { opacity: 0.8 }]}>
       <View style={{ width: 82 }}>
-        <MiniMap seed={route.id} height={82} borderRadius={14} polyline={route.polyline ?? undefined} />
+        {route.polyline && route.polyline.length >= 2
+          ? <RealMap height={82} borderRadius={14} polyline={route.polyline} />
+          : <MiniMap seed={route.id} height={82} borderRadius={14} />}
       </View>
       <View style={{ flex: 1, minWidth: 0, paddingRight: 26 }}>
         <Text style={st.rowTitle} numberOfLines={1}>{route.summary}</Text>

@@ -27,6 +27,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { MiniMap } from '@/components/mini-map';
+import { RealMap } from '@/components/real-map';
 import { PbCelebration } from '@/components/pb-celebration';
 import { Icon } from '@/components/ui';
 import { distUnit, fmtDist, fmtDuration, fmtPaceIn, paceUnit } from '@/lib/run-format';
@@ -214,7 +215,10 @@ export default function RunResultScreen() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 16 }}>
         {/* ── Hero: real recorded path on the stylized map ── */}
         <View style={{ height: 240 }}>
-          <MiniMap seed="run-result" height={240} borderRadius={0} polyline={run.path} />
+          {run.path.length >= 2
+            // hero class — cache=false for live tiles (지연 blank-tile fix)
+            ? <RealMap height={240} borderRadius={0} polyline={run.path} cache={false} />
+            : <MiniMap seed="run-result" height={240} borderRadius={0} />}
           <LinearGradient
             colors={['rgba(10,13,18,0.5)', 'rgba(10,13,18,0.1)', C.bg]}
             locations={[0, 0.4, 1]}

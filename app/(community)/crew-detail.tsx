@@ -859,7 +859,9 @@ export default function CrewDetailScreen() {
                     {i > 0 && <View style={st.divider} />}
                     <Pressable onPress={() => openCrewRun(run)} style={({ pressed }) => [st.feedRow, pressed && { opacity: 0.7 }]}>
                       <View style={st.feedThumb}>
-                        <MiniMap seed={run.run_id} height={48} borderRadius={13} polyline={run.polyline_thumb ?? undefined} />
+                        {run.polyline_thumb && run.polyline_thumb.length >= 2
+                          ? <RealMap height={48} borderRadius={13} polyline={run.polyline_thumb} />
+                          : <MiniMap seed={run.run_id} height={48} borderRadius={13} />}
                       </View>
                       <View style={{ flex: 1, minWidth: 0 }}>
                         <View style={st.feedHeadRow}>
