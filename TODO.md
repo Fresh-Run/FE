@@ -767,3 +767,13 @@ The honesty gap closed: a run survives a locked pocket. Architecture (owner-appr
 - Verified indoors [01:55]: pause-freeze/resume ×2, near-zero stats matching in-app truth, kcal weight rule. **Live flow (distance/pace/route on the lock screen mid-run) HELD for the dry run** — rides the same outing as ①'s pocket claim + B2's splits.
 
 **④b OTA PUBLISHED 2026-07-16:** channel `development`, runtimeVersion 1.0.1, group `a59756b9-4ce8-4479-9c73-111d989dd774` (iOS `019f6192-d10d-7ea8-96b4-ca75b8e1bd60`), commit b6073a3. Reaches both phones (build #3) on next open+reopen.
+
+## SEED CLEANUP / trackless runs — 지연 RESOLVED (a), probe PARKED (2026-07-16)
+
+- **(a) NOT delete:** the 39 trackless runs are the seed world's skeleton — 25 kudos, 8 comment threads, 5 crew sessions (incl. the 석촌호수 3-runner), PBs, monthly aggregates, 4 course links hang off them; the script would regenerate them tracklessly anyway. 지연 patched the seed script to synthesize REAL GPS tracks for all (12-route Seoul library, pace noise + jitter) and reseeded — zero story loss, identical counts.
+- **OWNER SIGHTING POST-RESEED (probe PARKED, owner's call):** scribbles persist on-device. When called back: pull the 기록 payload — do reseeded rows carry `polyline_thumb` with real geometry, or only `gps_track`? Suspected: the synthesis wrote tracks but not the DERIVED thumb field → lists scribble while details would render.
+- **(c) track-backfill-via-PATCH: REJECTED BY DESIGN (security):** a post-hoc gps_track PATCH is a "fabricate your run" surface (fake tracks → fake PBs/challenge/rankings). The closed door is load-bearing. **Recorded so nobody re-proposes it.**
+
+## 크루런 참여 — (b)-then-(c), 지연 driving (2026-07-16)
+
+Order: **(b) save-time retroactive suggestion FIRST** (catches the forgetter at the only honest moment), **(c) session-start push as a post-beta layer**. Her three server items: server-side overlap detection (client renders only) · a post-hoc tagging PATCH (sanity-windowed) · the missing "when" on session_key. **RIDER ARMED — our consumption:** a suggestion card on the save screen rendering what the server returns, honest decline (no re-nag). Waits on her design.
