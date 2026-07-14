@@ -795,3 +795,11 @@ DELETE /runs/{run_id} consumed. `deleteRun` (runs-api): 204 success, **404 resol
 - Verified [02:30]: own-only affordance, honest-final confirm, 기록 landing with the run gone, others' runs expose nothing. PB succession her-side-verified.
 
 **RUN-DELETE OTA PUBLISHED 2026-07-16:** channel `development`, runtimeVersion 1.0.1, group `66ed0b94-f1e2-446d-b994-4a7fa47b88d5` (iOS `019f61ae-de04-78d4-b6ec-e6dc50727427`), commit 0f6d8a5. Clean-tree publish.
+
+## SCRIBBLE PROBE — RESOLVED (2026-07-16, owner unparked): NOT the thumb gap — the reseed didn't reach staging's fixtures
+
+Probe (both fixture accounts, live): **zero** `has_track=true & thumb=null` rows — the suspected thumb-generation gap is DISPROVEN. Every tracked row has a real-geometry thumb (test1 6/6, test2 3/3; thumbs 15–33pt). The scribbles are the client's seed-stylized fallback for **genuinely trackless rows: test1 7/13, test2 5/8 still `has_track=false`** (e.g. test1 7a182858/c2d09f99/747069b0, test2 ca3be26f/72731e72) — 지연's tracks-for-all reseed either hasn't run against staging or skipped the existing fixture accounts. Client renders honestly; the fix is server-side data. **Relayed to 지연.**
+
+## pb_achieved TAB — RULED (owner, 2026-07-16): (a) 전체-only STANDS
+
+Same ruling as challenge_completed — a self-achievement, actorless, no 러닝 tab exists. The Tier-1 consumption entry's "TAB RULING NEEDED" line is CLOSED; current behavior is final. No build.
