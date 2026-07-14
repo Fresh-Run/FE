@@ -164,13 +164,13 @@ function IdentityCard({ profile, stats, units, premium, onEdit }: { profile: Pro
 
 // ─── PremiumBanner ────────────────────────────────────────────────────────────
 
-// Lite-only upsell (canvas: hidden on the premium variant). Destination is
-// the future 구독 screen (FrSubscription exists on canvas; TODO(PR-2)) —
-// honest 준비 중 until it builds.
+// Lite-only upsell (canvas: hidden on the premium variant). Destination:
+// the honest pre-IAP FrPremium page (B1, 2026-07-14) — the 준비 중 dead-end
+// closed; purchase itself lights at build #1 (IAP).
 function PremiumBanner() {
   return (
     <Pressable
-      onPress={() => Alert.alert('준비 중', '프리미엄 구독은 다음 업데이트에서 만나볼 수 있어요.')}
+      onPress={() => router.push('/premium' as never)}
       style={({ pressed }) => [st.premiumBanner, pressed && { opacity: 0.85 }]}
     >
       <Icon name="trophy-outline" size={22} color={C.accent} />
