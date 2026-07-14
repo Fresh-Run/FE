@@ -18,13 +18,17 @@ const cacheKey = (lat: number, lng: number) => `@fr_weather:${roundCoord(lat)},$
 type CacheEntry = { data: WeatherResponse; at: number };
 
 export function useWeather() {
-  const { coordinate, placeName } = useCurrentLocation();
+  const { coordinate, placeName, status: locStatus } = useCurrentLocation();
   const [weather, setWeather] = useState<WeatherResponse | null>(null);
   const fetchedAtRef = useRef(0);
   const busyRef = useRef(false);
 
   const load = useCallback(async () => {
-    if (!coordinate || busyRef.current) return;
+    // Seoul-fallback class: don't fetch on the synchronous fallback — the
+    // TTL guard would then LATCH Seoul weather past the GPS resolution
+    // (the fetched-fresh early-return). Wait for granted; the banner shows
+    // its loading dashes for the window instead of the wrong city's weather.
+    if (locStatus !== 'granted' || busyRef.current) return;
     if (Date.now() - fetchedAtRef.current < TTL_MS) return; // fresh enough
     busyRef.current = true;
     const key = cacheKey(coordinate.lat, coordinate.lng);
@@ -50,7 +54,7 @@ export function useWeather() {
       AsyncStorage.setItem(key, JSON.stringify({ data, at: fetchedAtRef.current } satisfies CacheEntry)).catch(() => {});
     } catch { /* offline / upstream outage — cached or null stands */ }
     finally { busyRef.current = false; }
-  }, [coordinate, weather]);
+  }, [coordinate, weather, locStatus]);
 
   // Mount + focus (TTL-gated inside load)
   useFocusEffect(useCallback(() => { load(); }, [load]));

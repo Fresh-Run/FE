@@ -23,6 +23,7 @@ import type { PublicRoute } from '@/lib/routes-api';
 import { useQuota } from '@/store/use-quota';
 import { useSettings } from '@/store/use-settings';
 import { useWeather } from '@/hooks/use-weather';
+import { weatherIcon } from '@/lib/weather-api';
 import {
   colors as C,
   radius as R,
@@ -46,7 +47,7 @@ function getWeekBounds(): [Date, Date] {
 export default function CreateTabScreen() {
   const insets = useSafeAreaInsets();
   const tabBarInset = useTabBarInset();
-  const { placeName, coordinate } = useCurrentLocation();
+  const { placeName, coordinate, status: locStatus } = useCurrentLocation();
   const { weather } = useWeather();
   const { runs, signedOut } = useRuns();
 
@@ -159,7 +160,10 @@ export default function CreateTabScreen() {
           <View style={[st.statCard, shadows.sm]}>
             <Text style={st.statLabel}>현재 온도</Text>
             <View style={st.tempRow}>
-              <Icon name="sunny" size={16} color={C.sun} />
+              {/* icon from the SAME source/mapping the 홈 banner uses (one
+                  source of truth — the hardcoded sun was a decoration bug,
+                  owner-caught 2026-07-14); loading → neutral, no weather claim */}
+              {(() => { const wi = weather ? weatherIcon(weather.condition_code, weather.is_day) : { name: 'cloud-outline', color: C.faint }; return <Icon name={wi.name} size={16} color={wi.color} />; })()}
               {/* Real weather (W1); quiet dashes while loading/offline */}
               <Text style={st.statVal}>{weather ? `${Math.round(weather.temp_c)}°` : '--°'}</Text>
             </View>
@@ -169,15 +173,30 @@ export default function CreateTabScreen() {
         {/* ── Location map card — real Apple map centered on the user
                (slice 1); stylized fallback while location resolves ──── */}
         <View style={[st.mapCard, shadows.sm]}>
-          {coordinate ? (
-            <RealMap height={164} borderRadius={R.xl} center={coordinate} />
+          {/* Seoul-fallback class (occurrence 4): coordinate is Seoul-seeded
+              and never null — the old truthiness gate mounted the map on 시청
+              and initialRegion latched it (no key). Gate = granted; key =
+              remount when GPS refines. */}
+          {locStatus === 'granted' ? (
+            // showsUser: the blue you-are-here dot (native layer; cache=false
+            // so the async dot isn't frozen out of the snapshot). Tap → the
+            // full in-app map (meet-map user mode) — the last non-tappable
+            // map joins the tap-to-enlarge convention (집결 카드/course heroes).
+            <Pressable onPress={() => router.push({
+              pathname: '/(community)/meet-map' as never,
+              params: { mode: 'user', name: placeName ?? '현재 위치', lat: String(coordinate.lat), lng: String(coordinate.lng) },
+            })}>
+              <RealMap key={`${coordinate.lat},${coordinate.lng}`} height={164} borderRadius={R.xl} center={coordinate} showsUser cache={false} />
+            </Pressable>
           ) : (
             <MiniMap seed="chooser-map" height={164} borderRadius={R.xl} />
           )}
           <View style={st.locationPill}>
             <Icon name="location" size={13} color={C.accentGrn} />
             <Text style={st.locationTxt} numberOfLines={1}>
-              현재 위치: {placeName ?? '위치 확인 중…'}
+              {locStatus === 'granted' ? `현재 위치: ${placeName}`
+                : locStatus === 'denied' ? '위치 권한 필요'
+                : '위치 확인 중…'}
             </Text>
           </View>
         </View>

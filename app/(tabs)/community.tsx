@@ -238,13 +238,19 @@ function DiscoverTab() {
   const [showFull, setShowFull] = useState(false);
   // Location filter — set by the region picker (module store), read on focus
   const [locFilter, setLocFilter] = useState<CrewLocationFilter>(getCrewFilter());
-  const { coordinate, placeName } = useCurrentLocation();
+  const { coordinate, placeName, status: locStatus } = useCurrentLocation();
 
   // 당근식 params: current mode sends lat/lng once resolved (parameterless
-  // until then = 기존 동작); region mode sends sido/sigungu
+  // until then). Seoul-fallback class fix: the old `coordinate?.lat` was a
+  // truthiness gate on a never-null value — it sent 시청 coords during the
+  // fetch window; the comment's "once resolved" intent now matches the code.
   const { crews, loading, error, refetch } = useBrowseCrews(
     locFilter.mode === 'current'
-      ? { lat: coordinate?.lat, lng: coordinate?.lng, includeFull: showFull }
+      ? {
+          lat: locStatus === 'granted' ? coordinate.lat : undefined,
+          lng: locStatus === 'granted' ? coordinate.lng : undefined,
+          includeFull: showFull,
+        }
       : { sido: locFilter.sido, sigungu: locFilter.sigungu, includeFull: showFull },
   );
   // 신청됨 state lives in the shared store (written here on 202/409, corrected

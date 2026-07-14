@@ -430,8 +430,9 @@ export default function HomeScreen() {
   const [tab, setTab]           = useState('친구');
 
   const feed = useFeed();
-  const { coordinate } = useCurrentLocation();
-  const nearby = useNearbyRoutes(tab === '전체' ? coordinate : null);
+  const { coordinate, status: locStatus } = useCurrentLocation();
+  // Seoul-fallback class: never query "nearby" with the synchronous fallback
+  const nearby = useNearbyRoutes(tab === '전체' && locStatus === 'granted' ? coordinate : null);
 
   // Maps slice 2 — real-map-only-for-viewable-cells. Stable refs (FlatList
   // forbids changing these props mid-list); 25% visibility flips a cell live.

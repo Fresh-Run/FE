@@ -52,6 +52,13 @@ type Props = {
   marker?: boolean;
   /** Interactive map (slice-2+ surfaces); card mode when false (default). */
   interactive?: boolean;
+  /** Native blue user-location dot (뛰러 가기 location card + its enlarged
+      view). Renders in non-interactive card mode too (the dot is a native
+      map layer, not a touch affordance) — but it arrives ASYNC, so cards
+      showing it should pass cache={false} (the hero-class snapshot rule)
+      or the snapshot can freeze dotless. Requires location permission —
+      callers already gate on a resolved coordinate. */
+  showsUser?: boolean;
   /** 출발지 PIN (owner correction 2026-07-14): a proper native pin at the
       route start instead of the subtle start dot — course previews looked
       unfinished without it. Feed cards keep the dots (unchanged). */
@@ -64,7 +71,7 @@ type Props = {
   cache?: boolean;
 };
 
-export function RealMap({ height, borderRadius = 0, polyline, center, marker = false, startPin = false, interactive = false, cache = true }: Props) {
+export function RealMap({ height, borderRadius = 0, polyline, center, marker = false, startPin = false, showsUser = false, interactive = false, cache = true }: Props) {
   const line = polyline && polyline.length >= 2 ? polyline : null;
   const mapRef = useRef<MapView>(null);
 
@@ -104,6 +111,7 @@ export function RealMap({ height, borderRadius = 0, polyline, center, marker = f
         pitchEnabled={interactive}
         rotateEnabled={interactive}
         cacheEnabled={cache && !interactive}
+        showsUserLocation={showsUser}
         showsPointsOfInterest={false}
         toolbarEnabled={false}
       >

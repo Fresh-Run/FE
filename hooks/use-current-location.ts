@@ -1,3 +1,12 @@
+/**
+ * ⚠ SEOUL-FALLBACK CLASS RULE (occurrences 1–4, documented 2026-07-14):
+ * `coordinate` is SEOUL-SEEDED SYNCHRONOUSLY — it is NEVER null, so a
+ * truthiness check passes on the fallback before any GPS. Consumers MUST
+ * gate on `status === 'granted'` before treating coordinate as the user's
+ * position (map centers, nearby queries, weather fetches, API lat/lng).
+ * The fallback exists so DISPLAY surfaces never hang — not so logic can
+ * mistake 시청 for the user.
+ */
 import * as Location from 'expo-location';
 import { useEffect, useState } from 'react';
 

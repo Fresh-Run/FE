@@ -42,7 +42,12 @@ import { accentShadow, colors as C, radius as R, shadows, spacing as S } from '@
 export default function MeetMapScreen() {
   const insets = useSafeAreaInsets();
   const { height: winH } = useWindowDimensions();
-  const params = useLocalSearchParams<{ name?: string; lat: string; lng: string; crewId?: string; canEdit?: string }>();
+  const params = useLocalSearchParams<{ name?: string; lat: string; lng: string; crewId?: string; canEdit?: string; mode?: string }>();
+  // mode='user' (뛰러 가기 location card): the live blue dot IS the subject —
+  // no red pin, no 지도 앱에서 보기 (external nav to yourself is decoration),
+  // no edit chip. One point-map screen, param-varied (stated: cleaner than a
+  // third screen — route-map stays the ROUTE variant).
+  const userMode = params.mode === 'user';
 
   // Display state — seeded from params, updated in place after a save
   const [place, setPlace] = useState(() => ({
@@ -91,7 +96,8 @@ export default function MeetMapScreen() {
           key={`${shownCoords.lat},${shownCoords.lng}`} // initialRegion ignores updates — remount on change
           height={winH}
           center={shownCoords}
-          marker
+          marker={!userMode}
+          showsUser={userMode}
           interactive
           cache={false}
           borderRadius={0}
@@ -104,7 +110,7 @@ export default function MeetMapScreen() {
           <Icon name="chevron-back" size={20} color={C.text} />
         </Pressable>
         <View style={st.titlePill}>
-          <Icon name="location" size={14} color={C.danger} />
+          <Icon name={userMode ? 'locate' : 'location'} size={14} color={userMode ? C.accentGrn : C.danger} />
           <Text style={st.titleTxt} numberOfLines={1}>{editing ? '집결 장소 수정' : place.name}</Text>
         </View>
         <View style={{ width: 40 }} />
@@ -112,6 +118,7 @@ export default function MeetMapScreen() {
 
       {/* bottom bar — display: 지도 앱에서 보기 (+ admin 위치 수정 pill) ·
           edit: name input + 취소/저장 */}
+      {!userMode && (
       <View style={[st.bottomBar, { paddingBottom: Math.max(insets.bottom, 12) + 8 }]} pointerEvents="box-none">
         {editing ? (
           <View style={[st.editCard, shadows.md]}>
@@ -160,6 +167,8 @@ export default function MeetMapScreen() {
           </View>
         )}
       </View>
+
+      )}
 
       {/* the editor itself — PlacePickSheet pushed over the view (reused verbatim) */}
       <PlacePickSheet
