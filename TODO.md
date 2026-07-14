@@ -752,3 +752,11 @@ The honesty gap closed: a run survives a locked pocket. Architecture (owner-appr
 - **RECONCILIATION NOTE:** verified against the dev server; the commit+OTA lagged the verification by one turn (owner said "shipped" — it hadn't landed; this commit makes it true).
 
 **① OTA PUBLISHED 2026-07-15:** channel `development`, runtimeVersion 1.0.0, group `fe7ddf90-51a7-42e3-be50-291ddf6d1351`, commit 1e80703. (Guard catch: ④a's uncommitted 1.0.1 bump was stashed for the publish — an OTA to 1.0.1 would have reached zero devices.)
+
+## BUILD #1 ④a — LIVE ACTIVITY: TARGET + BRIDGE + 4-STATE UI (2026-07-16, verified on-device [01:50], build #3)
+
+지연's ledgered LOCAL-only architecture, display slice. `targets/widgets/` WidgetKit extension (expo-apple-targets v4.0.7 — it CARRIED the ActivityKit target: prebuild-proven target/appex/frameworks/16.2, then cloud-built) + `modules/live-activity/` local Expo module (the JS↔ActivityKit bridge — ALL THREE verbs shipped so ④b is pure-JS OTA) + the 4-state SwiftUI UI (lock card / DI compact glyph+timer / minimal circular glyph / expanded stats) to the canvas spec, lime #74E827 on ink #0D1A06, Text(timerInterval:) self-counting clock.
+- **ContentState = the full ④b schema** (startedAt/pausedAt/distanceM/pace/kcal/route ≤50 normalized pairs — the 4KB cap): ④a starts zeroed, ④b fills it. Attributes duplicated VERBATIM app↔extension (byte-identical, cp-verified) — edit both or neither.
+- **version 1.0.0 → 1.0.1** (runtime hygiene: post-④a JS references the LA module; old-runtime phones can't receive it by construction). requireOptionalNativeModule guard besides.
+- **Stated adaptations:** runner glyph = SF figure.run; no pulse (WidgetKit forbids); expanded 일시정지/종료 OMITTED until ④c (dead lock-screen buttons = the dead-affordance lie at max visibility — owner ruling).
+- **Build #3 credential lesson (root-caused in eas-cli source):** non-interactive builds only REUSE per-bundle-id internal-distribution credentials — first-time bootstrap for a NEW target (com.freshrun.app.widgets) is interactive-only by design (SetUpInternalProvisioningProfile.js:65). One owner-terminal run minted the widget's ad-hoc profile; headless works again from now. `EXPO_APPLE_TEAM_ID`/`EXPO_APPLE_TEAM_TYPE` added to asc.env (needed for API-key-mode Apple auth — an ASC key carries no team identity).

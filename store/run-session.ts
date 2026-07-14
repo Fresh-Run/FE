@@ -29,6 +29,7 @@ import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
 
 import type { GpsPoint } from '@/lib/runs-api';
+import { endLiveActivity, startLiveActivity } from '@/modules/live-activity';
 import type { CrewSessionTag } from '@/store/active-course';
 import { persistActiveRun, type PendingRun } from '@/store/pending-run';
 import { estimateKcal } from '@/store/use-local-profile';
@@ -301,6 +302,10 @@ export const runSession = {
     if (state !== 'countdown') return;
     segmentStart = Date.now();
     setState('running');
+    // ④a: lock-screen/Dynamic-Island Live Activity — clock self-counts from
+    // here; ④b feeds stats. Fire-and-forget, never blocks the run; no-op on
+    // Android/unsupported (requireOptionalNativeModule).
+    startLiveActivity(segmentStart);
   },
 
   togglePause(): void {
@@ -328,6 +333,7 @@ export const runSession = {
     }
     setState('ended');
     stopUpdates();
+    endLiveActivity();
 
     const finalSec = Math.floor(accumulatedMs / 1000);
     const finalKm  = distanceM / 1000;
@@ -347,6 +353,8 @@ export const runSession = {
       then it holds the final run and belongs to the save flow. */
   teardown(): void {
     stopUpdates();
+    endLiveActivity(); // defensive — idempotent; a dead session must never
+                       // leave a live lock-screen card behind
     setState('idle');
     resetAccumulators();
     context = {};

@@ -2,7 +2,7 @@
   "expo": {
     "name": "FreshRun",
     "slug": "freshrun",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "freshrun",
@@ -15,6 +15,10 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.freshrun.app",
+      "appleTeamId": "ZSM9CJXQ8C",
+      "infoPlist": {
+        "NSSupportsLiveActivities": true
+      },
       "config": {
         "usesNonExemptEncryption": false
       }
@@ -62,7 +66,8 @@
           "photosPermission": "러닝에 사진을 첨부하고 프로필 사진을 설정할 때 사진에 접근해요."
         }
       ],
-      "expo-notifications"
+      "expo-notifications",
+      "@bacons/apple-targets"
     ],
     "experiments": {
       "typedRoutes": true,
