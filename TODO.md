@@ -793,3 +793,5 @@ DELETE /runs/{run_id} consumed. `deleteRun` (runs-api): 204 success, **404 resol
 - **Affordance:** own-run 활동 상세 ONLY — trash icon joins the header action idiom (beside 편집; no ⋯ exists). Own-run contract grep-proven tree-wide (기록 tab / run-post isOwn-gated 분석 보기 / notif taps = all own; others' runs = run-post !is_mine, no delete anywhere).
 - **Confirm (지연's instruction — no recovery, the dialog IS the last gate):** crew-해체 modal grammar, "이 러닝을 삭제할까요?" + "좋아요·댓글·사진이 함께 삭제돼요. 되돌릴 수 없어요.", destructive red, locked while deleting. Success → dismissAll + 기록 tab.
 - Verified [02:30]: own-only affordance, honest-final confirm, 기록 landing with the run gone, others' runs expose nothing. PB succession her-side-verified.
+
+**RUN-DELETE OTA PUBLISHED 2026-07-16:** channel `development`, runtimeVersion 1.0.1, group `66ed0b94-f1e2-446d-b994-4a7fa47b88d5` (iOS `019f61ae-de04-78d4-b6ec-e6dc50727427`), commit 0f6d8a5. Clean-tree publish.
