@@ -653,3 +653,17 @@ Inventory re-phantomed a done feature (stale `TODO(S2)` comment the cause — de
 
 ## 지연 ask (2026-07-14) — /me/profile body-field null-clear
 **Probed:** `PATCH /me/profile {weight_kg:null}` / `{birth_year:null}` → **200 but KEEPS the value** — null falls into omit-keep for the 4 body fields (birth_year/weight_kg/height_cm/gender), the SAME class as the crew active_time gap. Consequence: **a birth year can be set/changed but NOT cleared** (the only nullable field the store sends null for). **Ask:** add the 4 body fields to the /me/profile null-clear whitelist (the same `model_fields_set` fix she shipped for crew sido/sigungu/lat/lng). Consumption when live: nothing FE-side — the store already sends null on clear; it'll just start working. Low priority (clearing an optional birth year is a rare edge).
+
+## STALE-LEDGER AUDIT (2026-07-14) — 3 phantoms, 2 real
+
+Triggered by two same-day phantoms (pace_trend, B3). Spot-checked every remaining B-item against the tree:
+- **B4 둘러보기 텍스트 검색 → PHANTOM.** community.tsx:280–394 full search wired (searchCrews → GET /crews/search?q=, results UI, "S-batch2 #7"). Built.
+- **B5 owner-side 신청 관리 → PHANTOM.** crew-requests.tsx (listJoinRequests + approveJoinRequest + rejectJoinRequest), routed from crew-admin.tsx:191. The M3 note "owner side never built" was WRONG/stale. Built.
+- **B6 초대 코드 owner UI → PHANTOM.** crew-admin.tsx §92: getInviteCode + issueInviteCode + Share.share (invite) + rotate (재생성, "기존 초대 링크가 무효화됩니다"). Issue/rotate/share all present. Built ("S-batch2 invite").
+- **B7 첫 챌린지 at crew creation → REAL (absent, deferred).** crew-create.tsx:421 = a bare `{/* 첫 챌린지 — deferred */}` comment; no form block, no chained POST. Genuinely unbuilt.
+- **B8 api.ts 401-refresh + 429 → REAL (partial).** api.ts:61/96 throw 401 immediately — NO refreshSession-retry (guide §2); structured-detail object parsing exists but NO 429-quota mapping ({limit,used,remaining,reset_at}, guide §5). Both halves absent; wiring points = the 401 throw sites + the error mapper.
+
+**Re-ranked genuinely-left INDOOR buildable:** only **B8** (api.ts 401-refresh + 429 — S, infra-honesty: a mid-session 401 currently dumps to "로그인이 필요해요" instead of silent refresh; probe-verifiable) and **B7** (첫 챌린지 — M, blocks-nothing, value/hr; dual-account-verifiable). Everything else on the prior indoor list was phantom. Post-beta L-sweeps (다크 T2, i18n) + dev-build package unchanged.
+
+## STANDING RULE (2026-07-14) — stale docs generate phantom work
+When a slice completes, the ledger entry AND any in-code TODO/comment it satisfies MUST both be updated in that same commit — a feature isn't done until its own docs stop claiming it isn't. Before building ANY inventory item, grep the tree first: PHANTOM (built, cite code) / REAL (absent, cite wiring stub) / PARTIAL (which half). Never trust a "queued" line or a TODO as proof of absence. (Memory: stale-docs-generate-phantom-work.)
