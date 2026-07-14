@@ -1,6 +1,7 @@
 // Types mirror the backend RouteRequest / RouteResponse in schemas.py exactly.
 // Calls the partner FastAPI backend (EXPO_PUBLIC_API_URL) — see .env.example.
 
+import { quotaExceededMessage } from '@/lib/quota-message';
 import { supabase } from '@/lib/supabase';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -85,7 +86,13 @@ async function generate(input: RouteInput, signal?: AbortSignal): Promise<Genera
 
   if (!res.ok) {
     if (res.status === 401) throw new Error('로그인이 필요해요');
-    if (res.status === 429) throw new Error('이번 주 무료 생성 횟수를 모두 사용했어요');
+    if (res.status === 429) {
+      // honest quota copy with the real reset time (B8) — this frozen fetch
+      // keeps its own error mapping, so the shared formatter is imported.
+      let qd: Record<string, unknown> | null = null;
+      try { const b = await res.json(); qd = (b?.detail && typeof b.detail === 'object') ? b.detail : null; } catch { /* non-JSON */ }
+      throw new Error(quotaExceededMessage(qd));
+    }
     let detail: string | null = null;
     try {
       const body = await res.json();

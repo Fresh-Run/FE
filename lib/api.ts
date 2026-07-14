@@ -2,10 +2,27 @@
 // Error mapping follows the pattern established in use-generate-route.ts
 // (which stays frozen and keeps its own copy).
 
+import { quotaExceededMessage } from '@/lib/quota-message';
 import { supabase } from '@/lib/supabase';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? '';
 const DEFAULT_TIMEOUT_MS = 15_000;
+
+// Shared in-flight token refresh (B8): a burst of concurrent 401s must NOT
+// stampede supabase.refreshSession() — refresh-token rotation means parallel
+// refreshes invalidate each other. The first 401 starts the refresh; the rest
+// await the SAME promise; it's nulled on settle so a later genuine expiry can
+// refresh again. Returns true when a valid session was recovered.
+let refreshInFlight: Promise<boolean> | null = null;
+function refreshSessionOnce(): Promise<boolean> {
+  if (!refreshInFlight) {
+    refreshInFlight = supabase.auth.refreshSession()
+      .then(({ data, error }) => !error && !!data.session)
+      .catch(() => false)
+      .finally(() => { refreshInFlight = null; });
+  }
+  return refreshInFlight;
+}
 
 type ApiOptions = {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
@@ -33,7 +50,7 @@ export class ApiError extends Error {
 
 /** Like apiFetch, but exposes the HTTP status — for endpoints that branch
     on it (e.g. crew join: 200 joined vs 202 request pending). */
-export async function apiRequest<T>(path: string, opts: ApiOptions = {}): Promise<{ status: number; data: T }> {
+export async function apiRequest<T>(path: string, opts: ApiOptions = {}, _retried = false): Promise<{ status: number; data: T }> {
   if (!API_URL) {
     throw new ApiError('백엔드 주소가 설정되지 않았어요. .env.local의 EXPO_PUBLIC_API_URL을 확인해 주세요.', 0, 'config');
   }
@@ -58,6 +75,8 @@ export async function apiRequest<T>(path: string, opts: ApiOptions = {}): Promis
   }
   if (!session) {
     clearTimeout(timer);
+    // stale storage → one refresh may recover a valid session; else genuine logout
+    if (!_retried && await refreshSessionOnce()) return apiRequest<T>(path, opts, true);
     throw new ApiError('로그인이 필요해요', 401, null);
   }
 
@@ -93,7 +112,16 @@ export async function apiRequest<T>(path: string, opts: ApiOptions = {}): Promis
         message = typeof body.detail.message === 'string' ? body.detail.message : null;
       }
     } catch { /* non-JSON error body */ }
+    // 401 = stale access token (expired in transit / clock skew): refresh
+    // ONCE and retry with the fresh token. Second 401 (or refresh fail) =
+    // genuine logout, thrown honestly. Timer already cleared by the fetch's
+    // finally, so the recursion gets its own clock.
+    if (res.status === 401 && !_retried && await refreshSessionOnce()) {
+      return apiRequest<T>(path, opts, true);
+    }
     if (res.status === 401) throw new ApiError('로그인이 필요해요', 401, code, detail);
+    // 429 quota — honest copy from the structured detail (never generic here)
+    if (res.status === 429) throw new ApiError(message ?? quotaExceededMessage(detail), 429, code ?? 'quota_exceeded', detail);
     throw new ApiError(message ?? `요청에 실패했어요 (${res.status})`, res.status, code, detail);
   }
 
