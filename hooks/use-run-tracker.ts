@@ -1,10 +1,18 @@
-// 자유 러닝 tracker hook — since ① (background GPS) this is a THIN render
-// subscriber over store/run-session.ts, which owns the state machine, the
-// odometer/gates and the fix pipeline (a TaskManager background callback
-// can't see React refs, so none of that can live here anymore). The hook
-// keeps what is genuinely UI: the permission flow, the countdown ticker, the
-// 500ms render tick, and the derived per-render numbers. Public surface is
-// unchanged — tracking.tsx consumes it exactly as before.
+// 자유 러닝 tracker hook — a THIN render subscriber over store/run-session.ts
+// (① background GPS: the singleton owns the state machine, odometer, gates
+// and fix pipeline — a TaskManager headless callback can't see React refs).
+//
+// ⚠️ REACT COMPILER CONTRACT (the 2026-07-16 frozen-clock bug): this app
+// compiles with experiments.reactCompiler, which assumes render purity and
+// memoizes by REACTIVE deps. Reading the mutable singleton during render
+// (runSession.elapsedMs() etc.) gets cached — the compiled artifact keyed the
+// return object on [countdownValue, moving, paceSecPerKm, state] only, so the
+// clock refreshed ONLY on state transitions (pause→resume "jumps once, then
+// frozen"; pace/kcal/GPS-chip/livePath silently frozen too — invisible
+// indoors). THE RULE: the render may touch ONLY reactive state. Every
+// singleton read happens in readSnap(), called from event/effect contexts
+// (the 500ms tick, the transition subscriber) where impure reads are legal,
+// and lands in React state the compiler tracks correctly.
 
 import * as Location from 'expo-location';
 import { useCallback, useEffect, useState } from 'react';
@@ -17,19 +25,60 @@ export type { RunContext, RunSnapshot, TrackerState } from '@/store/run-session'
 
 const COUNTDOWN_FROM = 3;
 
+type TrackerSnap = {
+  elapsedSec: number;
+  distanceKm: number;
+  paceSecPerKm: number;
+  moving: boolean;
+  kcal: number | null;
+  lastFixAgeSec: number | null;
+};
+
+/** ALL singleton reads live here — called outside render only. */
+function readSnap(st: TrackerState): TrackerSnap {
+  const now = Date.now();
+  const pace = runSession.currentPaceSecPerKm(now);
+  const distanceKm = runSession.getDistanceM() / 1000;
+  const lastFixTs = runSession.getLastFixTs();
+  const moving = st === 'running' && pace != null;
+  return {
+    elapsedSec: Math.floor(runSession.elapsedMs() / 1000),
+    distanceKm,
+    paceSecPerKm: moving ? pace : 0,
+    moving,
+    kcal: estimateKcal(distanceKm), // MET×weight — null without saved weight
+    lastFixAgeSec: lastFixTs ? Math.floor((now - lastFixTs) / 1000) : null,
+  };
+}
+
 export function useRunTracker() {
-  const [state, setLocalState] = useState<TrackerState>(runSession.getState());
+  const [state, setLocalState] = useState<TrackerState>(() => runSession.getState());
   const [countdownValue, setCountdownValue] = useState(COUNTDOWN_FROM);
+  const [snap, setSnap] = useState<TrackerSnap>(() => readSnap(runSession.getState()));
+  // Immutable path snapshot: a NEW array reference only when the session path
+  // grew — so downstream memoization (tracking's drawnPath, the map) sees a
+  // real dep change per accepted fix instead of one stable mutated-in-place
+  // ref it would cache forever (the same compiler trap as the clock).
+  const [livePath, setLivePath] = useState<readonly Coordinate[]>([]);
 
-  // Mirror the session's machine transitions into React (transitions only —
-  // per-fix accumulation never re-renders; the tick below drives that).
-  useEffect(() => runSession.subscribe(setLocalState), []);
+  // Transition mirror + snapshot refresh (pause/resume/stop repaint even
+  // though the tick below only runs while 'running').
+  useEffect(() => runSession.subscribe(s => {
+    setLocalState(s);
+    setSnap(readSnap(s));
+  }), []);
 
-  // Interval only drives re-renders while running; values come from the session.
-  const [, setTick] = useState(0);
+  // The 500ms tick now CARRIES the data (it used to be an empty re-render
+  // ping — under the compiler that repainted nothing).
   useEffect(() => {
     if (state !== 'running') return;
-    const id = setInterval(() => setTick(t => t + 1), 500);
+    const id = setInterval(() => {
+      setSnap(readSnap('running'));
+      setLivePath(prev => {
+        const p = runSession.getPath();
+        return prev.length === p.length ? prev : [...p];
+      });
+    }, 500);
     return () => clearInterval(id);
   }, [state]);
 
@@ -80,39 +129,25 @@ export function useRunTracker() {
   /** Ends the run and returns its final snapshot (null if nothing was running). */
   const stop = useCallback(() => runSession.stop(), []);
 
-  const elapsedSec = Math.floor(runSession.elapsedMs() / 1000);
-
-  // Rolling-window pace — the session's single source (④b: the widget
-  // receives the same number this hook renders; they can never disagree).
-  const now = Date.now();
-  const pace = runSession.currentPaceSecPerKm(now);
-
-  const distanceKm   = runSession.getDistanceM() / 1000;
-  const moving       = state === 'running' && pace != null;
-  const paceSecPerKm = moving ? pace : 0;
-  const kcal         = estimateKcal(distanceKm); // MET×weight — null without saved weight
-  const lastFixTs    = runSession.getLastFixTs();
-
   return {
     state,
     countdownValue,
-    elapsedSec,
-    distanceKm,
-    paceSecPerKm,
-    moving,
-    kcal,
+    elapsedSec: snap.elapsedSec,
+    distanceKm: snap.distanceKm,
+    paceSecPerKm: snap.paceSecPerKm,
+    moving: snap.moving,
+    kcal: snap.kcal,
     start,
     togglePause,
     stop,
     // ── T-A read-only map surface (owner-approved boundary: the map is a
     // CONSUMER — these two exports are the ENTIRE tracker surface for it) ──
-    /** Filtered on-screen track (the same array the save snapshot copies).
-        READ-ONLY — consumers must never mutate. Mutated in place by the fix
-        pipeline; re-draws should key on .length. */
-    livePath: runSession.getPath() as readonly Coordinate[],
+    /** Immutable snapshot of the filtered track — a NEW reference whenever
+        the path grew (≤2/s), safe to memoize on directly. */
+    livePath,
     /** Seconds since the last RAW watch callback (pre-gate); null = none yet.
         Note: distanceInterval suppresses callbacks while standing still, so
         age also grows at rest — render the GPS-lost chip only while running. */
-    lastFixAgeSec: lastFixTs ? Math.floor((now - lastFixTs) / 1000) : null,
+    lastFixAgeSec: snap.lastFixAgeSec,
   };
 }
