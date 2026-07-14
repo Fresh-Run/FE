@@ -679,3 +679,17 @@ When a slice completes, the ledger entry AND any in-code TODO/comment it satisfi
 crew-create.tsx:421 was a bare deferred comment → now the canvas 첫 챌린지 (선택) block: toggle + goal(5–100km)/period(3–60일) wheels, title hardcoded '첫 챌린지'. Chained AFTER createCrew: on challenge failure the crew is NEVER rolled back — user lands in the real crew + honest Alert "크루는 만들어졌어요 · 첫 챌린지만 저장되지 않았어요", retries via crew-detail's create-CTA. Skip (default) → createChallenge never called, crew POST byte-identical, empty state renders. Reused challenge-create primitives; **moved kstDateStr into challenges-api.ts** (shared, both screens one copy). Probed the exact sequence (create crew → immediate challenge POST → displays → 422 bounds → crew deleted, world clean).
 
 **OWNER-VS-CANVAS OVERRIDE (ruled 2026-07-14 [21:32] — do NOT revert in a parity pass):** the canvas prototype defaults the challenge toggle **ON**; we ship it **OFF**. A default-ON fires a silent challenge POST for every crew whose creator didn't scroll to the block. Default-OFF = crew creation unchanged unless deliberately opted in. Same class as the 집결 장소 position override.
+
+## BUILD #1 — config-honesty commit (2026-07-14; dev build next, awaiting ASC API key)
+
+Owner ruled the move off Expo Go to a native build. app.json changes (this commit):
+- **iOS permission strings → honest Korean:** location(when-in-use) = "러닝 경로를 지도에 기록하기 위해 위치 정보를 사용해요." · photos = "러닝에 사진을 첨부하고 프로필 사진을 설정할 때 사진에 접근해요."
+- **DROPPED the background-location declaration** (`locationAlwaysAndWhenInUsePermission`) — a declared background capability with no shipping use is an App Review rejection AND the dead-affordance lie we kill. Re-add with `UIBackgroundModes:location` WHEN bg-GPS actually ships (build-#1 feature, not yet built).
+- **Added `ios.config.usesNonExemptEncryption: false`** — standard HTTPS only (exempt); skips the TestFlight export-compliance prompt.
+- **runtimeVersion stays `sdkVersion`** (owner-accepted correction): the tree has ZERO custom native modules — all deps SDK-54-bundled. The appVersion switch rides the TestFlight-cutover commit (or first Live-Activity/bg-GPS commit) — that is when Expo Go stops receiving OTA and 지연 installs the build. NOT this commit.
+
+**CHANNEL MISMATCH — decision deferred to cutover, recommendation stated:** OTA publishes went to `--channel main`; eas.json build profiles use development/preview/production. Recommendation: at cutover, **align the publish workflow to the build channel** — TestFlight OTA publishes go `--channel production` (dev builds don't need OTA; they run the embedded/dev-server JS). `main` was an Expo-Go-era convenience. The initial store build embeds its commit's JS regardless; only *subsequent* OTA-to-testers needs the channel aligned.
+
+**Order:** dev build FIRST (validates cert→provisioning→sign→install, unblocks on-device bg-GPS + Live Activity) → build native features → appVersion switch + production build → TestFlight (the cutover). B2 stash@{0} parked through the build, popped after.
+
+**PROCESS BUG FIXED (ee7edee):** B2's `git rm run-saved.tsx` pre-staged the deletion → A1's `git commit` swept it into 9fb4462 → HEAD's run-result routed to the deleted run-saved (unpublished; no device hit). Restored the file; B2 re-deletes it when it lands. **Rule: park a deletion with a working-tree `rm` (unstaged D), never `git rm` (pre-stages) — it defeats partial-staging.**

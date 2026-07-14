@@ -14,7 +14,10 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.freshrun.app"
+      "bundleIdentifier": "com.freshrun.app",
+      "config": {
+        "usesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.freshrun.app",
@@ -48,14 +51,13 @@
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "FreshRun needs your location to map your run route.",
-          "locationWhenInUsePermission": "FreshRun needs your location to map your run route."
+          "locationWhenInUsePermission": "러닝 경로를 지도에 기록하기 위해 위치 정보를 사용해요."
         }
       ],
       [
         "expo-image-picker",
         {
-          "photosPermission": "FreshRun needs photo access so you can attach photos to runs and set a profile picture."
+          "photosPermission": "러닝에 사진을 첨부하고 프로필 사진을 설정할 때 사진에 접근해요."
         }
       ]
     ],
