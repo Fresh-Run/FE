@@ -737,3 +737,5 @@ Client side complete. The 12 toggles + server `send_for_notification` already ex
 - **Decisions:** permission prompt once on login (undetermined); token registered regardless of the 12 toggles (server gates at send); no badge (no honest unread source); push data has no actor_nickname → profile fetches it.
 - **APNs LINKED:** existing key `45DJ2WCYUY` (team ZSM9CJXQ8C) attached to com.freshrun.app iOS credentials via GraphQL `setPushKey` (no duplicate — Apple caps at 2). 지연 confirms IN: EAS push security ON, `EXPO_ACCESS_TOKEN` set as Fly secret (token-first safe order), APNs registered.
 - **Verify:** tsc 0, eslint 0-err. E2E pending on-device (register phone A → kudos/follow from phone B → banner).
+
+**② OTA PUBLISHED 2026-07-15:** channel `development`, runtimeVersion 1.0.0, update group `0ebef6bb-ed94-4e21-980c-cc764eae8cb4` (iOS `019f6151-6b1e-7464-8298-9e3744de92a9`), commit 6128b59. E2E on-device pending (register phone A → follow/kudos from phone B → lock-screen banner).
