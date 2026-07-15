@@ -8,7 +8,9 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -340,6 +342,7 @@ function DiscoverTab() {
           onJoin={() => handleJoin(item)}
         />
       )}
+      keyboardShouldPersistTaps="handled"
       ListHeaderComponent={
         <View>
           {/* 크루 검색 (#7) — search overrides the region filter (global) */}
@@ -451,6 +454,9 @@ function InviteCodeSheet({
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={close}>
+      {/* ④ keyboard sweep: the code input lives in a BOTTOM sheet — without
+          KAV the keyboard rises straight over it (the named offender) */}
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <Pressable style={ics.overlay} onPress={close}>
         <Pressable style={[ics.sheet, { paddingBottom: Math.max(insets.bottom, 12) + 12 }]} onPress={() => {}}>
           <View style={ics.handleRow}><View style={ics.handle} /></View>
@@ -511,6 +517,7 @@ function InviteCodeSheet({
           )}
         </Pressable>
       </Pressable>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

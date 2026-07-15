@@ -15,6 +15,8 @@ import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -72,7 +74,7 @@ export default function EditRunScreen() {
   }
 
   return (
-    <View style={[st.root, { paddingTop: insets.top }]}>
+    <KeyboardAvoidingView style={[st.root, { paddingTop: insets.top }]} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <View style={st.appBar}>
         <Pressable onPress={() => router.back()} hitSlop={12} style={st.backBtn}>
           <Icon name="close" size={22} color={C.text} />
@@ -147,7 +149,7 @@ export default function EditRunScreen() {
           <Text style={st.footNote}>거리·시간·경로는 기록 그대로 유지돼요.</Text>
         </ScrollView>
       )}
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 

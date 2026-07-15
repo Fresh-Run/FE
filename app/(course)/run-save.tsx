@@ -24,7 +24,9 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -204,7 +206,7 @@ export default function RunSaveScreen() {
   }
 
   return (
-    <View style={[st.root, { paddingTop: insets.top }]}>
+    <KeyboardAvoidingView style={[st.root, { paddingTop: insets.top }]} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       {/* App bar: ‹ (→ discard confirm — no silent loss) · title · 저장 pill */}
       <View style={st.appBar}>
         <Pressable onPress={handleDelete} hitSlop={12} style={st.backBtn}>
@@ -414,7 +416,7 @@ export default function RunSaveScreen() {
           </Pressable>
         </Pressable>
       </Modal>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 

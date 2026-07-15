@@ -17,7 +17,9 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -283,7 +285,7 @@ export default function PersonalInfoScreen() {
   }
 
   return (
-    <View style={[st.root, { paddingTop: insets.top }]}>
+    <KeyboardAvoidingView style={[st.root, { paddingTop: insets.top }]} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       {/* ── App bar ── */}
       <View style={st.appBar}>
         <Pressable onPress={() => router.back()} hitSlop={12} style={st.backBtn}>
@@ -431,7 +433,7 @@ export default function PersonalInfoScreen() {
         onConfirm={(uri) => { setCropSrc(null); uploadCropped(uri); }}
         onRetake={changePhoto}
       />
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 

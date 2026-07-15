@@ -22,14 +22,15 @@ import React, { useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
   Linking,
   Platform,
   Pressable,
   StyleSheet,
   Text,
   TextInput,
-  useWindowDimensions,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -120,6 +121,10 @@ export default function MeetMapScreen() {
           edit: name input + 취소/저장 */}
       {!userMode && (
       <View style={[st.bottomBar, { paddingBottom: Math.max(insets.bottom, 12) + 8 }]} pointerEvents="box-none">
+        {/* ④ keyboard sweep: the bar is absolute-bottom, so 'padding' can't
+            lift it — 'position' shifts the edit card above the keyboard
+            (the autoFocus name input was fully covered before) */}
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'position' : undefined} pointerEvents="box-none">
         {editing ? (
           <View style={[st.editCard, shadows.md]}>
             <TextInput
@@ -166,6 +171,7 @@ export default function MeetMapScreen() {
             )}
           </View>
         )}
+        </KeyboardAvoidingView>
       </View>
 
       )}

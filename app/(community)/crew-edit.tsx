@@ -22,6 +22,8 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -216,7 +218,7 @@ export default function CrewEditScreen() {
   }
 
   return (
-    <View style={[st.root, { paddingTop: insets.top }]}>
+    <KeyboardAvoidingView style={[st.root, { paddingTop: insets.top }]} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <View style={st.appBar}>
         <Pressable onPress={() => router.back()} hitSlop={12} style={st.backBtn}>
           <Icon name="arrow-back" size={20} color={C.text} />
@@ -435,7 +437,7 @@ export default function CrewEditScreen() {
         memberCount={crew.member_count}
         onClose={() => setDeleteOpen(false)}
       />
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
