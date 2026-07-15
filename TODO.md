@@ -852,3 +852,5 @@ Same ruling as challenge_completed — a self-achievement, actorless, no 러닝 
 **DEBUG LIST — TOP:** the dev-client connect failure (Safari fetches the manifest, the app never sends a request; Local Network ON, firewall off, ATS `NSAllowsArbitraryLoads: true` introspect-proven). Blocks the NEXT slice's pre-commit verification — cracks BEFORE new feature work. (The wrong-screen fingerprint chase is ledgered as its own lesson: the profile TAB carries the visible settings; 앱 설정 is three-deep behind the SOCIAL profile — nav-graph facts to check before asserting "the row is there.")
 
 (rider: @expo/ngrok devDep — tunnel-diagnosis tool, kept for the debug work above)
+
+**③ SLICE C OTA PUBLISHED 2026-07-16:** channel `development`, runtimeVersion 1.0.1, group `b0c37586-8898-4583-9306-5f0204534875` (iOS `019f64fa-4cdc-7a84-bad9-74ab670cc271`), commit cd13219. Verify-on-OTA per the disclosed exception; owner timestamps land on this bundle.
