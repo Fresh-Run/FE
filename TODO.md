@@ -914,3 +914,9 @@ Owner-ruled feature removal: the chips UI, VIBE_OPTIONS, vibes state, toggleVibe
 B7's enlarge grammar extended to photo slides: `components/photo-viewer.tsx` (full-screen modal — paging from the tapped index, contain-fit, ×/backdrop/photo-tap close, n/m counter at 2+; **v1 = no pinch-zoom, stated**), MediaCarousel `onPhotoPress` (gated like onMapPress — absent = unchanged, all other hosts untouched by construction), 활동 상세 wired. Verified [19:35]: tapped-index open, paging/counter/contain, three closes, map-enlarge regression clean, single/zero-photo honesty. **WAVE 1 CLOSES with OTA-2.**
 
 **OTA-2 PUBLISHED 2026-07-16:** channel `development`, rtv 1.0.1, group `ede32c9f-b6db-468c-a160-83ad2be586cf` — ⑥ strip (c4b7286) + ⑦ viewer (623d70d) + soften. **WAVE 1 CLOSED.**
+
+## QUEUE ⑤+⑥ — CARD FLIP VERIFIED + ROUTE PALETTE (2026-07-16, verified [21:25])
+
+**⑤ (zero code):** course cards render real Apple Maps — 지연's 49/49 backfill confirmed API-side (5/5 feed sample, 41–57 pts) and eyes-on both modes. Closed.
+**⑥ palette:** `routeStroke(scheme)` single-source two-tone — LIGHT `#2E7D32` / DARK `#74E827` (= the LA lime; lock↔map consistent). RealMap's 3 sites (stroke+markers) scheme-keyed → every host inherits (feed/detail/heroes/route-map/tracking). MiniMap's neon `#7CF03D` DEAD — dark-fixed panel takes the dark tone unconditionally (panel-keyed, the LA precedent). Charts untouched (data, not routes).
+**BOARD FLAG (unranked, next read): 다크 모드 toggle is persist-only** — the app renders by SYSTEM scheme (`useColorScheme` direct); `settings.theme` feeds nothing. Same dead-toggle class keep_screen_on was. Joins quota-stale-tier in the unranked pile.

@@ -40,6 +40,15 @@ export const palette = {
 
 // ─── Semantic color tokens ────────────────────────────────────────────────────
 
+/** Route-line two-tone (지연 ruling 2026-07-16): LIGHT #2E7D32 / DARK
+    #74E827 — the DARK tone IS the Live Activity lime, so lock screen and map
+    stay consistent. Keys on the SYSTEM scheme: the app's only live theme
+    mechanism (settings.theme is persist-only — ledgered board item). Dark-
+    fixed panels (MiniMap's night canvas, the LA widget) use the dark tone
+    unconditionally — panel-keyed, not scheme-keyed (the LA precedent). */
+export const routeStroke = (scheme: 'light' | 'dark' | null | undefined): string =>
+  scheme === 'dark' ? '#74E827' : '#2E7D32';
+
 export const colors = {
   // Surfaces
   bg:          palette.warmWhite,   // screen background

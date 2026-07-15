@@ -1,3 +1,4 @@
+import { routeStroke } from '@/lib/theme';
 import React, { useMemo } from 'react';
 import { View } from 'react-native';
 import Svg, { Circle, Line, Path, Rect } from 'react-native-svg';
@@ -69,7 +70,9 @@ export function MiniMap({ seed, height = 172, borderRadius = 0, polyline }: Mini
   }, [seed, polyline]);
 
   const { W, H, d, start, end, roads, river } = data;
-  const accent = '#7CF03D';
+  // 지연 palette ruling: the neon dies. This panel is dark-fixed (night
+  // canvas), so it takes the DARK tone unconditionally — the LA precedent.
+  const accent = routeStroke('dark');
 
   return (
     <View style={{ width: '100%', height, backgroundColor: '#0C0F14', overflow: 'hidden', borderRadius }}>

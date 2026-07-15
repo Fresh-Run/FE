@@ -13,10 +13,10 @@
  *  - center: single {lat,lng} → region-only view (e.g. current location).
  */
 import React, { useMemo, useRef } from 'react';
-import { View } from 'react-native';
+import { View , useColorScheme} from 'react-native';
 import MapView, { Marker, Polyline } from 'react-native-maps';
 
-import { colors as C } from '@/lib/theme';
+import { routeStroke } from '@/lib/theme';
 import type { Coordinate } from '@/types';
 
 const EDGE_PAD = 1.35;       // bounds padding factor for auto-fit
@@ -72,6 +72,7 @@ type Props = {
 };
 
 export function RealMap({ height, borderRadius = 0, polyline, center, marker = false, startPin = false, showsUser = false, interactive = false, cache = true }: Props) {
+  const stroke = routeStroke(useColorScheme()); // 지연 two-tone (theme.ts)
   const line = polyline && polyline.length >= 2 ? polyline : null;
   const mapRef = useRef<MapView>(null);
 
@@ -122,7 +123,7 @@ export function RealMap({ height, borderRadius = 0, polyline, center, marker = f
           <>
             <Polyline
               coordinates={line.map(toLatLng)}
-              strokeColor={C.accentGrn}
+              strokeColor={stroke}
               strokeWidth={4}
               lineCap="round"
               lineJoin="round"
@@ -131,11 +132,11 @@ export function RealMap({ height, borderRadius = 0, polyline, center, marker = f
               <Marker coordinate={toLatLng(line[0])} />
             ) : (
               <Marker coordinate={toLatLng(line[0])} anchor={{ x: 0.5, y: 0.5 }}>
-                <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: '#fff', borderWidth: 4, borderColor: C.accentGrn }} />
+                <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: '#fff', borderWidth: 4, borderColor: stroke }} />
               </Marker>
             )}
             <Marker coordinate={toLatLng(line[line.length - 1])} anchor={{ x: 0.5, y: 0.5 }}>
-              <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: C.accentGrn, borderWidth: 3, borderColor: '#fff' }} />
+              <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: stroke, borderWidth: 3, borderColor: '#fff' }} />
             </Marker>
           </>
         )}
