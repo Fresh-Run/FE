@@ -25,7 +25,7 @@ import { colors as C, shadows, spacing as S } from '@/lib/theme';
 import { useQuota } from '@/store/use-quota';
 
 const FEATURES: { icon: string; title: string; desc: string; soon?: boolean }[] = [
-  { icon: 'sparkles-outline', title: 'AI 맞춤 코스 무제한', desc: '거리·분위기·경유지에 최적화된 코스 생성 — 횟수 제한 없이' },
+  { icon: 'sparkles-outline', title: 'AI 맞춤 코스 무제한', desc: '거리·경유지에 최적화된 코스 생성 — 횟수 제한 없이' },
   { icon: 'stats-chart-outline', title: 'AI 월간 인사이트', desc: '월간 통계·페이스 추이와 함께 AI 분석 리포트를 받아보세요' },
   { icon: 'volume-high-outline', title: 'AI 오디오 코치', desc: '러닝 중 실시간 음성 페이스 안내', soon: true },
 ];

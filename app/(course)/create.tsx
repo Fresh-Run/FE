@@ -48,11 +48,6 @@ import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
 // multi-select cut per contract; parity note in TODO.md).
 const PITSTOP_OPTIONS = ['편의점', '화장실', '카페', '공원'] as const;
 
-const VIBE_OPTIONS = [
-  '한강변', '조용한 골목', '평탄한 코스',
-  '오르막 피하기', '경치 좋은', '야경 명소',
-] as const;
-
 // 고급 설정 footer — labels for the invisible generation defaults
 const TERRAIN_LABEL = { flat: '평지 우선', mixed: '균형', hill: '언덕 훈련' } as const;
 const SURFACE_LABEL = { any: '노면 무관', paved: '포장도로', trail: '트레일' } as const;
@@ -178,7 +173,6 @@ export default function CreateScreen() {
   const isMi = units === 'mi';
   const distDisplay = isMi ? distanceKm / KM_PER_MI : distanceKm;
   const [pitstop, setPitstop]       = useState<string | null>(null);
-  const [vibes, setVibes]           = useState<string[]>([]);
 
   // ── 고급 설정 (C2) ──────────────────────────────────────────────────────────
   // 언덕 피하기 seeds from settings.ai_course and is ALWAYS sent as a body
@@ -210,11 +204,6 @@ export default function CreateScreen() {
   // Controller for the in-flight request — cancel actually aborts the fetch
   const genAbortRef = useRef<AbortController | null>(null);
 
-  // ── Vibe toggle ─────────────────────────────────────────────────────────────
-  function toggleVibe(v: string) {
-    setVibes(prev => prev.includes(v) ? prev.filter(x => x !== v) : [...prev, v]);
-  }
-
   // ── Generation ──────────────────────────────────────────────────────────────
   async function handleGenerate() {
     genCancelledRef.current = false;
@@ -223,7 +212,9 @@ export default function CreateScreen() {
     setViewState('generating');
     setGenError(null);
     try {
-      const noteParts = [...vibes, ...(avoidBusy ? ['번잡한 길 피하기'] : [])];
+      // 분위기 removed (owner ruling 2026-07-16) — `notes` survives for the
+      // 회피 hints; the generator's Runner-preferences line now carries only these
+      const noteParts = avoidBusy ? ['번잡한 길 피하기'] : [];
       const notes = noteParts.length > 0 ? noteParts.join(', ') : null;
       const result = await generate({
         start: startCoord,
@@ -404,7 +395,6 @@ export default function CreateScreen() {
           onPress={() => {
             setDistanceKm(seedKm);
             setPitstop(null);
-            setVibes([]);
             setAvoidHills(seedAvoidHills);
             setAvoidBusy(false);
             useStartPoint.getState().clear();
@@ -519,25 +509,7 @@ export default function CreateScreen() {
 
         <View style={st.sectionDivider} />
 
-        {/* ── Section: 분위기 ────────────────────────────────────────── */}
-        <View style={st.section}>
-          <SectionLabel text="분위기" />
-          <Text style={st.sectionHint}>여러 개 선택 가능</Text>
-          <View style={st.chipWrap}>
-            {VIBE_OPTIONS.map(opt => (
-              <Chip
-                key={opt}
-                label={opt}
-                active={vibes.includes(opt)}
-                onPress={() => toggleVibe(opt)}
-              />
-            ))}
-          </View>
-        </View>
-
-        <View style={st.sectionDivider} />
-
-        {/* ── Section: 고급 설정 accordion (C2) ─────────────────────── */}
+{/* ── Section: 고급 설정 accordion (C2) ─────────────────────── */}
         <View style={st.section}>
           <Pressable onPress={() => setAdvOpen(o => !o)} style={st.advHeader} hitSlop={4}>
             <Icon name="options-outline" size={17} color={C.sub} />

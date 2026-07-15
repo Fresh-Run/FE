@@ -75,7 +75,7 @@ export default function WelcomeScreen() {
           매번 새로운 길로,{'\n'}서울을 달리세요
         </Text>
         <Text variant="bodyMd" color="onSurfaceVariant" style={styles.subtitle}>
-          AI가 거리·분위기·경유지에 맞춰 한 번도{'\n'}달려본 적 없는 코스를 만들어 드려요.
+          AI가 거리·경유지에 맞춰 한 번도{'\n'}달려본 적 없는 코스를 만들어 드려요.
         </Text>
       </View>
 

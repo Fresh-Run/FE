@@ -28,7 +28,7 @@ export type RouteInput = {
   start: Coordinate;         // device GPS, Seoul fallback, or manual pick (C1)
   target_distance_km: number;
   pitstop_keyword: string | null;
-  notes: string | null;      // joined vibe chip labels (+ 회피 hints, C2)
+  notes: string | null;      // 회피 hints only (분위기 removed 2026-07-16, owner ruling)
   // Per-request override of settings.ai_course.avoid_hills — the guide's
   // body > 내 설정 priority; false counts as an explicit value server-side.
   avoid_hills: boolean;
