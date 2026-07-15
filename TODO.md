@@ -893,3 +893,18 @@ Owner-ruled feature removal: the chips UI, VIBE_OPTIONS, vibes state, toggleVibe
 - **MAP DIAGNOSIS (relay, zero FE work):** course cards' seed-stylized maps = **routes.polyline NULL on every row in the staging table** (`content-range: */0` with polyline non-null; waypoints [] too) — 지연's route seeder never wrote geometry (the runs reseed covered gps_track only). Client wiring correct (mapLive→RealMap, viewability-gated); first real geometry renders with no FE change. RELAY with column names.
 - **지연 palette ask (separate):** route color off neon green — hex settles owner↔지연 directly.
 - **BOARD ITEM (unranked, next board read): quota stale-tier honesty gap** — logged-out client logs `[quota] sync FAILED — holding last-known tier 'premium'`; a signed-out device retaining a paid tier flag needs a look.
+
+## 지연 CONSOLIDATED INTAKE (2026-07-16) — riders + post-⑦ queue
+
+**① CHAT-PUSH RIDER ARMED (her policy, agreed):** when her dispatch ships — instant push on FIRST message → 5-min throttle per crew per recipient (in-app records EVERY message; only banners suppressed) · sender excluded · respects crew mute + the EXISTING `crewChat` settings key (default ON, no new key). **Our side on landing:** verify tap-routing deep-links into the crew chat room + E2E banner (she messages a crew the owner is in → lock screen). Zero build until her sender ships.
+
+**② MAP DIAGNOSIS CLOSED — her correction supersedes my "every row":** 21/49 (seeder-created) were geometry-null; **28 app-created routes always had polyline** (why the real save path looked fine — my `*/0` count read was wrong or pre-dated her check; her split is authoritative). Her seeder now derives polyline/waypoints from the real-GPS track library (persist_route format, pydantic round-trip verified); the 21 backfilled. **49/49 non-null on staging NOW.** → build-queue ⑤ verifies visually.
+
+**③ SEED VISIBILITY REBALANCE (hers, shipped):** seed world now public-heavy — non-follower browsing feels alive; closes her feed-vs-profile mismatch. Context for feed-content expectations in future scripts.
+
+**④ HEALTH FIELD-LIST THREAD — OPEN, DRIFT GUARD:** she's waiting on a field list before anything health-shaped rides POST /runs. Our ③ shipped **100% client-side per her earlier confirm**; her offer implies opening server-side HR/kcal storage — the design conversation is UNRESOLVED between owner and 지연. **NOTHING gets sent until they settle it** — no field additions to saveRun without an explicit owner ruling citing this entry.
+
+**POST-⑦ BUILD QUEUE (in order):**
+- **⑤ course-card flip verification** (zero code, world-state): home feed + a course detail should render real Apple Maps (her backfill live); any card still on the fallback grid → its route ID goes back to her.
+- **⑥ route palette swap** (S, JS): neon dies on every polyline surface — 지연's two-tone **LIGHT `#2E7D32` / DARK `#74E827`** (= the LA lime; lock screen ↔ map consistent). Sweep: feed cards, course detail, run detail heroes, route-map full screen, tracking live path (LA mini-route already lime ✓). Mode-detection mechanism to be stated (app theme state vs system scheme).
+- **⑦-next followers_run_count CTA** (S-M, JS): additive field LIVE on public profiles — true followers-only run count; locked profiles always 0 (existence hidden, leak-verified). Consume: "팔로우하면 N개 더 볼 수 있어요" beside the run count on non-follower views; render only N>0; honest-absent at 0. Probe both profile states first.
