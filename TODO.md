@@ -920,3 +920,7 @@ B7's enlarge grammar extended to photo slides: `components/photo-viewer.tsx` (fu
 **⑤ (zero code):** course cards render real Apple Maps — 지연's 49/49 backfill confirmed API-side (5/5 feed sample, 41–57 pts) and eyes-on both modes. Closed.
 **⑥ palette:** `routeStroke(scheme)` single-source two-tone — LIGHT `#2E7D32` / DARK `#74E827` (= the LA lime; lock↔map consistent). RealMap's 3 sites (stroke+markers) scheme-keyed → every host inherits (feed/detail/heroes/route-map/tracking). MiniMap's neon `#7CF03D` DEAD — dark-fixed panel takes the dark tone unconditionally (panel-keyed, the LA precedent). Charts untouched (data, not routes).
 **BOARD FLAG (unranked, next read): 다크 모드 toggle is persist-only** — the app renders by SYSTEM scheme (`useColorScheme` direct); `settings.theme` feeds nothing. Same dead-toggle class keep_screen_on was. Joins quota-stale-tier in the unranked pile.
+
+## ⑦-next — followers_run_count CTA CUT BY OWNER RULING (2026-07-16, pre-commit)
+
+The CTA ("팔로우하면 N개 더 볼 수 있어요") built + probed both states, then **cut before commit ("not needed")** — user-profile.tsx restored to zero-diff. **KEPT: the `followers_run_count` field on UserProfile** (additive, live, probed; the type matches the wire; renders nothing). **지연 THREAD NOTE (relay): her field ships unconsumed by owner ruling — the CTA idea was DECLINED, not forgotten; the field stays available if a future design wants it.** Queue empty → Wave 2 (build #9) next.

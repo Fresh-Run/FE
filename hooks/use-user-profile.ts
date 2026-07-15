@@ -32,6 +32,11 @@ export type UserProfile = {
   is_following: boolean;
   is_followed_by: boolean;
   public_run_count: number; // zeroed by the server when locked
+  /** Additive (지연 2026-07-16, probed both states): true count of the
+      user's followers-only runs. Locked profiles ALWAYS 0 — existence
+      hidden, leak-verified server-side (no titles/dates/tracks). Feeds the
+      "팔로우하면 N개 더 볼 수 있어요" CTA; render only when > 0. */
+  followers_run_count: number;
   visibility: 'public' | 'followers' | 'private';
   locked: boolean;          // true = non-follower viewing a gated account
   /** v1.5 pre-render flags (지연 deploy, probed 2026-07-13): false = the
