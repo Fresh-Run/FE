@@ -44,6 +44,7 @@ import { computeElevGain, computeKmSplits } from '@/lib/run-metrics';
 import { uploadRunPhotos } from '@/lib/run-photos';
 import { saveRun, type NewRecord, type SavedRun } from '@/lib/runs-api';
 import { getMyStats, type MyStats } from '@/lib/stats-api';
+import { maybeWriteRunToHealth } from '@/lib/health';
 import { accentShadow, colors as C, radius as R, shadows } from '@/lib/theme';
 import { clearPendingRun, getPendingDraft, getPendingRun, getSavedResult } from '@/store/pending-run';
 import { useSettings } from '@/store/use-settings';
@@ -137,6 +138,9 @@ export default function RunResultScreen() {
       });
       savedRunRef.current = saved;
       setSaveState('saved');
+      // ③: mirror into Apple 건강 (opt-in gated, fire-and-forget) — the
+      // safety-net save path gets the same hook as the compose path
+      maybeWriteRunToHealth(run);
       if (saved.new_records && saved.new_records.length > 0) setPbRecords(saved.new_records);
     } catch (e: unknown) {
       setSaveError(e instanceof Error ? e.message : '저장에 실패했어요');

@@ -38,6 +38,7 @@ import { RealMap } from '@/components/real-map';
 import { Icon } from '@/components/ui';
 import { distUnit, fmtDist, fmtDuration, fmtPaceIn, fmtWhen, paceUnit, timeTitle } from '@/lib/run-format';
 import { MAX_RUN_PHOTOS, reencodeForUpload } from '@/lib/run-photos';
+import { maybeWriteRunToHealth } from '@/lib/health';
 import { saveRun, type RunVisibility } from '@/lib/runs-api';
 import { colors as C, radius as R, spacing as S } from '@/lib/theme';
 import {
@@ -171,6 +172,9 @@ export default function RunSaveScreen() {
       });
       savedOnceRef.current = true;
       markSaved(saved); // disk copy dropped — server has it now
+      // ③: mirror the run into Apple 건강 (opt-in gated, fire-and-forget —
+      // the server save above is the source of truth; HK never blocks it)
+      maybeWriteRunToHealth(run);
       exitingRef.current = true;
       router.replace('/(course)/run-result' as any);
     } catch (e: unknown) {

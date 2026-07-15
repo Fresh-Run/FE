@@ -17,9 +17,11 @@ import { Avatar } from '@/components/avatar';
 import { useTabBarInset } from '@/components/fresh-tab-bar';
 import { Icon } from '@/components/ui';
 import { useProfile, type Profile, type RunStats } from '@/hooks/use-profile';
+import { healthAvailable, requestHealthAuthorization } from '@/lib/health';
 import { distUnit, fmtDist, fmtPaceIn, type Units } from '@/lib/run-format';
 import type { RunSettings } from '@/lib/settings-api';
 import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
+import { useHealth } from '@/store/use-health';
 import { useQuota } from '@/store/use-quota';
 import { useSettings } from '@/store/use-settings';
 import { useStore } from '@/store/use-store';
@@ -198,6 +200,27 @@ export default function ProfileScreen() {
   const units         = useSettings(s => s.settings.units);
   const theme         = useSettings(s => s.settings.theme);
   const lang          = useSettings(s => s.settings.lang);
+
+  // Apple 건강 opt-in (③ Slice C — device-local; enable = the HK sheet once).
+  // iOS hides write-denial by design: `enabled` records the opt-in, and the
+  // post-enable alert names 건강 앱 > 공유 as the re-grant home.
+  const healthOn = useHealth(s => s.enabled);
+  const setHealthOn = useHealth(s => s.setEnabled);
+  useEffect(() => { useHealth.getState().hydrate(); }, []);
+  async function toggleHealth(v: boolean) {
+    if (!v) { setHealthOn(false); return; }
+    if (!healthAvailable()) {
+      Alert.alert('사용할 수 없어요', '이 기기에서는 Apple 건강을 사용할 수 없어요.');
+      return;
+    }
+    const ok = await requestHealthAuthorization();
+    if (!ok) { Alert.alert('연동 실패', '잠시 후 다시 시도해 주세요.'); return; }
+    setHealthOn(true);
+    Alert.alert(
+      'Apple 건강 연동됨',
+      '이제 저장하는 러닝이 건강 앱에 운동으로 기록돼요. 권한을 나중에 바꾸려면 건강 앱 > 공유 > 앱에서 조정할 수 있어요.',
+    );
+  }
   const hydrate       = useSettings(s => s.hydrate);
   const setRunSetting = useSettings(s => s.setRunSetting);
   useEffect(() => { hydrate(); }, [hydrate]);
@@ -355,6 +378,12 @@ export default function ProfileScreen() {
             onPress={() => router.push('/theme' as any)}
           />
           <SettingRow icon={<Icon name="globe-outline"         size={19} color={C.sub} />} label="언어"       value={lang === 'en' ? 'English' : '한국어'} onPress={() => router.push('/lang' as any)} />
+          {/* Apple 건강 연동 (③ Slice C) — convention-by-use home (owner
+              ruling 2026-07-16, SUPERSEDES the earlier 앱 설정 placement):
+              both instinctive looks landed here, beside 다크 모드/언어. ONE
+              home — deep settings.tsx carries no copy. Device-local opt-in
+              (store/use-health); enable presents the HK sheet once. */}
+          <ToggleRow label="Apple 건강 연동" on={healthOn} onChange={toggleHealth} />
           {/* 도움말/약관 screens don't exist yet — honest 준비 중 (house pattern),
               not a dead row or a faked screen. Wire when the screens land. */}
           <SettingRow icon={<Icon name="headset-outline"       size={19} color={C.sub} />} label="도움말 센터" onPress={() => router.push('/help-center' as any)} />

@@ -31,6 +31,8 @@ import { AvatarCrop, type CropSource } from '@/components/avatar-crop';
 import { Icon } from '@/components/ui';
 import { NumberWheelRow } from '@/components/wheel-sheet';
 import { ApiError } from '@/lib/api';
+import { fetchBodyMassKg } from '@/lib/health';
+import { useHealth } from '@/store/use-health';
 import { uploadAvatar } from '@/lib/avatar-api';
 import { avatarBg } from '@/lib/fr-hash';
 import { updateNickname, updateProfile } from '@/lib/profile-api';
@@ -120,6 +122,9 @@ export default function PersonalInfoScreen() {
   const [nameError, setNameError] = useState<string | null>(null);
   const [birthYear, setBirthYear] = useState(local.birthYear);
   const [weightKg, setWeightKg]   = useState(local.weightKg);
+  // ③: the 건강 pull affordance shows only after the 설정 opt-in
+  const healthOn = useHealth(s => s.enabled);
+  useEffect(() => { useHealth.getState().hydrate(); }, []);
   const [heightCm, setHeightCm]   = useState(local.heightCm);
   const [gender, setGender]       = useState<Gender>(local.gender);
 
@@ -338,6 +343,26 @@ export default function PersonalInfoScreen() {
         {/* ── 신체 정보 ── */}
         <Group title="신체 정보" hint="신체 정보는 칼로리와 페이스 추정의 정확도를 높여요.">
           <NumberWheelRow label="체중" value={weightKg} min={30} max={150} step={0.5} suffix=" kg" onChange={setWeightKg} />
+          {/* ③: 건강에서 체중 가져오기 — visible only after the Apple 건강
+              opt-in (설정). Sets the wheel; 저장 still commits it (no silent
+              writes). Honest empty state when 건강 has no record. */}
+          {healthOn && (
+            <Pressable
+              onPress={async () => {
+                const kg = await fetchBodyMassKg();
+                if (kg == null) {
+                  Alert.alert('기록 없음', '건강 앱에 체중 기록이 없거나 접근 권한이 없어요.');
+                  return;
+                }
+                setWeightKg(Math.min(150, Math.max(30, Math.round(kg * 2) / 2)));
+              }}
+              style={({ pressed }) => [st.healthPullRow, pressed && { opacity: 0.6 }]}
+              hitSlop={6}
+            >
+              <Icon name="heart-outline" size={14} color={C.accentGrn} />
+              <Text style={st.healthPullTxt}>건강에서 체중 가져오기</Text>
+            </Pressable>
+          )}
           <NumberWheelRow label="키" value={heightCm} min={120} max={220} step={1} suffix=" cm" onChange={setHeightCm} />
         </Group>
 
@@ -455,4 +480,6 @@ const st = StyleSheet.create({
   saveBtn:    { height: 54, borderRadius: R.lg, backgroundColor: C.accent, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7 },
   saveBtnDone:{ backgroundColor: C.accentDim, borderWidth: 1.5, borderColor: C.accent },
   saveTxt:    { fontSize: 16, fontWeight: '700', color: C.accentText, letterSpacing: -0.3 },
+  healthPullRow: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 10, paddingHorizontal: 4 },
+  healthPullTxt: { fontSize: 12.5, fontWeight: '600', color: C.accentGrn, letterSpacing: -0.2 },
 });

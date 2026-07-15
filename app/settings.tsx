@@ -90,8 +90,9 @@ export default function SettingsScreen() {
     if (!ok) Alert.alert('저장 실패', '설정을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.');
   }
 
-  const notReady = (feature: string) =>
-    Alert.alert('준비 중', `${feature}은 다음 업데이트에서 지원돼요.`);
+  // (notReady helper retired with the 건강 데이터 dead-end. The Apple 건강
+  // toggle lives on the PROFILE TAB's 설정 group — owner ruling 2026-07-16,
+  // convention-by-use; ONE home, this screen carries no copy.)
 
   return (
     <View style={[st.root, { paddingTop: insets.top }]}>
@@ -152,12 +153,6 @@ export default function SettingsScreen() {
             label="알림 설정"
             value="푸시 카테고리"
             onPress={() => router.push('/notification-settings' as any)}
-          />
-          <SettingRow
-            icon={<Icon name="heart-outline" size={19} color={C.danger} />}
-            iconBg="#EF444418"
-            label="건강 데이터"
-            onPress={() => notReady('건강 데이터 연동')}
           />
         </SettingGroup>
 
