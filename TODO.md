@@ -924,3 +924,5 @@ B7's enlarge grammar extended to photo slides: `components/photo-viewer.tsx` (fu
 ## ⑦-next — followers_run_count CTA CUT BY OWNER RULING (2026-07-16, pre-commit)
 
 The CTA ("팔로우하면 N개 더 볼 수 있어요") built + probed both states, then **cut before commit ("not needed")** — user-profile.tsx restored to zero-diff. **KEPT: the `followers_run_count` field on UserProfile** (additive, live, probed; the type matches the wire; renders nothing). **지연 THREAD NOTE (relay): her field ships unconsumed by owner ruling — the CTA idea was DECLINED, not forgotten; the field stays available if a future design wants it.** Queue empty → Wave 2 (build #9) next.
+
+**OTA-3 PUBLISHED 2026-07-16:** channel `development`, rtv 1.0.1, group `286412d4-d307-4ce3-b424-427f6c60e923` — ⑥ palette (ec6ad96) + type line. Queue closed.
