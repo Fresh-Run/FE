@@ -10,16 +10,31 @@
       "channel": "development",
       "ios": {
         "simulator": false
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://freshrun-api.fly.dev",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://jlmmqnpddkokyintlawd.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpsbW1xbnBkZGtva3lpbnRsYXdkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE3NTkxMTgsImV4cCI6MjA5NzMzNTExOH0.l2yL07n7V84FyGvS9SZiO7La6x7aAcIV2D02R3pONSo"
       }
     },
     "preview": {
       "distribution": "internal",
-      "channel": "preview"
+      "channel": "preview",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://freshrun-api.fly.dev",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://jlmmqnpddkokyintlawd.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpsbW1xbnBkZGtva3lpbnRsYXdkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE3NTkxMTgsImV4cCI6MjA5NzMzNTExOH0.l2yL07n7V84FyGvS9SZiO7La6x7aAcIV2D02R3pONSo"
+      }
     },
     "production": {
       "distribution": "store",
       "channel": "production",
-      "autoIncrement": true
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://freshrun-api.fly.dev",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://jlmmqnpddkokyintlawd.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpsbW1xbnBkZGtva3lpbnRsYXdkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE3NTkxMTgsImV4cCI6MjA5NzMzNTExOH0.l2yL07n7V84FyGvS9SZiO7La6x7aAcIV2D02R3pONSo"
+      }
     }
   },
   "submit": {
