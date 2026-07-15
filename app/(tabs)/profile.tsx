@@ -198,7 +198,8 @@ export default function ProfileScreen() {
   // Settings — bound to /me/settings (server truth, AsyncStorage first frame)
   const runSettings   = useSettings(s => s.settings.run);
   const units         = useSettings(s => s.settings.units);
-  const theme         = useSettings(s => s.settings.theme);
+  // (theme selector removed with the hidden row — the STORE field, /theme
+  //  screen and server persist stay; see the hidden-row TODO below)
   const lang          = useSettings(s => s.settings.lang);
 
   // Apple 건강 opt-in (③ Slice C — device-local; enable = the HK sheet once).
@@ -403,12 +404,15 @@ export default function ProfileScreen() {
             value={units === 'mi' ? 'mi (마일)' : 'km (킬로미터)'}
             onPress={() => router.push('/units' as any)}
           />
-          <SettingRow
-            icon={<Icon name="moon-outline" size={19} color={C.sub} />}
-            label="다크 모드"
-            value={theme === 'dark' ? '켜짐' : '꺼짐'}
-            onPress={() => router.push('/theme' as any)}
-          />
+          {/* 다크 모드 row HIDDEN pre-TestFlight (owner ruling 2026-07-16,
+              line-132): settings.theme is persist-only — the app renders by
+              SYSTEM scheme (useColorScheme direct) and nothing consumes the
+              toggle, so a rendered control would be a dead affordance.
+              TODO(post-beta): wire theme rendering to settings.theme (or
+              adopt Appearance.setColorScheme), then restore this row AND
+              app/theme.tsx (orphaned by this hide — kept for the return).
+              Persist plumbing (useSettings.theme, /theme screen, server
+              field) intact by design. */}
           <SettingRow icon={<Icon name="globe-outline"         size={19} color={C.sub} />} label="언어"       value={lang === 'en' ? 'English' : '한국어'} onPress={() => router.push('/lang' as any)} />
           {/* 도움말/약관 screens don't exist yet — honest 준비 중 (house pattern),
               not a dead row or a faked screen. Wire when the screens land. */}

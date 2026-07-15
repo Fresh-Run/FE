@@ -114,12 +114,10 @@ export default function SettingsScreen() {
             value={settings.units === 'mi' ? 'mi · 마일' : 'km · 킬로미터'}
             onPress={() => router.push('/units' as any)}
           />
-          <SettingRow
-            icon={<Icon name="moon-outline" size={19} color={C.sub} />}
-            label="테마"
-            value={settings.theme === 'dark' ? '다크' : '라이트'}
-            onPress={() => router.push('/theme' as any)}
-          />
+          {/* 테마 row HIDDEN pre-TestFlight — the SAME dead control as the
+              profile tab's 다크 모드 row (settings.theme is persist-only;
+              the app renders by system scheme). One ruling, both copies.
+              TODO(post-beta): restore with the theme-rendering wire-up. */}
           <SettingRow
             icon={<Icon name="globe-outline" size={19} color={C.sub} />}
             label="언어"
