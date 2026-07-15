@@ -866,3 +866,12 @@ The pre-A2 연결 group returns between 러닝&AI and 러닝 동작, original ro
 **연결-GROUP OTA PUBLISHED 2026-07-16:** channel `development`, runtimeVersion 1.0.1, group `649e64c6-726d-4171-977f-0513b966f14a`, commit 27b4400. Second disclosed verify-on-OTA.
 
 **연결 RESTORATION VERIFIED [18:00] (on-OTA, exception #2)** — both rows, honest 소셜 alert, connect/disconnect state truth, no re-prompt, bare toggle gone, save gate rides the store. CLOSED. Debug list top: the dev-client connect failure — investigation begins (launcher verbatim error requested; artifact ATS check running).
+
+## DEV-CLIENT CONNECT FAILURE — CLOSED (2026-07-16): one ATS story for everything
+
+**Mechanism (artifact + launcher-error + CLI-source proven):** build #8's SHIPPING Info.plist has `NSAllowsArbitraryLoads: false` (+ NSAllowsLocalNetworking: true) — **the EAS release-config build overrides the `NSAllowsArbitraryLoads: true` that `expo config --type introspect` reports. Config-vs-artifact ATS drift — introspection is NOT the artifact; when it matters, read the .ipa's plist.** Every failure was cleartext-into-an-ATS-locked-binary:
+- launcher manifest fetch over http:// (LAN + tunnel) → blocked in-process, zero packets (the "zero requests in both server logs");
+- https:// manifest workaround → bundle fetch STILL died: the manifest advertised `http://` launchAsset URLs (owner's verbatim RN-error capture) — @expo/cli UrlCreator hardcodes `protocol: 'http'` for tunnel components;
+- Safari worked (own ATS-exempt stack); app runtime worked (staging/OTA = HTTPS). No network/firewall/TCC issue ever existed.
+
+**FIX + STANDING DEV-LOOP RECIPE:** `EXPO_PACKAGER_PROXY_URL=https://<random>-cvcv0824-8081.exp.direct npx expo start --dev-client --tunnel` (the env var takes precedence, "Proxy comes first" — UrlCreator.js:145; deprecated but read by this CLI, source-verified; the subdomain is stable via .expo/settings.json urlRandomness). Manifest now emits https launchAsset (curl-verified). Phones connect via Enter-URL-manually with the https URL. LAN-http remains blocked by the same ATS fact — don't chase it; the tunnel-https loop is the recipe until a future build ships a dev-only ATS exception (deliberately NOT added now — an arbitrary-loads exception in a TestFlight-bound binary is the over-declaration class we kill; revisit only if tunnel latency hurts).
