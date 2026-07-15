@@ -13,6 +13,7 @@ import {
   Alert,
   FlatList,
   Pressable,
+  Linking,
   RefreshControl,
   StyleSheet,
   Text as RNText,
@@ -26,10 +27,15 @@ import { MiniMap } from '@/components/mini-map';
 import { RealMap } from '@/components/real-map';
 import { PendingRunRecovery } from '@/components/pending-run-recovery';
 import { Icon } from '@/components/ui';
+import * as Location from 'expo-location';
+
+import { RunCard } from '@/components/run-card';
 import { useCurrentLocation } from '@/hooks/use-current-location';
-import { useFeed, useNearbyRoutes } from '@/hooks/use-feed';
+import { useFeed, useNearbyFeed } from '@/hooks/use-feed';
 import { getUnreadCount } from '@/lib/notifications-api';
 import { openProfile } from '@/lib/profile-nav';
+import { type NearbyRun } from '@/lib/feed-api';
+import { kudosRun, unkudosRun } from '@/lib/run-social-api';
 import {
   bookmarkRoute,
   likeRoute,
@@ -67,16 +73,6 @@ function courseDisplay(r: PublicRoute, units: Units) {
   };
 }
 
-function haversineKm(a: Coordinate, b: Coordinate): number {
-  const R = 6371;
-  const toRad = (d: number) => (d * Math.PI) / 180;
-  const dLat = toRad(b.lat - a.lat);
-  const dLng = toRad(b.lng - a.lng);
-  const s =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
-  return 2 * R * Math.asin(Math.sqrt(s));
-}
 
 function verdictColor(tone: WeatherTone): string {
   if (tone === 'good') return C.accent;
@@ -200,10 +196,10 @@ const wst = StyleSheet.create({
 
 // ─── Feed tabs ────────────────────────────────────────────────────────────────
 
-function FeedTabs({ tab, setTab }: { tab: string; setTab: (v: string) => void }) {
-  // Query radius stays 10km — the label converts for display only
+function FeedTabs({ tab, setTab, radiusKm }: { tab: string; setTab: (v: string) => void; radiusKm: number }) {
+  // The label tracks the LIVE radius (10, or 20 after the one retry)
   const units = useSettings(s => s.settings.units);
-  const radiusLabel = units === 'mi' ? `내 위치 ${fmtDist(10, 'mi', 1)}mi 이내` : '내 위치 10km 이내';
+  const radiusLabel = units === 'mi' ? `내 위치 ${fmtDist(radiusKm, 'mi', 1)}mi 이내` : `내 위치 ${radiusKm}km 이내`;
   return (
     <View style={ftt.row}>
       <View style={ftt.seg}>
@@ -389,12 +385,17 @@ const abt = StyleSheet.create({
 
 // ─── List states ──────────────────────────────────────────────────────────────
 
-function ListState({ icon, title, sub }: { icon: string; title: string; sub?: string }) {
+function ListState({ icon, title, sub, btn, onBtn }: { icon: string; title: string; sub?: string; btn?: string; onBtn?: () => void }) {
   return (
     <View style={lst.wrap}>
       <Icon name={icon} size={38} color={C.faint} />
       <RNText style={lst.title}>{title}</RNText>
       {sub ? <RNText style={lst.sub}>{sub}</RNText> : null}
+      {btn && onBtn ? (
+        <Pressable onPress={onBtn} style={({ pressed }) => [lst.btn, pressed && { opacity: 0.8 }]}>
+          <RNText style={lst.btnTxt}>{btn}</RNText>
+        </Pressable>
+      ) : null}
     </View>
   );
 }
@@ -415,6 +416,8 @@ const lst = StyleSheet.create({
   wrap:     { alignItems: 'center', gap: 10, paddingVertical: 48, paddingHorizontal: S.gutter },
   title:    { fontSize: 14, color: C.faint, fontWeight: '600', letterSpacing: -0.2, textAlign: 'center' },
   sub:      { fontSize: 12.5, color: C.faint, letterSpacing: -0.2, textAlign: 'center', marginTop: -4 },
+  btn:      { marginTop: 6, paddingHorizontal: 18, paddingVertical: 10, borderRadius: 999, backgroundColor: C.accent },
+  btnTxt:   { fontSize: 13.5, fontWeight: '800', color: C.accentText, letterSpacing: -0.2 },
   retryBtn: { marginTop: 4, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 12, backgroundColor: C.surfaceAlt, borderWidth: 1, borderColor: C.border },
   retryTxt: { fontSize: 14, fontWeight: '700', color: C.text },
 });
@@ -442,8 +445,38 @@ export default function HomeScreen() {
 
   const feed = useFeed();
   const { coordinate, status: locStatus } = useCurrentLocation();
+  // ── 전체 discovery (2026-07-16): RUNS via GET /feed/nearby ────────────────
+  // Radius machine (owner R2): 10 → ONE 20km retry → terminal; pull-to-
+  // refresh RESETS to 10 and re-acquires a fresh fix. Tab-switch keeps state.
+  const [radiusKm, setRadiusKm]   = useState(10);
+  const [retried, setRetried]     = useState(false);
+  const [freshCoord, setFreshCoord] = useState<Coordinate | null>(null);
+  const [nearbyKey, setNearbyKey] = useState(0); // explicit refetch (error retry / refresh)
+  const units = useSettings(s => s.settings.units);
   // Seoul-fallback class: never query "nearby" with the synchronous fallback
-  const nearby = useNearbyRoutes(tab === '전체' && locStatus === 'granted' ? coordinate : null);
+  const effCoord = freshCoord ?? coordinate;
+  const nearby = useNearbyFeed(tab === '전체' && locStatus === 'granted' ? effCoord : null, radiusKm, nearbyKey);
+
+  const retryWider = useCallback(() => { setRetried(true); setRadiusKm(20); }, []);
+  const refreshNearby = useCallback(async () => {
+    setRadiusKm(10);
+    setRetried(false);
+    try {
+      const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      setFreshCoord({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+    } catch { /* keep the last coord — the key bump below still refetches */ }
+    setNearbyKey(k => k + 1);
+  }, []);
+
+  // Kudos overlay for discovery cards (the user-profile pattern verbatim)
+  const [kudosOv, setKudosOv] = useState<Record<string, { on: boolean; delta: number }>>({});
+  const toggleRunKudos = useCallback((run: NearbyRun) => {
+    const cur = kudosOv[run.run_id]?.on ?? run.my_kudos;
+    const next = !cur;
+    setKudosOv(p => ({ ...p, [run.run_id]: { on: next, delta: (next ? 1 : 0) - (run.my_kudos ? 1 : 0) } }));
+    (next ? kudosRun(run.run_id) : unkudosRun(run.run_id))
+      .catch(() => setKudosOv(p => ({ ...p, [run.run_id]: { on: run.my_kudos, delta: 0 } })));
+  }, [kudosOv]);
 
   // Maps slice 2 — real-map-only-for-viewable-cells. Stable refs (FlatList
   // forbids changing these props mid-list); 25% visibility flips a cell live.
@@ -491,8 +524,8 @@ export default function HomeScreen() {
   }, []);
 
   const name = displayName ?? '러너';
-  const list = tab === '전체' ? nearby.items : feed.items;
-  const loading = tab === '전체' ? nearby.loading || (!coordinate && nearby.items.length === 0) : feed.loading;
+  const list: (PublicRoute | NearbyRun)[] = tab === '전체' ? nearby.items : feed.items;
+  const loading = tab === '전체' ? nearby.loading || (locStatus === 'fetching' && nearby.items.length === 0) : feed.loading;
   const error = tab === '전체' ? nearby.error : feed.error;
 
   const header = useMemo(() => (
@@ -504,10 +537,10 @@ export default function HomeScreen() {
         <WeatherStrip onPress={() => router.push('/weather-detail')} />
       </View>
       <View style={{ paddingTop: 22, paddingBottom: 14, paddingHorizontal: S.gutter }}>
-        <FeedTabs tab={tab} setTab={setTab} />
+        <FeedTabs tab={tab} setTab={setTab} radiusKm={radiusKm} />
       </View>
     </View>
-  ), [insets.top, name, photoUrl, unread, tab]);
+  ), [insets.top, name, photoUrl, unread, tab, radiusKm]);
 
   return (
     <View style={{ flex: 1, backgroundColor: C.bg }}>
@@ -515,7 +548,7 @@ export default function HomeScreen() {
       <PendingRunRecovery />
       <FlatList
         data={list}
-        keyExtractor={(r) => r.id}
+        keyExtractor={(r) => ('run_id' in r ? r.run_id : r.id)}
         showsVerticalScrollIndicator={false}
         viewabilityConfig={viewabilityConfig}
         onViewableItemsChanged={onViewableItemsChanged}
@@ -525,7 +558,7 @@ export default function HomeScreen() {
             refreshing={tab === '전체' ? nearby.loading && nearby.items.length > 0 : feed.refreshing}
             onRefresh={() => {
               useQuota.getState().hydrate(true); // recovery path for a failed tier sync
-              if (tab === '전체') nearby.refetch(); else feed.refresh();
+              if (tab === '전체') void refreshNearby(); else feed.refresh();
             }}
             tintColor={C.faint}
           />
@@ -535,10 +568,38 @@ export default function HomeScreen() {
         contentContainerStyle={{ paddingBottom: tabBarInset }}
         ItemSeparatorComponent={() => <View style={{ height: 16 }} />}
         renderItem={({ item }) => {
+          // ── 전체: discovery RUN cards (the shared RunCard) ────────────────
+          if ('run_id' in item) {
+            const ov = kudosOv[item.run_id];
+            const shown = ov ? { ...item, my_kudos: ov.on, kudos_count: item.kudos_count + ov.delta } : item;
+            return (
+              <View style={{ paddingHorizontal: S.gutter }}>
+                <RunCard
+                  run={shown}
+                  units={units}
+                  mapLive={liveIds.has(item.run_id)}
+                  onKudos={() => toggleRunKudos(item)}
+                  kudosOff={item.allow_likes === false}
+                  onOpen={() => router.push({
+                    pathname: '/run-post' as never,
+                    params: {
+                      runId: shown.run_id,
+                      nickname: shown.nickname,
+                      avatarUrl: shown.avatar_url ?? '',
+                      myKudos: shown.my_kudos ? '1' : '0',
+                      kudosCount: String(shown.kudos_count),
+                    },
+                  })}
+                  // the discovery funnel: avatar → profile → 팔로우
+                  onAvatarPress={() => openProfile(item.user_id, item.nickname)}
+                />
+              </View>
+            );
+          }
           const like = effLiked(item);
-          const awayKm = tab === '전체' && coordinate && item.start_lat != null && item.start_lng != null
-            ? haversineKm(coordinate, { lat: item.start_lat, lng: item.start_lng })
-            : null;
+          // 친구 = the only FeedCard tab now (전체 renders RunCards above);
+          // the near-you chip was 전체-only and retires with the swap
+          const awayKm = null;
           return (
             <View style={{ paddingHorizontal: S.gutter }}>
               <FeedCard
@@ -562,10 +623,19 @@ export default function HomeScreen() {
           loading
             ? <View style={lst.wrap}><ActivityIndicator size="large" color={C.accent} /></View>
             : error
-              ? <ErrorState message={error} onRetry={tab === '전체' ? nearby.refetch : feed.refresh} />
+              ? <ErrorState message={error} onRetry={tab === '전체' ? () => setNearbyKey(k => k + 1) : feed.refresh} />
               : tab === '친구'
-                ? <ListState icon="people-outline" title="팔로우한 러너의 코스가 여기에 보여요" sub="전체 탭에서 근처 코스를 둘러보세요" />
-                : <ListState icon="map-outline" title="근처에 공개 코스가 없어요" />
+                ? <ListState icon="people-outline" title="팔로우한 러너의 코스가 여기에 보여요" sub="전체 탭에서 주변 러닝을 둘러보세요" />
+                : locStatus === 'denied'
+                  // the honest permission state — DISTINCT from genuine-empty
+                  ? <ListState icon="location-outline" title="위치 권한이 필요해요" sub="주변 러너들의 러닝을 보려면 위치 접근을 허용해 주세요." btn="설정 열기" onBtn={() => Linking.openSettings()} />
+                  : !nearby.fetched
+                    ? <View style={lst.wrap}><ActivityIndicator size="large" color={C.accent} /></View>
+                    : !retried
+                      // genuine empty @10km — ONE wider retry (server clamps at 20)
+                      ? <ListState icon="walk-outline" title="주변에 러닝이 없어요" sub="반경 10km 안에 공개된 러닝이 아직 없어요." btn="반경 20km로 넓혀 보기" onBtn={retryWider} />
+                      // terminal — refresh is the escape (owner R1)
+                      : <ListState icon="walk-outline" title="반경 20km 안에도 아직 없어요" sub="당겨서 새로고침할 수 있어요" />
         }
         ListFooterComponent={
           <View>

@@ -8,9 +8,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   getBookmarkedRouteIds,
   getFeed,
-  getNearbyRoutes,
   type PublicRoute,
 } from '@/lib/routes-api';
+import { getNearbyFeed, type NearbyRun } from '@/lib/feed-api';
 import type { Coordinate } from '@/types';
 
 // ─── useFeed — following feed, paginated ─────────────────────────────────────
@@ -73,32 +73,29 @@ export function useFeed() {
   return { items, bookmarkedIds, loading, refreshing, loadingMore, error, refresh, loadMore };
 }
 
-// ─── useNearbyRoutes — 전체 tab, single radius-bounded page ──────────────────
-// Pass null to defer fetching (e.g. until the tab is opened / location known).
+// ─── useNearbyFeed — 전체 discovery tab (GET /feed/nearby), radius-machined ──
+// Pass null coord to defer (tab unopened / permission not granted). radiusKm
+// is caller-owned state (10 → one 20 retry → terminal; refresh resets to 10).
+// Replaced useNearbyRoutes 2026-07-16 (전체 discovery slice) — course cards
+// left 전체; /routes/nearby lost its only consumer and retired with it.
 
-export function useNearbyRoutes(coord: Coordinate | null, radiusKm = 10) {
-  const [items, setItems]     = useState<PublicRoute[]>([]);
+export function useNearbyFeed(coord: Coordinate | null, radiusKm: number, refreshKey = 0) {
+  const [items, setItems]     = useState<NearbyRun[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState<string | null>(null);
-  const [key, setKey]         = useState(0);
-  const fetchedRef = useRef(false);
+  const [fetched, setFetched] = useState(false); // distinguishes "not asked" from "[] answered"
 
   useEffect(() => {
     if (!coord) return;
-    if (fetchedRef.current && key === 0) return; // fetch once per mount + explicit refetches
-    fetchedRef.current = true;
-
     let cancelled = false;
     setLoading(true);
     setError(null);
-    getNearbyRoutes(coord.lat, coord.lng, radiusKm)
-      .then(rows => { if (!cancelled) setItems(rows); })
-      .catch((e: unknown) => { if (!cancelled) setError(e instanceof Error ? e.message : '근처 코스를 불러올 수 없어요'); })
+    getNearbyFeed(coord.lat, coord.lng, radiusKm)
+      .then(rows => { if (!cancelled) { setItems(rows); setFetched(true); } })
+      .catch((e: unknown) => { if (!cancelled) setError(e instanceof Error ? e.message : '주변 러닝을 불러올 수 없어요'); })
       .finally(() => { if (!cancelled) setLoading(false); });
-
     return () => { cancelled = true; };
-  }, [coord, radiusKm, key]);
+  }, [coord, radiusKm, refreshKey]);
 
-  const refetch = useCallback(() => setKey(k => k + 1), []);
-  return { items, loading, error, refetch };
+  return { items, loading, error, fetched };
 }

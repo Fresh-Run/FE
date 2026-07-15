@@ -926,3 +926,8 @@ B7's enlarge grammar extended to photo slides: `components/photo-viewer.tsx` (fu
 The CTA ("팔로우하면 N개 더 볼 수 있어요") built + probed both states, then **cut before commit ("not needed")** — user-profile.tsx restored to zero-diff. **KEPT: the `followers_run_count` field on UserProfile** (additive, live, probed; the type matches the wire; renders nothing). **지연 THREAD NOTE (relay): her field ships unconsumed by owner ruling — the CTA idea was DECLINED, not forgotten; the field stays available if a future design wants it.** Queue empty → Wave 2 (build #9) next.
 
 **OTA-3 PUBLISHED 2026-07-16:** channel `development`, rtv 1.0.1, group `286412d4-d307-4ce3-b424-427f6c60e923` — ⑥ palette (ec6ad96) + type line. Queue closed.
+
+## 전체 DISCOVERY FEED (2026-07-16, verified [22:18] — 7/7 legs incl. both-direction exclusion)
+
+전체 = location discovery (GET /feed/nearby, 지연 contract fully probed: 400s verbatim for missing-latlng + Korea-bbox, silent 20km clamp, [] honest-empty, polyline_thumb served) · 친구 untouched. RunCard EXTRACTED verbatim from user-profile (2ins/83del; additive onAvatarPress, absent = zero change there — regression leg PASS). Radius machine: 10 → one 20 retry (inert on double-tap, verified) → terminal + 당겨서 새로고침 line; pull-to-refresh resets 10 + fresh fix. Denied state = honest card + REAL 설정 열기. Retired: useNearbyRoutes, getNearbyRoutes, haversineKm, the awayKm chip (전체-as-courses artifacts). Kudos = the overlay pattern verbatim.
+**INVARIANT (ledger line per owner):** 전체 empty-state QA depends on qa-empty's follow-everyone invariant (any new seeded public runner must be followed by qa-empty), maintained server-side per 지연's account docs, 2026-07-15.

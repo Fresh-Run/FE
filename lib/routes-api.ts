@@ -40,9 +40,8 @@ export function getFeed(offset = 0): Promise<PublicRoute[]> {
   return apiFetch<PublicRoute[]>(`/api/feed?limit=${FEED_PAGE_SIZE}&offset=${offset}`);
 }
 
-export function getNearbyRoutes(lat: number, lng: number, radiusKm = 10): Promise<PublicRoute[]> {
-  return apiFetch<PublicRoute[]>(`/api/routes/nearby?lat=${lat}&lng=${lng}&radius_km=${radiusKm}`);
-}
+// getNearbyRoutes retired 2026-07-16 (전체 discovery slice): /routes/nearby's
+// only consumer was the 전체 tab, which now serves RUNS via GET /feed/nearby.
 
 // PublicRouteResponse carries no is_bookmarked flag (raised as a backend
 // follow-up) — seed card state by intersecting the bookmark list instead.

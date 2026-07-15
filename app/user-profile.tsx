@@ -27,14 +27,12 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/avatar';
-import { MiniMap } from '@/components/mini-map';
-import { RealMap } from '@/components/real-map';
+import { RunCard } from '@/components/run-card';
 import { Icon } from '@/components/ui';
 import { ApiError, apiFetch, apiRequest } from '@/lib/api';
 import { blockUser } from '@/lib/blocks-api';
 import { REPORT_REASONS, reportUser, type ReportReason } from '@/lib/reports-api';
-import { distUnit, fmtDist, fmtDuration, fmtPaceIn, fmtWhen, paceUnit, timeTitle } from '@/lib/run-format';
-import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
+import { colors as C, radius as R, spacing as S } from '@/lib/theme';
 import { useUserProfile, type UserRun } from '@/hooks/use-user-profile';
 import { usePendingFollows } from '@/store/pending-follows';
 import { useSettings } from '@/store/use-settings';
@@ -43,75 +41,6 @@ import { useStore } from '@/store/use-store';
 // Run card — other-user variant: ♥ is a real toggle (my_kudos), no 💬,
 // no visibility caption (approved deltas). Card tap → 러닝 포스트 (R3',
 // BE 4cd5685 opened non-owner run detail) with entry-payload seeds.
-function RunCard({ run, units, mapLive, onKudos, kudosOff, onOpen }: {
-  run: UserRun;
-  units: ReturnType<typeof useSettings.getState>['settings']['units'];
-  mapLive: boolean;
-  onKudos: () => void;
-  /** v1.5 likes_disabled — hides the press affordance (count-only) */
-  kudosOff?: boolean;
-  onOpen?: () => void;
-}) {
-  return (
-    <Pressable onPress={onOpen} disabled={!onOpen} style={({ pressed }) => [st.card, shadows.sm, pressed && !!onOpen && { opacity: 0.85 }]}>
-      <View style={st.cardHead}>
-        <Avatar name={run.nickname} size={36} photoUrl={run.avatar_url} ring={C.border} initialsRatio={0.38} upper />
-        <View style={{ flex: 1, minWidth: 0 }}>
-          <Text style={st.cardName}>{run.nickname}</Text>
-          <Text style={st.cardDate}>{fmtWhen(run.ran_at)}</Text>
-        </View>
-      </View>
-      {/* polyline_thumb slice: viewable + thumb → real map; off-screen /
-          trackless → route-shaped or seed SVG (ledger rulings) */}
-      {mapLive && run.polyline_thumb && run.polyline_thumb.length >= 2 ? (
-        <RealMap height={200} polyline={run.polyline_thumb} />
-      ) : (
-        <MiniMap seed={run.run_id} height={200} polyline={run.polyline_thumb ?? undefined} />
-      )}
-      <View style={st.cardBody}>
-        <Text style={st.cardTitle}>{run.title ?? timeTitle(run.ran_at)}</Text>
-        <View style={st.statsRow}>
-          {([
-            [fmtDist(run.distance_km, units, 1), distUnit(units), '거리'],
-            [fmtDuration(run.duration_sec), '', '시간'],
-            [run.avg_pace_sec_per_km != null ? fmtPaceIn(run.avg_pace_sec_per_km, units) : '--', paceUnit(units), '페이스'],
-          ] as [string, string, string][]).map(([val, unit, label], i) => (
-            <View key={i} style={{ gap: 2 }}>
-              <Text style={st.statVal}>
-                {val}{unit ? <Text style={st.statUnit}> {unit}</Text> : null}
-              </Text>
-              <Text style={st.statLbl}>{label}</Text>
-            </View>
-          ))}
-        </View>
-      </View>
-      <View style={st.cardFooter}>
-        {kudosOff ? (
-          /* count-only — the read-only kudos idiom; no press affordance */
-          <View style={st.kudosBtn}>
-            <Icon name="heart-outline" size={18} color={C.sub} />
-            <Text style={st.kudosCount}>{run.kudos_count}</Text>
-          </View>
-        ) : (
-          <Pressable onPress={onKudos} hitSlop={8} style={({ pressed }) => [st.kudosBtn, pressed && { opacity: 0.6 }]}>
-            <Icon name={run.my_kudos ? 'heart' : 'heart-outline'} size={18} color={run.my_kudos ? C.danger : C.sub} />
-            <Text style={[st.kudosCount, run.my_kudos && { color: C.danger }]}>{run.kudos_count}</Text>
-          </Pressable>
-        )}
-        {/* 💬 read-only count — tap opens the post, same as the card body */}
-        <Pressable
-          onPress={onOpen}
-          disabled={!onOpen}
-          hitSlop={8}
-          style={({ pressed }) => [st.kudosBtn, { marginLeft: 14 }, pressed && !!onOpen && { opacity: 0.6 }]}
-        >
-          <Icon name="chatbubble-outline" size={17} color={C.sub} />
-          <Text style={st.kudosCount}>{run.comment_count}</Text>
-        </Pressable>
-      </View>
-    </Pressable>
-  );
-}
 
 export default function UserProfileScreen() {
   const insets = useSafeAreaInsets();
@@ -556,20 +485,7 @@ const st = StyleSheet.create({
   sectionTitle: { fontSize: 17, fontWeight: '700', letterSpacing: -0.4, color: C.text },
   sectionCount: { fontSize: 12.5, color: C.faint, letterSpacing: -0.2 },
 
-  card:      { backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 20, overflow: 'hidden' },
-  cardHead:  { flexDirection: 'row', alignItems: 'center', gap: 9, paddingVertical: 11, paddingHorizontal: 14 },
-  cardName:  { fontSize: 14, fontWeight: '700', color: C.text, letterSpacing: -0.3 },
-  cardDate:  { fontSize: 11.5, color: C.faint, letterSpacing: -0.2, marginTop: 1 },
-  cardBody:  { paddingTop: 12, paddingBottom: 14, paddingHorizontal: 14 },
-  cardTitle: { fontSize: 15.5, fontWeight: '700', color: C.text, letterSpacing: -0.4, marginBottom: 9 },
-  statsRow:  { flexDirection: 'row', gap: 18 },
-  statVal:   { fontSize: 16, fontWeight: '700', color: C.text, letterSpacing: -0.4 },
-  statUnit:  { fontSize: 11, color: C.faint, fontWeight: '600' },
-  statLbl:   { fontSize: 10.5, color: C.faint, letterSpacing: -0.1 },
 
-  cardFooter: { flexDirection: 'row', alignItems: 'center', paddingTop: 8, paddingBottom: 12, paddingHorizontal: 14, borderTopWidth: 1, borderTopColor: C.border },
-  kudosBtn:   { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 4 },
-  kudosCount: { fontSize: 13.5, fontWeight: '700', color: C.sub, letterSpacing: -0.2 },
 
   centered: { alignItems: 'center', gap: 12, paddingVertical: 60 },
   stateTxt: { fontSize: 14, fontWeight: '600', color: C.faint, letterSpacing: -0.2 },
