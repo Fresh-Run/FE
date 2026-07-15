@@ -912,3 +912,5 @@ Owner-ruled feature removal: the chips UI, VIBE_OPTIONS, vibes state, toggleVibe
 ## WAVE 1 ⑦ — PHOTO TAP-TO-ENLARGE (2026-07-16, verified [19:35])
 
 B7's enlarge grammar extended to photo slides: `components/photo-viewer.tsx` (full-screen modal — paging from the tapped index, contain-fit, ×/backdrop/photo-tap close, n/m counter at 2+; **v1 = no pinch-zoom, stated**), MediaCarousel `onPhotoPress` (gated like onMapPress — absent = unchanged, all other hosts untouched by construction), 활동 상세 wired. Verified [19:35]: tapped-index open, paging/counter/contain, three closes, map-enlarge regression clean, single/zero-photo honesty. **WAVE 1 CLOSES with OTA-2.**
+
+**OTA-2 PUBLISHED 2026-07-16:** channel `development`, rtv 1.0.1, group `ede32c9f-b6db-468c-a160-83ad2be586cf` — ⑥ strip (c4b7286) + ⑦ viewer (623d70d) + soften. **WAVE 1 CLOSED.**
