@@ -24,6 +24,7 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  Linking,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -127,6 +128,40 @@ export default function RunSaveScreen() {
       setPhotos(p => [...p, ...clean].slice(0, MAX_RUN_PHOTOS));
     } catch {
       Alert.alert('사진 추가 실패', '사진을 불러오지 못했어요. 다시 시도해 주세요.');
+    } finally {
+      setPicking(false);
+    }
+  }
+
+  // 촬영 (build #9 ③): camera capture beside library pick — the SAME
+  // EXIF-stripping re-encode owns the shot (the R2' privacy contract applies
+  // to camera photos identically). NSCameraUsageDescription ships with #9;
+  // pre-#9 runtimes never see this code (1.0.2 runtime bump).
+  async function takePhoto() {
+    if (picking || photos.length >= MAX_RUN_PHOTOS) return;
+    setPicking(true);
+    try {
+      const perm = await ImagePicker.requestCameraPermissionsAsync();
+      if (!perm.granted) {
+        // the house denied-grammar (handleStart's location alert): honest
+        // body + a REAL Settings route, never a dead-end OK
+        Alert.alert(
+          '카메라 권한이 필요해요',
+          '러닝 사진을 찍으려면 카메라 접근을 허용해 주세요.',
+          [
+            { text: '취소', style: 'cancel' },
+            { text: '설정 열기', onPress: () => Linking.openSettings() },
+          ],
+        );
+        return;
+      }
+      const res = await ImagePicker.launchCameraAsync({ quality: 1 });
+      if (res.canceled || !res.assets[0]) return;
+      const a = res.assets[0];
+      const clean = await reencodeForUpload(a.uri, a.width, a.height);
+      setPhotos(p => [...p, clean].slice(0, MAX_RUN_PHOTOS));
+    } catch {
+      Alert.alert('촬영 실패', '사진을 찍지 못했어요. 다시 시도해 주세요.');
     } finally {
       setPicking(false);
     }
@@ -315,6 +350,17 @@ export default function RunSaveScreen() {
             {picking
               ? <ActivityIndicator size="small" color={C.faint} />
               : <Icon name="add" size={22} color={C.faint} />}
+          </Pressable>
+          {/* 촬영 (build #9 ③) — same square grammar, camera glyph */}
+          <Pressable
+            onPress={takePhoto}
+            disabled={picking || photos.length >= MAX_RUN_PHOTOS}
+            style={({ pressed }) => [
+              st.photoSquare,
+              { opacity: photos.length >= MAX_RUN_PHOTOS ? 0.45 : pressed ? 0.7 : 1 },
+            ]}
+          >
+            <Icon name="camera-outline" size={20} color={C.faint} />
           </Pressable>
           {photos.length === 0 ? (
             <Text style={st.photoTxt}>사진 추가</Text>

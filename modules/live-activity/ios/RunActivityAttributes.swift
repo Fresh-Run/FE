@@ -16,6 +16,10 @@ struct RunActivityAttributes: ActivityAttributes {
     var startedAt: Date
     /// Non-nil while paused (④c): views freeze the clock at pausedAt.
     var pausedAt: Date?
+    /// Set Swift-side on EVERY push (build #9 staleness contract): when
+    /// context.isStale, views freeze the clock at fmtElapsed(startedAt →
+    /// updatedAt) — the elapsed as of the last real update. Zero JS surface.
+    var updatedAt: Date
     /// Gated odometer meters (the honest number — never raw).
     var distanceM: Int
     /// Rolling pace; nil = not moving / unknown → views show —.

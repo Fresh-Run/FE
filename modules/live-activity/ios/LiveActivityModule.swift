@@ -9,6 +9,13 @@
 import ActivityKit
 import ExpoModulesCore
 
+/// Staleness contract (build #9): ④b pushes every ≤5s while the app lives,
+/// so a stale activity ⇔ the app is dead (force-quit / crash). 90s = the
+/// worst-case lie window (vs the pre-#9 HOURS). iOS flips context.isStale;
+/// the widget renders the honest frozen state. No force-quit callback
+/// exists — staleness is the achievable honesty ceiling.
+let STALE_AFTER_S: TimeInterval = 90
+
 public class LiveActivityModule: Module {
   private var actionObserver: NSObjectProtocol?
 
@@ -52,11 +59,11 @@ public class LiveActivityModule: Module {
         guard ActivityAuthorizationInfo().areActivitiesEnabled else { return false }
         let state = RunActivityAttributes.ContentState(
           startedAt: Date(timeIntervalSince1970: startedAtMs / 1000),
-          pausedAt: nil, distanceM: 0, paceSecPerKm: nil, kcal: nil, route: [])
+          pausedAt: nil, updatedAt: Date(), distanceM: 0, paceSecPerKm: nil, kcal: nil, route: [])
         do {
           _ = try Activity.request(
             attributes: RunActivityAttributes(),
-            content: .init(state: state, staleDate: nil))
+            content: .init(state: state, staleDate: Date().addingTimeInterval(STALE_AFTER_S)))
           return true
         } catch {
           return false // e.g. per-app LA limit — never breaks the run
@@ -74,10 +81,11 @@ public class LiveActivityModule: Module {
         let state = RunActivityAttributes.ContentState(
           startedAt: Date(timeIntervalSince1970: startedAtMs / 1000),
           pausedAt: pausedAtMs.map { Date(timeIntervalSince1970: $0 / 1000) },
+          updatedAt: Date(),
           distanceM: distanceM, paceSecPerKm: paceSecPerKm, kcal: kcal,
           route: Array(route.prefix(100)))
         for activity in Activity<RunActivityAttributes>.activities {
-          await activity.update(.init(state: state, staleDate: nil))
+          await activity.update(.init(state: state, staleDate: Date().addingTimeInterval(STALE_AFTER_S)))
         }
       }
     }

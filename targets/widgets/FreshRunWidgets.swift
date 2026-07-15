@@ -64,10 +64,13 @@ private struct LogoBox: View {
 }
 
 private struct LiveBadge: View {
+  var isStale: Bool = false
   var body: some View {
     HStack(spacing: 5) {
-      Circle().fill(lime).frame(width: 7, height: 7) // static — no WidgetKit pulse
-      Text("러닝 중").font(.system(size: 11, weight: .bold)).foregroundStyle(lime)
+      Circle().fill(isStale ? Color(white: 0.55) : lime).frame(width: 7, height: 7)
+      Text(isStale ? "업데이트 끊김" : "러닝 중")
+        .font(.system(size: 11, weight: .bold))
+        .foregroundStyle(isStale ? Color(white: 0.65) : lime)
     }
   }
 }
@@ -78,9 +81,15 @@ private struct LiveBadge: View {
 private struct ElapsedClock: View {
   let state: RunActivityAttributes.ContentState
   var font: Font
+  var isStale: Bool = false
   var body: some View {
     Group {
-      if let pausedAt = state.pausedAt {
+      if isStale {
+        // build #9 staleness: FROZEN at the last real update (updatedAt is
+        // carried in the state — ActivityViewContext hides the stale date).
+        // A ticking Text(timerInterval:) would keep lying after app death.
+        Text(fmtElapsed(state.startedAt, to: state.pausedAt ?? state.updatedAt))
+      } else if let pausedAt = state.pausedAt {
         Text(fmtElapsed(state.startedAt, to: pausedAt))
       } else {
         Text(timerInterval: state.startedAt...Date.distantFuture, countsDown: false)
@@ -188,13 +197,14 @@ private struct StatCol: View {
 // ── Lock-screen card (canvas frame 1) ────────────────────────────────────────
 private struct LockScreenView: View {
   let state: RunActivityAttributes.ContentState
+  var isStale: Bool = false
   var body: some View {
     VStack(alignment: .leading, spacing: 0) {
       HStack(spacing: 9) {
         LogoBox()
         Text("FreshRun").font(.system(size: 13, weight: .bold)).foregroundStyle(textHi)
         Spacer()
-        LiveBadge()
+        LiveBadge(isStale: isStale)
       }
       // Lock card = 지연's canvas 1:1 (owner ruling, build #7): header ·
       // hero · mini-route · stats. NO buttons here — her design never had
@@ -204,7 +214,7 @@ private struct LockScreenView: View {
       HStack(alignment: .center, spacing: 16) {
         VStack(alignment: .leading, spacing: 2) {
           Text("경과 시간").font(.system(size: 11, weight: .semibold)).foregroundStyle(textLo)
-          ElapsedClock(state: state, font: .system(size: 34, weight: .bold))
+          ElapsedClock(state: state, font: .system(size: 34, weight: .bold), isStale: isStale)
         }
         Spacer()
         // No geometry yet → no panel (an invisible-grid dark box reads
@@ -228,6 +238,7 @@ private struct LockScreenView: View {
       .overlay(Rectangle().fill(.white.opacity(0.10)).frame(height: 0.5), alignment: .top)
     }
     .padding(EdgeInsets(top: 16, leading: 18, bottom: 17, trailing: 18))
+    .opacity(isStale ? 0.62 : 1) // dim — the card visibly stops claiming live
     .activityBackgroundTint(Color(red: 18 / 255, green: 20 / 255, blue: 17 / 255).opacity(0.62))
     .activitySystemActionForegroundColor(lime)
   }
@@ -237,12 +248,12 @@ private struct LockScreenView: View {
 struct RunLiveActivity: Widget {
   var body: some WidgetConfiguration {
     ActivityConfiguration(for: RunActivityAttributes.self) { context in
-      LockScreenView(state: context.state)
+      LockScreenView(state: context.state, isStale: context.isStale)
     } dynamicIsland: { context in
       DynamicIsland {
         // Expanded (canvas frame 4, stats-only in ④a — buttons arrive at ④c)
         DynamicIslandExpandedRegion(.leading) { LogoBox().padding(.leading, 4) }
-        DynamicIslandExpandedRegion(.trailing) { LiveBadge().padding(.trailing, 4) }
+        DynamicIslandExpandedRegion(.trailing) { LiveBadge(isStale: context.isStale).padding(.trailing, 4) }
         DynamicIslandExpandedRegion(.bottom) {
           // Physical truth (build #8): the WHOLE expanded presentation caps
           // at the DOCUMENTED ~160pt — 지연's expanded mock draws ~1.6× that
@@ -262,7 +273,7 @@ struct RunLiveActivity: Widget {
               }
               VStack(alignment: .leading, spacing: 1) {
                 Text("경과 시간").font(.system(size: 10, weight: .semibold)).foregroundStyle(textLo)
-                ElapsedClock(state: context.state, font: .system(size: 24, weight: .bold))
+                ElapsedClock(state: context.state, font: .system(size: 24, weight: .bold), isStale: context.isStale)
               }
               Spacer(minLength: 0)
               HStack(spacing: 14) {
@@ -279,7 +290,7 @@ struct RunLiveActivity: Widget {
       } compactTrailing: {
         // … + the self-counting run time (the owner's ask, next to the
         // location indicator). Width-capped: the island slot is narrow.
-        ElapsedClock(state: context.state, font: .system(size: 14, weight: .semibold))
+        ElapsedClock(state: context.state, font: .system(size: 14, weight: .semibold), isStale: context.isStale)
           .foregroundStyle(lime)
           .frame(maxWidth: 52)
       } minimal: {
