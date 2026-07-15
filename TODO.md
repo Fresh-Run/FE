@@ -862,3 +862,5 @@ The pre-A2 연결 group returns between 러닝&AI and 러닝 동작, original ro
 - **소셜 계정 — OWNER OVERRIDE of A2 + of the notReady retirement:** visible + tappable 준비-중이에요 alert NOW (inline, deliberately NOT a resurrected helper — a ledgered one-off). **RETURN CONDITION: wired when 지연's social-links backend lands.**
 - 알림 stays in 설정 (ruling ②).
 **Second disclosed verify-on-OTA exception (owner ④, not precedent)** — same rationale (dev loop provably broken); the connect failure stays TOP of the debug list, cracked immediately after this ships.
+
+**연결-GROUP OTA PUBLISHED 2026-07-16:** channel `development`, runtimeVersion 1.0.1, group `649e64c6-726d-4171-977f-0513b966f14a`, commit 27b4400. Second disclosed verify-on-OTA.
