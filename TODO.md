@@ -854,3 +854,11 @@ Same ruling as challenge_completed — a self-achievement, actorless, no 러닝 
 (rider: @expo/ngrok devDep — tunnel-diagnosis tool, kept for the debug work above)
 
 **③ SLICE C OTA PUBLISHED 2026-07-16:** channel `development`, runtimeVersion 1.0.1, group `b0c37586-8898-4583-9306-5f0204534875` (iOS `019f64fa-4cdc-7a84-bad9-74ab670cc271`), commit cd13219. Verify-on-OTA per the disclosed exception; owner timestamps land on this bundle.
+
+## 연결 GROUP RESTORED (owner ruling 2026-07-16 — A2's return condition met)
+
+The pre-A2 연결 group returns between 러닝&AI and 러닝 동작, original row grammar from git (9fb4462~1: heart #EF444418, state subtitle). **Stated honestly: the original rows were INERT (no onPress existed) — the "restored tap behavior" is therefore the row grammar only; taps got the REAL feature:**
+- **Apple 건강** — subtitle 연결됨/연결 안 됨; tap = opt-in flow (HK sheet) / honest disconnect dialog (stops OUR writes; iOS 권한 itself = 건강 앱 > 공유, stated in copy). This is the toggle's third and FINAL home (설정-group bare toggle REPLACED — one home, one truth; the Slice-C-era placement chain fully superseded).
+- **소셜 계정 — OWNER OVERRIDE of A2 + of the notReady retirement:** visible + tappable 준비-중이에요 alert NOW (inline, deliberately NOT a resurrected helper — a ledgered one-off). **RETURN CONDITION: wired when 지연's social-links backend lands.**
+- 알림 stays in 설정 (ruling ②).
+**Second disclosed verify-on-OTA exception (owner ④, not precedent)** — same rationale (dev loop provably broken); the connect failure stays TOP of the debug list, cracked immediately after this ships.

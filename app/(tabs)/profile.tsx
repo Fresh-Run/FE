@@ -207,17 +207,30 @@ export default function ProfileScreen() {
   const healthOn = useHealth(s => s.enabled);
   const setHealthOn = useHealth(s => s.setEnabled);
   useEffect(() => { useHealth.getState().hydrate(); }, []);
-  async function toggleHealth(v: boolean) {
-    if (!v) { setHealthOn(false); return; }
+  // The 연결 row's tap: 연결 안 됨 → the HK sheet (once) → 연결됨.
+  // 연결됨 → an honest disconnect dialog (stops OUR writes; the iOS
+  // permission itself lives in 건강 앱 > 공유 — stated in the copy).
+  async function handleHealthRow() {
+    if (healthOn) {
+      Alert.alert('Apple 건강', '연결됨 — 저장하는 러닝이 건강 앱에 운동으로 기록돼요.', [
+        { text: '닫기', style: 'cancel' },
+        {
+          text: '연결 해제',
+          style: 'destructive',
+          onPress: () => setHealthOn(false),
+        },
+      ]);
+      return;
+    }
     if (!healthAvailable()) {
       Alert.alert('사용할 수 없어요', '이 기기에서는 Apple 건강을 사용할 수 없어요.');
       return;
     }
     const ok = await requestHealthAuthorization();
-    if (!ok) { Alert.alert('연동 실패', '잠시 후 다시 시도해 주세요.'); return; }
+    if (!ok) { Alert.alert('연결 실패', '잠시 후 다시 시도해 주세요.'); return; }
     setHealthOn(true);
     Alert.alert(
-      'Apple 건강 연동됨',
+      'Apple 건강 연결됨',
       '이제 저장하는 러닝이 건강 앱에 운동으로 기록돼요. 권한을 나중에 바꾸려면 건강 앱 > 공유 > 앱에서 조정할 수 있어요.',
     );
   }
@@ -337,11 +350,30 @@ export default function ProfileScreen() {
           />
         </SettingGroup>
 
-        {/* 연결 group REMOVED (A2 ruling 2026-07-14, line-132 strict): Apple
-            건강 + 소셜 계정 were inert rows — dead affordances. RETURN
-            CONDITIONS: Apple 건강 with HealthKit at build #1 (native);
-            소셜 계정 with her social-links backend. The 알림 row moved
-            into 설정 below. */}
+        {/* 연결 — RESTORED (owner ruling 2026-07-16; A2's own return
+            condition met: HealthKit shipped at build #4). Original row
+            grammar from git (9fb4462~1): heart icon #EF444418, state
+            subtitle. The original rows were INERT — no tap behavior existed
+            to restore — so taps get the real feature: Apple 건강 drives the
+            opt-in/disconnect flow (the 설정-group toggle's third and FINAL
+            home; one truth). 소셜 계정 = OWNER OVERRIDE of A2: visible +
+            tappable 준비-중 alert NOW, wired when 지연's social-links
+            backend lands (the return condition, ledgered). 알림 stays in
+            설정 (ruling ②). */}
+        <SettingGroup title="연결">
+          <SettingRow
+            icon={<Icon name="heart-outline" size={19} color={C.danger} />}
+            iconBg="#EF444418"
+            label="Apple 건강"
+            value={healthOn ? '연결됨' : '연결 안 됨'}
+            onPress={handleHealthRow}
+          />
+          <SettingRow
+            icon={<Icon name="link-outline" size={19} color={C.sub} />}
+            label="소셜 계정"
+            onPress={() => Alert.alert('준비 중이에요', '소셜 계정 연결은 다음 업데이트에서 지원돼요.')}
+          />
+        </SettingGroup>
 
         {/* 러닝 동작 — persisted via PATCH /me/settings.
             Runtime effects: haptics is live (gates hold-stop feedback);
@@ -378,12 +410,6 @@ export default function ProfileScreen() {
             onPress={() => router.push('/theme' as any)}
           />
           <SettingRow icon={<Icon name="globe-outline"         size={19} color={C.sub} />} label="언어"       value={lang === 'en' ? 'English' : '한국어'} onPress={() => router.push('/lang' as any)} />
-          {/* Apple 건강 연동 (③ Slice C) — convention-by-use home (owner
-              ruling 2026-07-16, SUPERSEDES the earlier 앱 설정 placement):
-              both instinctive looks landed here, beside 다크 모드/언어. ONE
-              home — deep settings.tsx carries no copy. Device-local opt-in
-              (store/use-health); enable presents the HK sheet once. */}
-          <ToggleRow label="Apple 건강 연동" on={healthOn} onChange={toggleHealth} />
           {/* 도움말/약관 screens don't exist yet — honest 준비 중 (house pattern),
               not a dead row or a faked screen. Wire when the screens land. */}
           <SettingRow icon={<Icon name="headset-outline"       size={19} color={C.sub} />} label="도움말 센터" onPress={() => router.push('/help-center' as any)} />
