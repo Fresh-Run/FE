@@ -883,3 +883,5 @@ Census: 19 TextInput surfaces. Fixed 10: the 크루 코드 bottom-sheet Modal (K
 ## WAVE 1 ② — 분위기 REMOVAL (2026-07-16, verified [18:40])
 
 Owner-ruled feature removal: the chips UI, VIBE_OPTIONS, vibes state, toggleVibe, reset line, noteParts composition — all dead. **`notes` survives** (회피's only cargo now). The three copy promises (help-center FAQ, premium feature line, welcome tagline) drop 분위기 — no surface promises the removed control. Stale hook comment trued. crews-api's 분위기 = crew TAG category, different feature, untouched. 지연 relay queued: her Runner-preferences prompt line now carries only 회피 hints — prompt pruning is her call. Verified [18:40]. Rides OTA-1 with ④.
+
+**OTA-1 PUBLISHED 2026-07-16:** channel `development`, rtv 1.0.1, group `e961e3db-e49e-442f-ba06-e1ba7ce70700` — carries ④ (6d451bf) + ② (4ebd0a5).
