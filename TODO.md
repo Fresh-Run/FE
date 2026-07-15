@@ -951,3 +951,8 @@ Both copies of the dead control hidden (profile-tab 다크 모드 + deep 앱 환
 **OTA-5 PUBLISHED 2026-07-16:** channel `development`, **rtv 1.0.2** (the first OTA targeting the build-#9 runtime), group `ebbac6b2-b67a-423a-86ba-87fc2852ddff`, commit 2c1c096.
 
 **CLAIM-4 VERDICT (owner, closing the OPEN entry): MIXED, narrow** — app UI renders light regardless of OS scheme; the MAP surface follows system appearance independently (SDK-level). Route strokes/labels legible on the dark map (the dark-lime routeStroke built for exactly this). No unreadable surface → post-beta, no TF escalation. **Parked-다크모드 amendment:** map already follows OS scheme; the rendering sweep must either theme the app to match or pin the map to light until then — **half-dark is the forbidden state, and today's app is one notch into it (map-only), tolerated for beta.**
+
+## SEQUENCING RULING (owner, 2026-07-16): DRY RUN RE-GATED — TestFlight-entry → EXTERNAL-tester-entry
+
+Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON the TF build when weather allows; **no external tester, public link, or invite until the dry run passes.** NAMED RISK, ACCEPTED: a native tracking bug found outdoors costs build #11 + re-submit; a JS bug is an OTA to production. (Amends the triage: blocker #1 moves from TF-entry to external-gate.)
+**CHANNEL DOCTRINE (on the record):** the TF build polls `production`; dev phones stay on `development`; post-cutover JS fixes for TF ride OTAs to `production`. No publish to `production` before build #10 establishes the channel.
