@@ -57,3 +57,21 @@ export function updateLiveActivity(state: {
 export function endLiveActivity(): void {
   native?.endActivity().catch(() => {});
 }
+
+export type LiveActivityAction = 'pause' | 'stop';
+
+/** ④c: taps on the Live Activity's 일시정지/종료 buttons. The intent runs in
+    the app process and the module forwards it here; tracking.tsx routes the
+    action into the SAME handlers its on-screen buttons use. No-op remover on
+    Android / module-less builds. */
+export function addLiveActivityActionListener(
+  fn: (action: LiveActivityAction) => void,
+): { remove: () => void } {
+  if (!native) return { remove: () => {} };
+  const sub = (native as unknown as {
+    addListener: (event: string, l: (e: { action: string }) => void) => { remove: () => void };
+  }).addListener('onAction', e => {
+    if (e.action === 'pause' || e.action === 'stop') fn(e.action);
+  });
+  return sub;
+}

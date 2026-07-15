@@ -73,6 +73,8 @@ private struct LiveBadge: View {
 }
 
 /// Self-counting clock; frozen at pausedAt while paused (④c sets it).
+/// minimumScaleFactor: the hero must shrink, never clip, if the height
+/// budget tightens (the ④c lock-card overflow lesson).
 private struct ElapsedClock: View {
   let state: RunActivityAttributes.ContentState
   var font: Font
@@ -86,6 +88,8 @@ private struct ElapsedClock: View {
     }
     .font(font)
     .monospacedDigit()
+    .lineLimit(1)
+    .minimumScaleFactor(0.7)
     .foregroundStyle(.white)
   }
 }
@@ -103,7 +107,7 @@ private struct MiniRoute: View {
         grid.move(to: CGPoint(x: 0, y: size.height * fx))
         grid.addLine(to: CGPoint(x: size.width, y: size.height * fx))
       }
-      ctx.stroke(grid, with: .color(.white.opacity(0.05)), lineWidth: 1)
+      ctx.stroke(grid, with: .color(.white.opacity(0.08)), lineWidth: 1)
 
       guard route.count >= 4 else { return }
       var path = Path()
@@ -126,6 +130,42 @@ private struct MiniRoute: View {
                with: .color(lime))
     }
     .background(panelBg)
+  }
+}
+
+// ④c action row — 일시정지(재개)/종료, EXPANDED DI ONLY (owner ruling,
+// build #7 — exactly where 지연's mock draws them, at her 46pt). iOS 17+
+// (Button(intent:) is a 17 API); 16.2 renders stats-only. 종료 = no confirm
+// (recoverable-by-design → save flow); pocket-brush safety is structural —
+// the row sits behind the long-press.
+private struct RunActionsRow: View {
+  let paused: Bool
+  var body: some View {
+    if #available(iOS 17.0, *) {
+      HStack(spacing: 10) {
+        Button(intent: PauseRunIntent()) {
+          HStack(spacing: 7) {
+            Image(systemName: paused ? "play.fill" : "pause.fill").font(.system(size: 13, weight: .bold))
+            Text(paused ? "재개" : "일시정지").font(.system(size: 14, weight: .bold))
+          }
+          .foregroundStyle(.white)
+          .frame(maxWidth: .infinity, minHeight: 46)
+          .background(.white.opacity(0.14), in: RoundedRectangle(cornerRadius: 14))
+        }
+        .buttonStyle(.plain)
+        Button(intent: StopRunIntent()) {
+          HStack(spacing: 7) {
+            RoundedRectangle(cornerRadius: 3).fill(.white).frame(width: 13, height: 13)
+            Text("종료").font(.system(size: 14, weight: .bold))
+          }
+          .foregroundStyle(.white)
+          .frame(maxWidth: .infinity, minHeight: 46)
+          .background(Color(red: 240 / 255, green: 72 / 255, blue: 60 / 255),
+                      in: RoundedRectangle(cornerRadius: 14))
+        }
+        .buttonStyle(.plain)
+      }
+    }
   }
 }
 
@@ -156,15 +196,25 @@ private struct LockScreenView: View {
         Spacer()
         LiveBadge()
       }
+      // Lock card = 지연's canvas 1:1 (owner ruling, build #7): header ·
+      // hero · mini-route · stats. NO buttons here — her design never had
+      // them; 일시정지/종료 live in the expanded DI where her mock draws
+      // them. (The button row was OUR invention, and every compression
+      // since was paying interest on it — ledgered lesson.)
       HStack(alignment: .center, spacing: 16) {
         VStack(alignment: .leading, spacing: 2) {
           Text("경과 시간").font(.system(size: 11, weight: .semibold)).foregroundStyle(textLo)
           ElapsedClock(state: state, font: .system(size: 34, weight: .bold))
         }
         Spacer()
-        MiniRoute(route: state.route)
-          .frame(width: 88, height: 58)
-          .clipShape(RoundedRectangle(cornerRadius: 14))
+        // No geometry yet → no panel (an invisible-grid dark box reads
+        // broken, not honest). The panel appears with the first accepted
+        // shape — the one stated deviation from her mock (it always drew one).
+        if !state.route.isEmpty {
+          MiniRoute(route: state.route)
+            .frame(width: 88, height: 58)
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+        }
       }
       .padding(.top, 15)
       HStack(spacing: 26) {
@@ -194,22 +244,34 @@ struct RunLiveActivity: Widget {
         DynamicIslandExpandedRegion(.leading) { LogoBox().padding(.leading, 4) }
         DynamicIslandExpandedRegion(.trailing) { LiveBadge().padding(.trailing, 4) }
         DynamicIslandExpandedRegion(.bottom) {
-          HStack(alignment: .top, spacing: 14) {
-            MiniRoute(route: context.state.route)
-              .frame(width: 96, height: 70)
-              .clipShape(RoundedRectangle(cornerRadius: 16))
-            VStack(alignment: .leading, spacing: 4) {
-              Text("경과 시간").font(.system(size: 11, weight: .semibold)).foregroundStyle(textLo)
-              ElapsedClock(state: context.state, font: .system(size: 38, weight: .bold))
-              HStack(spacing: 20) {
+          // Physical truth (build #8): the WHOLE expanded presentation caps
+          // at the DOCUMENTED ~160pt — 지연's expanded mock draws ~1.6× that
+          // (illustrative, not budget-true). Prior rounds stacked 161–173pt
+          // in this region alone and iOS silently CULLED the trailing button
+          // row (it never rendered here on ANY build; #7 merely unmasked it
+          // by removing the lock-card copy). Her ELEMENTS survive at DI
+          // scale: route · clock · 거리/페이스 · her 46pt buttons — the
+          // buttons get their full height, everything above compresses.
+          // Stack: row max(44, ~42) + 8 + 46 ≈ 98pt.
+          VStack(spacing: 8) {
+            HStack(alignment: .center, spacing: 12) {
+              if !context.state.route.isEmpty { // same no-geometry rule as the lock card
+                MiniRoute(route: context.state.route)
+                  .frame(width: 64, height: 44)
+                  .clipShape(RoundedRectangle(cornerRadius: 10))
+              }
+              VStack(alignment: .leading, spacing: 1) {
+                Text("경과 시간").font(.system(size: 10, weight: .semibold)).foregroundStyle(textLo)
+                ElapsedClock(state: context.state, font: .system(size: 24, weight: .bold))
+              }
+              Spacer(minLength: 0)
+              HStack(spacing: 14) {
                 StatCol(label: "거리", value: fmtKm(context.state.distanceM), unit: "km")
                 StatCol(label: "페이스", value: fmtPace(context.state.paceSecPerKm), unit: "/km")
               }
-              .padding(.top, 5)
             }
-            Spacer(minLength: 0)
+            RunActionsRow(paused: context.state.pausedAt != nil)
           }
-          .padding(.top, 6)
         }
       } compactLeading: {
         // Canvas frame 2: lime runner glyph …

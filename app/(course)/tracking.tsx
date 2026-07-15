@@ -44,6 +44,7 @@ import { useRunTracker } from '@/hooks/use-run-tracker';
 import { composeFinishCue, composeSplitCue, composeStartCue, speakCue, stopSpeech } from '@/lib/audio-coach';
 import { useAudioCoach } from '@/store/use-audio-coach';
 import { useQuota } from '@/store/use-quota';
+import { addLiveActivityActionListener } from '@/modules/live-activity';
 import { clearActiveCourse, getActiveCourse } from '@/store/active-course';
 import { setPendingRun } from '@/store/pending-run';
 import { useLocalProfile } from '@/store/use-local-profile';
@@ -443,6 +444,23 @@ export default function TrackingScreen() {
       if (lockedRef.current && !exitingRef.current) e.preventDefault();
     });
   }, [navigation]);
+
+  // ④c: Live Activity 일시정지/종료 taps land here and drive the SAME
+  // handlers the on-screen buttons use — one code path, no drift. Refs keep
+  // the once-mounted listener reading fresh closures (compiler-safe: event
+  // context, not render). Ignored unless a run is live (stale-intent guard).
+  const laActionRef = useRef<{ pause: () => void; stop: () => void }>({ pause: () => {}, stop: () => {} });
+  laActionRef.current = {
+    pause: () => { if (state === 'running' || state === 'paused') togglePause(); },
+    stop: () => { if (state === 'running' || state === 'paused') endRun(); },
+  };
+  useEffect(() => {
+    const sub = addLiveActivityActionListener(action => {
+      if (action === 'pause') laActionRef.current.pause();
+      else laActionRef.current.stop();
+    });
+    return () => sub.remove();
+  }, []);
 
   const endRun = () => {
     const snapshot = stop();

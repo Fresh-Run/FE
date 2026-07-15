@@ -25,6 +25,9 @@ export type PendingRun = {
       with the rest (a crash can't lose the track). Optional: disk copies
       written before this field existed recover as track-less saves. */
   gpsTrack?: GpsPoint[];
+  /** TRUE wall-clock start (③'s HK anchor — never endedAt − elapsed, which
+      compresses paused time out). Optional: pre-anchor disk copies recover. */
+  startedAtMs?: number;
   endedAt: number;
   /** Present when the run was started from a course ("이 코스 달리기"). */
   course?: { id: string | null; title: string };

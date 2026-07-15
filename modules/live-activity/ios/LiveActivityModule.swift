@@ -10,8 +10,32 @@ import ActivityKit
 import ExpoModulesCore
 
 public class LiveActivityModule: Module {
+  private var actionObserver: NSObjectProtocol?
+
   public func definition() -> ModuleDefinition {
     Name("LiveActivity")
+
+    // ④c: the run-control intents (RunControlIntents.swift, app copy) post
+    // here from perform() — which LiveActivityIntent runs IN THIS PROCESS —
+    // and JS (tracking.tsx) drives the same togglePause/endRun handlers the
+    // on-screen buttons use.
+    Events("onAction")
+
+    OnStartObserving {
+      self.actionObserver = NotificationCenter.default.addObserver(
+        forName: freshrunLiveActivityAction, object: nil, queue: .main
+      ) { [weak self] note in
+        let action = note.userInfo?["action"] as? String ?? ""
+        self?.sendEvent("onAction", ["action": action])
+      }
+    }
+
+    OnStopObserving {
+      if let observer = self.actionObserver {
+        NotificationCenter.default.removeObserver(observer)
+        self.actionObserver = nil
+      }
+    }
 
     /// iOS ≥16.2 AND the per-app Live Activities toggle is on.
     Function("isSupported") { () -> Bool in

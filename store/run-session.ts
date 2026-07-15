@@ -46,6 +46,11 @@ export type RunSnapshot = {
   path: Coordinate[];
   /** RAW received fixes (gates not applied) — uploaded as gps_track. */
   gpsTrack: GpsPoint[];
+  /** TRUE wall-clock run start (beginRunning's Date.now — the ④b clock's own
+      anchor). ③'s HKWorkout start uses THIS, never endedAt − elapsed·1000:
+      elapsed excludes pauses, so the subtraction would push a paused run's
+      start LATER than reality (owner flag 2026-07-16). */
+  startedAtMs: number;
   endedAt: number;
 };
 
@@ -97,6 +102,7 @@ function haversineM(a: Coordinate, b: Coordinate): number {
 let state: TrackerState = 'idle';
 let accumulatedMs = 0;
 let segmentStart: number | null = null;
+let wallStartedAt = 0; // true wall-clock start (beginRunning) — ③'s HK anchor
 let anchor: { lat: number; lng: number; t: number } | null = null;
 let distanceM = 0;
 let path: Coordinate[] = [];      // filtered on-screen track (save + polyline)
@@ -288,6 +294,7 @@ function buildPartial(): PendingRun | null {
     kcal: estimateKcal(finalKm),
     path: [...path],
     gpsTrack: [...rawTrack],
+    ...(wallStartedAt ? { startedAtMs: wallStartedAt } : {}),
     endedAt: Date.now(),
     ...(context.course ? { course: context.course } : {}),
     ...(context.crewSession ? { crewSession: context.crewSession } : {}),
@@ -355,6 +362,7 @@ function elapsedMsNow(): number {
 function resetAccumulators(): void {
   accumulatedMs = 0;
   segmentStart = null;
+  wallStartedAt = 0;
   anchor = null;
   distanceM = 0;
   path = [];
@@ -384,6 +392,7 @@ export const runSession = {
   beginRunning(): void {
     if (state !== 'countdown') return;
     segmentStart = Date.now();
+    wallStartedAt = segmentStart; // true wall-clock start (③'s HK anchor)
     setState('running');
     // ④a: lock-screen/Dynamic-Island Live Activity — clock self-counts from
     // here; ④b feeds stats. Fire-and-forget, never blocks the run; no-op on
@@ -431,6 +440,7 @@ export const runSession = {
       kcal: estimateKcal(finalKm),
       path: [...path],
       gpsTrack: [...rawTrack],
+      startedAtMs: wallStartedAt,
       endedAt: Date.now(),
     };
   },
