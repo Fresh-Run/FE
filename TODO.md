@@ -908,3 +908,7 @@ Owner-ruled feature removal: the chips UI, VIBE_OPTIONS, vibes state, toggleVibe
 - **⑤ course-card flip verification** (zero code, world-state): home feed + a course detail should render real Apple Maps (her backfill live); any card still on the fallback grid → its route ID goes back to her.
 - **⑥ route palette swap** (S, JS): neon dies on every polyline surface — 지연's two-tone **LIGHT `#2E7D32` / DARK `#74E827`** (= the LA lime; lock screen ↔ map consistent). Sweep: feed cards, course detail, run detail heroes, route-map full screen, tracking live path (LA mini-route already lime ✓). Mode-detection mechanism to be stated (app theme state vs system scheme).
 - **⑦-next followers_run_count CTA** (S-M, JS): additive field LIVE on public profiles — true followers-only run count; locked profiles always 0 (existence hidden, leak-verified). Consume: "팔로우하면 N개 더 볼 수 있어요" beside the run count on non-follower views; render only N>0; honest-absent at 0. Probe both profile states first.
+
+## WAVE 1 ⑦ — PHOTO TAP-TO-ENLARGE (2026-07-16, verified [19:35])
+
+B7's enlarge grammar extended to photo slides: `components/photo-viewer.tsx` (full-screen modal — paging from the tapped index, contain-fit, ×/backdrop/photo-tap close, n/m counter at 2+; **v1 = no pinch-zoom, stated**), MediaCarousel `onPhotoPress` (gated like onMapPress — absent = unchanged, all other hosts untouched by construction), 활동 상세 wired. Verified [19:35]: tapped-index open, paging/counter/contain, three closes, map-enlarge regression clean, single/zero-photo honesty. **WAVE 1 CLOSES with OTA-2.**

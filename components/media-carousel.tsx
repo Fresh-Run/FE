@@ -23,6 +23,9 @@ type Props = {
   height: number;
   /** tap-to-enlarge for the MAP slide only (B7) — absent = not tappable */
   onMapPress?: () => void;
+  /** tap-to-enlarge for PHOTO slides (⑦) — same gated grammar as onMapPress;
+      receives the tapped photo's index into `photos`. Absent = not tappable. */
+  onPhotoPress?: (index: number) => void;
 };
 
 function MapSlide({ polyline, seed, height, onPress }: { polyline: Coordinate[] | null; seed: string; height: number; onPress?: () => void }) {
@@ -39,7 +42,7 @@ function MapSlide({ polyline, seed, height, onPress }: { polyline: Coordinate[] 
   return map;
 }
 
-export function MediaCarousel({ polyline, seed, photos = [], height, onMapPress }: Props) {
+export function MediaCarousel({ polyline, seed, photos = [], height, onMapPress, onPhotoPress }: Props) {
   const [width, setWidth] = useState(0);
   const [idx, setIdx] = useState(0);
   const listRef = useRef<FlatList<Slide>>(null);
@@ -71,7 +74,11 @@ export function MediaCarousel({ polyline, seed, photos = [], height, onMapPress 
             <View style={{ width, height }}>
               {item.type === 'map'
                 ? <MapSlide polyline={polyline} seed={seed} height={height} onPress={onMapPress} />
-                : <Image source={{ uri: item.uri }} style={{ width, height }} resizeMode="cover" />}
+                : onPhotoPress
+                  ? <Pressable onPress={() => onPhotoPress(slides.findIndex(s => s.key === item.key) - 1)}>
+                      <Image source={{ uri: item.uri }} style={{ width, height }} resizeMode="cover" />
+                    </Pressable>
+                  : <Image source={{ uri: item.uri }} style={{ width, height }} resizeMode="cover" />}
             </View>
           )}
         />

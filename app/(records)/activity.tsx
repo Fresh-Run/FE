@@ -15,6 +15,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { MediaCarousel } from '@/components/media-carousel';
+import { PhotoViewer } from '@/components/photo-viewer';
 import { setRouteMap } from '@/store/route-map';
 import { PaceChart, SplitsTable } from '@/components/run-splits';
 import { Icon } from '@/components/ui';
@@ -97,6 +98,8 @@ export default function ActivityScreen() {
   // 지연's instruction: no recovery — the dialog IS the last gate, honest
   // cascade copy. 404 = already gone = success (deleteRun's transport).
   const [delOpen, setDelOpen] = useState(false);
+  // ⑦: photo tap-to-enlarge — B7's grammar extended to photo slides
+  const [photoViewIdx, setPhotoViewIdx] = useState<number | null>(null);
   const [deleting, setDeleting] = useState(false);
   async function doDelete() {
     if (deleting || !run) return;
@@ -171,6 +174,7 @@ export default function ActivityScreen() {
             polyline={track ?? run.polyline_thumb ?? null}
             seed={run.id}
             photos={run.photos ?? []}
+            onPhotoPress={i => setPhotoViewIdx(i)}
             height={HERO_H + insets.top}
             onMapPress={() => {
               const line = track ?? run.polyline_thumb;
@@ -287,6 +291,15 @@ export default function ActivityScreen() {
       {/* 삭제 confirm — the crew-해체 modal's grammar (icon circle · honest
           cascade body · destructive red · 취소). No recovery: this IS the
           last gate (지연's instruction). */}
+      {photoViewIdx !== null && (
+        <PhotoViewer
+          visible
+          photos={run.photos ?? []}
+          initialIndex={photoViewIdx}
+          onClose={() => setPhotoViewIdx(null)}
+        />
+      )}
+
       <Modal visible={delOpen} transparent animationType="fade" onRequestClose={() => !deleting && setDelOpen(false)}>
         <View style={st.delRoot}>
           <Pressable style={st.delBackdrop} onPress={() => !deleting && setDelOpen(false)} />
