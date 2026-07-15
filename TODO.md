@@ -864,3 +864,5 @@ The pre-A2 연결 group returns between 러닝&AI and 러닝 동작, original ro
 **Second disclosed verify-on-OTA exception (owner ④, not precedent)** — same rationale (dev loop provably broken); the connect failure stays TOP of the debug list, cracked immediately after this ships.
 
 **연결-GROUP OTA PUBLISHED 2026-07-16:** channel `development`, runtimeVersion 1.0.1, group `649e64c6-726d-4171-977f-0513b966f14a`, commit 27b4400. Second disclosed verify-on-OTA.
+
+**연결 RESTORATION VERIFIED [18:00] (on-OTA, exception #2)** — both rows, honest 소셜 alert, connect/disconnect state truth, no re-prompt, bare toggle gone, save gate rides the store. CLOSED. Debug list top: the dev-client connect failure — investigation begins (launcher verbatim error requested; artifact ATS check running).
