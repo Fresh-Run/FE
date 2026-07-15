@@ -127,11 +127,17 @@ const gst = StyleSheet.create({
 // ─── Weather strip ────────────────────────────────────────────────────────────
 
 function WeatherStrip({ onPress }: { onPress: () => void }) {
-  // W2: live data — the SAME useWeather the detail screen consumes (shared
-  // cache + TTL: one fetch serves both, numbers always agree). Quiet-dashes
-  // contract while loading/offline-uncached (matches the detail screen; no
-  // mock flash, layout stays stable). Permission denied = Seoul-fallback
-  // coords inside useCurrentLocation — strip mirrors detail for free.
+  // W2: live data (shared useWeather cache/TTL; quiet dashes; Seoul fallback).
+  // SINGLE ROW, FIXED-SIZE (⑥ final, owner ruling 2026-07-16): every text
+  // in THIS strip is allowFontScaling={false} — a deliberate one-component
+  // design-control exception, sized at the written font sizes (the 1.0
+  // render), pixel-identical across devices/OS text settings. The global
+  // Dynamic Type question stays OPEN for a future ruling (ledgered).
+  // Safety rails retained for long content: 미세group numberOfLines=1
+  // tail-ellipsis + minWidth 48 floor + paddingRight 6 seam (flex can't eat
+  // padding — the ellipsis never kisses the chip); yield order = place name
+  // (flexShrink 10) → 미세 label to floor → nothing else; gaps 8. Fixed-size
+  // worst case (375pt): 286 ≤ 309 — comfortable.
   const { weather: w, placeName } = useWeather();
   const tone = w ? weatherTone(w.running_index.score) : null;
   const vc = tone ? verdictColor(tone) : null;
@@ -140,29 +146,29 @@ function WeatherStrip({ onPress }: { onPress: () => void }) {
     <Pressable onPress={onPress} style={[wst.strip, shadows.sm]}>
       <Icon name={icon.name as any} size={26} color={icon.color} />
       <View style={wst.tempGroup}>
-        <RNText style={wst.temp}>{w ? `${Math.round(w.temp_c)}°` : '--°'}</RNText>
-        <RNText style={wst.area}>{placeName ?? '위치 확인 중'}</RNText>
+        <RNText style={wst.temp} allowFontScaling={false}>{w ? `${Math.round(w.temp_c)}°` : '--°'}</RNText>
+        <RNText style={wst.area} numberOfLines={1} allowFontScaling={false}>{placeName ?? '위치 확인 중'}</RNText>
       </View>
       <View style={wst.divider} />
       <View style={wst.metrics}>
         <View style={wst.metric}>
           <Icon name="water-outline" size={13} color={C.faint} />
-          <RNText style={wst.metricTxt}>{w ? `${w.humidity_pct}%` : '—'}</RNText>
+          <RNText style={wst.metricTxt} allowFontScaling={false}>{w ? `${w.humidity_pct}%` : '—'}</RNText>
         </View>
-        {/* pm10 is nullable on partial upstream outage — hide, don't fake */}
+        {/* pm10 nullable on upstream outage — hide, don't fake */}
         {w?.pm10 ? (
-          <View style={wst.metric}>
+          <View style={wst.pmGroup}>
             <View style={[wst.aqiDot, { backgroundColor: C.aqi[w.pm10.grade] ?? C.faint }]} />
-            <RNText style={wst.metricTxt}>미세 {w.pm10.grade}</RNText>
+            <RNText style={wst.metricTxt} numberOfLines={1} ellipsizeMode="tail" allowFontScaling={false}>
+              미세먼지 {w.pm10.grade}
+            </RNText>
           </View>
         ) : null}
       </View>
-      {/* Verdict chip: server running_index.label (좋음/보통/…), tone from
-          the shared score thresholds — appears only with data */}
       {w && vc ? (
         <View style={[wst.verdict, { backgroundColor: vc + '1A' }]}>
           <View style={[wst.verdictDot, { backgroundColor: vc }]} />
-          <RNText style={wst.verdictTxt}>{w.running_index.label}</RNText>
+          <RNText style={wst.verdictTxt} allowFontScaling={false}>{w.running_index.label}</RNText>
         </View>
       ) : null}
       <View style={{ marginLeft: 2 }}>
@@ -173,16 +179,21 @@ function WeatherStrip({ onPress }: { onPress: () => void }) {
 }
 
 const wst = StyleSheet.create({
-  strip:      { width: '100%', flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 16, paddingTop: 11, paddingBottom: 11, paddingLeft: 14, paddingRight: 12 },
-  tempGroup:  { flexDirection: 'row', alignItems: 'baseline', gap: 6 },
-  temp:       { fontSize: 22, fontWeight: '700', color: C.text, letterSpacing: -0.8 },
-  area:       { fontSize: 11.5, color: C.faint, letterSpacing: -0.2 },
-  divider:    { width: 1, height: 26, backgroundColor: C.border },
-  metrics:    { flexDirection: 'row', gap: 12, flex: 1, minWidth: 0 },
-  metric:     { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  strip:      { width: '100%', flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 16, paddingTop: 11, paddingBottom: 11, paddingLeft: 14, paddingRight: 12 },
+  tempGroup:  { flexDirection: 'row', alignItems: 'baseline', gap: 6, flexShrink: 1, minWidth: 0 },
+  temp:       { fontSize: 22, fontWeight: '700', color: C.text, letterSpacing: -0.8, flexShrink: 0 },
+  area:       { fontSize: 11.5, color: C.faint, letterSpacing: -0.2, flexShrink: 10 },
+  divider:    { width: 1, height: 26, backgroundColor: C.border, flexShrink: 0 },
+  metrics:    { flexDirection: 'row', gap: 8, flex: 1, minWidth: 0, alignItems: 'center' },
+  metric:     { flexDirection: 'row', alignItems: 'center', gap: 4, flexShrink: 0 },
+  // ⑥-r4 seam: paddingRight is box-owned — flex can't eat it, the ellipsis
+  // never kisses the chip. Floor 52→48 (owner yield): "미…" binds ONLY at
+  // the 375pt/1.35 corner (303 ≤ 309, 6px spare); everyday states never
+  // touch the floor.
+  pmGroup:    { flexDirection: 'row', alignItems: 'center', gap: 4, flexShrink: 1, minWidth: 48, paddingRight: 6 },
   metricTxt:  { fontSize: 12.5, fontWeight: '600', color: C.text },
-  aqiDot:     { width: 6, height: 6, borderRadius: 3 },
-  verdict:    { flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5 },
+  aqiDot:     { width: 6, height: 6, borderRadius: 3, flexShrink: 0 },
+  verdict:    { flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5, flexShrink: 0 },
   verdictDot: { width: 7, height: 7, borderRadius: 4 },
   verdictTxt: { fontSize: 12, fontWeight: '700', color: C.text, letterSpacing: -0.2 },
 });

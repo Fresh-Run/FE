@@ -547,7 +547,7 @@ export default function CreateScreen() {
               />
               <AdvToggleRow
                 label="번잡한 길 피하기"
-                sub="사람 많은 길을 피해서 추천"
+                sub="사람 많은 길을 되도록 피해요"
                 on={avoidBusy}
                 onChange={setAvoidBusy}
               />
