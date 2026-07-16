@@ -1,29 +1,38 @@
-// Home feed data — 친구 tab (GET /feed, offset-paginated) and 전체 tab
-// (GET /routes/nearby). Read-only: optimistic like/bookmark overlays live
+// Home feed data — 친구 tab (GET /feed/activities, offset-paginated) and
+// 전체 tab (GET /feed/nearby). Read-only: the optimistic kudos overlay lives
 // in the screen so both tabs share one code path.
+//
+// 친구 = RUNS (feed-triage slice 2026-07-17, canvas-aligned): followed
+// users' + own runs via /feed/activities. The course feed (GET /feed) left
+// home entirely — owner ruling; 코스 surfaces keep their own consumers.
 
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import {
-  getBookmarkedRouteIds,
-  getFeed,
-  type PublicRoute,
-} from '@/lib/routes-api';
-import { getNearbyFeed, type NearbyRun } from '@/lib/feed-api';
+  getActivityFeed,
+  getNearbyFeed,
+  type ActivityRun,
+  type NearbyRun,
+} from '@/lib/feed-api';
 import type { Coordinate } from '@/types';
 
-// ─── useFeed — following feed, paginated ─────────────────────────────────────
+const PAGE = 20; // server default page size (limit≤100)
+
+// ─── useFeed — 친구 activity feed, paginated ─────────────────────────────────
 
 export function useFeed() {
-  const [items, setItems] = useState<PublicRoute[]>([]);
-  const [bookmarkedIds, setBookmarkedIds] = useState<Set<string>>(new Set());
+  const [items, setItems] = useState<ActivityRun[]>([]);
   const [loading, setLoading]         = useState(true);
   const [refreshing, setRefreshing]   = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore]         = useState(true);
   const [error, setError]             = useState<string | null>(null);
   const busyRef = useRef(false);
+  // Mirrors items.length for the focus callback — written in an effect, never
+  // during render (React Compiler purity contract, the frozen-clock lesson).
+  const countRef = useRef(0);
+  useEffect(() => { countRef.current = items.length; }, [items.length]);
 
   const load = useCallback(async (mode: 'initial' | 'refresh') => {
     if (busyRef.current) return;
@@ -31,9 +40,8 @@ export function useFeed() {
     if (mode === 'initial') setLoading(true); else setRefreshing(true);
     setError(null);
     try {
-      const [page, bookmarks] = await Promise.all([getFeed(0), getBookmarkedRouteIds()]);
+      const page = await getActivityFeed(0);
       setItems(page);
-      setBookmarkedIds(bookmarks);
       setHasMore(page.length > 0);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : '피드를 불러올 수 없어요');
@@ -46,10 +54,17 @@ export function useFeed() {
 
   useEffect(() => { load('initial'); }, [load]);
 
-  // Re-sync ribbon state on every home focus — bookmark changes made
-  // elsewhere (저장된 코스 unsave/undo) must reflect without a pull-refresh.
+  // Silent re-sync on every home focus (the save-a-run rider): a run saved on
+  // run-save must appear on return without a pull. No spinner — the list just
+  // updates. Skipped while a load is in flight (covers the mount double-fire:
+  // load('initial') sets busyRef synchronously first) and once the user has
+  // paginated past page 1 — a silent reset would truncate the list mid-scroll;
+  // pull-to-refresh stays the explicit path there.
   useFocusEffect(useCallback(() => {
-    getBookmarkedRouteIds().then(setBookmarkedIds).catch(() => {});
+    if (busyRef.current || countRef.current > PAGE) return;
+    getActivityFeed(0)
+      .then(page => { setItems(page); setHasMore(page.length > 0); })
+      .catch(() => {}); // quiet — the visible list is still valid
   }, []));
 
   const loadMore = useCallback(async () => {
@@ -57,7 +72,7 @@ export function useFeed() {
     busyRef.current = true;
     setLoadingMore(true);
     try {
-      const page = await getFeed(items.length);
+      const page = await getActivityFeed(items.length);
       setItems(prev => [...prev, ...page]);
       if (page.length === 0) setHasMore(false); // empty page = end (guide §6)
     } catch {
@@ -70,7 +85,7 @@ export function useFeed() {
 
   const refresh = useCallback(() => load('refresh'), [load]);
 
-  return { items, bookmarkedIds, loading, refreshing, loadingMore, error, refresh, loadMore };
+  return { items, loading, refreshing, loadingMore, error, refresh, loadMore };
 }
 
 // ─── useNearbyFeed — 전체 discovery tab (GET /feed/nearby), radius-machined ──

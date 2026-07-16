@@ -34,23 +34,18 @@ export type RouteComment = {
   created_at: string;
 };
 
-export const FEED_PAGE_SIZE = 20;
-
-export function getFeed(offset = 0): Promise<PublicRoute[]> {
-  return apiFetch<PublicRoute[]>(`/api/feed?limit=${FEED_PAGE_SIZE}&offset=${offset}`);
-}
+// getFeed retired 2026-07-17 (feed-triage slice): the 친구 tab now serves
+// RUNS via GET /feed/activities (lib/feed-api.ts). GET /feed (followed
+// users' courses) remains LIVE server-side — our client wrapper died, her
+// endpoint didn't.
 
 // getNearbyRoutes retired 2026-07-16 (전체 discovery slice): /routes/nearby's
 // only consumer was the 전체 tab, which now serves RUNS via GET /feed/nearby.
 
-// PublicRouteResponse carries no is_bookmarked flag (raised as a backend
-// follow-up) — seed card state by intersecting the bookmark list instead.
-// Server caps limit at 100; users with more bookmarks may see stale icons
-// past that — acceptable for v1.
-export async function getBookmarkedRouteIds(): Promise<Set<string>> {
-  const rows = await apiFetch<PublicRoute[]>('/api/routes/bookmarked?limit=100');
-  return new Set(rows.map(r => r.id));
-}
+// getBookmarkedRouteIds retired 2026-07-17 (feed-triage slice): it existed
+// only to seed the course-feed bookmark ribbons, which left home with the
+// course cards. GET /routes/bookmarked remains LIVE server-side and keeps a
+// full-row consumer in lib/bookmarks-api.ts (저장된 코스).
 
 export function likeRoute(id: string): Promise<void> {
   return apiFetch<void>(`/api/routes/${id}/like`, { method: 'POST' });

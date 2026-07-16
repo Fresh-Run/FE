@@ -1,8 +1,10 @@
 /**
  * Home screen — Layout B from the FrHomeB bundle spec.
- * Feed v1: cards are real public courses (GET /feed for 친구, /routes/nearby
- * for 전체) with real likes / bookmarks / comments per docs/API_GUIDE.md.
- * Cards show estimates (예상 시간/페이스) — courses carry no run stats.
+ * Feed v2 (feed-triage slice 2026-07-17): BOTH tabs are RUN cards — 친구 =
+ * followed users' + own runs (GET /feed/activities), 전체 = nearby discovery
+ * (GET /feed/nearby). One RunCard render path; the course feed (GET /feed)
+ * left home entirely (owner ruling — 코스 surfaces keep courses; the
+ * canvas home-cards.jsx 친구 feed is run cards).
  */
 import { useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -23,8 +25,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/avatar';
 import { useTabBarInset } from '@/components/fresh-tab-bar';
-import { MiniMap } from '@/components/mini-map';
-import { RealMap } from '@/components/real-map';
 import { PendingRunRecovery } from '@/components/pending-run-recovery';
 import { Icon } from '@/components/ui';
 import * as Location from 'expo-location';
@@ -34,19 +34,10 @@ import { useCurrentLocation } from '@/hooks/use-current-location';
 import { useFeed, useNearbyFeed } from '@/hooks/use-feed';
 import { getUnreadCount } from '@/lib/notifications-api';
 import { openProfile } from '@/lib/profile-nav';
-import { type NearbyRun } from '@/lib/feed-api';
+import { type FeedRun } from '@/lib/feed-api';
 import { kudosRun, unkudosRun } from '@/lib/run-social-api';
-import {
-  bookmarkRoute,
-  likeRoute,
-  unbookmarkRoute,
-  unlikeRoute,
-  type PublicRoute,
-} from '@/lib/routes-api';
-import { distUnit, fmtAgo, fmtDist, fmtDuration, fmtPaceIn, paceUnit, type Units } from '@/lib/run-format';
+import { fmtDist } from '@/lib/run-format';
 import { colors as C, shadows, spacing as S } from '@/lib/theme';
-import { setPendingCourse } from '@/store/pending-course';
-import { setPendingPost } from '@/store/pending-post';
 import { useQuota } from '@/store/use-quota';
 import { useSettings } from '@/store/use-settings';
 import { useStore } from '@/store/use-store';
@@ -55,24 +46,6 @@ import { useWeather } from '@/hooks/use-weather';
 import { weatherIcon, weatherTone, type WeatherTone } from '@/lib/weather-api';
 
 // ─── Constants / helpers ──────────────────────────────────────────────────────
-
-const EST_PACE_SEC_PER_KM = 320; // same assumption as courseStats
-
-/** Display fields the design shows that courses don't carry directly.
-    All math stays km; `units` affects formatting only. */
-function courseDisplay(r: PublicRoute, units: Units) {
-  const dist = r.total_distance_km;
-  const estMin = r.estimated_duration_min ?? (dist * EST_PACE_SEC_PER_KM) / 60;
-  const durSec = Math.round(estMin * 60);
-  const paceSec = dist > 0 ? Math.round(durSec / dist) : EST_PACE_SEC_PER_KM;
-  return {
-    name: r.owner_nickname ?? '러너',
-    ago:  fmtAgo(r.created_at),
-    dur:  fmtDuration(durSec),
-    pace: fmtPaceIn(paceSec, units),
-  };
-}
-
 
 function verdictColor(tone: WeatherTone): string {
   if (tone === 'good') return C.accent;
@@ -227,115 +200,6 @@ const ftt = StyleSheet.create({
   locTxt:   { fontSize: 12, color: C.faint, letterSpacing: -0.2, fontWeight: '600' },
 });
 
-// ─── Feed card (Layout B — full-bleed hero map) ───────────────────────────────
-
-function FeedCard({
-  item, liked, likeCount, commentCount, saved, awayKm, mapLive,
-  onLike, onSave, onOpen, onRun,
-}: {
-  item: PublicRoute; liked: boolean; likeCount: number; commentCount: number;
-  saved: boolean; awayKm: number | null;
-  /** Viewability gate (maps slice 2): real Apple map only while the cell is
-      on screen — off-screen cells keep the cheap SVG so a 20-card feed never
-      hosts more than the ~3 viewable MapViews at once. */
-  mapLive: boolean;
-  onLike: () => void; onSave: () => void; onOpen: () => void; onRun: () => void;
-}) {
-  const units = useSettings(s => s.settings.units);
-  const d = courseDisplay(item, units);
-  return (
-    <View style={[fct.card, shadows.sm]}>
-      {/* Header — author zone → profile (routing-rule RIDER: commits with
-          the item-17 walk gate) */}
-      <View style={fct.header}>
-        <Pressable onPress={() => openProfile(item.owner_id, item.owner_nickname)} disabled={!item.owner_id} hitSlop={6}>
-          <Avatar name={d.name} size={36} photoUrl={item.owner_avatar_url} letterSpacing={-0.3} />
-        </Pressable>
-        <View style={{ flex: 1, minWidth: 0 }}>
-          <RNText style={fct.name} onPress={item.owner_id ? () => openProfile(item.owner_id, item.owner_nickname) : undefined}>{d.name}</RNText>
-          <View style={fct.subRow}>
-            <Icon name="location-outline" size={11} color={C.faint} />
-            <RNText style={fct.sub} numberOfLines={1}>
-              {d.ago}
-              {awayKm != null
-                ? <RNText style={fct.away}> · {fmtDist(awayKm, units, 1)}{distUnit(units)}</RNText>
-                : null}
-            </RNText>
-          </View>
-        </View>
-        <Pressable onPress={onSave} hitSlop={8}>
-          <Icon name={saved ? 'bookmark' : 'bookmark-outline'} size={20} color={saved ? C.accent : C.faint} />
-        </Pressable>
-      </View>
-
-      {/* Hero map — real course geometry */}
-      <Pressable onPress={onOpen}>
-        {mapLive && item.polyline && item.polyline.length >= 2 ? (
-          <RealMap height={172} polyline={item.polyline} />
-        ) : (
-          // Off-screen placeholder + the permanent no-geometry fallback
-          <MiniMap seed={item.id} height={172} polyline={item.polyline ?? undefined} />
-        )}
-      </Pressable>
-
-      {/* Title + stats (예상 — courses carry no run stats) */}
-      <Pressable onPress={onOpen} style={fct.stats}>
-        <RNText style={fct.title} numberOfLines={1}>{item.summary}</RNText>
-        <View style={fct.statsRow}>
-          {([
-            [fmtDist(item.total_distance_km, units, 1), distUnit(units), '거리'],
-            [d.dur,                                     '',              '예상 시간'],
-            [d.pace,                                    paceUnit(units), '예상 페이스'],
-          ] as [string, string, string][]).map(([val, unit, label], i) => (
-            <View key={i} style={{ flexDirection: 'column', gap: 2 }}>
-              <RNText style={fct.statVal}>
-                {val}{unit ? <RNText style={fct.statUnit}> {unit}</RNText> : null}
-              </RNText>
-              <RNText style={fct.statLbl}>{label}</RNText>
-            </View>
-          ))}
-        </View>
-      </Pressable>
-
-      {/* Footer */}
-      <View style={fct.footer}>
-        <Pressable onPress={onLike} style={fct.action}>
-          <Icon name={liked ? 'heart' : 'heart-outline'} size={19} color={liked ? C.danger : C.sub} />
-          <RNText style={[fct.actionTxt, { color: liked ? C.danger : C.sub }]}>{likeCount}</RNText>
-        </Pressable>
-        <Pressable onPress={onOpen} style={fct.action}>
-          <Icon name="chatbubble-outline" size={19} color={C.sub} />
-          <RNText style={[fct.actionTxt, { color: C.sub }]}>{commentCount}</RNText>
-        </Pressable>
-        <Pressable onPress={onRun} style={fct.runBtn}>
-          <Icon name="navigate-outline" size={15} color="#3F8E14" />
-          <RNText style={fct.runBtnTxt}>이 코스 달리기</RNText>
-        </Pressable>
-      </View>
-    </View>
-  );
-}
-
-const fct = StyleSheet.create({
-  card:      { backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 20, overflow: 'hidden' },
-  header:    { flexDirection: 'row', alignItems: 'center', gap: 9, paddingTop: 12, paddingBottom: 12, paddingHorizontal: 14 },
-  name:      { fontSize: 14, fontWeight: '700', color: C.text, letterSpacing: -0.3 },
-  subRow:    { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 1 },
-  sub:       { fontSize: 11.5, color: C.faint, letterSpacing: -0.2, flex: 1 },
-  away:      { fontSize: 11.5, fontWeight: '700', color: C.accent },
-  stats:     { paddingTop: 12, paddingBottom: 4, paddingHorizontal: 14 },
-  title:     { fontSize: 15.5, fontWeight: '700', color: C.text, letterSpacing: -0.4, marginBottom: 9 },
-  statsRow:  { flexDirection: 'row', gap: 18 },
-  statVal:   { fontSize: 16, fontWeight: '700', color: C.text, letterSpacing: -0.4 },
-  statUnit:  { fontSize: 11, color: C.faint, fontWeight: '600' },
-  statLbl:   { fontSize: 10.5, color: C.faint, letterSpacing: -0.1 },
-  footer:    { flexDirection: 'row', alignItems: 'center', gap: 18, paddingTop: 8, paddingHorizontal: 14, paddingBottom: 12, marginTop: 6, borderTopWidth: 1, borderTopColor: C.border },
-  action:    { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  actionTxt: { fontSize: 13, fontWeight: '600', letterSpacing: -0.2 },
-  runBtn:    { marginLeft: 'auto', flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: C.accentDim, borderWidth: 1, borderColor: C.accent, borderRadius: 999, paddingHorizontal: 13, paddingVertical: 6 },
-  runBtnTxt: { fontSize: 12.5, fontWeight: '700', color: '#3F8E14', letterSpacing: -0.2 },
-});
-
 // ─── AI banner ────────────────────────────────────────────────────────────────
 
 function AIBanner({ locked, onPress }: { locked?: boolean; onPress: () => void }) {
@@ -468,9 +332,9 @@ export default function HomeScreen() {
     setNearbyKey(k => k + 1);
   }, []);
 
-  // Kudos overlay for discovery cards (the user-profile pattern verbatim)
+  // Kudos overlay for run cards, BOTH tabs (the user-profile pattern verbatim)
   const [kudosOv, setKudosOv] = useState<Record<string, { on: boolean; delta: number }>>({});
-  const toggleRunKudos = useCallback((run: NearbyRun) => {
+  const toggleRunKudos = useCallback((run: FeedRun) => {
     const cur = kudosOv[run.run_id]?.on ?? run.my_kudos;
     const next = !cur;
     setKudosOv(p => ({ ...p, [run.run_id]: { on: next, delta: (next ? 1 : 0) - (run.my_kudos ? 1 : 0) } }));
@@ -488,43 +352,8 @@ export default function HomeScreen() {
     },
   ).current;
 
-  // Optimistic overlays (shared by both tabs), rolled back on error.
-  // (The old comment sheet + its cmtOv override were deleted 2026-07-12 —
-  // the logged gate-cleanup debt; 코스 포스트 owns comments now.)
-  const [likeOv, setLikeOv] = useState<Record<string, { liked: boolean; count: number }>>({});
-  const [saveOv, setSaveOv] = useState<Record<string, boolean>>({});
-
-  const effLiked = useCallback(
-    (r: PublicRoute) => likeOv[r.id] ?? { liked: r.is_liked, count: r.like_count },
-    [likeOv],
-  );
-  const effSaved = useCallback(
-    (r: PublicRoute) => saveOv[r.id] ?? feed.bookmarkedIds.has(r.id),
-    [saveOv, feed.bookmarkedIds],
-  );
-
-  const toggleLike = useCallback((r: PublicRoute) => {
-    const cur = likeOv[r.id] ?? { liked: r.is_liked, count: r.like_count };
-    const next = { liked: !cur.liked, count: cur.count + (cur.liked ? -1 : 1) };
-    setLikeOv(p => ({ ...p, [r.id]: next }));
-    (cur.liked ? unlikeRoute(r.id) : likeRoute(r.id))
-      .catch(() => setLikeOv(p => ({ ...p, [r.id]: cur }))); // rollback
-  }, [likeOv]);
-
-  const toggleSave = useCallback((r: PublicRoute) => {
-    const cur = saveOv[r.id] ?? feed.bookmarkedIds.has(r.id);
-    setSaveOv(p => ({ ...p, [r.id]: !cur }));
-    (cur ? unbookmarkRoute(r.id) : bookmarkRoute(r.id))
-      .catch(() => setSaveOv(p => ({ ...p, [r.id]: cur }))); // rollback
-  }, [saveOv, feed.bookmarkedIds]);
-
-  const runCourse = useCallback((r: PublicRoute) => {
-    setPendingCourse(r);
-    router.push('/(course)/preview' as any);
-  }, []);
-
   const name = displayName ?? '러너';
-  const list: (PublicRoute | NearbyRun)[] = tab === '전체' ? nearby.items : feed.items;
+  const list: FeedRun[] = tab === '전체' ? nearby.items : feed.items;
   const loading = tab === '전체' ? nearby.loading || (locStatus === 'fetching' && nearby.items.length === 0) : feed.loading;
   const error = tab === '전체' ? nearby.error : feed.error;
 
@@ -548,7 +377,7 @@ export default function HomeScreen() {
       <PendingRunRecovery />
       <FlatList
         data={list}
-        keyExtractor={(r) => ('run_id' in r ? r.run_id : r.id)}
+        keyExtractor={(r) => r.run_id}
         showsVerticalScrollIndicator={false}
         viewabilityConfig={viewabilityConfig}
         onViewableItemsChanged={onViewableItemsChanged}
@@ -568,53 +397,29 @@ export default function HomeScreen() {
         contentContainerStyle={{ paddingBottom: tabBarInset }}
         ItemSeparatorComponent={() => <View style={{ height: 16 }} />}
         renderItem={({ item }) => {
-          // ── 전체: discovery RUN cards (the shared RunCard) ────────────────
-          if ('run_id' in item) {
-            const ov = kudosOv[item.run_id];
-            const shown = ov ? { ...item, my_kudos: ov.on, kudos_count: item.kudos_count + ov.delta } : item;
-            return (
-              <View style={{ paddingHorizontal: S.gutter }}>
-                <RunCard
-                  run={shown}
-                  units={units}
-                  mapLive={liveIds.has(item.run_id)}
-                  onKudos={() => toggleRunKudos(item)}
-                  kudosOff={item.allow_likes === false}
-                  onOpen={() => router.push({
-                    pathname: '/run-post' as never,
-                    params: {
-                      runId: shown.run_id,
-                      nickname: shown.nickname,
-                      avatarUrl: shown.avatar_url ?? '',
-                      myKudos: shown.my_kudos ? '1' : '0',
-                      kudosCount: String(shown.kudos_count),
-                    },
-                  })}
-                  // the discovery funnel: avatar → profile → 팔로우
-                  onAvatarPress={() => openProfile(item.user_id, item.nickname)}
-                />
-              </View>
-            );
-          }
-          const like = effLiked(item);
-          // 친구 = the only FeedCard tab now (전체 renders RunCards above);
-          // the near-you chip was 전체-only and retires with the swap
-          const awayKm = null;
+          // ── ONE RunCard path, both tabs (payload shape parity, probed) ────
+          const ov = kudosOv[item.run_id];
+          const shown = ov ? { ...item, my_kudos: ov.on, kudos_count: item.kudos_count + ov.delta } : item;
           return (
             <View style={{ paddingHorizontal: S.gutter }}>
-              <FeedCard
-                item={item}
-                liked={like.liked}
-                likeCount={like.count}
-                commentCount={item.comment_count}
-                saved={effSaved(item)}
-                awayKm={awayKm}
-                mapLive={liveIds.has(item.id)}
-                onLike={() => toggleLike(item)}
-                onSave={() => toggleSave(item)}
-                // Card tap → 코스 포스트 full screen (canvas FrRunPost)
-                onOpen={() => { setPendingPost(item); router.push('/(course)/course-post' as any); }}
-                onRun={() => runCourse(item)}
+              <RunCard
+                run={shown}
+                units={units}
+                mapLive={liveIds.has(item.run_id)}
+                onKudos={() => toggleRunKudos(item)}
+                kudosOff={item.allow_likes === false}
+                onOpen={() => router.push({
+                  pathname: '/run-post' as never,
+                  params: {
+                    runId: shown.run_id,
+                    nickname: shown.nickname,
+                    avatarUrl: shown.avatar_url ?? '',
+                    myKudos: shown.my_kudos ? '1' : '0',
+                    kudosCount: String(shown.kudos_count),
+                  },
+                })}
+                // avatar → profile (openProfile self-routes own cards to 내 프로필)
+                onAvatarPress={() => openProfile(item.user_id, item.nickname)}
               />
             </View>
           );
@@ -625,7 +430,7 @@ export default function HomeScreen() {
             : error
               ? <ErrorState message={error} onRetry={tab === '전체' ? () => setNearbyKey(k => k + 1) : feed.refresh} />
               : tab === '친구'
-                ? <ListState icon="people-outline" title="팔로우한 러너의 코스가 여기에 보여요" sub="전체 탭에서 주변 러닝을 둘러보세요" />
+                ? <ListState icon="people-outline" title="팔로우한 러너들의 러닝이 여기에 보여요" sub="전체 탭에서 주변 러닝을 둘러보세요" />
                 : locStatus === 'denied'
                   // the honest permission state — DISTINCT from genuine-empty
                   ? <ListState icon="location-outline" title="위치 권한이 필요해요" sub="주변 러너들의 러닝을 보려면 위치 접근을 허용해 주세요." btn="설정 열기" onBtn={() => Linking.openSettings()} />
