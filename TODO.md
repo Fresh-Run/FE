@@ -1034,6 +1034,15 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 **REPAIR SLICE = ITEM 4 EXPANDED (plan-first, gated on 지연's canvas blessing — upgraded to urgent):** canvas card B's CTA + bookmark on run cards (demand-side close of both casualties) PLUS preview gaining a bookmark-add ("이 코스 저장") — the one surface all course paths flow through.
 **STANDING LESSONS (owner-ledgered):** ① a "generalized/shared" checkpoint walks EVERY consumer of the shared thing; ② a slice that removes a surface must enumerate the AFFORDANCES that die with it (not just the dead exports) — the b7ca600 orphaning is the type specimen.
 
+## SLICE 3 — 편도/일방통행 REAL UNLOCK, v2.3 (2026-07-20, awaiting TF [HH:MM])
+
+**UNPARKED on 지연's v2.3 deploy (BE `c781f97`, v68 — corridor geometry + feasibility gate).** Shipped: end-point store · start-picker parameterized `target=end` (4 edits, sibling fallback unused) · `RouteInput.end` presence-keyed (loop mode OMITS the field — her gate keys on end presence, not prefer_loop; confirmed) · 경로 유형 live two-way choice, **준비 중 pill dead** · 도착지 row (출발지 grammar) + CTA gating · feasibility pre-warn (C.sun lane) with 설정 chip, local formula == server (`d/0.8` 0.1-올림, probe-identical 12.9) · `OneWayTooFarError` 422 mapping → "이 거리로는 도착지가 너무 멀어요 — 최소 Xkm가 필요해요." (unit-native, server min authoritative).
+**Build-time verifies resolved:** RealMap already draws an unconditional end dot at the last point — one-way heroes need zero code; tracking has no loop/auto-finish geometry; band/다시 생성/miss banner shape-agnostic.
+**A2 probes (staging):** 422 pre-credit verbatim in 0.69s (min_target_km 12.9) · 성수 3km one-way 전패 → quota-free 502 (17s — the shipped copy handles it) · 4km retry → 200/18.2s, 4.5km, target_missed+radius_expanded, geometry genuinely one-way (start 7m / end 3m / endpoints 1,631m apart). **Residue:** route `c13eb570` (4.5km 뚝섬→서울숲, private) in test1's 내 코스, undeletable — disclosed.
+**A3 (지연 honest tail, observed live):** 성수 one-way rough — 3km ask 전패, 4km flagged-over. Miss banner + 502 copy load-bearing as-is; no copy changes.
+**RIDER — `estimated_duration_min` SEMANTIC CHANGE (BE 2026-07-20): running-basis** (거리 × 6'30"/km; was T-map walking ~13분/km, ≈2× longer; 55/55 rows backfilled server-side). Client fallback formula (×6.5) now matches the server basis; "예상 시간" labels stay valid everywhere; NO client action. Displayed durations on old bookmarks/코스 will look ~halved — that's the fix, not a bug.
+**RIDER — StoredRoute one-way-flag nicety (지연 ask, cosmetic):** no field marks a stored route as one-way; 내 코스/preview can't label 편도. Harmless today (the end dot renders the true endpoint everywhere) — an `end`/`is_one_way` column on StoredRoute would let list rows badge it.
+
 ## DOCTRINE AMENDMENT (owner, 2026-07-20): DEV LANE RETIRED FOR VERIFICATION
 
 Both phones run the TF build; **all publishes go production-first**; owner verification happens on TF after the OTA dance; the [HH:MM] gates the verified-ledger entry per slice. NOT an exception — standing doctrine.

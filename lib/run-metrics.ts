@@ -11,6 +11,12 @@ function haversineM(a: GpsPoint, b: GpsPoint): number {
   return 2 * R * Math.asin(Math.sqrt(h));
 }
 
+/** Straight-line km between two coordinates — the one-way feasibility
+    pre-warn (v2.3: server gates |start−end| > target×0.8 with 422). */
+export function haversineKm(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
+  return haversineM({ lat: a.lat, lng: a.lng, t: 0 } as GpsPoint, { lat: b.lat, lng: b.lng, t: 0 } as GpsPoint) / 1000;
+}
+
 /** Full-km split paces (sec per km). Boundary times linearly interpolated
     within the crossing segment; the trailing partial km is dropped (a split
     is a completed kilometer). <2 usable points → []. */

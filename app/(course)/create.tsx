@@ -30,11 +30,14 @@ import { RealMap } from '@/components/real-map';
 import { Icon } from '@/components/ui';
 import { useCurrentLocation } from '@/hooks/use-current-location';
 import { distUnit, fmtDist, KM_PER_MI } from '@/lib/run-format';
+import { haversineKm } from '@/lib/run-metrics';
 import { setActiveCourse } from '@/store/active-course';
+import { useEndPoint } from '@/store/end-point';
 import { setRouteMap } from '@/store/route-map';
 import { useStartPoint } from '@/store/start-point';
 import { useSettings } from '@/store/use-settings';
 import {
+  OneWayTooFarError,
   useGenerateRoute,
   type GeneratedRoute,
   type Waypoint,
@@ -194,6 +197,21 @@ export default function CreateScreen() {
   useEffect(() => () => useStartPoint.getState().clear(), []);
   const startCoord = manualStart ? { lat: manualStart.lat, lng: manualStart.lng } : gpsCoord;
 
+  // ── 일방통행 (v2.3 unlock) ──────────────────────────────────────────────────
+  // end is sent ONLY in one-way mode (the server's one-way semantics key on
+  // end PRESENCE — prefer_loop stays settings-backed and untouched).
+  const [oneWay, setOneWay] = useState(false);
+  const manualEnd = useEndPoint(s => s.point);
+  useEffect(() => () => useEndPoint.getState().clear(), []);
+  const endCoord = manualEnd ? { lat: manualEnd.lat, lng: manualEnd.lng } : null;
+  // Feasibility pre-warn — mirrors the server gate exactly (422 when
+  // |start−end| > target×0.8; min = d/0.8, 0.1-올림) so the local warn and
+  // the server's answer can't disagree beyond float dust.
+  const straightKm  = oneWay && endCoord ? haversineKm(startCoord, endCoord) : null;
+  const minTargetKm = straightKm != null ? Math.ceil((straightKm / 0.8) * 10) / 10 : null;
+  const endTooFar   = straightKm != null && straightKm > distanceKm * 0.8;
+  const sliderMaxKm = isMi ? 20 * KM_PER_MI : 30;
+
   // ── Flow state ──────────────────────────────────────────────────────────────
   const [viewState, setViewState] = useState<ViewState>('form');
   const [route, setRoute]         = useState<GeneratedRoute | null>(null);
@@ -209,6 +227,7 @@ export default function CreateScreen() {
 
   // ── Generation ──────────────────────────────────────────────────────────────
   async function handleGenerate() {
+    if (oneWay && !endCoord) return; // CTA is disabled; belt for the retry paths
     genCancelledRef.current = false;
     const controller = new AbortController();
     genAbortRef.current = controller;
@@ -226,13 +245,20 @@ export default function CreateScreen() {
         pitstop_keyword: pitstop,
         notes,
         avoid_hills: avoidHills,
+        end: oneWay ? endCoord : null,
       }, controller.signal);
       if (genCancelledRef.current) return;
       setRoute(result);
       setViewState('result');
     } catch (e: unknown) {
       if (genCancelledRef.current) return;
-      setGenError(e instanceof Error ? e.message : '코스 생성에 실패했어요');
+      if (e instanceof OneWayTooFarError) {
+        // Server min is authoritative (guide: feed it into the slider
+        // suggestion) — the inline warn row's 설정 chip carries the fix.
+        setGenError(`이 거리로는 도착지가 너무 멀어요 — 최소 ${fmtDist(e.minTargetKm, units, 1)}${distUnit(units)}가 필요해요.`);
+      } else {
+        setGenError(e instanceof Error ? e.message : '코스 생성에 실패했어요');
+      }
       setViewState('form');
     } finally {
       genAbortRef.current = null;
@@ -521,26 +547,64 @@ export default function CreateScreen() {
 
         <View style={st.sectionDivider} />
 
-        {/* ── Section: 경로 유형 ─────────────────────────────────────── */}
+        {/* ── Section: 경로 유형 (일방통행 LIVE — v2.3 unlock; the 준비 중
+               pill died here) ────────────────────────────────────────────── */}
         <View style={st.section}>
           <SectionLabel text="경로 유형" />
           <View style={st.routeTypeRow}>
-            {/* Loop — always selected this pass */}
-            <Pressable style={[st.routeTypeBtn, st.routeTypeBtnActive]}>
-              <Icon name="refresh-outline" size={16} color={C.accentGrn} />
-              <Text style={[st.routeTypeTxt, { color: C.accentGrn }]}>원점 복귀</Text>
+            <Pressable onPress={() => setOneWay(false)} style={[st.routeTypeBtn, !oneWay && st.routeTypeBtnActive]}>
+              <Icon name="refresh-outline" size={16} color={!oneWay ? C.accentGrn : C.faint} />
+              <Text style={[st.routeTypeTxt, { color: !oneWay ? C.accentGrn : C.faint }]}>원점 복귀</Text>
             </Pressable>
-            {/* One-way — 준비 중 (destination picker is the future M-slice;
-                server-ready: RouteRequest.end is live). Text badge, not a
-                lock — lock reads as premium in this app (honesty ruling). */}
-            <Pressable style={[st.routeTypeBtn, st.routeTypeBtnLocked]} disabled>
-              <Icon name="arrow-forward-outline" size={16} color={C.faint} />
-              <Text style={[st.routeTypeTxt, { color: C.faint }]}>일방통행</Text>
-              <View style={st.soonBadge}>
-                <Text style={st.soonBadgeTxt}>준비 중</Text>
-              </View>
+            <Pressable onPress={() => setOneWay(true)} style={[st.routeTypeBtn, oneWay && st.routeTypeBtnActive]}>
+              <Icon name="arrow-forward-outline" size={16} color={oneWay ? C.accentGrn : C.faint} />
+              <Text style={[st.routeTypeTxt, { color: oneWay ? C.accentGrn : C.faint }]}>일방통행</Text>
             </Pressable>
           </View>
+
+          {/* 도착지 — 출발지 row grammar; picker is start-picker in target=end
+              mode. Feasibility pre-warn mirrors the server's v2.3 gate. */}
+          {oneWay && (
+            <>
+              <View style={st.startRow}>
+                <View style={st.startIcon}>
+                  <Icon name="flag-outline" size={16} color={C.accentGrn} />
+                </View>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={st.startLabel} numberOfLines={1}>
+                    {manualEnd ? manualEnd.label : '도착지를 선택해 주세요'}
+                  </Text>
+                  <Text style={st.startSub}>도착지</Text>
+                </View>
+                <Pressable
+                  onPress={() => router.push({
+                    pathname: '/(course)/start-picker' as never,
+                    params: {
+                      lat: String((endCoord ?? startCoord).lat),
+                      lng: String((endCoord ?? startCoord).lng),
+                      target: 'end',
+                    },
+                  })}
+                  hitSlop={8}
+                >
+                  <Text style={st.startChangeTxt}>{manualEnd ? '변경' : '선택'}</Text>
+                </Pressable>
+              </View>
+              {endTooFar && minTargetKm != null && (
+                <View style={st.feasWarn}>
+                  <Icon name="alert-circle-outline" size={14} color={C.sun} />
+                  <Text style={st.feasWarnTxt} numberOfLines={2}>
+                    {`이 도착지까지는 최소 ${fmtDist(minTargetKm, units, 1)}${distUnit(units)} 코스가 필요해요`}
+                  </Text>
+                  {minTargetKm <= sliderMaxKm && (
+                    <Pressable onPress={() => setDistanceKm(minTargetKm)} hitSlop={6} style={({ pressed }) => [st.feasFixBtn, pressed && { opacity: 0.7 }]}>
+                      <Text style={st.feasFixTxt}>{`${fmtDist(minTargetKm, units, 1)}${distUnit(units)}로 설정`}</Text>
+                    </Pressable>
+                  )}
+                </View>
+              )}
+            </>
+          )}
         </View>
 
         <View style={st.sectionDivider} />
@@ -605,14 +669,17 @@ export default function CreateScreen() {
         </View>
       </ScrollView>
 
-      {/* ── Sticky CTA ──────────────────────────────────────────────── */}
+      {/* ── Sticky CTA — gated on a picked 도착지 in one-way mode ────── */}
       <View style={[st.formFooter, { paddingBottom: Math.max(insets.bottom, S.lg) + S.sm }]}>
         <Pressable
           onPress={handleGenerate}
-          style={({ pressed }) => [st.primaryBtn, { opacity: pressed ? 0.85 : 1 }]}
+          disabled={oneWay && !endCoord}
+          style={({ pressed }) => [st.primaryBtn, oneWay && !endCoord && { backgroundColor: C.surfaceAlt }, { opacity: pressed ? 0.85 : 1 }]}
         >
-          <Icon name="sparkles-outline" size={18} color={C.accentText} />
-          <Text style={st.primaryBtnTxt}>코스 생성하기</Text>
+          <Icon name="sparkles-outline" size={18} color={oneWay && !endCoord ? C.faint : C.accentText} />
+          <Text style={[st.primaryBtnTxt, oneWay && !endCoord && { color: C.faint }]}>
+            {oneWay && !endCoord ? '도착지를 선택해 주세요' : '코스 생성하기'}
+          </Text>
         </Pressable>
       </View>
     </View>
@@ -654,10 +721,13 @@ const st = StyleSheet.create({
   routeTypeRow:       { flexDirection: 'row', gap: 10 },
   routeTypeBtn:       { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, height: 48, borderRadius: R.lg, borderWidth: 1.5, borderColor: C.border, position: 'relative' },
   routeTypeBtnActive: { borderColor: C.accent, backgroundColor: C.accentDim },
-  routeTypeBtnLocked: { backgroundColor: C.surfaceAlt, opacity: 0.65 },
   routeTypeTxt:       { fontSize: 14.5, fontWeight: '700', letterSpacing: -0.3 },
-  soonBadge:          { position: 'absolute', top: 6, right: 8, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: R.pill, paddingHorizontal: 6, paddingVertical: 2 },
-  soonBadgeTxt:       { fontSize: 9.5, fontWeight: '700', color: C.faint, letterSpacing: -0.2 },
+
+  // 일방통행 feasibility pre-warn (warning lane C.sun — the miss-banner class)
+  feasWarn:    { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10, backgroundColor: C.sun + '14', borderWidth: 1, borderColor: C.sun + '44', borderRadius: R.md, paddingHorizontal: 12, paddingVertical: 10 },
+  feasWarnTxt: { flex: 1, fontSize: 12.5, color: C.sub, letterSpacing: -0.2, lineHeight: 17 },
+  feasFixBtn:  { backgroundColor: C.surface, borderWidth: 1, borderColor: C.sun + '66', borderRadius: R.pill, paddingHorizontal: 10, paddingVertical: 6 },
+  feasFixTxt:  { fontSize: 12, fontWeight: '700', color: C.text, letterSpacing: -0.2 },
 
   // Chips (single and multi-select)
   chipRow:       { flexDirection: 'row', flexWrap: 'nowrap', gap: 8 },

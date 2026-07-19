@@ -37,9 +37,23 @@ export type RouteInput = {
   // Per-request override of settings.ai_course.avoid_hills — the guide's
   // body > 내 설정 priority; false counts as an explicit value server-side.
   avoid_hills: boolean;
-  // end: omitted → backend treats as loop
+  /** 일방통행 도착지 (v2.3 unlock). null → field OMITTED from the body: the
+      server's one-way semantics (corridor search + feasibility 422) key on
+      end PRESENCE, not prefer_loop — never send end on loop mode. */
+  end: Coordinate | null;
   // avoid_from_route_id: not yet surfaced in the creation UI
 };
+
+/** v2.3 feasibility gate: |start−end| > target×0.8 → 422 BEFORE credit spend
+    (quota unconsumed, Gemini uncalled). min_target_km = d/0.8, 0.1-올림 —
+    the guide says to feed it straight into the slider-minimum suggestion. */
+export class OneWayTooFarError extends Error {
+  minTargetKm: number;
+  constructor(message: string, minTargetKm: number) {
+    super(message);
+    this.minTargetKm = minTargetKm;
+  }
+}
 
 // ─── generate ─────────────────────────────────────────────────────────────────
 
@@ -77,6 +91,8 @@ async function generate(input: RouteInput, signal?: AbortSignal): Promise<Genera
         pitstop_keyword: input.pitstop_keyword,
         notes: input.notes,
         avoid_hills: input.avoid_hills,
+        // presence-keyed (v2.3): included ONLY in one-way mode
+        ...(input.end ? { end: input.end } : {}),
       }),
       signal: controller.signal,
     });
@@ -97,6 +113,20 @@ async function generate(input: RouteInput, signal?: AbortSignal): Promise<Genera
       let qd: Record<string, unknown> | null = null;
       try { const b = await res.json(); qd = (b?.detail && typeof b.detail === 'object') ? b.detail : null; } catch { /* non-JSON */ }
       throw new Error(quotaExceededMessage(qd));
+    }
+    if (res.status === 422) {
+      // v2.3 one-way feasibility gate — detail is an OBJECT here (unlike the
+      // string-detail class below). Other 422s (pydantic validation arrays)
+      // fall to the generic face; body read once, branch terminates both ways.
+      let d: { error?: unknown; min_target_km?: unknown } | null = null;
+      try {
+        const body = await res.json();
+        d = body?.detail && typeof body.detail === 'object' ? body.detail : null;
+      } catch { /* non-JSON 422 */ }
+      if (d?.error === 'one_way_end_too_far' && typeof d.min_target_km === 'number') {
+        throw new OneWayTooFarError('도착지가 목표 거리에 비해 너무 멀어요', d.min_target_km);
+      }
+      throw new Error('입력값을 확인해 주세요 (422)');
     }
     if (res.status === 502) {
       // v2.1 계약 (BE routes.py 502 detail.error): route_generation_failed =

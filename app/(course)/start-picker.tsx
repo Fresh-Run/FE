@@ -29,6 +29,7 @@ import { Icon } from '@/components/ui';
 import { SEOUL_FALLBACK } from '@/hooks/use-current-location';
 import { searchPlaces, type Place } from '@/lib/places-api';
 import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
+import { useEndPoint } from '@/store/end-point';
 import { useStartPoint } from '@/store/start-point';
 
 const SEARCH_DEBOUNCE_MS = 400;
@@ -41,8 +42,11 @@ const inKorea = (lat: number, lng: number) =>
 
 export default function StartPickerScreen() {
   const insets = useSafeAreaInsets();
-  // Initial region: the form's current effective start (passed as params)
-  const params = useLocalSearchParams<{ lat?: string; lng?: string }>();
+  // Initial region: the form's current effective start (passed as params).
+  // target=end (v2.3 one-way unlock) reuses this screen verbatim as the
+  // 도착지 picker — same map-tap + search machinery, writes to the end store.
+  const params = useLocalSearchParams<{ lat?: string; lng?: string; target?: string }>();
+  const isEnd = params.target === 'end';
   const initLat = Number(params.lat) || SEOUL_FALLBACK.lat;
   const initLng = Number(params.lng) || SEOUL_FALLBACK.lng;
 
@@ -121,7 +125,8 @@ export default function StartPickerScreen() {
 
   function confirm() {
     if (!picked) return;
-    useStartPoint.getState().setPoint({ ...picked, label: label ?? '선택한 위치' });
+    const store = isEnd ? useEndPoint : useStartPoint;
+    store.getState().setPoint({ ...picked, label: label ?? '선택한 위치' });
     router.back();
   }
 
@@ -210,7 +215,7 @@ export default function StartPickerScreen() {
         {picked === null ? (
           <View style={st.hintRow}>
             <Icon name="locate" size={16} color={C.accentGrn} />
-            <Text style={st.hintTxt}>지도를 탭해서 출발지를 선택하세요</Text>
+            <Text style={st.hintTxt}>{isEnd ? '지도를 탭해서 도착지를 선택하세요' : '지도를 탭해서 출발지를 선택하세요'}</Text>
           </View>
         ) : (
           <View style={st.hintRow}>
@@ -225,7 +230,7 @@ export default function StartPickerScreen() {
           disabled={!canConfirm}
           style={({ pressed }) => [st.confirmBtn, !canConfirm && st.confirmBtnDisabled, pressed && canConfirm && { opacity: 0.85 }]}
         >
-          <Text style={[st.confirmTxt, !canConfirm && { color: C.faint }]}>이 위치에서 출발</Text>
+          <Text style={[st.confirmTxt, !canConfirm && { color: C.faint }]}>{isEnd ? '이 위치로 도착' : '이 위치에서 출발'}</Text>
         </Pressable>
       </View>
     </View>
