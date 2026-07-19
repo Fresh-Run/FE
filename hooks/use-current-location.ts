@@ -17,6 +17,12 @@ export type LocationCoordinate = { lat: number; lng: number };
 export const SEOUL_FALLBACK: LocationCoordinate = { lat: 37.5665, lng: 126.9780 };
 const SEOUL_FALLBACK_NAME = '서울 중심';
 
+// OS-cached fix acceptance window. 10min matches the weather cache TTL and its
+// ~1.1km grid: a fix this fresh can't be wrong enough to matter for any
+// consumer (weather, nearby radius, map center) — older returns null and the
+// cold Balanced fix stays the only path, exactly the pre-fix behavior.
+const LAST_KNOWN_MAX_AGE_MS = 10 * 60 * 1000;
+
 export function useCurrentLocation() {
   const [status, setStatus]         = useState<LocationStatus>('fetching');
   const [coordinate, setCoordinate] = useState<LocationCoordinate>(SEOUL_FALLBACK);
@@ -24,6 +30,22 @@ export function useCurrentLocation() {
 
   useEffect(() => {
     let cancelled = false;
+
+    // Adopt a fix: coords + granted + best-effort reverse geocode (non-blocking,
+    // failure silently swallowed).
+    const apply = (coord: LocationCoordinate) => {
+      setCoordinate(coord);
+      setStatus('granted');
+      Location.reverseGeocodeAsync({ latitude: coord.lat, longitude: coord.lng })
+        .then(([geo]) => {
+          if (!cancelled) {
+            setPlaceName(geo?.district ?? geo?.subregion ?? geo?.city ?? '현재 위치');
+          }
+        })
+        .catch(() => {
+          if (!cancelled) setPlaceName('현재 위치');
+        });
+    };
 
     (async () => {
       try {
@@ -36,28 +58,24 @@ export function useCurrentLocation() {
           return;
         }
 
+        // Fast path: paint from the OS-cached fix instead of stalling every
+        // mount on a cold Balanced fix (the measured weather-page waterfall —
+        // consumers gate on 'granted', so even warm caches waited seconds).
+        const last = await Location.getLastKnownPositionAsync({ maxAge: LAST_KNOWN_MAX_AGE_MS });
+        if (cancelled) return;
+        if (last) apply({ lat: last.coords.latitude, lng: last.coords.longitude });
+
+        // Fresh fix refines in the background (or is the only fix when the OS
+        // had nothing cached — the pre-fix behavior).
         const pos = await Location.getCurrentPositionAsync({
           accuracy: Location.Accuracy.Balanced,
         });
         if (cancelled) return;
-
-        const coord = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-        setCoordinate(coord);
-        setStatus('granted'); // resolve status before reverse-geocode (non-blocking)
-
-        // Best-effort reverse geocode for display name; failure is silently swallowed
-        Location.reverseGeocodeAsync({ latitude: coord.lat, longitude: coord.lng })
-          .then(([geo]) => {
-            if (!cancelled) {
-              setPlaceName(geo?.district ?? geo?.subregion ?? geo?.city ?? '현재 위치');
-            }
-          })
-          .catch(() => {
-            if (!cancelled) setPlaceName('현재 위치');
-          });
-
+        apply({ lat: pos.coords.latitude, lng: pos.coords.longitude });
       } catch {
-        if (!cancelled) setStatus('denied');
+        // A fresh-fix failure must not revoke a fix already adopted from the
+        // fast path; with no fix at all, fall back exactly as before.
+        if (!cancelled) setStatus(s => (s === 'granted' ? s : 'denied'));
         // coordinate + placeName stay as Seoul fallback values
       }
     })();

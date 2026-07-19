@@ -29,7 +29,7 @@ import { MiniMap } from '@/components/mini-map';
 import { RealMap } from '@/components/real-map';
 import { Icon } from '@/components/ui';
 import { useCurrentLocation } from '@/hooks/use-current-location';
-import { KM_PER_MI } from '@/lib/run-format';
+import { distUnit, fmtDist, KM_PER_MI } from '@/lib/run-format';
 import { setActiveCourse } from '@/store/active-course';
 import { setRouteMap } from '@/store/route-map';
 import { useStartPoint } from '@/store/start-point';
@@ -198,6 +198,9 @@ export default function CreateScreen() {
   const [viewState, setViewState] = useState<ViewState>('form');
   const [route, setRoute]         = useState<GeneratedRoute | null>(null);
   const [genError, setGenError]   = useState<string | null>(null);
+  // Target captured at request time — the miss banner's delta must compare
+  // against what was actually asked, not the (resettable) slider state.
+  const [genTargetKm, setGenTargetKm] = useState(0);
 
   // Ref so cancelled-generation results are silently dropped
   const genCancelledRef = useRef(false);
@@ -211,6 +214,7 @@ export default function CreateScreen() {
     genAbortRef.current = controller;
     setViewState('generating');
     setGenError(null);
+    setGenTargetKm(distanceKm);
     try {
       // 분위기 removed (owner ruling 2026-07-16) — `notes` survives for the
       // 회피 hints; the generator's Runner-preferences line now carries only these
@@ -274,6 +278,7 @@ export default function CreateScreen() {
   if (viewState === 'result' && route) {
     const pitstopCount = route.waypoints.filter(w => w.is_pitstop).length;
     const estMin = route.estimated_duration_min ?? Math.round(route.total_distance_km * 6.5);
+    const deltaKm = route.total_distance_km - genTargetKm;
 
     return (
       <View style={st.root}>
@@ -324,6 +329,33 @@ export default function CreateScreen() {
             <View style={st.statsDivider} />
             <StatTile label="경유지" value={`${pitstopCount}곳`} />
           </View>
+
+          {/* ── 거리 보장 안내 — ±0.5km 계약(BE)의 "정직한 표시" 절반: 전패
+                 최선 후보(target_missed)는 오차를 밝히고 다시 생성을 권한다 ── */}
+          {route.target_missed && (
+            <View style={{ paddingHorizontal: S.gutter, paddingTop: S.md }}>
+              <View style={st.missCard}>
+                <Icon name="alert-circle-outline" size={16} color={C.sun} />
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={st.missTitle}>요청 거리와 조금 달라요</Text>
+                  <Text style={st.missSub}>
+                    {`${fmtDist(genTargetKm, units, 1)}${distUnit(units)} 요청 → ${fmtDist(route.total_distance_km, units, 1)}${distUnit(units)} (${deltaKm >= 0 ? '+' : '-'}${fmtDist(Math.abs(deltaKm), units, 1)}${distUnit(units)})`}
+                  </Text>
+                </View>
+                <Pressable onPress={handleGenerate} hitSlop={6} style={({ pressed }) => [st.missRetryBtn, pressed && { opacity: 0.7 }]}>
+                  <Text style={st.missRetryTxt}>다시 생성</Text>
+                </Pressable>
+              </View>
+            </View>
+          )}
+          {route.radius_expanded && (
+            <View style={{ paddingHorizontal: S.gutter, paddingTop: S.md }}>
+              <View style={st.noticeCard}>
+                <Icon name="information-circle-outline" size={15} color={C.accentGrn} />
+                <Text style={st.noticeTxt}>반경을 넓혀 찾았어요 — 출발지에서 조금 더 넓게 탐색한 코스예요.</Text>
+              </View>
+            </View>
+          )}
 
           {/* ── Waypoints ──────────────────────────────────────────────────── */}
           <View style={{ paddingHorizontal: S.gutter, paddingTop: S.xl }}>
@@ -496,12 +528,14 @@ export default function CreateScreen() {
               <Icon name="refresh-outline" size={16} color={C.accentGrn} />
               <Text style={[st.routeTypeTxt, { color: C.accentGrn }]}>원점 복귀</Text>
             </Pressable>
-            {/* One-way — locked (destination picker is a future item) */}
+            {/* One-way — 준비 중 (destination picker is the future M-slice;
+                server-ready: RouteRequest.end is live). Text badge, not a
+                lock — lock reads as premium in this app (honesty ruling). */}
             <Pressable style={[st.routeTypeBtn, st.routeTypeBtnLocked]} disabled>
               <Icon name="arrow-forward-outline" size={16} color={C.faint} />
               <Text style={[st.routeTypeTxt, { color: C.faint }]}>일방통행</Text>
-              <View style={st.lockedBadge}>
-                <Icon name="lock-closed-outline" size={9} color={C.faint} />
+              <View style={st.soonBadge}>
+                <Text style={st.soonBadgeTxt}>준비 중</Text>
               </View>
             </Pressable>
           </View>
@@ -620,7 +654,8 @@ const st = StyleSheet.create({
   routeTypeBtnActive: { borderColor: C.accent, backgroundColor: C.accentDim },
   routeTypeBtnLocked: { backgroundColor: C.surfaceAlt, opacity: 0.65 },
   routeTypeTxt:       { fontSize: 14.5, fontWeight: '700', letterSpacing: -0.3 },
-  lockedBadge:        { position: 'absolute', top: 6, right: 8 },
+  soonBadge:          { position: 'absolute', top: 6, right: 8, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: R.pill, paddingHorizontal: 6, paddingVertical: 2 },
+  soonBadgeTxt:       { fontSize: 9.5, fontWeight: '700', color: C.faint, letterSpacing: -0.2 },
 
   // Chips (single and multi-select)
   chipRow:       { flexDirection: 'row', flexWrap: 'nowrap', gap: 8 },
@@ -698,6 +733,13 @@ const st = StyleSheet.create({
 
   noticeCard: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, backgroundColor: C.accentDim, borderWidth: 1, borderColor: C.accent + '44', borderRadius: R.md, padding: 12 },
   noticeTxt:  { flex: 1, fontSize: 12.5, color: C.accentGrn, letterSpacing: -0.2, lineHeight: 18 },
+
+  // 거리 미스 배너 — 경고 톤(C.sun): 오류(danger)도 정보(accent)도 아닌 주의
+  missCard:     { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: C.sun + '14', borderWidth: 1, borderColor: C.sun + '44', borderRadius: R.md, padding: 12 },
+  missTitle:    { fontSize: 13, fontWeight: '700', color: C.text, letterSpacing: -0.3 },
+  missSub:      { fontSize: 12, color: C.sub, letterSpacing: -0.2, marginTop: 2 },
+  missRetryBtn: { backgroundColor: C.surface, borderWidth: 1, borderColor: C.sun + '66', borderRadius: R.pill, paddingHorizontal: 12, paddingVertical: 7 },
+  missRetryTxt: { fontSize: 12.5, fontWeight: '700', color: C.text, letterSpacing: -0.2 },
 
   resultFooter: { position: 'absolute', bottom: 0, left: 0, right: 0, flexDirection: 'row', gap: 10, paddingHorizontal: S.gutter, paddingTop: S.md, backgroundColor: C.bg, borderTopWidth: 1, borderTopColor: C.border },
 });

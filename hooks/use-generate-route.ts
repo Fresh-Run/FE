@@ -22,6 +22,11 @@ export type GeneratedRoute = {
   estimated_duration_min: number | null;
   waypoints: Waypoint[];
   polyline: Coordinate[]; // raw path geometry for map preview
+  /** ±500m 보장 (BE 2026-07-14): true면 목표 ±0.5km를 4회 시도에도 못 맞춘
+      최선 후보 — 오차는 total_distance_km − 요청 target으로 클라이언트가 계산. */
+  target_missed?: boolean;
+  /** 초기 반경으로 실패해 탐색 반경을 넓혀 찾은 결과. */
+  radius_expanded?: boolean;
 };
 
 export type RouteInput = {
