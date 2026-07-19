@@ -998,6 +998,19 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 **VERIFIED [02:38] (owner, TF, production group `8d14cd64` — first slice under the amended doctrine):** 날씨 상세 painted instantly, zero dash window · 준비 중 pill renders, no lock icon · 친구/전체/코스 surfaces normal, full generation E2E fine. **Item-2 banner on-device outcome recorded as-reported:** the owner's report arrived with the banner bracket unfilled (rendered-correct vs no-natural-miss-in-N-tries unchosen) — the miss BANNER therefore stands on desk proof + the live server-flag probe (5.0→5.6 flagged), not on an on-device sighting; first natural TF miss confirms it visually, no action queued. Rollback standby (`10cfe4e4`) retired; `8d14cd64` is now the known-good production group.
 **SCAN-METHOD NOTE (permanent, byte-scan standing step):** Hermes stores non-ASCII strings in its string table as **UTF-16LE** — raw UTF-8 scans read 0 on ALL Korean copy (wave probe: `요청 거리와 조금 달라요` utf8=0 / utf16le=1; `준비 중` ×3 utf16le). ASCII counts (URLs, API paths) were and remain valid as-is. Korean desk proofs must scan UTF-16LE from now on.
 
+## ENDPOINT SWEEP (2026-07-20) — BOARD REORDERED BY FINDINGS (owner ruling)
+
+**Sweep:** 95 paths/123 ops (staging OpenAPI @ BE `c986215`) × client grep-proof, method-level resolution + dynamic-path false-negative check (`${kind}/upload-url` class). ~100 ops consumed and healthy.
+**⭐ LOCKED-SHOWROOM FINDING:** public courses are currently UNREACHABLE and UNSUPPLIABLE — GET /feed (wrapper deleted by ruling), /routes/nearby (retired), /routes/public + /routes/search (never consumed) leave no discovery surface, and PATCH publish/unpublish has no UI so no user can create supply. The entire course social layer (copy/like/comment/course-post) runs on seed data. **Supply valve = SLICE 2.**
+**Deliberate-unconsumed (as-is, no action):** GET /feed (endpoint live, our lane is runs) · /routes/nearby (retired) · preview-by-code GET variant (POST is ours) · /api/admin/* (ops) · /api/iap/notifications (server-to-server) · /api/iap/verify (pre-IAP, parked).
+**Queued post-beta:** RunUpdate.photos/area edit · RouteRequest.avoid_from_route_id ("이 코스 피해서 생성") · coach-script (premium lane) · course discovery/search surfaces.
+**exclude-self CONFIRMED LIVE on staging** (probe: 17 rows, 0 own) — impact audit held, zero client change needed, is_mine backward-compat (always false).
+**BOARD (owner sequence):** IMMEDIATE 502 rider (S, ships alone) → SLICE 1 run reporting (S, `target_type='run'` + run-post entry, UGC gap pre-external) → SLICE 2 코스 공개 + 내 코스 (M, plan-first; publish toggle + GET /routes library as saved-courses second tab + GET /routes/{id} reload) → SLICE 3 one-way unlock (M, plan approved 7-step, **PARKED until 지연's corridor/end-aware radius fix lands or she blesses the current schedule**).
+
+## v2.1 502 RIDER (2026-07-20, awaiting TF [HH:MM])
+
+**Live misbehavior fixed:** BE v2.1 rejects under-only 전패 with 502 `route_generation_failed` (quota released BEFORE raise — 미소모 always true); client showed the generic "(502)". Now mapped to honest copy: "조건에 맞는 코스를 찾지 못했어요. 쿼터는 소모되지 않았어요 — 조건을 바꿔 다시 시도해 주세요." Non-matching 502s (gateway class) keep the generic string; body parsed once (no double-read).
+
 ## DOCTRINE AMENDMENT (owner, 2026-07-20): DEV LANE RETIRED FOR VERIFICATION
 
 Both phones run the TF build; **all publishes go production-first**; owner verification happens on TF after the OTA dance; the [HH:MM] gates the verified-ledger entry per slice. NOT an exception — standing doctrine.

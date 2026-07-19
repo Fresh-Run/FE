@@ -98,6 +98,20 @@ async function generate(input: RouteInput, signal?: AbortSignal): Promise<Genera
       try { const b = await res.json(); qd = (b?.detail && typeof b.detail === 'object') ? b.detail : null; } catch { /* non-JSON */ }
       throw new Error(quotaExceededMessage(qd));
     }
+    if (res.status === 502) {
+      // v2.1 계약 (BE routes.py 502 detail.error): route_generation_failed =
+      // 생성 전패 반려(미달-only 포함) — 쿼터는 raise 전에 해제되므로 미소모가
+      // 항상 참. 다른 502(게이트웨이 등)는 아래 일반 매핑으로 폴백.
+      let code: string | null = null;
+      try {
+        const body = await res.json();
+        code = typeof body?.detail?.error === 'string' ? body.detail.error : null;
+      } catch { /* non-JSON 502 — generic fallback */ }
+      if (code === 'route_generation_failed') {
+        throw new Error('조건에 맞는 코스를 찾지 못했어요. 쿼터는 소모되지 않았어요 — 조건을 바꿔 다시 시도해 주세요.');
+      }
+      throw new Error('코스 생성에 실패했어요 (502)');
+    }
     let detail: string | null = null;
     try {
       const body = await res.json();
