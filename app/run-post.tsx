@@ -31,6 +31,7 @@ import {
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -57,6 +58,7 @@ import {
   unkudosRun,
   type RunComment,
 } from '@/lib/run-social-api';
+import { REPORT_REASONS, reportRun, type ReportReason } from '@/lib/reports-api';
 import {
   distUnit,
   fmtDist,
@@ -142,6 +144,34 @@ export default function RunPostScreen() {
 
   // Likers sheet (own mode — ♥ is count-only)
   const [likersOpen, setLikersOpen] = useState(false);
+
+  // 신고 sheet (others' runs only — ⋯ hidden on own mode; server self-400 is
+  // the backstop). The user-profile grammar verbatim: ⋯ → menu → reason
+  // picker; 204 AND 404 both land on 신고가 접수되었어요 (은닉 rule, hers).
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [sheetView, setSheetView] = useState<'menu' | 'report'>('menu');
+  const [reportReason, setReportReason] = useState<ReportReason | null>(null);
+  const [reportDetail, setReportDetail] = useState('');
+  const [reportBusy, setReportBusy] = useState(false);
+
+  function closeSheet() {
+    setMenuOpen(false);
+    setSheetView('menu'); setReportReason(null); setReportDetail(''); setReportBusy(false);
+  }
+
+  function submitReport() {
+    if (!params.runId || !reportReason || reportBusy) return;
+    setReportBusy(true);
+    reportRun(params.runId, reportReason, reportDetail)
+      .then(() => {
+        closeSheet();
+        Alert.alert('신고가 접수되었어요', '검토 후 필요한 조치를 취할게요.');
+      })
+      .catch((e: unknown) => {
+        setReportBusy(false);
+        Alert.alert('신고 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요.');
+      });
+  }
 
   // Comments
   const [comments, setComments]   = useState<RunComment[] | null>(null);
@@ -243,7 +273,14 @@ export default function RunPostScreen() {
           <Icon name="arrow-back" size={20} color={C.text} />
         </Pressable>
         <Text style={st.appBarTitle}>러닝</Text>
-        <View style={{ width: 36 }} />
+        {/* ⋯ — report entry, others' runs only (own mode keeps the spacer) */}
+        {!isOwn ? (
+          <Pressable onPress={() => setMenuOpen(true)} hitSlop={12} style={st.backBtn}>
+            <Icon name="ellipsis-horizontal" size={20} color={C.text} />
+          </Pressable>
+        ) : (
+          <View style={{ width: 36 }} />
+        )}
       </View>
 
       {loading ? (
@@ -400,6 +437,55 @@ export default function RunPostScreen() {
           )}
         </>
       )}
+
+      {/* ⋯ report sheet — user-profile grammar verbatim (menu → reason picker;
+          Modal hosts its own KAV: the native overlay sits outside the screen's
+          KAV tree). Single row for now — block stays a profile-level action. */}
+      <Modal visible={menuOpen} transparent animationType="slide" onRequestClose={closeSheet}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+        <Pressable style={st.sheetOverlay} onPress={closeSheet}>
+          <Pressable style={[st.sheet, { paddingBottom: Math.max(insets.bottom, 12) + 8 }]} onPress={() => {}}>
+            <View style={st.sheetHandleRow}><View style={st.sheetHandle} /></View>
+            {sheetView === 'menu' ? (
+              <Pressable onPress={() => setSheetView('report')} style={({ pressed }) => [st.sheetRow, pressed && { opacity: 0.7 }]}>
+                <Icon name="flag-outline" size={19} color={C.text} />
+                <Text style={st.sheetRowTxt}>신고하기</Text>
+              </Pressable>
+            ) : (
+              <>
+                <Text style={st.sheetTitle}>신고하기</Text>
+                {REPORT_REASONS.map(r => {
+                  const on = reportReason === r.value;
+                  return (
+                    <Pressable key={r.value} onPress={() => setReportReason(r.value)} style={({ pressed }) => [st.reasonRow, pressed && { opacity: 0.7 }]}>
+                      <Icon name={on ? 'radio-button-on' : 'radio-button-off'} size={19} color={on ? C.accentGrn : C.faint} />
+                      <Text style={[st.sheetRowTxt, on && { fontWeight: '700' }]}>{r.label}</Text>
+                    </Pressable>
+                  );
+                })}
+                <TextInput
+                  value={reportDetail}
+                  onChangeText={t => setReportDetail(t.slice(0, 500))}
+                  placeholder="자세한 내용 (선택)"
+                  placeholderTextColor={C.faint}
+                  multiline
+                  style={st.reportInput}
+                />
+                <Pressable
+                  onPress={submitReport}
+                  disabled={!reportReason || reportBusy}
+                  style={[st.reportSubmit, !reportReason && { backgroundColor: C.surfaceAlt }]}
+                >
+                  {reportBusy
+                    ? <ActivityIndicator size="small" color={C.accentText} />
+                    : <Text style={[st.reportSubmitTxt, !reportReason && { color: C.faint }]}>신고 제출</Text>}
+                </Pressable>
+              </>
+            )}
+          </Pressable>
+        </Pressable>
+        </KeyboardAvoidingView>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -409,6 +495,21 @@ const st = StyleSheet.create({
 
   appBar:      { flexDirection: 'row', alignItems: 'center', paddingHorizontal: S.gutter, paddingVertical: 10 },
   backBtn:     { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
+
+  // ⋯ report sheet (user-profile grammar verbatim — third screen-local copy
+  // of the house sheet idiom after crew-members/user-profile; extraction is a
+  // post-beta cleanup, not this S-slice)
+  sheetOverlay:   { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.42)' },
+  sheet:          { backgroundColor: C.bg, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: S.gutter },
+  sheetHandleRow: { alignItems: 'center', paddingTop: 10, paddingBottom: 2 },
+  sheetHandle:    { width: 38, height: 5, borderRadius: 99, backgroundColor: C.border },
+  sheetRow:       { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 16, paddingHorizontal: 4 },
+  sheetRowTxt:    { fontSize: 15, fontWeight: '600', color: C.text, letterSpacing: -0.3 },
+  sheetTitle:     { fontSize: 16, fontWeight: '700', color: C.text, letterSpacing: -0.4, paddingVertical: 10, textAlign: 'center' },
+  reasonRow:      { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 4 },
+  reportInput:    { minHeight: 64, maxHeight: 120, borderWidth: 1, borderColor: C.border, borderRadius: 12, backgroundColor: C.surfaceAlt, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, color: C.text, letterSpacing: -0.2, textAlignVertical: 'top', marginTop: 6 },
+  reportSubmit:   { height: 50, borderRadius: 14, backgroundColor: C.accent, alignItems: 'center', justifyContent: 'center', marginTop: 12 },
+  reportSubmitTxt:{ fontSize: 15, fontWeight: '700', color: C.accentText, letterSpacing: -0.3 },
   appBarTitle: { flex: 1, textAlign: 'center', fontSize: 16, fontWeight: '700', letterSpacing: -0.3, color: C.text },
 
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
