@@ -1007,9 +1007,10 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 **exclude-self CONFIRMED LIVE on staging** (probe: 17 rows, 0 own) — impact audit held, zero client change needed, is_mine backward-compat (always false).
 **BOARD (owner sequence):** IMMEDIATE 502 rider (S, ships alone) → SLICE 1 run reporting (S, `target_type='run'` + run-post entry, UGC gap pre-external) → SLICE 2 코스 공개 + 내 코스 (M, plan-first; publish toggle + GET /routes library as saved-courses second tab + GET /routes/{id} reload) → SLICE 3 one-way unlock (M, plan approved 7-step, **PARKED until 지연's corridor/end-aware radius fix lands or she blesses the current schedule**).
 
-## v2.1 502 RIDER (2026-07-20, awaiting TF [HH:MM])
+## v2.1 502 RIDER (2026-07-20 → VERIFIED [03:02] TF)
 
 **Live misbehavior fixed:** BE v2.1 rejects under-only 전패 with 502 `route_generation_failed` (quota released BEFORE raise — 미소모 always true); client showed the generic "(502)". Now mapped to honest copy: "조건에 맞는 코스를 찾지 못했어요. 쿼터는 소모되지 않았어요 — 조건을 바꿔 다시 시도해 주세요." Non-matching 502s (gateway class) keep the generic string; body parsed once (no double-read).
+**VERIFIED [03:02] (owner, TF, production group `269370be`):** regression pass — normal generation + miss-banner path unchanged. The 502 copy itself stands on desk proof (BE source contract + 지연's integration test + parser sanity-run + UTF-16LE string-in-artifact); sighted-in-the-wild pending a genuine 4-fold failure — recorded honestly, no action queued. Known-good production group promoted: `269370be-bc4e-414e-87e4-b1b80004df8a`.
 
 ## DOCTRINE AMENDMENT (owner, 2026-07-20): DEV LANE RETIRED FOR VERIFICATION
 
