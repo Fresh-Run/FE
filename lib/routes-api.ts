@@ -61,6 +61,40 @@ export function unbookmarkRoute(id: string): Promise<void> {
   return apiFetch<void>(`/api/routes/${id}/bookmark`, { method: 'DELETE' });
 }
 
+// ─── 내 코스 (owner view) — GET /routes · GET /routes/{id} · PATCH publish ────
+// Mirrors the backend StoredRoute (includes private fields; owner-only reads).
+// Wired 2026-07-20 (코스 공개 + 내 코스 slice — the locked-showroom supply valve).
+export type StoredRoute = {
+  id: string;
+  created_at: string;
+  user_id: string | null;
+  target_distance_km: number | null;
+  pitstop_keyword: string | null;
+  notes: string | null;
+  summary: string;
+  total_distance_km: number;
+  estimated_duration_min: number | null;
+  waypoints: { name: string; coordinate: Coordinate; is_pitstop: boolean; description: string | null }[];
+  polyline: Coordinate[] | null;
+  is_public: boolean;
+  copied_from: string | null;
+};
+
+/** My routes, newest first (server clamps limit). */
+export function getMyRoutes(): Promise<StoredRoute[]> {
+  return apiFetch<StoredRoute[]>('/api/routes?limit=100');
+}
+
+/** Single-route reload — owner-only server-side (others' → 404). */
+export function getMyRoute(id: string): Promise<StoredRoute> {
+  return apiFetch<StoredRoute>(`/api/routes/${id}`);
+}
+
+/** 공개/비공개 토글 (owner-only; 404 otherwise). Returns the updated row. */
+export function setRoutePublic(id: string, isPublic: boolean): Promise<StoredRoute> {
+  return apiFetch<StoredRoute>(`/api/routes/${id}`, { method: 'PATCH', body: { is_public: isPublic } });
+}
+
 // My private copy of a route (StoredRoute) — subset we consume.
 export type CopiedRoute = {
   id: string;

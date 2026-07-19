@@ -370,12 +370,14 @@ export default function CreateScreen() {
             </View>
           </View>
 
-          {/* ── Notice ─────────────────────────────────────────────────────── */}
+          {/* ── Notice — generation-exit discoverability (코스 공개 slice):
+                 routes persist server-side at generation; the old "저장은 다음
+                 업데이트에서" copy was stale the moment 내 코스 shipped ── */}
           <View style={{ paddingHorizontal: S.gutter, paddingTop: S.md }}>
             <View style={st.noticeCard}>
               <Icon name="information-circle-outline" size={15} color={C.accentGrn} />
               <Text style={st.noticeTxt}>
-                경로 저장은 다음 업데이트에서 지원돼요.
+                생성된 코스는 자동 저장돼요 — 뛰러 가기의 저장된 코스 › 내 코스에서 다시 볼 수 있어요.
               </Text>
             </View>
           </View>

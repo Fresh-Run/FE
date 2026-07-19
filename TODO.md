@@ -1018,6 +1018,13 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 **Contract probed live (staging, run-target):** 204 · dup 204 · 404(은닉) · 422 — identical to the user legs. **Probe residue:** 2 probe-marked report rows in 지연's admin queue (run `72b9f486`, "프로브 — 무시" in detail) — dismissal requested in relay.
 **VERIFIED [03:12] (owner, TF):** full flow + idempotent resubmit face + own-run ⋯ hidden + kudos/comments/composer/hero regression normal. Known-good production group promoted: `ccc03586-1dc1-48fe-9503-1640193bd12c`. UGC-moderation gap closed pre-external. Byte-scan note: Hermes dedupes identical literals — UTF-16LE counts are unique-string presence, not usage counts.
 
+## SLICE 2 — 코스 공개 + 내 코스 (2026-07-20, awaiting TF [HH:MM])
+
+**The locked-showroom supply valve.** Shipped: `StoredRoute` + getMyRoutes/getMyRoute/setRoutePublic (routes-api) · saved-courses tab segment 저장된 코스|내 코스 (D1: title unchanged — rename is a canvas question; 내 코스 has NO canvas design, house grammar per divergence ruling) · MyCourseRow with 공개/비공개 pill + confirm flow · preview direct-run branch (D3: own courses never copy; published-own == private-own via owner-unscoped reads) · generation-exit notice rewritten to the 내 코스 pointer (the old "저장은 다음 업데이트" copy was stale — routes persist at generation).
+**D2 CONDITIONAL FIRED (결정-B, probed live + BE source):** private-account owners' public courses are excluded from 둘러보기/검색 (`visible_owners` in `list_public_routes`) — reach is followers-only. Publish confirm branches on own `visibility`: private accounts get the honest followers-only copy; both branches carry "언제든 비공개로 되돌릴 수 있어요". Profile-fetch failure → public copy (disclosed trade-off).
+**Probes (world restored):** publish→verify→unpublish round-trip on `c359d431` clean; GET /routes?limit=100 → 200, 32 rows, 13-key parity. **Residue update: probe route `f85e2602` no longer exists** — 지연 cleaned/reseeded routes server-side; the ledgered generation-probe residue is self-resolved.
+**Honest expectation (also in relay):** publishing creates SUPPLY only — until item-4's CTA and/or a discovery surface ships, published courses surface in-app via linked runs only.
+
 ## DOCTRINE AMENDMENT (owner, 2026-07-20): DEV LANE RETIRED FOR VERIFICATION
 
 Both phones run the TF build; **all publishes go production-first**; owner verification happens on TF after the OTA dance; the [HH:MM] gates the verified-ledger entry per slice. NOT an exception — standing doctrine.

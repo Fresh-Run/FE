@@ -84,14 +84,27 @@ export default function CoursePreviewScreen() {
     }
     setStarting(true);
     try {
-      // "이 코스 달리기" = copy into my account; the copy's id links runs.route_id
-      const copy = await copyRoute(pending.id);
-      setActiveCourse({
-        id: copy.id,
-        title: copy.summary,
-        distanceKm: copy.total_distance_km,
-        polyline: copy.polyline ?? pending.polyline ?? null,
-      });
+      if (pending.is_mine) {
+        // 내 코스 direct-run (D3 ruling): no copy — runs.route_id links the
+        // ORIGINAL row (owner reads are visibility-unscoped, so published-own
+        // and private-own run identically). Copying own routes would mint a
+        // duplicate 내 코스 row per run.
+        setActiveCourse({
+          id: pending.id,
+          title: pending.summary,
+          distanceKm: pending.total_distance_km,
+          polyline: pending.polyline ?? null,
+        });
+      } else {
+        // "이 코스 달리기" = copy into my account; the copy's id links runs.route_id
+        const copy = await copyRoute(pending.id);
+        setActiveCourse({
+          id: copy.id,
+          title: copy.summary,
+          distanceKm: copy.total_distance_km,
+          polyline: copy.polyline ?? pending.polyline ?? null,
+        });
+      }
       // replace: back from tracking-idle should land on the feed, not here
       router.replace('/(course)/tracking' as any);
     } catch (e: unknown) {
