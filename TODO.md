@@ -892,7 +892,7 @@ Owner-ruled feature removal: the chips UI, VIBE_OPTIONS, vibes state, toggleVibe
 - **번잡한 길 피하기 softened (owner-ruled):** "사람 많은 길을 되도록 피해요" — the hint is a static LLM place-type bias (her prompt: `Runner preferences: 번잡한 길 피하기`, verbatim); no real-time congestion claim survives. 지연 note: Korean hint in an English template — hers to prune.
 - **MAP DIAGNOSIS (relay, zero FE work):** course cards' seed-stylized maps = **routes.polyline NULL on every row in the staging table** (`content-range: */0` with polyline non-null; waypoints [] too) — 지연's route seeder never wrote geometry (the runs reseed covered gps_track only). Client wiring correct (mapLive→RealMap, viewability-gated); first real geometry renders with no FE change. RELAY with column names.
 - **지연 palette ask (separate):** route color off neon green — hex settles owner↔지연 directly.
-- **BOARD ITEM (unranked, next board read): quota stale-tier honesty gap** — logged-out client logs `[quota] sync FAILED — holding last-known tier 'premium'`; a signed-out device retaining a paid tier flag needs a look.
+- ~~BOARD ITEM: quota stale-tier honesty gap~~ **KILLED (recon 2026-07-20, owner-accepted):** signed-out premium-holding is impossible in the current tree — the auth listener resets the quota store on every sign-out (`use-store.ts:167`, wired in `1adfd38` alongside the store itself), and a signed-out hydrate early-returns before any fetch. The logged line can only fire on a signed-in session whose sync failed — the DESIGNED never-silently-downgrade hold, per-user cache keys prevent cross-account bleed. **Residual (no action): an expired-token device shows premium UI until re-auth — cosmetic only; every premium gate is server-enforced (403/400 backstops).**
 
 ## 지연 CONSOLIDATED INTAKE (2026-07-16) — riders + post-⑦ queue
 
@@ -1044,6 +1044,10 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 **A3 (지연 honest tail, observed live):** 성수 one-way rough — 3km ask 전패, 4km flagged-over. Miss banner + 502 copy load-bearing as-is; no copy changes.
 **RIDER — `estimated_duration_min` SEMANTIC CHANGE (BE 2026-07-20): running-basis** (거리 × 6'30"/km; was T-map walking ~13분/km, ≈2× longer; 55/55 rows backfilled server-side). Client fallback formula (×6.5) now matches the server basis; "예상 시간" labels stay valid everywhere; NO client action. Displayed durations on old bookmarks/코스 will look ~halved — that's the fix, not a bug.
 **RIDER — StoredRoute one-way-flag nicety (지연 ask, cosmetic):** no field marks a stored route as one-way; 내 코스/preview can't label 편도. Harmless today (the end dot renders the true endpoint everywhere) — an `end`/`is_one_way` column on StoredRoute would let list rows badge it.
+
+## HONESTY WAVE — #2a+#2b+#4+#5 (2026-07-20, awaiting TF [HH:MM])
+
+**One commit/OTA (owner ruling on the rankings):** ① community crew-create lie fixed — the owned-crews empty card ("크루 생성은 다음 업데이트에서 지원돼요", FALSE since crew-create shipped) is now a live create entry (same route as the header button; owned==0 ⇒ no gate needed). ② weather-detail share button WIRED (was a dead Pressable since the screen shipped) — screen-data summary payload, dimmed until weather exists, quiet cancel-catch. ③ stale-comment sweep: item-17-locked notes ×3 rewritten as resolved-historical (bookmarks-api's deleted-export citation corrected), course-post entry note now states the b7ca600 orphaning truth (re-entry = repair slice). preview.tsx untouched (repair file). ④ **CLAUDE.md publish rules synced to the amended doctrine** — production-first, four compensating controls (incl. UTF-16LE scan rule + mandatory republish --message), development dormant, external-gate REVISIT, full project ID + sdkVersion rider. **Owner blessing granted on the shown diff (matches ledger point-for-point).**
 
 ## DOCTRINE AMENDMENT (owner, 2026-07-20): DEV LANE RETIRED FOR VERIFICATION
 

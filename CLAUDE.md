@@ -31,11 +31,18 @@ Checkpoints must include a "Pre-verified:" section listing what was run and the 
 
 ## EAS publish rules
 
-**The Expo Go path is VALIDATED (지연 open-test succeeded 2026-07-07) and is the standing workflow** for getting her the latest app without Ivan's Mac: she opens the freshrun project in Expo Go (logged into her invited member account); each publish reaches her on next open.
+**Doctrine (amended 2026-07-20, ledgered in TODO.md): PRODUCTION-FIRST.** Both phones run the TF build; all publishes go to the `production` channel after verified commits; the owner verifies ON TF after the OTA dance (open → kill → reopen), and his [HH:MM] gates the verified-ledger entry per slice. The Expo Go/channel-`main` workflow and the dev-channel-first verification lane are RETIRED (지연 lives on TF). The `development` channel is DORMANT — alive for build #9 installs, never a publish target.
 
-- Before ANY `eas update` publish, verify `.env.local`'s `EXPO_PUBLIC_API_URL` is the staging URL, never localhost/LAN — a localhost publish ships a dead app. Check it EVERY time, not from memory.
-- Publishes happen only after verified commits, same authorization rule as commits. Publish when the landed work is 지연-visible (screens/flows she'd open), skip for internal-only changes unless asked.
-- Manual publish only (`eas update --channel main -m "<message>"`) — no CI auto-publish. Project `99f17a15…` under the `freshrun1` account; runtimeVersion policy stays `sdkVersion` (Expo Go requirement — an `appVersion` policy publish is invisible to Expo Go).
+Compensating controls, standing — every production publish:
+
+1. HARD pre-flight with output shown: env-guard (`.env.local`'s `EXPO_PUBLIC_API_URL` is the staging URL, zero localhost/LAN — check EVERY time, not from memory) + `npx tsc --noEmit` + eslint + per-item desk proofs.
+2. Post-publish hash-tied byte-scan: the served production manifest's `launchAsset.hash` must equal sha256-b64url of the locally exported `dist/_expo/static/js/ios/entry-*.hbc`. String counts: ASCII for URLs/API paths; **UTF-16LE for Korean copy** (Hermes string-table encoding — UTF-8 scans read 0 on all Korean; counts are byte-occurrence, dedup-aware).
+3. Rollback pre-armed: every publish checkpoint states the previous known-good production group ID before firing (`npx eas-cli update:republish --group <id> --message "..."` — message is mandatory in non-interactive mode).
+4. 지연 pre-notified before each production publish.
+
+**REVISIT at the external gate:** production-only publishing is re-evaluated (strangers must not receive unverified bundles) — the dev lane returns or an internal staging channel is created.
+
+Mechanics: manual publish only, no CI — `npx eas-cli update --channel production -m "<message>" --non-interactive` (bare `eas` is not on PATH). Project `99f17a15-d9ba-4497-adb2-a25a8ac93c61` under the `freshrun1` account; runtimeVersion policy stays `sdkVersion` until the first custom-native-module build (that switch rides the same commit, per the standing rule).
 
 ## Data access
 

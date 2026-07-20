@@ -596,15 +596,22 @@ function MyCrewsTab() {
           })()}
         </View>
         {owned.length === 0 ? (
-          <View style={st.emptyDashed}>
+          // Live create entry — the old "다음 업데이트에서 지원돼요" copy was a
+          // stale lie (crew-create shipped; the header button above pushes it).
+          // owned==0 ⇒ the free 1-crew limit can't be hit — no gate needed.
+          <Pressable
+            onPress={() => router.push('/(community)/crew-create' as any)}
+            style={({ pressed }) => [st.emptyDashed, pressed && { opacity: 0.7 }]}
+          >
             <View style={st.emptyDashedIcon}>
               <Icon name="people-outline" size={20} color={C.accentGrn} />
             </View>
             <View style={{ flex: 1, minWidth: 0 }}>
               <Text style={st.emptyDashedTitle}>직접 크루 만들기</Text>
-              <Text style={st.emptyDashedSub}>크루 생성은 다음 업데이트에서 지원돼요</Text>
+              <Text style={st.emptyDashedSub}>러너들을 모아 함께 달려보세요</Text>
             </View>
-          </View>
+            <Icon name="chevron-forward" size={16} color={C.faint} />
+          </Pressable>
         ) : (
           <View style={{ gap: 13 }}>
             {owned.map(c => (

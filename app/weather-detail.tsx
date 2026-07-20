@@ -5,7 +5,7 @@
  */
 import { router } from 'expo-router';
 import React from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, G } from 'react-native-svg';
 
@@ -173,7 +173,23 @@ export default function WeatherDetailScreen() {
           <Icon name="close" size={22} color={C.text} />
         </Pressable>
         <Text style={styles.headerTitle}>날씨 상세 분석</Text>
-        <Pressable hitSlop={12} style={styles.headerBtn}>
+        {/* Share — was a dead Pressable (no onPress) since the screen shipped;
+            wired 2026-07-20 (#2b): the screen's own summary is the content.
+            Disabled until weather data exists (nothing honest to share). */}
+        <Pressable
+          hitSlop={12}
+          style={[styles.headerBtn, !w && { opacity: 0.35 }]}
+          disabled={!w}
+          onPress={() => {
+            if (!w) return;
+            Share.share({
+              message:
+                `${placeName ?? '현재 위치'} 러닝 날씨 — ${Math.round(w.temp_c)}° ${w.condition}, ` +
+                `체감 ${Math.round(w.feels_like_c)}° · AI 러닝 지수 ${w.running_index.score}/100 (${scoreTitle(w.running_index.score)})` +
+                ` — FreshRun`,
+            }).catch(() => {}); // user-cancelled share sheets throw on some platforms — quiet
+          }}
+        >
           <Icon name="share-outline" size={21} color={C.text} />
         </Pressable>
       </View>

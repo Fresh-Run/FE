@@ -1,6 +1,7 @@
 // Run social surface — kudos toggle, comments CRUD, track fetch (R3').
-// Lives apart from lib/runs-api.ts on purpose (same rationale as
-// kudos-api.ts): that file is item-17-locked uncommitted; this commits alone.
+// Historical split: lived apart from runs-api during the item-17 lock (long
+// resolved; same note in kudos-api.ts) — kept separate as-is, merging is
+// cosmetic.
 // Endpoints probed live 2026-07-10/11: comments GET/POST visibility-gated
 // (200 for a feed-visible run as non-owner), kudos POST/DELETE idempotent,
 // GET /runs/{id}/track open per the 4cd5685 contract (public/followers;

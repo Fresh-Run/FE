@@ -1,6 +1,7 @@
-// Full-row bookmarked-courses fetch (저장된 코스 list). Lives apart from
-// lib/routes-api.ts — that file is item-17-locked uncommitted; its committed
-// getBookmarkedRouteIds() only returns ids (the feed-ribbon workaround).
+// Full-row bookmarked-courses fetch (저장된 코스 list). Historical split:
+// this lived apart from routes-api during the item-17 lock (long resolved);
+// the id-only getBookmarkedRouteIds it references was DELETED 2026-07-17
+// (feed-triage). Kept separate as-is — merging into routes-api is cosmetic.
 // Rows are PublicRouteResponse-shaped (staging-probed 2026-07-08); server
 // caps limit at 100.
 import { apiFetch } from '@/lib/api';

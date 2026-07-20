@@ -5,9 +5,11 @@
  * pending-course rationale: owner-only GET /routes/{id}, oversized polyline).
  *
  * Live endpoints: ♥ = POST/DELETE /routes/{id}/like (optimistic + rollback),
- * comments = GET/POST /routes/{id}/comments. Entry: feed-card tap retarget
- * rides the item-17 gate (rider ④); until then DEV-only long-press from
- * 저장된 코스.
+ * comments = GET/POST /routes/{id}/comments. Entry: ORPHANED since the
+ * feed-triage slice (2026-07-17) took the course cards off home — the old
+ * item-17 rider-④ retarget never landed and the ledgered b7ca600 orphaning
+ * finding covers this screen; re-entry rides the item-4-expanded repair
+ * slice (course discovery lane).
  *
  * Adaptations from the run-post canvas (parity-noted in TODO.md): app bar
  * "코스" not "러닝"; stat tiles 거리/예상 시간/달린 횟수 (course has no run
