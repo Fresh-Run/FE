@@ -7,14 +7,16 @@
  * (canvas "목표 달성 시 진동" mis-describes live behavior — haptics fire on
  * hold-stop). Canvas-side correction logged on the parity list (TODO.md).
  */
+import Constants from 'expo-constants';
 import { router } from 'expo-router';
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/ui';
 import type { RunSettings } from '@/lib/settings-api';
 import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
+import { useScheme } from '@/store/use-scheme';
 import { useSettings } from '@/store/use-settings';
 
 // ─── Primitives (profile-tab clones + canvas-hub additions) ──────────────────
@@ -40,6 +42,28 @@ function ToggleRow({ label, sub, on, onChange }: { label: string; sub: string; o
       </View>
       <Toggle on={on} onChange={onChange} />
     </View>
+  );
+}
+
+// ⚠ TEMPORARY (dark-mode epic Phase 1) — dies with Phase 5's real picker.
+function VersionFooter() {
+  const devOverride = useScheme(s => s.devOverride);
+  const cycle = useScheme(s => s.cycleDevOverride);
+  const taps = useRef({ count: 0, last: 0 });
+  const onTap = () => {
+    const now = Date.now();
+    taps.current.count = now - taps.current.last > 1500 ? 1 : taps.current.count + 1;
+    taps.current.last = now;
+    if (taps.current.count >= 5) {
+      taps.current.count = 0;
+      cycle();
+    }
+  };
+  const suffix = devOverride ? ` · ${devOverride === 'dark' ? '다크' : '라이트'} 미리보기` : '';
+  return (
+    <Pressable onPress={onTap} style={st.versionRow}>
+      <Text style={st.versionTxt}>{`FreshRun ${Constants.expoConfig?.version ?? ''}${suffix}`}</Text>
+    </Pressable>
   );
 }
 
@@ -163,6 +187,12 @@ export default function SettingsScreen() {
             onPress={() => router.push('/delete-account' as any)}
           />
         </SettingGroup>
+
+        {/* Version footer — ⚠ TEMPORARY dark-mode dev-override host (epic
+            Phase 1): 5 quick taps cycles off → 다크 미리보기 → 라이트 → off.
+            Internal-only, disclosed to 지연; DIES with Phase 5's real picker.
+            The suffix makes the active override visible (no mystery state). */}
+        <VersionFooter />
       </ScrollView>
     </View>
   );
@@ -188,6 +218,9 @@ const st = StyleSheet.create({
 
   rowLabel: { fontSize: 14.5, fontWeight: '600', letterSpacing: -0.3, color: C.text },
   rowSub:   { fontSize: 12, color: C.faint, letterSpacing: -0.2, marginTop: 3 },
+
+  versionRow: { alignItems: 'center', paddingTop: S.xl, paddingBottom: S.sm },
+  versionTxt: { fontSize: 12, color: C.faint, letterSpacing: -0.2 },
 
   toggleRow:   { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14, paddingHorizontal: 4 },
   toggleTrack: { width: 46, height: 28, borderRadius: 14, padding: 3, justifyContent: 'center' },

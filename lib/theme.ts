@@ -265,3 +265,57 @@ export const md3 = {
   typography: md3Typography,
   elevation: md3Elevation,
 };
+
+// ─── Dark palette (dark-mode epic Phase 1, 2026-07-20) ───────────────────────
+// Source: canvas FR_DARK (auth-ui.jsx, the canonical page's theme object) +
+// the components' `c.dark ? c.accent : '#3F8E14'` ternary (accentGrn).
+// Status colors (blue/sun/aqi) are scheme-INVARIANT per canvas usage (rendered
+// unbranched in dark frames). DERIVED placeholders (no canvas source — each is
+// ledgered canvas debt until 지연's uncovered palettes land): crown, uv map.
+// USER-FACING RESOLUTION IS PINNED LIGHT until phases 3–4 are whole — this
+// palette is reachable only via the hidden dev override (store/use-scheme).
+
+/** Widened token shape — both palettes satisfy it; factories take this. */
+export type Tokens = {
+  [K in keyof typeof colors]: (typeof colors)[K] extends Record<string, string>
+    ? Record<string, string>
+    : string;
+};
+
+export const darkColors: Tokens = {
+  // Surfaces (canvas FR_DARK)
+  bg:         '#0E0F12',
+  surface:    '#15171C',
+  surfaceAlt: '#1B1E24',
+  border:     '#24282F',
+  // Text (canvas FR_DARK)
+  text:  '#F2F3F0',
+  sub:   '#9A9EA5',
+  faint: '#6A6F77',
+  // Accent (canvas FR_DARK; accentGrn via the components' dark ternary)
+  accent:     '#63C23A',
+  accentText: '#0B1505',
+  accentDim:  '#18260D',
+  accentGrn:  '#63C23A',
+  // Semantic — blue/sun scheme-invariant per canvas; danger from FR_DARK;
+  // crown DERIVED (no canvas source — canvas debt)
+  blue:   palette.blue400,
+  sun:    palette.amber400,
+  crown:  '#E8B53D',
+  danger: '#F0635A',
+  // Status maps — aqi invariant per canvas FR_AQI_COLOR (unbranched in dark);
+  // uv DERIVED (app-only ruling, no canvas source — canvas debt)
+  aqi: {
+    '좋음':    palette.aqiGood,
+    '보통':    palette.aqiOk,
+    '나쁨':    palette.aqiBad,
+    '매우나쁨': palette.aqiVeryBad,
+  },
+  uv: {
+    '낮음':    palette.aqiOk,
+    '보통':    palette.amber400,
+    '높음':    palette.aqiBad,
+    '매우높음': palette.aqiVeryBad,
+    '위험':    '#8A4FD8',
+  },
+};

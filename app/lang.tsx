@@ -2,6 +2,13 @@
  * 언어 — language picker (canvas: FrLangScreen). Persist-only: the selection
  * PATCHes /me/settings {lang} (optimistic, rollback) but runtime i18n is a
  * later item — the notice below states this honestly (T1-theme pattern).
+ *
+ * DARK-MODE PILOT (epic Phase 1, 2026-07-20): first screen on the
+ * useTokens/useStyles pattern — the reference conversion for every phase-3
+ * batch. Recipe: static `colors as C` import dropped; `const C = useTokens()`
+ * for inline uses; module-scope styles became the `makeSt(C)` factory
+ * resolved via `useStyles`. Dark is reachable only through the hidden dev
+ * override (설정 버전 row ×5) until phases 3–4 are whole.
  */
 import { router } from 'expo-router';
 import React from 'react';
@@ -9,8 +16,9 @@ import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/ui';
+import { useStyles, useTokens } from '@/hooks/use-tokens';
 import type { UserSettings } from '@/lib/settings-api';
-import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
+import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useSettings } from '@/store/use-settings';
 
 const OPTIONS: { value: UserSettings['lang']; label: string; sub: string }[] = [
@@ -22,6 +30,8 @@ export default function LangScreen() {
   const insets = useSafeAreaInsets();
   const lang = useSettings(s => s.settings.lang);
   const setLang = useSettings(s => s.setLang);
+  const C = useTokens();
+  const st = useStyles(makeSt);
 
   async function pick(value: UserSettings['lang']) {
     if (value === lang) return;
@@ -68,7 +78,7 @@ export default function LangScreen() {
   );
 }
 
-const st = StyleSheet.create({
+const makeSt = (C: Tokens) => StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
 
   appBar:      { flexDirection: 'row', alignItems: 'center', paddingHorizontal: S.gutter, paddingVertical: 12 },
