@@ -10,7 +10,8 @@ import { FlatList, Pressable, Image, StyleSheet, View } from 'react-native';
 
 import { MiniMap } from '@/components/mini-map';
 import { RealMap } from '@/components/real-map';
-import { colors as C } from '@/lib/theme';
+import { type Tokens } from '@/lib/theme';
+import { useStyles, useTokens } from '@/hooks/use-tokens';
 import type { Coordinate } from '@/types';
 
 type Slide = { key: string; type: 'map' } | { key: string; type: 'photo'; uri: string };
@@ -43,6 +44,8 @@ function MapSlide({ polyline, seed, height, onPress }: { polyline: Coordinate[] 
 }
 
 export function MediaCarousel({ polyline, seed, photos = [], height, onMapPress, onPhotoPress }: Props) {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   const [width, setWidth] = useState(0);
   const [idx, setIdx] = useState(0);
   const listRef = useRef<FlatList<Slide>>(null);
@@ -95,7 +98,7 @@ export function MediaCarousel({ polyline, seed, photos = [], height, onMapPress,
   );
 }
 
-const st = StyleSheet.create({
+const makeSt = (C: Tokens) => StyleSheet.create({
   dotsWrap: { position: 'absolute', bottom: 10, left: 0, right: 0, alignItems: 'center' },
   dotsPill: { flexDirection: 'row', gap: 5, backgroundColor: 'rgba(0,0,0,0.35)', borderRadius: 999, paddingHorizontal: 8, paddingVertical: 4 },
   dot:      { width: 6, height: 6, borderRadius: 3 },

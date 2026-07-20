@@ -45,7 +45,8 @@ import { uploadRunPhotos } from '@/lib/run-photos';
 import { saveRun, type NewRecord, type SavedRun } from '@/lib/runs-api';
 import { getMyStats, type MyStats } from '@/lib/stats-api';
 import { maybeWriteRunToHealth } from '@/lib/health';
-import { accentShadow, colors as C, radius as R, shadows } from '@/lib/theme';
+import { accentShadow, radius as R, shadows, type Tokens } from '@/lib/theme';
+import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { clearPendingRun, getPendingDraft, getPendingRun, getSavedResult } from '@/store/pending-run';
 import { useSettings } from '@/store/use-settings';
 import { useStore } from '@/store/use-store';
@@ -56,6 +57,7 @@ const MIN_SAVE_KM = 0.05; // 50m floor (owner spec, 2026-07-11 outing)
 
 // ─── 구간 페이스 chart — canvas FrDoneSplits ported to RN Svg ─────────────────
 function SplitsChart({ splits, avg }: { splits: number[]; avg: number }) {
+  const C = useTokens();
   const W = 320, H = 108, padT = 16, padB = 20, padL = 4, padR = 4;
   const n = splits.length, innerW = W - padL - padR, innerH = H - padT - padB;
   const bw = innerW / n;
@@ -97,6 +99,8 @@ function SplitsChart({ splits, avg }: { splits: number[]; avg: number }) {
 }
 
 export default function RunResultScreen() {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const displayName = useStore(s => s.displayName) ?? '러너';
@@ -424,7 +428,7 @@ export default function RunResultScreen() {
   );
 }
 
-const st = StyleSheet.create({
+const makeSt = (C: Tokens) => StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
 
   title: { fontSize: 25, fontWeight: '700', letterSpacing: -0.7, color: C.text },

@@ -50,7 +50,8 @@ import { setPendingRun } from '@/store/pending-run';
 import { useLocalProfile } from '@/store/use-local-profile';
 import { useSettings } from '@/store/use-settings';
 import { distUnit, fmtDist, fmtPaceIn, paceUnit } from '@/lib/run-format';
-import { accentShadow, colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
+import { accentShadow, radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
+import { useStyles, useTokens } from '@/hooks/use-tokens';
 
 const MAP_H = 330;                    // expanded-detent map viewport (canvas)
 const SHEET_TOP = MAP_H - 22;         // sheet's expanded top edge (canvas -22 overlap)
@@ -59,6 +60,8 @@ const COMPACT_VISIBLE = 100;          // compact detent: handle + strip
 // ─── Status badge (blinking dot while running) ────────────────────────────────
 
 function StatusBadge({ paused }: { paused: boolean }) {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   const opacity = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
@@ -84,6 +87,7 @@ function StatusBadge({ paused }: { paused: boolean }) {
 const WAVE_BARS = [10, 18, 26, 14, 22, 30, 16, 12, 24, 20, 28, 14];
 
 function Waveform({ active }: { active: boolean }) {
+  const st = useStyles(makeSt);
   const scales = useRef(WAVE_BARS.map(() => new Animated.Value(1))).current;
 
   useEffect(() => {
@@ -134,6 +138,8 @@ function HoldStop({ onComplete, size = 72, showLabel = true, gestureRef }: {
   /** Exposes this hold to the sheet's waitFor (Gesture.withRef). */
   gestureRef?: React.MutableRefObject<GestureType | undefined>;
 }) {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   const HOLD_SZ = size, HOLD_R = size / 2 - 3, HOLD_CIRC = 2 * Math.PI * HOLD_R;
   const [holding, setHolding] = useState(false);
   const progress = useRef(new Animated.Value(0)).current;
@@ -209,6 +215,7 @@ function KeepAwake() {
 // ─── Countdown overlay ────────────────────────────────────────────────────────
 
 function CountdownOverlay({ value }: { value: number }) {
+  const st = useStyles(makeSt);
   const scale = useRef(new Animated.Value(1.4)).current;
   const opacity = useRef(new Animated.Value(0)).current;
 
@@ -240,6 +247,8 @@ function fmtElapsed(sec: number): string {
 }
 
 export default function TrackingScreen() {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   // Course mode ("이 코스 달리기"): map shows the course shape, pill shows its
@@ -714,7 +723,7 @@ export default function TrackingScreen() {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const st = StyleSheet.create({
+const makeSt = (C: Tokens) => StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
 
   // Close (idle only)

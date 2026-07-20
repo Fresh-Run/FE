@@ -13,7 +13,8 @@ import { Icon } from '@/components/ui';
 import { MiniMap } from '@/components/mini-map';
 import { RealMap } from '@/components/real-map';
 import { distUnit, fmtDist, fmtDuration, fmtPaceIn, fmtWhen, paceUnit, timeTitle } from '@/lib/run-format';
-import { colors as C, shadows } from '@/lib/theme';
+import { shadows, type Tokens } from '@/lib/theme';
+import { useStyles, useTokens } from '@/hooks/use-tokens';
 import type { UserRun } from '@/hooks/use-user-profile';
 import type { useSettings } from '@/store/use-settings';
 
@@ -28,6 +29,8 @@ export function RunCard({ run, units, mapLive, onKudos, kudosOff, onOpen, onAvat
   /** discovery funnel: avatar tap → profile (absent = not tappable) */
   onAvatarPress?: () => void;
 }) {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   return (
     <Pressable onPress={onOpen} disabled={!onOpen} style={({ pressed }) => [st.card, shadows.sm, pressed && !!onOpen && { opacity: 0.85 }]}>
       <View style={st.cardHead}>
@@ -91,7 +94,7 @@ export function RunCard({ run, units, mapLive, onKudos, kudosOff, onOpen, onAvat
   );
 }
 
-const st = StyleSheet.create({
+const makeSt = (C: Tokens) => StyleSheet.create({
   card:      { backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 20, overflow: 'hidden' },
   cardHead:  { flexDirection: 'row', alignItems: 'center', gap: 9, paddingVertical: 11, paddingHorizontal: 14 },
   cardName:  { fontSize: 14, fontWeight: '700', color: C.text, letterSpacing: -0.3 },

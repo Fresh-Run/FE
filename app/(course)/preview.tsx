@@ -30,13 +30,11 @@ import { useSettings } from '@/store/use-settings';
 import { setActiveCourse } from '@/store/active-course';
 import { clearPendingCourse, getPendingCourse } from '@/store/pending-course';
 import { setRouteMap } from '@/store/route-map';
-import {
-  accentShadow,
-  colors as C,
+import { accentShadow,
   radius as R,
   shadows,
-  spacing as S,
-} from '@/lib/theme';
+  spacing as S, type Tokens } from '@/lib/theme';
+import { useStyles, useTokens } from '@/hooks/use-tokens';
 
 function parseItem(raw: string | string[] | undefined): CourseStatsInput {
   if (typeof raw !== 'string') return {};
@@ -44,6 +42,8 @@ function parseItem(raw: string | string[] | undefined): CourseStatsInput {
 }
 
 export default function CoursePreviewScreen() {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ item?: string }>();
   const [pending] = useState(() => getPendingCourse());
@@ -225,7 +225,7 @@ export default function CoursePreviewScreen() {
   );
 }
 
-const st = StyleSheet.create({
+const makeSt = (C: Tokens) => StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
 
   // Hero

@@ -51,7 +51,8 @@ import {
   type PublicRoute,
   type StoredRoute,
 } from '@/lib/routes-api';
-import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
+import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
+import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { setPendingCourse } from '@/store/pending-course';
 
 // ─── Filters (canvas: dist ranges + region keywords) ──────────────────────────
@@ -64,6 +65,8 @@ function regionOf(r: { summary: string }): string {
 const DIST_RANGES: [string, number, number][] = [['~5km', 0, 5], ['5–10km', 5, 10], ['10km+', 10, 9999]];
 
 function Chip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   return (
     <Pressable
       onPress={onPress}
@@ -77,6 +80,8 @@ function Chip({ label, active, onPress }: { label: string; active: boolean; onPr
 // ─── Row (canvas: FrSavedCourseCard) ──────────────────────────────────────────
 
 function CourseRow({ route, onOpen, onUnsave }: { route: PublicRoute; onOpen: () => void; onUnsave: () => void }) {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   const s = courseStats({
     dist: route.total_distance_km,
     dur:  route.estimated_duration_min != null ? fmtDuration(route.estimated_duration_min * 60) : undefined,
@@ -126,6 +131,8 @@ function CourseRow({ route, onOpen, onUnsave }: { route: PublicRoute; onOpen: ()
 function MyCourseRow({ route, onOpen, onTogglePublic }: {
   route: StoredRoute; onOpen: () => void; onTogglePublic: () => void;
 }) {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   return (
     <Pressable onPress={onOpen} style={({ pressed }) => [st.row, shadows.sm, pressed && { opacity: 0.8 }]}>
       <View style={{ width: 82 }}>
@@ -159,6 +166,8 @@ function MyCourseRow({ route, onOpen, onTogglePublic }: {
 type Undo = { route: PublicRoute; index: number } | null;
 
 export default function SavedCoursesScreen() {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
   const [tab, setTab]         = useState<'saved' | 'mine'>('saved');
   const [all, setAll]         = useState<PublicRoute[] | null>(null);
@@ -465,7 +474,7 @@ export default function SavedCoursesScreen() {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const st = StyleSheet.create({
+const makeSt = (C: Tokens) => StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
 
   appBar:      { flexDirection: 'row', alignItems: 'center', paddingHorizontal: S.md, paddingVertical: 10 },

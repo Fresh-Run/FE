@@ -28,7 +28,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '@/components/ui';
 import { SEOUL_FALLBACK } from '@/hooks/use-current-location';
 import { searchPlaces, type Place } from '@/lib/places-api';
-import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
+import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
+import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { useEndPoint } from '@/store/end-point';
 import { useStartPoint } from '@/store/start-point';
 
@@ -41,6 +42,8 @@ const inKorea = (lat: number, lng: number) =>
   lng >= KOREA_BOUNDS.lngMin && lng <= KOREA_BOUNDS.lngMax;
 
 export default function StartPickerScreen() {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
   // Initial region: the form's current effective start (passed as params).
   // target=end (v2.3 one-way unlock) reuses this screen verbatim as the
@@ -237,7 +240,7 @@ export default function StartPickerScreen() {
   );
 }
 
-const st = StyleSheet.create({
+const makeSt = (C: Tokens) => StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
 
   appBar:   { position: 'absolute', top: 0, left: 0, right: 0, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: S.gutter },

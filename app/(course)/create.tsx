@@ -42,7 +42,8 @@ import {
   type GeneratedRoute,
   type Waypoint,
 } from '@/hooks/use-generate-route';
-import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
+import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
+import { useStyles, useTokens } from '@/hooks/use-tokens';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -69,12 +70,15 @@ function fmtMin(min: number): string {
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function SectionLabel({ text }: { text: string }) {
+  const st = useStyles(makeSt);
   return <Text style={st.sectionLabel}>{text}</Text>;
 }
 
 function Chip({
   label, active, locked, onPress,
 }: { label: string; active: boolean; locked?: boolean; onPress?: () => void }) {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   return (
     <Pressable
       onPress={locked ? undefined : onPress}
@@ -90,6 +94,8 @@ function Chip({
 }
 
 function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   return (
     <Pressable
       onPress={() => onChange(!on)}
@@ -104,6 +110,7 @@ function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void 
 function AdvToggleRow({ label, sub, on, onChange }: {
   label: string; sub: string; on: boolean; onChange: (v: boolean) => void;
 }) {
+  const st = useStyles(makeSt);
   return (
     <View style={st.advToggleRow}>
       <View style={{ flex: 1, minWidth: 0 }}>
@@ -116,6 +123,7 @@ function AdvToggleRow({ label, sub, on, onChange }: {
 }
 
 function StatTile({ label, value }: { label: string; value: string }) {
+  const st = useStyles(makeSt);
   return (
     <View style={st.statTile}>
       <Text style={st.statVal}>{value}</Text>
@@ -125,6 +133,7 @@ function StatTile({ label, value }: { label: string; value: string }) {
 }
 
 function WaypointRow({ wp, index }: { wp: Waypoint; index: number }) {
+  const st = useStyles(makeSt);
   return (
     <View style={st.wpRow}>
       <View style={st.wpIndex}>
@@ -153,6 +162,8 @@ function WaypointRow({ wp, index }: { wp: Waypoint; index: number }) {
 const HERO_H = 210;
 
 export default function CreateScreen() {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
   const { generate } = useGenerateRoute();
 
@@ -688,7 +699,7 @@ export default function CreateScreen() {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const st = StyleSheet.create({
+const makeSt = (C: Tokens) => StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
 
   // Header
@@ -699,7 +710,7 @@ const st = StyleSheet.create({
   resetTxt:    { fontSize: 13.5, fontWeight: '600', color: C.sub },
 
   // Error banner
-  errBanner:    { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: S.gutter, paddingVertical: 10, backgroundColor: '#EF444412', borderBottomWidth: 1, borderBottomColor: '#EF444430' },
+  errBanner:    { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: S.gutter, paddingVertical: 10, backgroundColor: C.danger + '12', borderBottomWidth: 1, borderBottomColor: C.danger + '30' },
   errBannerTxt: { flex: 1, fontSize: 13, color: C.danger, letterSpacing: -0.2 },
 
   // Sections
@@ -800,8 +811,8 @@ const st = StyleSheet.create({
   wpIndexTxt:   { fontSize: 11, fontWeight: '800', color: C.accentGrn },
   wpName:       { fontSize: 14.5, fontWeight: '700', letterSpacing: -0.3, color: C.text },
   wpDesc:       { fontSize: 12.5, color: C.faint, letterSpacing: -0.2, marginTop: 2 },
-  pitstopBadge: { backgroundColor: '#3D8BFF18', borderRadius: 6, borderWidth: 1, borderColor: '#3D8BFF44', paddingHorizontal: 6, paddingVertical: 2 },
-  pitstopTxt:   { fontSize: 10, fontWeight: '800', color: '#3D8BFF', letterSpacing: 0.2 },
+  pitstopBadge: { backgroundColor: C.blue + '18', borderRadius: 6, borderWidth: 1, borderColor: C.blue + '44', paddingHorizontal: 6, paddingVertical: 2 },
+  pitstopTxt:   { fontSize: 10, fontWeight: '800', color: C.blue, letterSpacing: 0.2 },
 
   noticeCard: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, backgroundColor: C.accentDim, borderWidth: 1, borderColor: C.accent + '44', borderRadius: R.md, padding: 12 },
   noticeTxt:  { flex: 1, fontSize: 12.5, color: C.accentGrn, letterSpacing: -0.2, lineHeight: 18 },

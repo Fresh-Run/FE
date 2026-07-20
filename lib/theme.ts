@@ -67,7 +67,10 @@ export const colors = {
 
   // Accent (lime green)
   accent:      palette.lime400,
-  accentText:  palette.neutral950,  // text on lime backgrounds
+  // J1 ruling (2026-07-21): canvas FR_LIGHT.accentText adopted — the tree used
+  // #0D1A06 at 12 canvas-verbatim sites while the token held #111111; the
+  // canvas value wins (near-invisible on lime). Was palette.neutral950.
+  accentText:  '#0D1A06',
   accentDim:   palette.lime50,
   accentGrn:   palette.green700,    // dark-green text / icons on accentDim
 
@@ -75,6 +78,7 @@ export const colors = {
   blue:        palette.blue400,
   sun:         palette.amber400,    // sun icon, warning verdict
   crown:       '#E8B53D',           // 크루장 role badge (debt batch 2 — was inline ×5)
+  chart:       '#34B85A',           // J3 ruling: records sparkline green (was inline ×3)
   danger:      palette.red500,
 
   // AQI status map (index by Korean label)
@@ -302,6 +306,7 @@ export const darkColors: Tokens = {
   blue:   palette.blue400,
   sun:    palette.amber400,
   crown:  '#E8B53D',
+  chart:  '#34B85A',   // DERIVED placeholder (J3) — canvas debt with crown/uv
   danger: '#F0635A',
   // Status maps — aqi invariant per canvas FR_AQI_COLOR (unbranched in dark);
   // uv DERIVED (app-only ruling, no canvas source — canvas debt)

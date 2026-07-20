@@ -14,10 +14,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RealMap } from '@/components/real-map';
 import { Icon } from '@/components/ui';
 import { getRunTrack } from '@/lib/run-social-api';
-import { colors as C, shadows, spacing as S } from '@/lib/theme';
+import { shadows, spacing as S, type Tokens } from '@/lib/theme';
+import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { takeRouteMap } from '@/store/route-map';
 
 export default function RouteMapScreen() {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
   const { height: winH } = useWindowDimensions();
   const [payload] = useState(() => takeRouteMap()); // one-shot; survives re-render
@@ -72,7 +75,7 @@ export default function RouteMapScreen() {
   );
 }
 
-const st = StyleSheet.create({
+const makeSt = (C: Tokens) => StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
 
   topBar:   { position: 'absolute', top: 0, left: 0, right: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: S.lg, gap: 8, zIndex: 2 },

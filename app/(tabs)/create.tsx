@@ -24,13 +24,11 @@ import { useQuota } from '@/store/use-quota';
 import { useSettings } from '@/store/use-settings';
 import { useWeather } from '@/hooks/use-weather';
 import { weatherIcon } from '@/lib/weather-api';
-import {
-  colors as C,
-  radius as R,
+import { radius as R,
   shadows,
   spacing as S,
-  type as T,
-} from '@/lib/theme';
+  type as T, type Tokens } from '@/lib/theme';
+import { useStyles, useTokens } from '@/hooks/use-tokens';
 
 function getWeekBounds(): [Date, Date] {
   const now = new Date();
@@ -45,6 +43,8 @@ function getWeekBounds(): [Date, Date] {
 }
 
 export default function CreateTabScreen() {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
   const tabBarInset = useTabBarInset();
   const { placeName, coordinate, status: locStatus } = useCurrentLocation();
@@ -225,7 +225,7 @@ export default function CreateTabScreen() {
   );
 }
 
-const st = StyleSheet.create({
+const makeSt = (C: Tokens) => StyleSheet.create({
   root:    { flex: 1, backgroundColor: C.bg },
   scroll:  { flex: 1 },
   content: { paddingHorizontal: S.gutter },

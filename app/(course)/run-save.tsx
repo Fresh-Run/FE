@@ -43,7 +43,8 @@ import { distUnit, fmtDist, fmtDuration, fmtPaceIn, fmtWhen, paceUnit, timeTitle
 import { MAX_RUN_PHOTOS, reencodeForUpload } from '@/lib/run-photos';
 import { maybeWriteRunToHealth } from '@/lib/health';
 import { saveRun, type RunVisibility } from '@/lib/runs-api';
-import { colors as C, radius as R, spacing as S } from '@/lib/theme';
+import { radius as R, spacing as S, type Tokens } from '@/lib/theme';
+import { useStyles, useTokens } from '@/hooks/use-tokens';
 import {
   clearPendingRun,
   getPendingDraft,
@@ -66,6 +67,8 @@ const visibilityLabel = (v: RunVisibility) =>
   VISIBILITY_OPTIONS.find(o => o.value === v)?.label ?? '전체 공개';
 
 export default function RunSaveScreen() {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const units = useSettings(s => s.settings.units);
@@ -466,7 +469,7 @@ export default function RunSaveScreen() {
   );
 }
 
-const st = StyleSheet.create({
+const makeSt = (C: Tokens) => StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
 
   appBar:      { flexDirection: 'row', alignItems: 'center', paddingHorizontal: S.md, paddingVertical: 10, gap: 8 },

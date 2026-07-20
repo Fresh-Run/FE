@@ -37,7 +37,8 @@ import { openProfile } from '@/lib/profile-nav';
 import { type FeedRun } from '@/lib/feed-api';
 import { kudosRun, unkudosRun } from '@/lib/run-social-api';
 import { fmtDist } from '@/lib/run-format';
-import { colors as C, shadows, spacing as S } from '@/lib/theme';
+import { shadows, spacing as S, type Tokens } from '@/lib/theme';
+import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { useQuota } from '@/store/use-quota';
 import { useSettings } from '@/store/use-settings';
 import { useStore } from '@/store/use-store';
@@ -47,7 +48,8 @@ import { weatherIcon, weatherTone, type WeatherTone } from '@/lib/weather-api';
 
 // ─── Constants / helpers ──────────────────────────────────────────────────────
 
-function verdictColor(tone: WeatherTone): string {
+// Plain helper — tokens passed in (hooks live in components only)
+function verdictColor(C: Tokens, tone: WeatherTone): string {
   if (tone === 'good') return C.accent;
   if (tone === 'ok')   return C.sun;
   return C.danger;
@@ -62,6 +64,8 @@ function formatDate(): string {
 // ─── Greeting header ──────────────────────────────────────────────────────────
 
 function Greeting({ name, photoUrl, showBellDot, onBell }: { name: string; photoUrl: string | null; showBellDot: boolean; onBell: () => void }) {
+  const C = useTokens();
+  const gst = useStyles(makeGst);
   return (
     <View style={gst.row}>
       <View style={{ minWidth: 0, flex: 1 }}>
@@ -84,7 +88,7 @@ function Greeting({ name, photoUrl, showBellDot, onBell }: { name: string; photo
   );
 }
 
-const gst = StyleSheet.create({
+const makeGst = (C: Tokens) => StyleSheet.create({
   row:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   date:     { fontSize: 12.5, color: C.faint, letterSpacing: -0.2, fontWeight: '600' },
   heading:  { fontSize: 20, fontWeight: '700', letterSpacing: -0.7, color: C.text, marginTop: 3 },
@@ -96,6 +100,8 @@ const gst = StyleSheet.create({
 // ─── Weather strip ────────────────────────────────────────────────────────────
 
 function WeatherStrip({ onPress }: { onPress: () => void }) {
+  const C = useTokens();
+  const wst = useStyles(makeWst);
   // W2: live data (shared useWeather cache/TTL; quiet dashes; Seoul fallback).
   // SINGLE ROW, FIXED-SIZE (⑥ final, owner ruling 2026-07-16): every text
   // in THIS strip is allowFontScaling={false} — a deliberate one-component
@@ -109,8 +115,9 @@ function WeatherStrip({ onPress }: { onPress: () => void }) {
   // worst case (375pt): 286 ≤ 309 — comfortable.
   const { weather: w, placeName } = useWeather();
   const tone = w ? weatherTone(w.running_index.score) : null;
-  const vc = tone ? verdictColor(tone) : null;
-  const icon = w ? weatherIcon(w.condition_code, w.is_day) : { name: 'sunny', color: '#E8A23D' };
+  const vc = tone ? verdictColor(C, tone) : null;
+  // T4 (phase-2 ruling): fallback sun color via token
+  const icon = w ? weatherIcon(w.condition_code, w.is_day) : { name: 'sunny', color: C.sun };
   return (
     <Pressable onPress={onPress} style={[wst.strip, shadows.sm]}>
       <Icon name={icon.name as any} size={26} color={icon.color} />
@@ -147,7 +154,7 @@ function WeatherStrip({ onPress }: { onPress: () => void }) {
   );
 }
 
-const wst = StyleSheet.create({
+const makeWst = (C: Tokens) => StyleSheet.create({
   strip:      { width: '100%', flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 16, paddingTop: 11, paddingBottom: 11, paddingLeft: 14, paddingRight: 12 },
   tempGroup:  { flexDirection: 'row', alignItems: 'baseline', gap: 6, flexShrink: 1, minWidth: 0 },
   temp:       { fontSize: 22, fontWeight: '700', color: C.text, letterSpacing: -0.8, flexShrink: 0 },
@@ -170,6 +177,8 @@ const wst = StyleSheet.create({
 // ─── Feed tabs ────────────────────────────────────────────────────────────────
 
 function FeedTabs({ tab, setTab, radiusKm }: { tab: string; setTab: (v: string) => void; radiusKm: number }) {
+  const C = useTokens();
+  const ftt = useStyles(makeFtt);
   // The label tracks the LIVE radius (10, or 20 after the one retry)
   const units = useSettings(s => s.settings.units);
   const radiusLabel = units === 'mi' ? `내 위치 ${fmtDist(radiusKm, 'mi', 1)}mi 이내` : `내 위치 ${radiusKm}km 이내`;
@@ -190,7 +199,7 @@ function FeedTabs({ tab, setTab, radiusKm }: { tab: string; setTab: (v: string) 
   );
 }
 
-const ftt = StyleSheet.create({
+const makeFtt = (C: Tokens) => StyleSheet.create({
   row:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   seg:      { flexDirection: 'row', gap: 3, backgroundColor: C.surfaceAlt, borderWidth: 1, borderColor: C.border, borderRadius: 999, padding: 3 },
   btn:      { height: 32, borderRadius: 999, paddingHorizontal: 18, alignItems: 'center', justifyContent: 'center' },
@@ -203,6 +212,7 @@ const ftt = StyleSheet.create({
 // ─── AI banner ────────────────────────────────────────────────────────────────
 
 function AIBanner({ locked, onPress }: { locked?: boolean; onPress: () => void }) {
+  const abt = useStyles(makeAbt);
   return (
     <Pressable onPress={onPress} style={abt.banner}>
       <LinearGradient
@@ -236,7 +246,7 @@ function AIBanner({ locked, onPress }: { locked?: boolean; onPress: () => void }
   );
 }
 
-const abt = StyleSheet.create({
+const makeAbt = (C: Tokens) => StyleSheet.create({
   banner:   { position: 'relative', borderRadius: 22, paddingHorizontal: 20, paddingTop: 20, paddingBottom: 22, overflow: 'hidden', shadowColor: '#2BA94F', shadowOpacity: 0.32, shadowRadius: 26, shadowOffset: { width: 0, height: 10 }, elevation: 6 },
   circle1:  { position: 'absolute', top: -30, right: -24, width: 152, height: 152, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.14)' },
   circle2:  { position: 'absolute', bottom: -52, right: 36, width: 96, height: 96, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.10)' },
@@ -250,6 +260,8 @@ const abt = StyleSheet.create({
 // ─── List states ──────────────────────────────────────────────────────────────
 
 function ListState({ icon, title, sub, btn, onBtn }: { icon: string; title: string; sub?: string; btn?: string; onBtn?: () => void }) {
+  const C = useTokens();
+  const lst = useStyles(makeLst);
   return (
     <View style={lst.wrap}>
       <Icon name={icon} size={38} color={C.faint} />
@@ -265,6 +277,8 @@ function ListState({ icon, title, sub, btn, onBtn }: { icon: string; title: stri
 }
 
 function ErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
+  const C = useTokens();
+  const lst = useStyles(makeLst);
   return (
     <View style={lst.wrap}>
       <Icon name="warning-outline" size={36} color={C.faint} />
@@ -276,7 +290,7 @@ function ErrorState({ message, onRetry }: { message: string; onRetry: () => void
   );
 }
 
-const lst = StyleSheet.create({
+const makeLst = (C: Tokens) => StyleSheet.create({
   wrap:     { alignItems: 'center', gap: 10, paddingVertical: 48, paddingHorizontal: S.gutter },
   title:    { fontSize: 14, color: C.faint, fontWeight: '600', letterSpacing: -0.2, textAlign: 'center' },
   sub:      { fontSize: 12.5, color: C.faint, letterSpacing: -0.2, textAlign: 'center', marginTop: -4 },
@@ -289,6 +303,8 @@ const lst = StyleSheet.create({
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 export default function HomeScreen() {
+  const C = useTokens();
+  const lst = useStyles(makeLst);
   const insets      = useSafeAreaInsets();
   const tabBarInset = useTabBarInset(); // 홈 was the last clipper — floating pill overlap
   const displayName = useStore((s) => s.displayName);

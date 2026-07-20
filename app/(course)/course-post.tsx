@@ -45,7 +45,8 @@ import {
   type RouteComment,
 } from '@/lib/routes-api';
 import { fmtWhen } from '@/lib/run-format';
-import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
+import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
+import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { setPendingCourse } from '@/store/pending-course';
 import { getPendingPost } from '@/store/pending-post';
 import { useStore } from '@/store/use-store';
@@ -60,6 +61,7 @@ function fmtEstMin(min: number | null): string {
 }
 
 function StatTile({ label, value }: { label: string; value: string }) {
+  const st = useStyles(makeSt);
   return (
     <View style={[st.statTile, shadows.sm]}>
       <Text style={st.statVal} numberOfLines={1}>{value}</Text>
@@ -69,6 +71,8 @@ function StatTile({ label, value }: { label: string; value: string }) {
 }
 
 export default function CoursePostScreen() {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
   // Handoff read once; the store stays set so re-renders survive
   const [route] = useState(getPendingPost);
@@ -267,7 +271,7 @@ export default function CoursePostScreen() {
   );
 }
 
-const st = StyleSheet.create({
+const makeSt = (C: Tokens) => StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
 
   appBar:      { flexDirection: 'row', alignItems: 'center', paddingHorizontal: S.gutter, paddingVertical: 10 },
@@ -291,7 +295,7 @@ const st = StyleSheet.create({
 
   actionRow:     { flexDirection: 'row', gap: 10, marginTop: 12 },
   likeBtn:       { flex: 1, height: 46, borderRadius: R.md, borderWidth: 1, borderColor: C.border, backgroundColor: C.surface, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7 },
-  likeBtnActive: { borderColor: C.danger, backgroundColor: '#EF444414' },
+  likeBtnActive: { borderColor: C.danger, backgroundColor: C.danger + '14' },
   likeTxt:       { fontSize: 13.5, fontWeight: '700', color: C.sub, letterSpacing: -0.2 },
   runBtn:        { flex: 2, height: 46, borderRadius: R.md, backgroundColor: C.accent, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7 },
   runTxt:        { fontSize: 14, fontWeight: '700', color: C.accentText, letterSpacing: -0.3 },
