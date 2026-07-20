@@ -5,11 +5,16 @@
  *     segments. 유저 rows → 프로필 (locked users show the 🔒 screen — A′
  *     holds; search returns them identity-only with bio=null). 크루 rows →
  *     크루 상세.
- *   INVITE (crewId param, from 크루원 관리 → 초대하기): 유저-only, each row
- *     carries an 초대 action → POST /crews/{id}/invitations. Any member can
- *     invite (probed — not a permission key). Honest per-row feedback from
- *     what the server actually returns: 초대됨 (204) / 이미 멤버 (409) /
- *     초대할 수 없어요 (404 은닉 — 차단·프로필 없음).
+ *   INVITE (crewId param; entries: 크루원 앱바 아이콘 · 크루 생성 성공 모달 ·
+ *     크루 관리 초대 카드 — the 2026-07-20 discoverability slice): 유저-only,
+ *     each row carries an 초대 action → POST /crews/{id}/invitations. Any
+ *     member can invite (probed — not a permission key). Honest per-row
+ *     feedback from what the server actually returns: 초대됨 (204) / 이미
+ *     멤버 (409) / 초대할 수 없어요 (404 은닉 — 차단·프로필 없음).
+ *     A pinned "링크로 초대" row keeps the reach-anyone share lane inside the
+ *     picker (GET-then-issue — never blind-issue, regeneration invalidates
+ *     shared codes; code endpoints are 크루장-gated → honest fallback line
+ *     for non-owner members).
  *
  * Search discipline (출발지-picker house pattern): 400ms debounce, 2-char
  * floor (server 422 below 2), monotonic seq stale-guard.
@@ -21,6 +26,7 @@ import {
   Alert,
   FlatList,
   Pressable,
+  Share,
   StyleSheet,
   Text,
   TextInput,
@@ -31,7 +37,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Avatar } from '@/components/avatar';
 import { SafeImage } from '@/components/safe-image';
 import { Icon } from '@/components/ui';
-import { inviteToCrew, searchCrews, type Crew } from '@/lib/crews-api';
+import { getInviteCode, inviteToCrew, issueInviteCode, searchCrews, type Crew } from '@/lib/crews-api';
 import { searchUsers, type UserSearchItem } from '@/lib/profile-api';
 import { openProfile } from '@/lib/profile-nav';
 import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
@@ -43,7 +49,7 @@ type InviteState = 'idle' | 'sending' | 'sent' | 'member';
 
 export default function UserSearchScreen() {
   const insets = useSafeAreaInsets();
-  const { crewId } = useLocalSearchParams<{ crewId?: string }>();
+  const { crewId, crewName } = useLocalSearchParams<{ crewId?: string; crewName?: string }>();
   const inviteMode = !!crewId;
 
   const [q, setQ] = useState('');
@@ -74,6 +80,30 @@ export default function UserSearchScreen() {
     }, DEBOUNCE_MS);
     return () => clearTimeout(t);
   }, [trimmed, activeSeg]);
+
+  // 링크로 초대 — the reach-anyone lane, relocated INTO the picker (2026-07-20
+  // slice: the crew-create modal's share moved here; crew-admin keeps its own
+  // card). GET first, issue only on 미발급 — blind issuance would invalidate a
+  // code the owner already shared. Code endpoints are 크루장-gated: non-owner
+  // members get the honest line, direct row-invites stay their lane.
+  const [shareBusy, setShareBusy] = useState(false);
+  const shareInviteLink = useCallback(async () => {
+    if (!crewId || shareBusy) return;
+    setShareBusy(true);
+    try {
+      const code = (await getInviteCode(crewId)) ?? (await issueInviteCode(crewId));
+      await Share.share({
+        message: `FreshRun 크루${crewName ? ` '${crewName}'` : ''}에 초대해요!\n초대 코드: ${code}\n앱 커뮤니티 탭의 '코드로 가입'에서 입력해 주세요.`,
+      }).catch(() => {}); // user-cancelled sheet — quiet
+    } catch {
+      Alert.alert(
+        '초대 링크를 준비하지 못했어요',
+        '초대 링크 공유는 크루장 전용이에요 — 이름 검색 초대는 크루원 누구나 보낼 수 있어요.',
+      );
+    } finally {
+      setShareBusy(false);
+    }
+  }, [crewId, crewName, shareBusy]);
 
   const sendInvite = useCallback(async (u: UserSearchItem) => {
     if (!crewId || invite[u.user_id] === 'sending' || invite[u.user_id] === 'sent' || invite[u.user_id] === 'member') return;
@@ -189,6 +219,22 @@ export default function UserSearchScreen() {
             ))}
           </View>
         )}
+
+        {/* 링크로 초대 — pinned, query-independent (invite mode only) */}
+        {inviteMode && (
+          <Pressable onPress={shareInviteLink} disabled={shareBusy} style={({ pressed }) => [st.shareRow, pressed && { opacity: 0.7 }]}>
+            <View style={st.shareIcon}>
+              {shareBusy
+                ? <ActivityIndicator size="small" color={C.accentGrn} />
+                : <Icon name="share-outline" size={17} color={C.accentGrn} />}
+            </View>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={st.shareTitle}>링크로 초대</Text>
+              <Text style={st.shareSub}>앱이 없는 친구에게 초대 코드를 보내요</Text>
+            </View>
+            <Icon name="chevron-forward" size={16} color={C.faint} />
+          </Pressable>
+        )}
       </View>
 
       {trimmed.length < MIN_Q ? (
@@ -236,6 +282,12 @@ const st = StyleSheet.create({
   appBarTitle: { flex: 1, textAlign: 'center', fontSize: 16, fontWeight: '700', letterSpacing: -0.3, color: C.text },
 
   searchBar:   { flexDirection: 'row', alignItems: 'center', gap: 9, height: 46, borderRadius: 14, borderWidth: 1.5, borderColor: C.border, backgroundColor: C.surface, paddingHorizontal: 14, marginTop: 4 },
+
+  // 링크로 초대 pinned row (invite mode)
+  shareRow:   { flexDirection: 'row', alignItems: 'center', gap: 11, marginTop: 10, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 14, paddingVertical: 11, paddingHorizontal: 13 },
+  shareIcon:  { width: 34, height: 34, borderRadius: 11, backgroundColor: C.accentDim, alignItems: 'center', justifyContent: 'center' },
+  shareTitle: { fontSize: 14, fontWeight: '700', color: C.text, letterSpacing: -0.3 },
+  shareSub:   { fontSize: 11.5, color: C.faint, letterSpacing: -0.2, marginTop: 1 },
   searchInput: { flex: 1, minWidth: 0, fontSize: 14.5, color: C.text, letterSpacing: -0.2, padding: 0 },
 
   segRow:   { flexDirection: 'row', alignSelf: 'flex-start', gap: 3, backgroundColor: C.surfaceAlt, borderWidth: 1, borderColor: C.border, borderRadius: R.pill, padding: 3, marginTop: 12 },

@@ -6,7 +6,8 @@
  *
  * Approved deviations: 출발지 = editable text defaulting to the current
  * placeName; 첫 챌린지 block deferred (own item, paired with challenge
- * display); success 초대하기 → 준비 중 (owner-invite UI is its own item).
+ * display); success 초대하기 → user-search INVITE picker (2026-07-20 slice —
+ * the share lane lives inside the picker's 링크로 초대 row).
  */
 import Slider from '@react-native-community/slider';
 import { useFocusEffect } from '@react-navigation/native';
@@ -21,7 +22,6 @@ import {
   Platform,
   Pressable,
   ScrollView,
-  Share,
   StyleSheet,
   Switch,
   Text,
@@ -33,7 +33,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '@/components/ui';
 import { NumberWheelRow } from '@/components/wheel-sheet';
 import { createChallenge, dateToKstIsoDay, kstDateStr } from '@/lib/challenges-api';
-import { createCrew, issueInviteCode, CREW_TAG_GROUPS, CREW_TAG_MAX, type Crew, type CrewLevel } from '@/lib/crews-api';
+import { createCrew, CREW_TAG_GROUPS, CREW_TAG_MAX, type Crew, type CrewLevel } from '@/lib/crews-api';
 import { useCurrentLocation } from '@/hooks/use-current-location';
 import { accentShadow, colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
 import { takePendingCrewRegion } from '@/store/pending-crew-region';
@@ -296,18 +296,15 @@ export default function CrewCreateScreen() {
     }
   }
 
-  // Debt batch 2: the 준비-중 stub died — invite codes shipped (S-batch2).
-  // The natural "crew made, now invite" moment: issue the code + share sheet.
-  async function shareInviteForCreated() {
-    if (!created) return;
-    try {
-      const code = await issueInviteCode(created.id);
-      await Share.share({
-        message: `FreshRun 크루 '${created.name}'에 초대해요!\n초대 코드: ${code}\n앱 커뮤니티 탭의 '코드로 가입'에서 입력해 주세요.`,
-      });
-    } catch (e: unknown) {
-      Alert.alert('초대 코드 오류', e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요');
-    }
+  // 크루원 초대하기 → the in-app picker (2026-07-20 discoverability slice).
+  // The old direct share sheet RELOCATED into the picker's 링크로 초대 row —
+  // both lanes stay live. Land on crew-detail first (replace) so back from
+  // the picker exits to the crew, not the spent create form.
+  function inviteForCreated() {
+    const { id, name } = created!;
+    setCreated(null);
+    router.replace({ pathname: '/(community)/crew-detail' as any, params: { crewId: id } });
+    router.push({ pathname: '/(community)/user-search' as never, params: { crewId: id, crewName: name } });
   }
 
   const goDetail = () => {
@@ -485,7 +482,7 @@ export default function CrewCreateScreen() {
 
       <CreatedModal
         crew={created}
-        onInvite={shareInviteForCreated}
+        onInvite={inviteForCreated}
         onLater={goDetail}
         onDismiss={() => { setCreated(null); router.back(); }}
       />

@@ -290,6 +290,17 @@ export default function CrewAdminScreen() {
                   </Pressable>
                 )}
               </View>
+              {/* 이름 초대 — the in-app picker lane beside the share lane
+                  (2026-07-20 discoverability slice; both lanes stay live) */}
+              <Pressable
+                onPress={() => router.push({ pathname: '/(community)/user-search' as never, params: { crewId: crewId!, crewName: crew.name } })}
+                style={({ pressed }) => [st.inviteSearchRow, shadows.sm, pressed && { opacity: 0.7 }]}
+              >
+                <Icon name="person-add-outline" size={17} color={C.accentGrn} />
+                <Text style={st.inviteSearchTxt}>이름으로 검색해 초대</Text>
+                <View style={{ flex: 1 }} />
+                <Icon name="chevron-forward" size={16} color={C.faint} />
+              </Pressable>
             </>
           )}
 
@@ -364,6 +375,8 @@ const st = StyleSheet.create({
 
   sectionTitle: { fontSize: 11.5, fontWeight: '700', letterSpacing: 0.6, color: C.faint, textTransform: 'uppercase', paddingHorizontal: 4, paddingTop: 22, paddingBottom: 8 },
   inviteCard:     { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 18, padding: 14 },
+  inviteSearchRow: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 18, padding: 14, marginTop: 10 },
+  inviteSearchTxt: { fontSize: 14, fontWeight: '700', color: C.text, letterSpacing: -0.3 },
   inviteLbl:      { fontSize: 11, fontWeight: '600', color: C.faint, letterSpacing: -0.1 },
   inviteCode:     { fontSize: 20, fontWeight: '800', color: C.text, letterSpacing: 2, marginTop: 2, fontVariant: ['tabular-nums'] },
   inviteShareBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: C.accent, borderRadius: R.pill, paddingHorizontal: 14, height: 38 },
