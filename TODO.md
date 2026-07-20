@@ -1034,7 +1034,9 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 **REPAIR SLICE = ITEM 4 EXPANDED (plan-first, gated on 지연's canvas blessing — upgraded to urgent):** canvas card B's CTA + bookmark on run cards (demand-side close of both casualties) PLUS preview gaining a bookmark-add ("이 코스 저장") — the one surface all course paths flow through.
 **STANDING LESSONS (owner-ledgered):** ① a "generalized/shared" checkpoint walks EVERY consumer of the shared thing; ② a slice that removes a surface must enumerate the AFFORDANCES that die with it (not just the dead exports) — the b7ca600 orphaning is the type specimen.
 
-## SLICE 3 — 편도/일방통행 REAL UNLOCK, v2.3 (2026-07-20, awaiting TF [HH:MM])
+## SLICE 3 — 편도/일방통행 REAL UNLOCK, v2.3 (2026-07-20, ⏸ VERIFICATION PARKED — no [HH:MM])
+
+**PARKED STATUS (owner, 2026-07-20):** published (group `b777dc16` live) · client legs informally observed — 도착지 reveal, picker both modes, 502 honest copy sighted twice at 용산 **with quota preserved** · **one-way SERVING unconfirmed: 2× 전패 at 용산** (5.0km and 3.5km asks, ~1.3km direct hop) — possible rough-region finding for 지연's instrumentation (relay). Verification resumes on the owner's word; NO verified entry until then.
 
 **UNPARKED on 지연's v2.3 deploy (BE `c781f97`, v68 — corridor geometry + feasibility gate).** Shipped: end-point store · start-picker parameterized `target=end` (4 edits, sibling fallback unused) · `RouteInput.end` presence-keyed (loop mode OMITS the field — her gate keys on end presence, not prefer_loop; confirmed) · 경로 유형 live two-way choice, **준비 중 pill dead** · 도착지 row (출발지 grammar) + CTA gating · feasibility pre-warn (C.sun lane) with 설정 chip, local formula == server (`d/0.8` 0.1-올림, probe-identical 12.9) · `OneWayTooFarError` 422 mapping → "이 거리로는 도착지가 너무 멀어요 — 최소 Xkm가 필요해요." (unit-native, server min authoritative).
 **Build-time verifies resolved:** RealMap already draws an unconditional end dot at the last point — one-way heroes need zero code; tracking has no loop/auto-finish geometry; band/다시 생성/miss banner shape-agnostic.
