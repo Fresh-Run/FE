@@ -1,7 +1,7 @@
 import { useFocusEffect } from '@react-navigation/native';
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -23,6 +23,7 @@ import type { RunSettings } from '@/lib/settings-api';
 import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
 import { useHealth } from '@/store/use-health';
 import { useQuota } from '@/store/use-quota';
+import { useScheme } from '@/store/use-scheme';
 import { useSettings } from '@/store/use-settings';
 import { useStore } from '@/store/use-store';
 
@@ -188,6 +189,30 @@ function PremiumBanner() {
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 const APP_VERSION = Constants.expoConfig?.version ?? '1.0.0';
+
+// ⚠ TEMPORARY (dark-mode epic Phase 1) — dies with Phase 5's real picker.
+function VersionFooter() {
+  const devOverride = useScheme(s => s.devOverride);
+  const cycle = useScheme(s => s.cycleDevOverride);
+  const taps = useRef({ count: 0, last: 0 });
+  // onPressIn = touch-down: counts before any scroll/bounce can cancel the
+  // press (the release-cancel class the settings-orphan version was open to).
+  const onPressIn = () => {
+    const now = Date.now();
+    taps.current.count = now - taps.current.last > 1500 ? 1 : taps.current.count + 1;
+    taps.current.last = now;
+    if (taps.current.count >= 5) {
+      taps.current.count = 0;
+      cycle();
+    }
+  };
+  const suffix = devOverride ? ` · ${devOverride === 'dark' ? '다크' : '라이트'} 미리보기` : '';
+  return (
+    <Pressable onPressIn={onPressIn} pressRetentionOffset={{ top: 24, bottom: 24, left: 48, right: 48 }}>
+      <Text style={st.versionFooter}>{`FreshRun ${APP_VERSION} · Made in Seoul${suffix}`}</Text>
+    </Pressable>
+  );
+}
 
 export default function ProfileScreen() {
   const insets  = useSafeAreaInsets();
@@ -432,8 +457,14 @@ export default function ProfileScreen() {
           />
         </View>
 
-        {/* Version footer */}
-        <Text style={st.versionFooter}>FreshRun {APP_VERSION} · Made in Seoul</Text>
+        {/* Version footer — ⚠ TEMPORARY dark-mode dev-override host (epic
+            Phase 1 fix: relocated here from the ORPHANED app/settings.tsx,
+            which no route ever displayed — deleted). 5 quick taps cycles
+            off → 다크 미리보기 → 라이트 → off; active state shows as a label
+            suffix. Counting on onPressIn (touch-down) + pressRetentionOffset:
+            immune to the release-cancel/bounce-steal class at the bouncy
+            bottom of this ScrollView. DIES with Phase 5's real picker. */}
+        <VersionFooter />
       </ScrollView>
     </View>
   );
