@@ -7,7 +7,7 @@ import {
   View,
 } from 'react-native';
 
-import { useTheme } from '@/contexts/theme';
+import { md3 } from '@/lib/theme';
 import { Icon } from './icon';
 import { Text } from './text';
 
@@ -41,7 +41,7 @@ export function Input({
   editable?: boolean;
 }) {
   const [showText, setShowText] = useState(false);
-  const { colors, radius } = useTheme();
+  const { colors, radius } = md3;
   const c = colors;
 
   const hasError = !!error;

@@ -405,17 +405,18 @@ export default function ProfileScreen() {
             onPress={() => router.push('/units' as any)}
           />
           {/* 다크 모드 row HIDDEN pre-TestFlight (owner ruling 2026-07-16,
-              line-132): settings.theme is persist-only — the app renders by
-              SYSTEM scheme (useColorScheme direct) and nothing consumes the
-              toggle, so a rendered control would be a dead affordance.
-              TODO(post-beta): wire theme rendering to settings.theme (or
-              adopt Appearance.setColorScheme), then restore this row AND
-              app/theme.tsx (orphaned by this hide — kept for the return).
+              line-132): settings.theme is persist-only. Phase 0 (2026-07-20)
+              pinned the app LIGHT-ONLY (the half-dark scaffold system died);
+              the dark-mode EPIC (phases 1-5, parked post-launch) themes the
+              app for real — mode pre-ruled 시스템/라이트/다크 three-way,
+              default 시스템. Restore this row AND app/theme.tsx with the
+              epic's Phase 5 picker.
               Persist plumbing (useSettings.theme, /theme screen, server
               field) intact by design. */}
           <SettingRow icon={<Icon name="globe-outline"         size={19} color={C.sub} />} label="언어"       value={lang === 'en' ? 'English' : '한국어'} onPress={() => router.push('/lang' as any)} />
-          {/* 도움말/약관 screens don't exist yet — honest 준비 중 (house pattern),
-              not a dead row or a faked screen. Wire when the screens land. */}
+          {/* 도움말/약관 — LIVE screens (help-center.tsx / terms.tsx); the old
+              "don't exist yet" note outlived their shipping (comment fixed
+              2026-07-20, Phase-0 ride-along). */}
           <SettingRow icon={<Icon name="headset-outline"       size={19} color={C.sub} />} label="도움말 센터" onPress={() => router.push('/help-center' as any)} />
           <SettingRow icon={<Icon name="document-text-outline" size={19} color={C.sub} />} label="서비스 약관" onPress={() => router.push('/terms' as any)} />
         </SettingGroup>

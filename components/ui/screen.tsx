@@ -2,7 +2,7 @@ import React from 'react';
 import { ScrollView, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 import { Edge, SafeAreaView } from 'react-native-safe-area-context';
 
-import { useTheme } from '@/contexts/theme';
+import { md3 } from '@/lib/theme';
 
 export function Screen({
   children,
@@ -19,7 +19,7 @@ export function Screen({
   contentStyle?: StyleProp<ViewStyle>;
   background?: string;
 }) {
-  const { colors, spacing } = useTheme();
+  const { colors, spacing } = md3;
   const bg = background ?? colors.background;
   const pad = padded ? { paddingHorizontal: spacing.containerMargin } : undefined;
 

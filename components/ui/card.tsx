@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleProp, View, ViewStyle } from 'react-native';
 
-import { useTheme } from '@/contexts/theme';
+import { md3 } from '@/lib/theme';
 
 export function Card({
   children,
@@ -16,7 +16,7 @@ export function Card({
   radius?: number;
   elevated?: boolean;
 }) {
-  const { colors, spacing, radius: r, elevation } = useTheme();
+  const { colors, spacing, radius: r, elevation } = md3;
 
   return (
     <View

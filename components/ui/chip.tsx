@@ -1,7 +1,7 @@
 import React from 'react';
 import { Pressable, StyleSheet } from 'react-native';
 
-import { useTheme } from '@/contexts/theme';
+import { md3 } from '@/lib/theme';
 import { Icon } from './icon';
 import { Text } from './text';
 
@@ -20,7 +20,7 @@ export function Chip({
   onPress?: () => void;
   tone?: Tone;
 }) {
-  const { colors } = useTheme();
+  const { colors } = md3;
   const c = colors;
 
   const bg =

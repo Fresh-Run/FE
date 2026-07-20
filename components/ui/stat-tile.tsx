@@ -1,7 +1,6 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { useTheme } from '@/contexts/theme';
 import { Text } from './text';
 
 export function StatTile({
@@ -21,8 +20,6 @@ export function StatTile({
   labelColor?: string;
   big?: boolean;
 }) {
-  const { colors } = useTheme();
-
   return (
     <View style={[styles.tile, align === 'left' ? styles.left : styles.center]}>
       <View style={styles.valueRow}>

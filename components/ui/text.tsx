@@ -1,8 +1,8 @@
 import React from 'react';
 import { StyleProp, Text as RNText, TextStyle } from 'react-native';
 
-import { useTheme } from '@/contexts/theme';
-import { ColorTokens } from '@/constants/colors';
+import { md3 } from '@/lib/theme';
+import { type ColorTokens } from '@/lib/theme';
 
 type Variant = 'headlineXl' | 'headlineLg' | 'headlineMd' | 'bodyLg' | 'bodyMd' | 'labelLg' | 'labelSm' | 'statDisplay';
 
@@ -23,7 +23,7 @@ export function Text({
   style?: StyleProp<TextStyle>;
   numberOfLines?: number;
 }) {
-  const { colors, typography } = useTheme();
+  const { colors, typography } = md3;
 
   const resolvedColor =
     color == null

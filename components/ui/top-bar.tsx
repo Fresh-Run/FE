@@ -1,7 +1,7 @@
 import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { useTheme } from '@/contexts/theme';
+import { md3 } from '@/lib/theme';
 import { Icon } from './icon';
 import { Text } from './text';
 
@@ -22,7 +22,7 @@ export function TopBar({
   onAction?: () => void;
   avatar?: React.ReactNode;
 }) {
-  const { colors } = useTheme();
+  const { colors } = md3;
   const c = colors;
 
   return (

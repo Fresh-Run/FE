@@ -1,3 +1,5 @@
+import { Platform, type TextStyle, type ViewStyle } from 'react-native';
+
 /**
  * FreshRun design tokens — single source of truth.
  *
@@ -175,3 +177,91 @@ export const type = {
   ctaLabel:   { fontSize: 16, fontWeight: '700' as const, letterSpacing: -0.3 },
   ringScore:  { fontSize: 34, fontWeight: '700' as const, letterSpacing: -1.5 },
 } as const;
+
+// ═════════════════════════════════════════════════════════════════════════════
+// LEGACY MD3 TOKENS — LIGHT-FROZEN (dark-mode Phase 0, 2026-07-20)
+//
+// The scaffold-era theme system (contexts/theme + constants/*) followed the OS
+// scheme and put the app in a half-dark state (dark auth + light main — four
+// symptoms, owner-observed). Phase 0 ruling: that system DIES; its light
+// values move here VERBATIM so the auth screens + ui scaffold components
+// render pixel-identically while consuming the same single source of truth.
+// The MD3 vocabulary itself retires in the dark-mode epic's Phase 1
+// (tokenization onto `colors` above) — do not add new consumers.
+// ═════════════════════════════════════════════════════════════════════════════
+
+export type ColorTokens = {
+  background: string; onBackground: string;
+  surface: string; surfaceDim: string; surfaceBright: string;
+  surfaceContainerLowest: string; surfaceContainerLow: string; surfaceContainer: string;
+  surfaceContainerHigh: string; surfaceContainerHighest: string;
+  onSurface: string; onSurfaceVariant: string; surfaceVariant: string;
+  inverseSurface: string; inverseOnSurface: string;
+  outline: string; outlineVariant: string; surfaceTint: string;
+  primary: string; onPrimary: string; primaryContainer: string; onPrimaryContainer: string;
+  inversePrimary: string; primaryFixed: string; primaryFixedDim: string;
+  onPrimaryFixed: string; onPrimaryFixedVariant: string;
+  secondary: string; onSecondary: string; secondaryContainer: string; onSecondaryContainer: string;
+  tertiary: string; onTertiary: string; tertiaryContainer: string; onTertiaryContainer: string;
+  error: string; onError: string; errorContainer: string; onErrorContainer: string;
+  amber: string; neon: string; scrim: string;
+};
+
+const md3Colors: ColorTokens = {
+  background: '#faf9fe', onBackground: '#1a1b1f',
+  surface: '#faf9fe', surfaceDim: '#dad9df', surfaceBright: '#faf9fe',
+  surfaceContainerLowest: '#ffffff', surfaceContainerLow: '#f4f3f8', surfaceContainer: '#eeedf3',
+  surfaceContainerHigh: '#e9e7ed', surfaceContainerHighest: '#e3e2e7',
+  onSurface: '#1a1b1f', onSurfaceVariant: '#3d4a3a', surfaceVariant: '#e3e2e7',
+  inverseSurface: '#2f3034', inverseOnSurface: '#f1f0f5',
+  outline: '#6d7b68', outlineVariant: '#bbcbb5', surfaceTint: '#006e1c',
+  primary: '#006e1c', onPrimary: '#ffffff', primaryContainer: '#32d74b', onPrimaryContainer: '#005814',
+  inversePrimary: '#42e355', primaryFixed: '#70ff76', primaryFixedDim: '#42e355',
+  onPrimaryFixed: '#002204', onPrimaryFixedVariant: '#005313',
+  secondary: '#5f5e60', onSecondary: '#ffffff', secondaryContainer: '#e2dfe1', onSecondaryContainer: '#636264',
+  tertiary: '#005bc1', onTertiary: '#ffffff', tertiaryContainer: '#9bbbff', onTertiaryContainer: '#00489b',
+  error: '#ba1a1a', onError: '#ffffff', errorContainer: '#ffdad6', onErrorContainer: '#93000a',
+  amber: '#f59e0b', neon: '#42e355', scrim: 'rgba(0,0,0,0.5)',
+};
+
+const md3Spacing = { stackSm: 8, stackMd: 12, gutterMd: 16, containerMargin: 20, stackLg: 24, sectionGap: 32 } as const;
+const md3Radius  = { sm: 4, md: 8, lg: 12, xl: 16, xxl: 20, xxxl: 24, full: 9999 } as const;
+
+const md3Typography = {
+  headlineXl:  { fontSize: 34, fontWeight: '700', lineHeight: 41, letterSpacing: -0.4 },
+  headlineLg:  { fontSize: 28, fontWeight: '700', lineHeight: 34, letterSpacing: -0.4 },
+  headlineMd:  { fontSize: 22, fontWeight: '600', lineHeight: 28, letterSpacing: -0.4 },
+  bodyLg:      { fontSize: 17, fontWeight: '400', lineHeight: 22, letterSpacing: -0.4 },
+  bodyMd:      { fontSize: 15, fontWeight: '400', lineHeight: 20, letterSpacing: -0.2 },
+  labelLg:     { fontSize: 13, fontWeight: '600', lineHeight: 18, letterSpacing: 0 },
+  labelSm:     { fontSize: 11, fontWeight: '500', lineHeight: 13, letterSpacing: 0.06 },
+  statDisplay: { fontSize: 24, fontWeight: '700', lineHeight: 30, letterSpacing: 0.5 },
+} satisfies Record<string, TextStyle>;
+
+const md3Elevation: Record<'card' | 'sheet' | 'fab', ViewStyle> = {
+  card: Platform.select({
+    ios:     { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 12 },
+    android: { elevation: 2 },
+    default: {},
+  }) as ViewStyle,
+  sheet: Platform.select({
+    ios:     { shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.10, shadowRadius: 24 },
+    android: { elevation: 8 },
+    default: {},
+  }) as ViewStyle,
+  fab: Platform.select({
+    ios:     { shadowColor: '#006e1c', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.30, shadowRadius: 12 },
+    android: { elevation: 10 },
+    default: {},
+  }) as ViewStyle,
+};
+
+/** The frozen light theme object — same shape the old useTheme() returned. */
+export const md3 = {
+  dark: false as const,
+  colors: md3Colors,
+  spacing: md3Spacing,
+  radius: md3Radius,
+  typography: md3Typography,
+  elevation: md3Elevation,
+};

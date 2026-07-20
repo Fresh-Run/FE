@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle, Path, Text as SvgText } from 'react-native-svg';
 
 import { Button, Text } from '@/components/ui';
-import { useTheme } from '@/contexts/theme';
+import { md3 } from '@/lib/theme';
 import { useStore } from '@/store/use-store';
 
 const ROUTE_PATH =
@@ -14,7 +14,7 @@ const START = { cx: 18,  cy: 195 };
 const END   = { cx: 372, cy: 70  };
 
 export default function WelcomeScreen() {
-  const { colors } = useTheme();
+  const { colors } = md3;
   const _devBypassAuth = useStore((s) => s._devBypassAuth);
   const c = colors;
 

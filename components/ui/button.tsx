@@ -8,7 +8,7 @@ import {
   ViewStyle,
 } from 'react-native';
 
-import { useTheme } from '@/contexts/theme';
+import { md3 } from '@/lib/theme';
 import { Icon } from './icon';
 import { Text } from './text';
 
@@ -35,7 +35,7 @@ export function Button({
   large?: boolean;
   style?: StyleProp<ViewStyle>;
 }) {
-  const { colors, elevation } = useTheme();
+  const { colors, elevation } = md3;
   const c = colors;
 
   const bg: Record<Variant, string> = {

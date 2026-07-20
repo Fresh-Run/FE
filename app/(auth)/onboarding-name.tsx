@@ -31,7 +31,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AvatarCrop, type CropSource } from '@/components/avatar-crop';
 import { Button, Icon, Input, Text } from '@/components/ui';
-import { useTheme } from '@/contexts/theme';
+import { md3 } from '@/lib/theme';
 import { ApiError } from '@/lib/api';
 import { uploadAvatar } from '@/lib/avatar-api';
 import { updateProfile } from '@/lib/profile-api';
@@ -41,7 +41,7 @@ import { useStore } from '@/store/use-store';
 type Step = 1 | 2 | 3;
 
 export default function OnboardingScreen() {
-  const { colors } = useTheme();
+  const { colors } = md3;
   const setDisplayName    = useStore((s) => s.setDisplayName);
   const setPhotoUrl       = useStore((s) => s.setPhotoUrl);
   const markProfileCreated = useStore((s) => s.markProfileCreated);

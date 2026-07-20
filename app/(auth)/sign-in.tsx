@@ -4,11 +4,11 @@ import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, TextInput, View 
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button, Icon, Input, Text } from '@/components/ui';
-import { useTheme } from '@/contexts/theme';
+import { md3 } from '@/lib/theme';
 import { useStore } from '@/store/use-store';
 
 export default function SignInScreen() {
-  const { colors } = useTheme();
+  const { colors } = md3;
   const signIn = useStore((s) => s.signIn);
 
   const [email, setEmail] = useState('');

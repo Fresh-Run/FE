@@ -1,12 +1,11 @@
-import { DarkTheme, DefaultTheme, ThemeProvider as NavThemeProvider } from '@react-navigation/native';
+import { DefaultTheme, ThemeProvider as NavThemeProvider } from '@react-navigation/native';
 import { router, Stack, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import 'react-native-reanimated';
 
-import { ThemeProvider, useTheme } from '@/contexts/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { md3 } from '@/lib/theme';
 import { usePushSync } from '@/lib/push';
 import { endLiveActivity } from '@/modules/live-activity';
 // ① background GPS: the location task must be DEFINED at bundle evaluation on
@@ -74,7 +73,7 @@ function PushSync() {
 }
 
 function LoadingScreen() {
-  const { colors } = useTheme();
+  const { colors } = md3;
   return (
     <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background }}>
       <ActivityIndicator size="large" color={colors.primary} />
@@ -84,32 +83,33 @@ function LoadingScreen() {
 
 function RootLayoutInner() {
   const sessionLoading = useStore((s) => s.sessionLoading);
-  const colorScheme    = useColorScheme();
-  const { dark }       = useTheme();
 
   // Block rendering until we know the session state to prevent flash.
   if (sessionLoading) return <LoadingScreen />;
 
+  // Dark-mode Phase 0 (2026-07-20): the app is LIGHT-ONLY until the epic
+  // ships — navigator theme and status bar are PINNED so OS dark can't
+  // produce the half-dark state (dark auth / white status icons on light
+  // screens / dark transition underlays). Un-pin in the epic's Phase 1.
   return (
-    <NavThemeProvider value={dark ? DarkTheme : DefaultTheme}>
+    <NavThemeProvider value={DefaultTheme}>
       {/* Native headers hidden by default — every screen renders its own
           in-content header per the design. Future sub-screens inherit this. */}
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(course)"       options={{ presentation: 'fullScreenModal' }} />
         <Stack.Screen name="weather-detail" options={{ animation: 'slide_from_bottom' }} />
-        <Stack.Screen name="modal"          options={{ presentation: 'modal', title: '', headerShown: true }} />
       </Stack>
-      <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
+      <StatusBar style="dark" />
     </NavThemeProvider>
   );
 }
 
 export default function RootLayout() {
   return (
-    <ThemeProvider>
+    <>
       <AuthGuard />
       <PushSync />
       <RootLayoutInner />
-    </ThemeProvider>
+    </>
   );
 }

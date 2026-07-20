@@ -1,7 +1,7 @@
 import React from 'react';
 import { Pressable, StyleSheet, Switch, View } from 'react-native';
 
-import { useTheme } from '@/contexts/theme';
+import { md3 } from '@/lib/theme';
 import { Icon } from './icon';
 import { Text } from './text';
 
@@ -18,7 +18,7 @@ export function ToggleRow({
   value: boolean;
   onValueChange: (v: boolean) => void;
 }) {
-  const { colors } = useTheme();
+  const { colors } = md3;
   const c = colors;
 
   return (
@@ -53,7 +53,7 @@ export function SegmentedControl({
   value: string;
   onChange: (v: string) => void;
 }) {
-  const { colors, elevation } = useTheme();
+  const { colors, elevation } = md3;
   const c = colors;
 
   return (
