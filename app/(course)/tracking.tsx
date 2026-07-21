@@ -278,11 +278,17 @@ export default function TrackingScreen() {
   // ①: the background task keeps tracking through a sleeping screen, so
   // 화면 항상 켜기 is now a genuine user choice, not a GPS crutch.
   const keepScreenOn = useSettings(s2 => s2.settings.run.keep_screen_on);
-  const coachSet  = useAudioCoach();
+  // 지연 report fix (2026-07-21): NO render-path subscription to the coach
+  // store — every cue-time read is an imperative getState() snapshot at fire
+  // time. The 783 compiler contract's spirit applied preemptively: the
+  // reported toggles-ignored staleness matches the compiled-memoization
+  // class on this same screen, and fire-time snapshots kill the entire
+  // class by construction (the start-cue's intervalKm reset already used
+  // this idiom — now everything does).
   const [coachMuted, setCoachMuted] = useState(false);
   useEffect(() => { useQuota.getState().hydrate(); useAudioCoach.getState().hydrate(); }, []);
   const coachActive = isPremium && voiceCue && !coachMuted;
-  const nextCueKmRef = useRef<number>(coachSet.intervalKm);
+  const nextCueKmRef = useRef<number>(useAudioCoach.getState().intervalKm);
   const prevStateRef = useRef(state);
 
   // run lifecycle → start cue + threshold reset; stop speech on leave/pause
@@ -290,8 +296,9 @@ export default function TrackingScreen() {
     const prev = prevStateRef.current;
     prevStateRef.current = state;
     if (prev === 'countdown' && state === 'running') {
-      nextCueKmRef.current = useAudioCoach.getState().intervalKm; // fresh run
-      if (coachActive) speakCue(composeStartCue(), coachSet.rate);
+      const coach = useAudioCoach.getState(); // fire-time snapshot
+      nextCueKmRef.current = coach.intervalKm; // fresh run
+      if (coachActive) speakCue(composeStartCue(), coach.rate);
     }
     if (state === 'paused' || state === 'idle') stopSpeech();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -302,16 +309,17 @@ export default function TrackingScreen() {
   useEffect(() => {
     if (state !== 'running' || !coachActive) return;
     if (distanceKm < nextCueKmRef.current) return;
+    const coach = useAudioCoach.getState(); // fire-time snapshot (지연 fix)
     const spokenAt = nextCueKmRef.current;
-    while (distanceKm >= nextCueKmRef.current) nextCueKmRef.current += coachSet.intervalKm;
+    while (distanceKm >= nextCueKmRef.current) nextCueKmRef.current += coach.intervalKm;
     const text = composeSplitCue({
       km: spokenAt,
       elapsedSec,
       paceSecPerKm,
       kcal, // estimateKcal-driven — null without confirmed weight (honest rule)
-      items: coachSet.items,
+      items: coach.items,
     });
-    if (text) speakCue(text, coachSet.rate);
+    if (text) speakCue(text, coach.rate);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [distanceKm, state, coachActive]);
 
@@ -495,7 +503,7 @@ export default function TrackingScreen() {
     exitingRef.current = true;
     if (!snapshot) { router.back(); return; }
     // 종료 cue — fire-and-forget before the screen swap
-    if (coachActive) speakCue(composeFinishCue(snapshot.distanceKm, snapshot.elapsedSec), coachSet.rate);
+    if (coachActive) speakCue(composeFinishCue(snapshot.distanceKm, snapshot.elapsedSec), useAudioCoach.getState().rate);
     // setPendingRun also persists to disk — crash-safe from this moment
     setPendingRun(course
       ? {

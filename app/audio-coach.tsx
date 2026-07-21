@@ -18,6 +18,7 @@ import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-nat
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/ui';
+import { composeIntervalSample, composeRateSample, speakCue } from '@/lib/audio-coach';
 import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { useAudioCoach } from '@/store/use-audio-coach';
@@ -81,14 +82,25 @@ export default function AudioCoachScreen() {
 
         <View style={{ opacity: voiceCue ? 1 : 0.4 }} pointerEvents={voiceCue ? 'auto' : 'none'}>
           <View style={[st.card, shadows.sm, { marginTop: 18 }]}>
+            {/* 지연 feature ask (2026-07-21): slider release speaks a sample
+                line — 속도는 새 rate로, 간격은 값을 읽어줘서 귀로 확인 */}
             <SliderRow
               label="말하기 속도" value={coach.rate} min={0.6} max={1.6} step={0.1}
-              fmt={v => `${v.toFixed(1)}x`} onChange={v => coach.set({ rate: Math.round(v * 10) / 10 })}
+              fmt={v => `${v.toFixed(1)}x`}
+              onChange={v => {
+                const rate = Math.round(v * 10) / 10;
+                coach.set({ rate });
+                speakCue(composeRateSample(), rate);
+              }}
             />
             <View style={st.divider} />
             <SliderRow
               label="안내 간격" value={coach.intervalKm} min={0.5} max={3} step={0.5}
-              fmt={v => `${v} km`} onChange={v => coach.set({ intervalKm: v })}
+              fmt={v => `${v} km`}
+              onChange={v => {
+                coach.set({ intervalKm: v });
+                speakCue(composeIntervalSample(v), useAudioCoach.getState().rate);
+              }}
             />
           </View>
 

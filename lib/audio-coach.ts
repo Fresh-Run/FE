@@ -44,6 +44,14 @@ export function composeSplitCue(args: {
   return parts.length ? parts.join(' ') : null;
 }
 
+// ── 설정 샘플 라인 (지연 feature ask, 2026-07-21) — slider release feedback ──
+export function composeRateSample(): string {
+  return '이 속도로 안내해 드릴게요.';
+}
+export function composeIntervalSample(km: number): string {
+  return `${fmtKm(km)}킬로미터마다 안내해 드릴게요.`;
+}
+
 export function composeFinishCue(distanceKm: number, elapsedSec: number): string {
   return `러닝 종료. 총 ${distanceKm.toFixed(2)}킬로미터, ${fmtMinSec(elapsedSec)} 달렸어요.`;
 }
