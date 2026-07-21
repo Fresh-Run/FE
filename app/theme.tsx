@@ -1,8 +1,10 @@
 /**
  * 테마 — theme picker (bundle: FrThemeScreen). Pushed from the profile tab.
- * T1: persist-only — the selection PATCHes /me/settings {theme} (optimistic,
- * rollback) but nothing repaints yet; dark RENDERING is the 다크 렌더링 sweep
- * (TODO.md T2). The notice below states this honestly.
+ * Phase 5 (dark-mode epic end-state, 2026-07-21): LIVE three-way
+ * 시스템/라이트/다크 (default 시스템 — pre-ruled). mode is DEVICE-LOCAL
+ * (store/use-scheme); explicit picks additionally PATCH /me/settings {theme}
+ * (server enum is light|dark — 'system' is local-only; enum extension is a
+ * ledgered 지연 nicety). The old persist-only 준비-중 notice died here.
  */
 import { router } from 'expo-router';
 import React from 'react';
@@ -10,27 +12,33 @@ import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/ui';
-import type { UserSettings } from '@/lib/settings-api';
 import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
+import { useScheme, type Mode } from '@/store/use-scheme';
 import { useSettings } from '@/store/use-settings';
 
-const OPTIONS: { value: UserSettings['theme']; label: string; sub: string }[] = [
-  { value: 'light', label: '라이트', sub: '밝은 배경' },
-  { value: 'dark',  label: '다크',   sub: '어두운 배경' },
+const OPTIONS: { value: Mode; label: string; sub: string }[] = [
+  { value: 'system', label: '시스템', sub: '기기 설정을 따라요' },
+  { value: 'light',  label: '라이트', sub: '밝은 배경' },
+  { value: 'dark',   label: '다크',   sub: '어두운 배경' },
 ];
 
 export default function ThemeScreen() {
   const C = useTokens();
   const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
-  const theme = useSettings(s => s.settings.theme);
+  const mode = useScheme(s => s.mode);
+  const setMode = useScheme(s => s.setMode);
   const setTheme = useSettings(s => s.setTheme);
 
-  async function pick(value: UserSettings['theme']) {
-    if (value === theme) return;
-    const ok = await setTheme(value); // optimistic; rolls back on failure
-    if (!ok) Alert.alert('저장 실패', '설정을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.');
+  async function pick(value: Mode) {
+    if (value === mode) return;
+    setMode(value); // applies + persists locally, instantly
+    if (value !== 'system') {
+      // keep the server contract in sync for explicit picks (light|dark enum)
+      const ok = await setTheme(value);
+      if (!ok) Alert.alert('저장 실패', '기기에는 적용됐지만 서버 동기화에 실패했어요.');
+    }
   }
 
   return (
@@ -54,19 +62,15 @@ export default function ThemeScreen() {
                   <Text style={st.rowLabel}>{o.label}</Text>
                   <Text style={st.rowSub}>{o.sub}</Text>
                 </View>
-                <View style={[st.radioOuter, theme === o.value && { borderColor: C.accent }]}>
-                  {theme === o.value && <View style={st.radioInner} />}
+                <View style={[st.radioOuter, mode === o.value && { borderColor: C.accent }]}>
+                  {mode === o.value && <View style={st.radioInner} />}
                 </View>
               </Pressable>
             </React.Fragment>
           ))}
         </View>
 
-        {/* Honest T1 notice — rendering lands with the 다크 렌더링 sweep */}
-        <View style={st.noticeCard}>
-          <Icon name="information-circle-outline" size={15} color={C.accentGrn} />
-          <Text style={st.noticeTxt}>다크 화면은 준비 중이에요 — 설정은 저장돼요</Text>
-        </View>
+
       </View>
     </View>
   );

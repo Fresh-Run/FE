@@ -13,10 +13,11 @@
  *  - center: single {lat,lng} → region-only view (e.g. current location).
  */
 import React, { useMemo, useRef } from 'react';
-import { View , useColorScheme} from 'react-native';
+import { View } from 'react-native';
 import MapView, { Marker, Polyline } from 'react-native-maps';
 
 import { routeStroke } from '@/lib/theme';
+import { useScheme } from '@/store/use-scheme';
 import type { Coordinate } from '@/types';
 
 const EDGE_PAD = 1.35;       // bounds padding factor for auto-fit
@@ -72,7 +73,9 @@ type Props = {
 };
 
 export function RealMap({ height, borderRadius = 0, polyline, center, marker = false, startPin = false, showsUser = false, interactive = false, cache = true }: Props) {
-  const stroke = routeStroke(useColorScheme()); // 지연 two-tone (theme.ts)
+  // 지연 two-tone — keys on the RESOLVED scheme since Phase 5 (manual 다크
+  // gets the dark stroke; 시스템 mode behaves as before via the store).
+  const stroke = routeStroke(useScheme(s => s.resolved));
   const line = polyline && polyline.length >= 2 ? polyline : null;
   const mapRef = useRef<MapView>(null);
 

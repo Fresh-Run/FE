@@ -84,11 +84,10 @@ function LoadingScreen() {
 
 function RootLayoutInner() {
   const sessionLoading = useStore((s) => s.sessionLoading);
-  // Phase 4: navigator chrome + status bar follow the RESOLVED scheme from
-  // the store — for users this is still the Phase-0 pin (resolved = light
-  // until the epic completes); under the dev override, transitions and
-  // status icons theme with the screens instead of flashing light-on-dark.
-  // OS dark alone still changes nothing (the store never reads it yet).
+  // Phase 5 (epic complete): resolution is LIVE — mode 시스템/라이트/다크
+  // (default 시스템 follows the OS via the scheme store's Appearance
+  // listener). Navigator chrome + status bar ride `resolved` with the rest
+  // of the app. The Phase-0 pin and the dev override are history.
   const resolved = useScheme((s) => s.resolved);
 
   // Block rendering until we know the session state to prevent flash.

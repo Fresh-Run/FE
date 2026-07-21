@@ -1,34 +1,62 @@
-// Dark-mode epic scheme INPUT (Phase 1, Option A — owner-approved).
+// Dark-mode scheme store — Phase 5 (the picker): the epic's END-STATE.
 //
-// USER-FACING RESOLUTION IS PINNED LIGHT until phases 3–4 are whole:
-// converted screens must not dark-follow while unconverted files are still
-// static-light — that would re-create the half-dark state Phase 0 killed.
+// mode = 시스템/라이트/다크 (pre-ruled three-way, default 시스템). DEVICE-LOCAL
+// (AsyncStorage): appearance-follow is a per-device preference, like iOS
+// itself. Explicit picks additionally PATCH /me/settings {theme} (the server
+// enum is Literal["light","dark"] — 'system' would 422; enum extension is a
+// ledgered 지연 nicety ask, cross-device sync rides it if ever wanted).
 //
-// ⚠ TEMPORARY FIXTURE — the hidden dev override (설정's version row, 5 taps)
-// is the ONLY dark path and DIES WITH PHASE 5's real picker (시스템/라이트/
-// 다크 three-way, default 시스템 — pre-ruled). Phase 5 replaces `devOverride`
-// with `mode` + an Appearance change listener feeding `resolved`; nothing
-// else should ever read the OS scheme directly (real-map's routeStroke is
-// the one grandfathered exception until its batch converts).
+// resolved = the single scheme output every consumer derives from
+// (useTokens/useStyles, nav chrome, status bar, route stroke). 시스템 mode
+// follows the OS live via the Appearance listener. The Phase-0/1 light pin
+// and the temporary 5-tap dev override DIED here — resolution is REAL now.
+//
+// Cold start: first frames resolve as 시스템 until the ~ms AsyncStorage
+// hydrate lands (explicit-mode users on an opposite-scheme device may see a
+// brief system-scheme flash — standard RN pattern, disclosed).
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Appearance } from 'react-native';
 import { create } from 'zustand';
 
+export type Mode = 'system' | 'light' | 'dark';
 export type Resolved = 'light' | 'dark';
 
+const KEY = '@fr_theme_mode';
+
+const resolve = (mode: Mode): Resolved =>
+  mode === 'system'
+    ? (Appearance.getColorScheme() === 'dark' ? 'dark' : 'light')
+    : mode;
+
 type SchemeStore = {
-  /** Hidden internal override — null = the pinned default (light). */
-  devOverride: Resolved | null;
-  /** The single scheme output every token consumer derives from. */
+  mode: Mode;
   resolved: Resolved;
-  /** 5-tap cycle: off(light) → dark preview → light preview → off. */
-  cycleDevOverride: () => void;
+  /** Apply + persist (device-local). Explicit server sync is the caller's
+      job (theme.tsx PATCHes light/dark; 시스템 is local-only). */
+  setMode: (m: Mode) => void;
 };
 
-export const useScheme = create<SchemeStore>((set, get) => ({
-  devOverride: null,
-  resolved: 'light',
-  cycleDevOverride: () => {
-    const cur = get().devOverride;
-    const next: Resolved | null = cur === null ? 'dark' : cur === 'dark' ? 'light' : null;
-    set({ devOverride: next, resolved: next ?? 'light' });
+export const useScheme = create<SchemeStore>(set => ({
+  mode: 'system',
+  resolved: resolve('system'),
+  setMode: (m: Mode) => {
+    set({ mode: m, resolved: resolve(m) });
+    AsyncStorage.setItem(KEY, m).catch(() => {});
   },
 }));
+
+// Hydrate the persisted mode (no re-persist round-trip).
+AsyncStorage.getItem(KEY)
+  .then(v => {
+    if (v === 'light' || v === 'dark' || v === 'system') {
+      useScheme.setState({ mode: v, resolved: resolve(v) });
+    }
+  })
+  .catch(() => {});
+
+// 시스템 mode follows the OS live.
+Appearance.addChangeListener(({ colorScheme }) => {
+  if (useScheme.getState().mode === 'system') {
+    useScheme.setState({ resolved: colorScheme === 'dark' ? 'dark' : 'light' });
+  }
+});

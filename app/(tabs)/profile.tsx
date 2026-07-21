@@ -1,7 +1,7 @@
 import { useFocusEffect } from '@react-navigation/native';
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
-import React, { useCallback, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -201,30 +201,6 @@ function PremiumBanner() {
 
 const APP_VERSION = Constants.expoConfig?.version ?? '1.0.0';
 
-// ⚠ TEMPORARY (dark-mode epic Phase 1) — dies with Phase 5's real picker.
-function VersionFooter() {
-  const st = useStyles(makeSt);
-  const devOverride = useScheme(s => s.devOverride);
-  const cycle = useScheme(s => s.cycleDevOverride);
-  const taps = useRef({ count: 0, last: 0 });
-  // onPressIn = touch-down: counts before any scroll/bounce can cancel the
-  // press (the release-cancel class the settings-orphan version was open to).
-  const onPressIn = () => {
-    const now = Date.now();
-    taps.current.count = now - taps.current.last > 1500 ? 1 : taps.current.count + 1;
-    taps.current.last = now;
-    if (taps.current.count >= 5) {
-      taps.current.count = 0;
-      cycle();
-    }
-  };
-  const suffix = devOverride ? ` · ${devOverride === 'dark' ? '다크' : '라이트'} 미리보기` : '';
-  return (
-    <Pressable onPressIn={onPressIn} pressRetentionOffset={{ top: 24, bottom: 24, left: 48, right: 48 }}>
-      <Text style={st.versionFooter}>{`FreshRun ${APP_VERSION} · Made in Seoul${suffix}`}</Text>
-    </Pressable>
-  );
-}
 
 export default function ProfileScreen() {
   const C = useTokens();
@@ -237,8 +213,7 @@ export default function ProfileScreen() {
   // Settings — bound to /me/settings (server truth, AsyncStorage first frame)
   const runSettings   = useSettings(s => s.settings.run);
   const units         = useSettings(s => s.settings.units);
-  // (theme selector removed with the hidden row — the STORE field, /theme
-  //  screen and server persist stay; see the hidden-row TODO below)
+  const themeMode     = useScheme(s => s.mode); // Phase 5 — the 테마 row value
   const lang          = useSettings(s => s.settings.lang);
 
   // Apple 건강 opt-in (③ Slice C — device-local; enable = the HK sheet once).
@@ -443,15 +418,12 @@ export default function ProfileScreen() {
             value={units === 'mi' ? 'mi (마일)' : 'km (킬로미터)'}
             onPress={() => router.push('/units' as any)}
           />
-          {/* 다크 모드 row HIDDEN pre-TestFlight (owner ruling 2026-07-16,
-              line-132): settings.theme is persist-only. Phase 0 (2026-07-20)
-              pinned the app LIGHT-ONLY (the half-dark scaffold system died);
-              the dark-mode EPIC (phases 1-5, parked post-launch) themes the
-              app for real — mode pre-ruled 시스템/라이트/다크 three-way,
-              default 시스템. Restore this row AND app/theme.tsx with the
-              epic's Phase 5 picker.
+          {/* 테마 row RESTORED (Phase 5, 2026-07-21) — the epic's end-state:
+              live 시스템/라이트/다크 picker (default 시스템), device-local
+              mode + server sync on explicit picks.
               Persist plumbing (useSettings.theme, /theme screen, server
               field) intact by design. */}
+          <SettingRow icon={<Icon name="moon-outline"          size={19} color={C.sub} />} label="테마"       value={themeMode === 'system' ? '시스템' : themeMode === 'dark' ? '다크' : '라이트'} onPress={() => router.push('/theme' as any)} />
           <SettingRow icon={<Icon name="globe-outline"         size={19} color={C.sub} />} label="언어"       value={lang === 'en' ? 'English' : '한국어'} onPress={() => router.push('/lang' as any)} />
           {/* 도움말/약관 — LIVE screens (help-center.tsx / terms.tsx); the old
               "don't exist yet" note outlived their shipping (comment fixed
@@ -471,14 +443,9 @@ export default function ProfileScreen() {
           />
         </View>
 
-        {/* Version footer — ⚠ TEMPORARY dark-mode dev-override host (epic
-            Phase 1 fix: relocated here from the ORPHANED app/settings.tsx,
-            which no route ever displayed — deleted). 5 quick taps cycles
-            off → 다크 미리보기 → 라이트 → off; active state shows as a label
-            suffix. Counting on onPressIn (touch-down) + pressRetentionOffset:
-            immune to the release-cancel/bounce-steal class at the bouncy
-            bottom of this ScrollView. DIES with Phase 5's real picker. */}
-        <VersionFooter />
+        {/* Version footer — plain again: the temporary dev override DIED with
+            Phase 5's real picker (테마 row above). */}
+        <Text style={st.versionFooter}>{`FreshRun ${APP_VERSION} · Made in Seoul`}</Text>
       </ScrollView>
     </View>
   );
