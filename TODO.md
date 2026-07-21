@@ -1133,6 +1133,10 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 
 **VERIFIED [17:25] (owner, TF, production group `0d45c21b`):** 시스템 default — OS-dark device opens DARK · live-follows OS flips · explicit 다크 sticks across relaunch · 라이트 beats OS dark · 시스템 resumes following · map stroke themes · override dead (footer inert) · regression lap clean, unpinned. Known-good production group promoted: `0d45c21b-92ac-4331-b1ce-b0a3b07fbc60`.
 
+## ⚠️ GENERATION TRIAGE — SYSTEM VERDICT: SERVER-SICK, DEPLOY-WINDOW REGRESSION (2026-07-21 night; 지연 relayed)
+
+Owner reported all three failure classes at once during her overnight-deploy window. **Probes (3× controlled, 성수 5km known-good, world-restored after): 3/3 HTTP 200 · distances EXCELLENT (5.0/5.2/5.2) · 15.3–17.5s (vs her v2.5 6.3s benchmark) · POLYLINE ZERO POINTS in all three — in the STORED rows too (waypoints 6–8 present)**: the deployed generator is writing geometry-less routes. Deploy markers live: /stats/course-run-share + copy-as-route (tonight's batch is on staging; BE repo +15 commits incl. v2.7 선택 층 교체). Class mapping: "quality down" = zero-polyline (proven) · "spinner-forever" = her 2.5× slowdown × **our real timeout = 45s on generate (hooks/use-generate-route TIMEOUT_MS 45_000; apiFetch default 15s elsewhere)** — one mechanism, not two bugs; the parked timeout audit stays parked (number now on record) · "misses up" = NOT reproduced at the known-good spot (v2.7's accuracy looks good there). **No client fix; wait + her fix. Health 200/185ms throughout.**
+
 ## 🏃 DRY-RUN OUTING MANIFEST (consolidated 2026-07-21 — the one document for the one outdoor hour)
 
 **Trigger: the sky. Build: TF #10 (production bundle — NO METRO: every capture is on-screen numbers, screenshots, or post-hoc API debrief.)**
