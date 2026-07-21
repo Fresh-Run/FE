@@ -1,4 +1,4 @@
-import { DefaultTheme, ThemeProvider as NavThemeProvider } from '@react-navigation/native';
+import { DarkTheme, DefaultTheme, ThemeProvider as NavThemeProvider } from '@react-navigation/native';
 import { router, Stack, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect } from 'react';
@@ -6,6 +6,7 @@ import { ActivityIndicator, View } from 'react-native';
 import 'react-native-reanimated';
 
 import { useTokens } from '@/hooks/use-tokens';
+import { useScheme } from '@/store/use-scheme';
 import { usePushSync } from '@/lib/push';
 import { endLiveActivity } from '@/modules/live-activity';
 // ① background GPS: the location task must be DEFINED at bundle evaluation on
@@ -83,23 +84,25 @@ function LoadingScreen() {
 
 function RootLayoutInner() {
   const sessionLoading = useStore((s) => s.sessionLoading);
+  // Phase 4: navigator chrome + status bar follow the RESOLVED scheme from
+  // the store — for users this is still the Phase-0 pin (resolved = light
+  // until the epic completes); under the dev override, transitions and
+  // status icons theme with the screens instead of flashing light-on-dark.
+  // OS dark alone still changes nothing (the store never reads it yet).
+  const resolved = useScheme((s) => s.resolved);
 
   // Block rendering until we know the session state to prevent flash.
   if (sessionLoading) return <LoadingScreen />;
 
-  // Dark-mode Phase 0 (2026-07-20): the app is LIGHT-ONLY until the epic
-  // ships — navigator theme and status bar are PINNED so OS dark can't
-  // produce the half-dark state (dark auth / white status icons on light
-  // screens / dark transition underlays). Un-pin in the epic's Phase 1.
   return (
-    <NavThemeProvider value={DefaultTheme}>
+    <NavThemeProvider value={resolved === 'dark' ? DarkTheme : DefaultTheme}>
       {/* Native headers hidden by default — every screen renders its own
           in-content header per the design. Future sub-screens inherit this. */}
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(course)"       options={{ presentation: 'fullScreenModal' }} />
         <Stack.Screen name="weather-detail" options={{ animation: 'slide_from_bottom' }} />
       </Stack>
-      <StatusBar style="dark" />
+      <StatusBar style={resolved === 'dark' ? 'light' : 'dark'} />
     </NavThemeProvider>
   );
 }

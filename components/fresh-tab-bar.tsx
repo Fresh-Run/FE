@@ -5,7 +5,8 @@ import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/ui';
-import { accentShadow, colors as C, shadows } from '@/lib/theme';
+import { accentShadow, shadows, type Tokens } from '@/lib/theme';
+import { useStyles, useTokens } from '@/hooks/use-tokens';
 
 type TabDef = {
   route: string;
@@ -39,6 +40,8 @@ const TABS: TabDef[] = [
 ];
 
 export function FreshTabBar({ state, navigation }: BottomTabBarProps) {
+  const C = useTokens();
+  const styles = useStyles(makeStyles);
   const insets = useSafeAreaInsets();
 
   function handlePress(routeName: string, routeKey: string, isFocused: boolean) {
@@ -110,7 +113,7 @@ export function FreshTabBar({ state, navigation }: BottomTabBarProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (C: Tokens) => StyleSheet.create({
   wrapper: {
     position: 'absolute',
     bottom: 0,
