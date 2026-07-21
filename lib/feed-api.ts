@@ -27,8 +27,9 @@ type FeedRunExtras = {
   is_crew_session?: boolean;
   route_id?: string | null;
   /** Linked course's summary — non-null ONLY for PUBLIC courses (server
-      filters private ones out). THE CTA GATE (repair slice, blessing ①):
-      route_summary != null ⇒ 이 코스 달리기 + bookmark render. */
+      filters private ones out). NO CLIENT CONSUMER since the 2026-07-21
+      owner step-back (feed course affordances removed; the CTA-gate logic
+      that consumed this lives at commit 82c5bc9, returns post-launch). */
   route_summary?: string | null;
   photo_thumb?: string | null;
 };

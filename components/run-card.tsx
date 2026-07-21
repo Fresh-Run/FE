@@ -18,7 +18,10 @@ import { useStyles, useTokens } from '@/hooks/use-tokens';
 import type { UserRun } from '@/hooks/use-user-profile';
 import type { useSettings } from '@/store/use-settings';
 
-export function RunCard({ run, units, mapLive, onKudos, kudosOff, onOpen, onAvatarPress, onRunCourse, bookmarked, onBookmark }: {
+// Course affordances (이 코스 달리기 CTA + header bookmark, canvas card B)
+// REMOVED 2026-07-21 — owner step-back ruling; the feature returns
+// post-launch. Full prop/UI/style implementation lives at commit 82c5bc9.
+export function RunCard({ run, units, mapLive, onKudos, kudosOff, onOpen, onAvatarPress }: {
   run: UserRun;
   units: ReturnType<typeof useSettings.getState>['settings']['units'];
   mapLive: boolean;
@@ -28,14 +31,6 @@ export function RunCard({ run, units, mapLive, onKudos, kudosOff, onOpen, onAvat
   onOpen?: () => void;
   /** discovery funnel: avatar tap → profile (absent = not tappable) */
   onAvatarPress?: () => void;
-  /** 이 코스 달리기 CTA (repair slice, canvas card B) — DATA-GATED by the
-      caller: passed only when the run links a PUBLIC course
-      (route_summary != null). Profile surfaces pass nothing. */
-  onRunCourse?: () => void;
-  /** Bookmark affordance (canvas card B header) — same data gate; revives
-      the bookmark-add path dead since b7ca600. */
-  bookmarked?: boolean;
-  onBookmark?: () => void;
 }) {
   const C = useTokens();
   const st = useStyles(makeSt);
@@ -49,11 +44,6 @@ export function RunCard({ run, units, mapLive, onKudos, kudosOff, onOpen, onAvat
           <Text style={st.cardName}>{run.nickname}</Text>
           <Text style={st.cardDate}>{fmtWhen(run.ran_at)}</Text>
         </View>
-        {onBookmark && (
-          <Pressable onPress={onBookmark} hitSlop={8} style={st.bookmarkBtn}>
-            <Icon name={bookmarked ? 'bookmark' : 'bookmark-outline'} size={19} color={bookmarked ? C.accentGrn : C.faint} />
-          </Pressable>
-        )}
       </View>
       {/* polyline_thumb slice: viewable + thumb → real map; off-screen /
           trackless → route-shaped or seed SVG (ledger rulings) */}
@@ -102,12 +92,6 @@ export function RunCard({ run, units, mapLive, onKudos, kudosOff, onOpen, onAvat
           <Icon name="chatbubble-outline" size={17} color={C.sub} />
           <Text style={st.kudosCount}>{run.comment_count}</Text>
         </Pressable>
-        {onRunCourse && (
-          <Pressable onPress={onRunCourse} hitSlop={6} style={({ pressed }) => [st.runCourseBtn, pressed && { opacity: 0.8 }]}>
-            <Icon name="navigate-outline" size={14} color={C.accentGrn} />
-            <Text style={st.runCourseTxt}>이 코스 달리기</Text>
-          </Pressable>
-        )}
       </View>
     </Pressable>
   );
@@ -127,9 +111,4 @@ const makeSt = (C: Tokens) => StyleSheet.create({
   cardFooter: { flexDirection: 'row', alignItems: 'center', paddingTop: 8, paddingBottom: 12, paddingHorizontal: 14, borderTopWidth: 1, borderTopColor: C.border },
   kudosBtn:   { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 4 },
   kudosCount: { fontSize: 13.5, fontWeight: '700', color: C.sub, letterSpacing: -0.2 },
-
-  // Repair slice (canvas card B): header bookmark + footer CTA pill
-  bookmarkBtn:  { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
-  runCourseBtn: { marginLeft: 'auto', flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: C.accentDim, borderWidth: 1, borderColor: C.accent, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 6 },
-  runCourseTxt: { fontSize: 12.5, fontWeight: '700', color: C.accentGrn, letterSpacing: -0.2 },
 });

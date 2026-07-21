@@ -1133,7 +1133,19 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 
 **VERIFIED [17:25] (owner, TF, production group `0d45c21b`):** 시스템 default — OS-dark device opens DARK · live-follows OS flips · explicit 다크 sticks across relaunch · 라이트 beats OS dark · 시스템 resumes following · map stroke themes · override dead (footer inert) · regression lap clean, unpinned. Known-good production group promoted: `0d45c21b-92ac-4331-b1ce-b0a3b07fbc60`.
 
-## UNIVERSAL "이 경로 달리기" — 지연 RULING (a′) LANDED (2026-07-21; build gated on her deploy confirm)
+## OWNER RULING — STRATEGIC STEP-BACK (2026-07-21): FEED COURSE AFFORDANCES REMOVED UNTIL POST-LAUNCH
+
+**Plainly: the feed course affordances (이 코스 달리기 CTA + bookmark on run cards, preview 이 코스 저장) are REMOVED. The saga — two failed walks, two real bugs found — consumed launch-path attention; the feature returns post-launch with fresh eyes.**
+
+**Affordance-death enumerated (the b7ca600 lesson, applied on purpose):** ① RunCard CTA pill + header bookmark — props, UI, styles stripped (zero consumers after home unwired); ② home's bookmark-set seeding/optimistic toggle/runCourse lane — deleted; ③ preview's 이 코스 저장 square + seeding — deleted. **Pointer comments at every seam name commit `82c5bc9` as the resurrection source.** `route_summary` stays typed on FeedRunExtras (server still ships it; comment marks NO CLIENT CONSUMER). **Zero-consumer grep-proofs run untruncated: onRunCourse/onBookmark/toggleBookmark/bookmarkedIds/canBookmark/toggleSave/runCourseBtn/bookmarkBtn — all 0.**
+
+**KEPT (verified working, other consumers):** overlay fix pair (fit-to-strip `ffa37869` + courseStroke `6bff6c08` — they fix course-post's pre-existing lane, which stays; **the fix-pair walk re-targets 코스 게시물 → 네 뛸게요**) · 내 코스 + publish toggle (slice 2, verified [03:25]) · 저장된 코스 (saved-courses + 러닝 hub keep all bookmark libs alive) · copy-lane machinery (preview's confirmRun consumes it).
+
+**PARKED formally:** the universal 이-경로-달리기 build — 지연's (a′) blessing + amendment stay on the books below, **build parked post-launch**. Slice A's ledger arc closes as **removed pre-verification** (published `086ff709`, never TF-verified, affordances withdrawn by this ruling).
+
+**FUNNEL V1: HELD ENTIRELY (owner-approved) on branch `funnel-v1-parked`** (pushed, never main) — post-run nudge + degradation memory + social-proof consumer + hub landing, all six files committed there intact. Rationale on record: stripping to "the timeout rider alone" ships dead code (the degradation ring's only consumer is the nudge). **지연's timeout/time-budget answer PARKS WITH IT** — the health-endpoint nicety stays unspent, and her answer gets consumed when the branch returns post-launch (relay line included). Byte-scan note for the removal publish: no removal-unique string exists (the dead UI reused shared vocabulary — `이 코스 달리기` remains at 1 via course-post's surviving pill, dedup-consistent); removal is proven by the commit-tied hash, not byte counts.
+
+## UNIVERSAL "이 경로 달리기" — 지연 RULING (a′) LANDED (2026-07-21; ~~build gated on her deploy confirm~~ **PARKED POST-LAUNCH by the step-back ruling — blessing stands**)
 
 **Privacy ruling (a′): visibility=consent APPROVED with one amendment.** (a) accepted — exposure argument endorsed (track endpoint already serves viewers, card already draws the trace, the 19/19 matrix IS the consent surface); (b) start-fuzz / (c) per-run toggle rejections agreed. **THE AMENDMENT: materialization fires a notification to the run owner** ("OO님이 회원님의 경로를 저장했어요") — new notification type, settings-gated, kudos-class. Her rationale on record: *technical exposure ≠ social signal; transparency without consent machinery; a per-run toggle becomes the follow-up ONLY if beta surfaces discomfort — not preemptive.* **Shape (ii) approved as proposed:** `source_run_id` provenance, idempotent `unique(user_id, source_run_id)`, real-run duration, **no quota**. Copy distinction (코스/경로) blessed.
 
