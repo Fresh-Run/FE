@@ -1,6 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 
+import { useTokens } from '@/hooks/use-tokens';
+
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
 export type IconName = IoniconName;
@@ -8,7 +10,7 @@ export type IconName = IoniconName;
 export function Icon({
   name,
   size = 24,
-  color = '#000000',
+  color,
   filled,
 }: {
   name: string;
@@ -18,5 +20,7 @@ export function Icon({
 }) {
   // filled is a hint — callers supply the exact name variant they want
   void filled;
-  return <Ionicons name={name as IoniconName} size={size} color={color} />;
+  // T7 (dark-mode phase 2): default = the active text token, not static black
+  const C = useTokens();
+  return <Ionicons name={name as IoniconName} size={size} color={color ?? C.text} />;
 }

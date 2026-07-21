@@ -5,7 +5,7 @@ import React, { useEffect } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import 'react-native-reanimated';
 
-import { md3 } from '@/lib/theme';
+import { useTokens } from '@/hooks/use-tokens';
 import { usePushSync } from '@/lib/push';
 import { endLiveActivity } from '@/modules/live-activity';
 // ① background GPS: the location task must be DEFINED at bundle evaluation on
@@ -73,10 +73,10 @@ function PushSync() {
 }
 
 function LoadingScreen() {
-  const { colors } = md3;
+  const C = useTokens();
   return (
-    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background }}>
-      <ActivityIndicator size="large" color={colors.primary} />
+    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: C.bg }}>
+      <ActivityIndicator size="large" color={C.accent} />
     </View>
   );
 }

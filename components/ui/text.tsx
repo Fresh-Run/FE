@@ -1,8 +1,8 @@
 import React from 'react';
 import { StyleProp, Text as RNText, TextStyle } from 'react-native';
 
-import { md3 } from '@/lib/theme';
-import { type ColorTokens } from '@/lib/theme';
+import { useTokens } from '@/hooks/use-tokens';
+import { md3, type Tokens } from '@/lib/theme';
 
 type Variant = 'headlineXl' | 'headlineLg' | 'headlineMd' | 'bodyLg' | 'bodyMd' | 'labelLg' | 'labelSm' | 'statDisplay';
 
@@ -17,20 +17,19 @@ export function Text({
 }: {
   children?: React.ReactNode;
   variant?: Variant;
-  color?: keyof ColorTokens | (string & {});
+  /** App token name (e.g. 'sub', 'accentGrn') or a raw color string. */
+  color?: keyof Tokens | (string & {});
   weight?: TextStyle['fontWeight'];
   center?: boolean;
   style?: StyleProp<TextStyle>;
   numberOfLines?: number;
 }) {
-  const { colors, typography } = md3;
+  const C = useTokens();
+  const { typography } = md3; // scheme-neutral legacy layout tokens
 
+  const looked = color != null && color in C ? C[color as keyof Tokens] : undefined;
   const resolvedColor =
-    color == null
-      ? colors.onSurface
-      : color in colors
-      ? colors[color as keyof ColorTokens]
-      : color;
+    color == null ? C.text : typeof looked === 'string' ? looked : color;
 
   return (
     <RNText

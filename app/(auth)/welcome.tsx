@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle, Path, Text as SvgText } from 'react-native-svg';
 
 import { Button, Text } from '@/components/ui';
-import { md3 } from '@/lib/theme';
+import { useTokens } from '@/hooks/use-tokens';
 import { useStore } from '@/store/use-store';
 
 const ROUTE_PATH =
@@ -14,16 +14,15 @@ const START = { cx: 18,  cy: 195 };
 const END   = { cx: 372, cy: 70  };
 
 export default function WelcomeScreen() {
-  const { colors } = md3;
+  const C = useTokens();
   const _devBypassAuth = useStore((s) => s._devBypassAuth);
-  const c = colors;
 
   return (
-    <SafeAreaView style={[styles.root, { backgroundColor: c.background }]} edges={['top', 'bottom']}>
+    <SafeAreaView style={[styles.root, { backgroundColor: C.bg }]} edges={['top', 'bottom']}>
 
       {/* Brand */}
       <View style={styles.brand}>
-        <View style={[styles.brandDot, { backgroundColor: c.primary }]} />
+        <View style={[styles.brandDot, { backgroundColor: C.accent }]} />
         <Text variant="bodyLg" weight="700">FreshRun</Text>
       </View>
 
@@ -37,7 +36,7 @@ export default function WelcomeScreen() {
         {/* Glow */}
         <Path
           d={ROUTE_PATH}
-          stroke="#42e355"
+          stroke={C.accent}
           strokeWidth={14}
           fill="none"
           opacity={0.10}
@@ -46,23 +45,23 @@ export default function WelcomeScreen() {
         {/* Route line */}
         <Path
           d={ROUTE_PATH}
-          stroke="#42e355"
+          stroke={C.accent}
           strokeWidth={2}
           fill="none"
           strokeLinecap="round"
           strokeLinejoin="round"
         />
         {/* Start dot */}
-        <Circle cx={START.cx} cy={START.cy} r={5} fill="#42e355" />
+        <Circle cx={START.cx} cy={START.cy} r={5} fill={C.accent} />
         {/* End dot */}
-        <Circle cx={END.cx} cy={END.cy} r={5} fill="#42e355" />
+        <Circle cx={END.cx} cy={END.cy} r={5} fill={C.accent} />
         {/* Distance label */}
         <SvgText
           x={END.cx - 8}
           y={END.cy - 14}
           fontSize={11}
           fontWeight="500"
-          fill={c.onSurfaceVariant}
+          fill={C.sub}
           textAnchor="end"
         >
           5.2 km · 28분
@@ -74,7 +73,7 @@ export default function WelcomeScreen() {
         <Text variant="headlineXl" weight="700">
           매번 새로운 길로,{'\n'}서울을 달리세요
         </Text>
-        <Text variant="bodyMd" color="onSurfaceVariant" style={styles.subtitle}>
+        <Text variant="bodyMd" color="sub" style={styles.subtitle}>
           AI가 거리·경유지에 맞춰 한 번도{'\n'}달려본 적 없는 코스를 만들어 드려요.
         </Text>
       </View>
@@ -89,16 +88,16 @@ export default function WelcomeScreen() {
           large
         />
         <Pressable onPress={() => router.push('/(auth)/sign-in')} style={styles.loginLink}>
-          <Text variant="bodyMd" color="onSurfaceVariant" center>로그인</Text>
+          <Text variant="bodyMd" color="sub" center>로그인</Text>
         </Pressable>
       </View>
 
       {__DEV__ && (
         <Pressable
           onPress={_devBypassAuth}
-          style={[styles.devBtn, { borderColor: c.outlineVariant }]}
+          style={[styles.devBtn, { borderColor: C.border }]}
         >
-          <Text variant="labelSm" color="onSurfaceVariant">DEV: 로그인 건너뛰기 →</Text>
+          <Text variant="labelSm" color="sub">DEV: 로그인 건너뛰기 →</Text>
         </Pressable>
       )}
 

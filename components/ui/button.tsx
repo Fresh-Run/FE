@@ -8,7 +8,8 @@ import {
   ViewStyle,
 } from 'react-native';
 
-import { md3 } from '@/lib/theme';
+import { accentShadow } from '@/lib/theme';
+import { useTokens } from '@/hooks/use-tokens';
 import { Icon } from './icon';
 import { Text } from './text';
 
@@ -35,21 +36,22 @@ export function Button({
   large?: boolean;
   style?: StyleProp<ViewStyle>;
 }) {
-  const { colors, elevation } = md3;
-  const c = colors;
+  // md3-colors retired (dark-mode batch 4): app tokens, canvas-true —
+  // primary = lime CTA + dark-green-black text (the app's CTA grammar).
+  const C = useTokens();
 
   const bg: Record<Variant, string> = {
-    primary:   c.primary,
-    secondary: c.surfaceContainerLowest,
+    primary:   C.accent,
+    secondary: C.surface,
     tertiary:  'transparent',
-    inverse:   c.inversePrimary,
+    inverse:   C.accent,
   };
 
   const fg: Record<Variant, string> = {
-    primary:   c.onPrimary,
-    secondary: c.onSurface,
-    tertiary:  c.primary,
-    inverse:   c.onPrimaryFixed,
+    primary:   C.accentText,
+    secondary: C.text,
+    tertiary:  C.accentGrn,
+    inverse:   C.accentText,
   };
 
   return (
@@ -60,14 +62,14 @@ export function Button({
         styles.base,
         {
           backgroundColor: bg[variant],
-          borderColor: variant === 'secondary' ? c.outlineVariant : 'transparent',
+          borderColor: variant === 'secondary' ? C.border : 'transparent',
           borderWidth: variant === 'secondary' ? 1 : 0,
           paddingVertical: large ? 18 : 14,
           opacity: disabled ? 0.5 : pressed ? 0.9 : 1,
           transform: [{ scale: pressed ? 0.97 : 1 }],
           alignSelf: fullWidth ? 'stretch' : 'flex-start',
         },
-        variant === 'primary' ? elevation.fab : undefined,
+        variant === 'primary' ? accentShadow(C.accent) : undefined,
         style,
       ]}
     >

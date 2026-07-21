@@ -4,11 +4,11 @@ import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, TextInput, View 
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button, Icon, Input, Text } from '@/components/ui';
-import { md3 } from '@/lib/theme';
+import { useTokens } from '@/hooks/use-tokens';
 import { useStore } from '@/store/use-store';
 
 export default function SignInScreen() {
-  const { colors } = md3;
+  const C = useTokens();
   const signIn = useStore((s) => s.signIn);
 
   const [email, setEmail] = useState('');
@@ -34,12 +34,12 @@ export default function SignInScreen() {
   }
 
   return (
-    <SafeAreaView style={[styles.root, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
+    <SafeAreaView style={[styles.root, { backgroundColor: C.bg }]} edges={['top', 'bottom']}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       {/* Top bar */}
       <View style={styles.topBar}>
         <Pressable onPress={() => router.back()} hitSlop={12} style={styles.backBtn}>
-          <Icon name="chevron-back" size={24} color={colors.onSurface} />
+          <Icon name="chevron-back" size={24} color={C.text} />
         </Pressable>
       </View>
 
@@ -47,7 +47,7 @@ export default function SignInScreen() {
         {/* Heading */}
         <View style={styles.heading}>
           <Text variant="headlineLg" weight="700">로그인</Text>
-          <Text variant="bodyMd" color="onSurfaceVariant">
+          <Text variant="bodyMd" color="sub">
             이메일로 계속하기
           </Text>
         </View>
@@ -81,9 +81,9 @@ export default function SignInScreen() {
 
         {/* Switch to sign up */}
         <Pressable onPress={() => router.replace('/(auth)/sign-up')} style={styles.switchLink}>
-          <Text variant="bodyMd" color="onSurfaceVariant">
+          <Text variant="bodyMd" color="sub">
             계정이 없으신가요?{'  '}
-            <Text variant="bodyMd" color="primary" weight="600">
+            <Text variant="bodyMd" color="accentGrn" weight="600">
               회원가입
             </Text>
           </Text>

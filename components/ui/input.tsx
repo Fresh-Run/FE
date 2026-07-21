@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 
 import { md3 } from '@/lib/theme';
+import { useTokens } from '@/hooks/use-tokens';
 import { Icon } from './icon';
 import { Text } from './text';
 
@@ -41,8 +42,9 @@ export function Input({
   editable?: boolean;
 }) {
   const [showText, setShowText] = useState(false);
-  const { colors, radius } = md3;
-  const c = colors;
+  // md3-colors retired (batch 4) — app tokens; radius stays legacy layout.
+  const C = useTokens();
+  const { radius } = md3;
 
   const hasError = !!error;
 
@@ -55,8 +57,8 @@ export function Input({
         style={[
           styles.field,
           {
-            backgroundColor: c.surfaceContainerLow,
-            borderColor: hasError ? c.error : c.outlineVariant,
+            backgroundColor: C.surfaceAlt,
+            borderColor: hasError ? C.danger : C.border,
             borderRadius: radius.lg,
           },
         ]}
@@ -66,7 +68,7 @@ export function Input({
           value={value}
           onChangeText={onChangeText}
           placeholder={placeholder}
-          placeholderTextColor={c.onSurfaceVariant + '66'}
+          placeholderTextColor={C.faint}
           secureTextEntry={secureTextEntry && !showText}
           keyboardType={keyboardType}
           autoCapitalize={autoCapitalize}
@@ -74,7 +76,7 @@ export function Input({
           returnKeyType={returnKeyType}
           onSubmitEditing={onSubmitEditing}
           editable={editable}
-          style={[styles.input, { color: c.onSurface }]}
+          style={[styles.input, { color: C.text }]}
         />
         {secureTextEntry ? (
           <Pressable
@@ -85,13 +87,13 @@ export function Input({
             <Icon
               name={showText ? 'eye-off-outline' : 'eye-outline'}
               size={20}
-              color={c.onSurfaceVariant}
+              color={C.sub}
             />
           </Pressable>
         ) : null}
       </View>
       {hasError ? (
-        <Text variant="labelSm" color="error" style={styles.errorText}>
+        <Text variant="labelSm" color="danger" style={styles.errorText}>
           {error}
         </Text>
       ) : null}

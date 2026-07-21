@@ -31,7 +31,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AvatarCrop, type CropSource } from '@/components/avatar-crop';
 import { Button, Icon, Input, Text } from '@/components/ui';
-import { md3 } from '@/lib/theme';
+import { useTokens } from '@/hooks/use-tokens';
 import { ApiError } from '@/lib/api';
 import { uploadAvatar } from '@/lib/avatar-api';
 import { updateProfile } from '@/lib/profile-api';
@@ -41,7 +41,7 @@ import { useStore } from '@/store/use-store';
 type Step = 1 | 2 | 3;
 
 export default function OnboardingScreen() {
-  const { colors } = md3;
+  const C = useTokens();
   const setDisplayName    = useStore((s) => s.setDisplayName);
   const setPhotoUrl       = useStore((s) => s.setPhotoUrl);
   const markProfileCreated = useStore((s) => s.markProfileCreated);
@@ -151,17 +151,17 @@ export default function OnboardingScreen() {
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <SafeAreaView style={[styles.root, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
+      <SafeAreaView style={[styles.root, { backgroundColor: C.bg }]} edges={['top', 'bottom']}>
         {/* Step dots + back (steps 2-3 only — step 1 is the hard gate) */}
         <View style={styles.topBar}>
           {step > 1 ? (
             <Pressable onPress={() => setStep((step - 1) as Step)} hitSlop={12} style={styles.backBtn}>
-              <Icon name="chevron-back" size={22} color={colors.onSurface} />
+              <Icon name="chevron-back" size={22} color={C.text} />
             </Pressable>
           ) : <View style={styles.backBtn} />}
           <View style={styles.dots}>
             {[1, 2, 3].map(d => (
-              <View key={d} style={[styles.dot, { backgroundColor: d === step ? colors.primary : colors.surfaceContainerHigh }]} />
+              <View key={d} style={[styles.dot, { backgroundColor: d === step ? C.accent : C.border }]} />
             ))}
           </View>
           <View style={styles.backBtn} />
@@ -169,12 +169,12 @@ export default function OnboardingScreen() {
 
         {step === 1 && (
           <View style={styles.content}>
-            <View style={[styles.iconCircle, { backgroundColor: colors.primaryContainer }]}>
-              <Icon name="person" size={36} color={colors.onPrimaryContainer} />
+            <View style={[styles.iconCircle, { backgroundColor: C.accentDim }]}>
+              <Icon name="person" size={36} color={C.accentGrn} />
             </View>
             <View style={styles.heading}>
               <Text variant="headlineLg" weight="700" center>환영합니다! 👋</Text>
-              <Text variant="bodyMd" color="onSurfaceVariant" center>
+              <Text variant="bodyMd" color="sub" center>
                 앱에서 사용할 닉네임을 설정해 주세요.{'\n'}나중에 언제든지 변경할 수 있습니다.
               </Text>
             </View>
@@ -189,7 +189,7 @@ export default function OnboardingScreen() {
               onSubmitEditing={nextFromName}
               error={nameError}
             />
-            <Text variant="labelSm" color="onSurfaceVariant" style={styles.hint}>
+            <Text variant="labelSm" color="sub" style={styles.hint}>
               {name.trim().length} / 20자
             </Text>
           </View>
@@ -199,7 +199,7 @@ export default function OnboardingScreen() {
           <View style={styles.content}>
             <View style={styles.heading}>
               <Text variant="headlineLg" weight="700" center>프로필 사진</Text>
-              <Text variant="bodyMd" color="onSurfaceVariant" center>
+              <Text variant="bodyMd" color="sub" center>
                 다른 러너에게 보여질 사진이에요. (선택)
               </Text>
             </View>
@@ -207,11 +207,11 @@ export default function OnboardingScreen() {
               {photoUri ? (
                 <Image source={{ uri: photoUri }} style={styles.photo} />
               ) : (
-                <View style={[styles.photo, styles.photoEmpty, { backgroundColor: colors.surfaceContainerLow, borderColor: colors.surfaceContainerHigh }]}>
-                  <Icon name="camera" size={30} color={colors.onSurfaceVariant} />
+                <View style={[styles.photo, styles.photoEmpty, { backgroundColor: C.surfaceAlt, borderColor: C.border }]}>
+                  <Icon name="camera" size={30} color={C.sub} />
                 </View>
               )}
-              <Text variant="labelSm" color="primary" style={{ textAlign: 'center', marginTop: 12 }}>
+              <Text variant="labelSm" color="accentGrn" style={{ textAlign: 'center', marginTop: 12 }}>
                 {photoUri ? '다시 선택' : '사진 선택'}
               </Text>
             </Pressable>
@@ -222,7 +222,7 @@ export default function OnboardingScreen() {
           <View style={styles.content}>
             <View style={styles.heading}>
               <Text variant="headlineLg" weight="700" center>키 · 체중</Text>
-              <Text variant="bodyMd" color="onSurfaceVariant" center>
+              <Text variant="bodyMd" color="sub" center>
                 키·체중을 입력하면 칼로리 추정과 러닝 분석이{'\n'}더 정확해져요 · 프로필에 공개되지 않아요
               </Text>
             </View>
@@ -252,7 +252,7 @@ export default function OnboardingScreen() {
               <Button label="다음" onPress={() => setStep(3)} large />
               {!photoUri && (
                 <Pressable onPress={() => setStep(3)} hitSlop={8} style={styles.skipBtn}>
-                  <Text variant="labelSm" color="onSurfaceVariant">다음에 하기</Text>
+                  <Text variant="labelSm" color="sub">다음에 하기</Text>
                 </Pressable>
               )}
             </>
@@ -260,7 +260,7 @@ export default function OnboardingScreen() {
           {step === 3 && (
             <>
               {submitting ? (
-                <View style={styles.submittingWrap}><ActivityIndicator color={colors.primary} /></View>
+                <View style={styles.submittingWrap}><ActivityIndicator color={C.accent} /></View>
               ) : (
                 <Button
                   label="FreshRun 시작하기"
@@ -271,7 +271,7 @@ export default function OnboardingScreen() {
               )}
               {heightCm.trim() === '' && weightKg.trim() === '' && !submitting && (
                 <Pressable onPress={submit} hitSlop={8} style={styles.skipBtn}>
-                  <Text variant="labelSm" color="onSurfaceVariant">다음에 하기</Text>
+                  <Text variant="labelSm" color="sub">다음에 하기</Text>
                 </Pressable>
               )}
             </>
