@@ -20,13 +20,15 @@ export function deepLink(n: DeepLinkTarget): (() => void) | null {
   switch (n.type) {
     case 'run_kudoed':
     case 'run_commented': // target_type "run", target_id = run id (probed)
-      if (!n.target_id) return null;
-      return () => router.push({ pathname: '/(records)/activity' as any, params: { runId: n.target_id! } });
     case 'pb_achieved':
-      // self-targeted → own-run 활동 상세 (same home as run_kudoed/commented;
-      // own runs analyse in 기록 tab, not the social post). target_id = run_id.
+      // Slice B (지연 진단 + owner repro, ruled 2026-07-21): all three land
+      // on the SOCIAL run detail (run-post) — the kudos/comment you were
+      // notified about must be visible at the landing. The old 활동-상세
+      // route was the misroute (its analytics view shows neither).
+      // own='1': these types only ever target MY run, and run-post derives
+      // own-mode from the param (the detail payload has no is_mine).
       if (!n.target_id) return null;
-      return () => router.push({ pathname: '/(records)/activity' as any, params: { runId: n.target_id! } });
+      return () => router.push({ pathname: '/run-post' as any, params: { runId: n.target_id!, own: '1' } });
     case 'crew_invited':
       // preview→join screen (payload.invite_code; the crew's shared code).
       // No invite record to accept/decline server-side — the code IS the invite.
@@ -51,9 +53,11 @@ export function deepLink(n: DeepLinkTarget): (() => void) | null {
       return () => openProfile(n.target_id, n.actor_nickname);
     case 'crew_announcement': {
       // routes to the real 공지 detail — payload.crew_id + target_id(=공지 id),
-      // per the guide's deep-link table. Old rows (payload:null) stay inert.
+      // per the guide's deep-link table. Legacy rows (pre-07-08, null
+      // payload): land on the crew list — an honest imperfect landing beats
+      // a dead tap (owner ruling, Slice B 2026-07-21).
       const crewId = n.payload?.crew_id;
-      if (!crewId) return null;
+      if (!crewId) return () => router.push('/(tabs)/community' as any);
       if (n.target_id) {
         return () => router.push({
           pathname: '/(community)/announcement-detail' as any,

@@ -45,6 +45,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Avatar } from '@/components/avatar';
 import { KudosSheet } from '@/components/kudos-sheet';
 import { MediaCarousel } from '@/components/media-carousel';
+import { PhotoViewer } from '@/components/photo-viewer';
 import { setRouteMap } from '@/store/route-map';
 import { Icon } from '@/components/ui';
 import { ApiError } from '@/lib/api';
@@ -154,6 +155,8 @@ export default function RunPostScreen() {
   // picker; 204 AND 404 both land on 신고가 접수되었어요 (은닉 rule, hers).
   const [menuOpen, setMenuOpen] = useState(false);
   const [sheetView, setSheetView] = useState<'menu' | 'report'>('menu');
+  // ⑦ photo enlarge — 활동 상세's wiring mirrored (per-surface gap, 2026-07-21)
+  const [photoViewIdx, setPhotoViewIdx] = useState<number | null>(null);
   const [reportReason, setReportReason] = useState<ReportReason | null>(null);
   const [reportDetail, setReportDetail] = useState('');
   const [reportBusy, setReportBusy] = useState(false);
@@ -316,6 +319,7 @@ export default function RunPostScreen() {
                 seed={run.id}
                 photos={run.photos ?? []}
                 height={HERO_H}
+                onPhotoPress={i => setPhotoViewIdx(i)}
                 onMapPress={() => {
                   const line = track ?? run.polyline_thumb;
                   if (!line || line.length < 2) return;
@@ -490,6 +494,15 @@ export default function RunPostScreen() {
         </Pressable>
         </KeyboardAvoidingView>
       </Modal>
+
+      {photoViewIdx !== null && run && (
+        <PhotoViewer
+          visible
+          photos={run.photos ?? []}
+          initialIndex={photoViewIdx}
+          onClose={() => setPhotoViewIdx(null)}
+        />
+      )}
     </KeyboardAvoidingView>
   );
 }
