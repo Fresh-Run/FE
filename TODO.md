@@ -1146,9 +1146,13 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 4. **(f) re-confirm items** — PB modal if triggered: 성과 공유하기 (준비 중 state?) + 기록 자세히 보기 routing. 30 seconds, capture verbal verdict.
 5. **Post-outing desk debrief (self-service, no 지연 ask):** `GET /runs/{id}/track` → `point_count_raw/kept` + `server_distance_km` vs app-credited vs ground truth — the three-number layer attribution, from the sofa.
 
+**PAUSE-SEMANTICS RIDER (지연 11:08 contract check, audited contract-clean 2026-07-21):** mid-run, deliberately pause 2 min and WALK ~50m before resuming. Post-hoc debrief: `GET /runs/{id}/track` — the timestamp gap present at the pause point (no points inside it), and the walked 50m absent from both the app-credited and server distances. This extends ①'s odometer claim to cover pause semantics — client (anchor-refresh) and server (gap-threshold) must agree.
+
 **OPTIONAL RIDER — slice-3 편도 resume (owner's word + legs permitting):** generate 편도 (start → real destination; v2.3 corridor + v2.4 band deployed since the 용산 2× 전패 — retry justified). If too-far: the 422 gate shows 최소 X km + the 설정 chip fixes the slider. Run it: course line visible (proven rails), destination arrival behavior, save → run links route + 편도 badge in 내 코스. Budget: ≤2 generation attempts (quota is real).
 
 ## 🔨 BUILD #11 RUNBOOK (pre-written 2026-07-21 — build day is an hour, not an afternoon)
+
+**SCHEDULE EQUATION (지연 11:10, ledgered): DRY MORNING = BUILD DAY.** The audio rider is **doubly confirmed** — lock-kill re-reproduced on the current OTA bundle (`a4ae6f2e`).
 
 **Trigger: dry run passes (external gate) or next native need. RUNTIME RULING (owner, 2026-07-21, on the record): the runtimeVersion sdkVersion→appVersion switch does NOT ride #11** — no new native module (env rebuild + LA-widget colors only); standing policy holds; **version increment only**.
 
