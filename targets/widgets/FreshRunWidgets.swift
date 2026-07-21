@@ -169,7 +169,10 @@ private struct RunActionsRow: View {
           }
           .foregroundStyle(.white)
           .frame(maxWidth: .infinity, minHeight: 46)
-          .background(Color(red: 240 / 255, green: 72 / 255, blue: 60 / 255),
+          // #E85A5A — the adopted dark `danger` (지연 ruling (c)+, 2026-07-21):
+          // lock-screen 종료 == in-app hold-stop, one red across the system.
+          // (Was #F0483C, the pre-adoption value — the LA rider's one drift.)
+          .background(Color(red: 232 / 255, green: 90 / 255, blue: 90 / 255),
                       in: RoundedRectangle(cornerRadius: 14))
         }
         .buttonStyle(.plain)
