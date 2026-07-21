@@ -21,7 +21,8 @@ import { MonthPicker } from '@/components/month-picker';
 import { Icon } from '@/components/ui';
 import { useRuns, type Run } from '@/hooks/use-runs';
 import { distUnit, fmtDate, fmtDist, fmtDuration, fmtPaceIn, fmtWhen, timeTitle } from '@/lib/run-format';
-import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
+import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
+import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { getMonthlyStats, type MonthlyStats } from '@/lib/stats-api';
 import { useQuota } from '@/store/use-quota';
 import { useSettings } from '@/store/use-settings';
@@ -51,6 +52,8 @@ function sparkPaths(vals: readonly number[], W: number, H: number) {
 // All hooks are called unconditionally; early return is placed after the last hook.
 
 function MonthStats() {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   const units = useSettings(s => s.settings.units);
   // Server month stats (stats-api swap): client aggregation over fetched
   // runs went quietly wrong once cursor pagination landed (only page one
@@ -163,7 +166,7 @@ function MonthStats() {
             <Text style={st.heroUnit}>{distUnit(units)}</Text>
           </View>
           {delta !== null && (
-            <View style={[st.deltaBadge, { backgroundColor: delta >= 0 ? C.accentDim : '#EF444416' }]}>
+            <View style={[st.deltaBadge, { backgroundColor: delta >= 0 ? C.accentDim : C.danger + '16' }]}>
               <Text style={[st.deltaTxt, { color: delta >= 0 ? C.accentGrn : C.danger }]}>
                 지난달 {delta >= 0 ? '+' : ''}{delta}%
               </Text>
@@ -181,12 +184,12 @@ function MonthStats() {
           >
             <Defs>
               <LinearGradient id="sparkGrad" x1="0" y1="0" x2="0" y2="1">
-                <Stop offset="0" stopColor="#34B85A" stopOpacity={0.3} />
-                <Stop offset="1" stopColor="#34B85A" stopOpacity={0} />
+                <Stop offset="0" stopColor={C.chart} stopOpacity={0.3} />
+                <Stop offset="1" stopColor={C.chart} stopOpacity={0} />
               </LinearGradient>
             </Defs>
             <Path d={area} fill="url(#sparkGrad)" />
-            <Path d={line} fill="none" stroke="#34B85A" strokeWidth={2.5} strokeLinecap="round" />
+            <Path d={line} fill="none" stroke={C.chart} strokeWidth={2.5} strokeLinecap="round" />
           </Svg>
         </View>
       </View>
@@ -213,6 +216,8 @@ function MonthStats() {
 // the quota store.
 
 function InsightUpsell({ premium }: { premium: boolean }) {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   const onPress = premium
     ? () => router.push('/monthly-insight' as never)
     : () => Alert.alert('준비 중', '프리미엄 구독은 다음 업데이트에서 만나볼 수 있어요.');
@@ -235,6 +240,7 @@ function InsightUpsell({ premium }: { premium: boolean }) {
 // ─── RunRow ───────────────────────────────────────────────────────────────────
 
 function MetricPill({ icon, value, color }: { icon: string; value: string; color: string }) {
+  const st = useStyles(makeSt);
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
       <Icon name={icon} size={12} color={color} />
@@ -244,6 +250,8 @@ function MetricPill({ icon, value, color }: { icon: string; value: string; color
 }
 
 function RunRow({ run }: { run: Run }) {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   const units = useSettings(s => s.settings.units);
   return (
     <Pressable
@@ -282,6 +290,8 @@ function RunRow({ run }: { run: Run }) {
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function RecordsScreen() {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
   const tabBarInset = useTabBarInset();
   const { runs, loading, loadingMore, hasMore, loadMore, error, signedOut, refetch } = useRuns();
@@ -384,7 +394,7 @@ export default function RecordsScreen() {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const st = StyleSheet.create({
+const makeSt = (C: Tokens) => StyleSheet.create({
   root:        { flex: 1, backgroundColor: C.bg },
   loadingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   headerPad:   { paddingTop: S.xl },

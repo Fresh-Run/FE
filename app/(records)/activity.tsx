@@ -24,7 +24,8 @@ import { useRunDetail } from '@/hooks/use-runs';
 import { deleteRun } from '@/lib/runs-api';
 import { getRunTrack } from '@/lib/run-social-api';
 import { distUnit, fmtDist, fmtDuration, fmtPaceIn, fmtWhen, timeTitle } from '@/lib/run-format';
-import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
+import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
+import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { KCAL_PER_KG_KM, useLocalProfile } from '@/store/use-local-profile';
 import { useSettings } from '@/store/use-settings';
 import type { Coordinate } from '@/types';
@@ -40,6 +41,8 @@ function StatTile({
 }: {
   icon: string; label: string; value: string; unit?: string; accent?: boolean; hint?: string;
 }) {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   return (
     <View style={[st.tile, shadows.sm]}>
       <View style={st.tileTop}>
@@ -60,6 +63,8 @@ function StatTile({
 const HERO_H = 200;
 
 export default function ActivityScreen() {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
   const { runId } = useLocalSearchParams<{ runId: string }>();
   const { run, loading, error, refetch } = useRunDetail(runId ?? null);
@@ -324,7 +329,7 @@ export default function ActivityScreen() {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const st = StyleSheet.create({
+const makeSt = (C: Tokens) => StyleSheet.create({
   root:        { flex: 1, backgroundColor: C.bg },
   loadingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 

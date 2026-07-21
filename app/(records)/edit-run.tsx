@@ -29,11 +29,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '@/components/ui';
 import { timeTitle } from '@/lib/run-format';
 import { updateRun, type RunVisibility } from '@/lib/runs-api';
-import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
+import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
+import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { useRunDetail } from '@/hooks/use-runs';
 import { VISIBILITY_OPTIONS } from '@/app/(course)/run-save';
 
 export default function EditRunScreen() {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
   const { runId } = useLocalSearchParams<{ runId: string }>();
   const { run, loading, error } = useRunDetail(runId ?? null);
@@ -153,7 +156,7 @@ export default function EditRunScreen() {
   );
 }
 
-const st = StyleSheet.create({
+const makeSt = (C: Tokens) => StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
 
   appBar:      { flexDirection: 'row', alignItems: 'center', paddingHorizontal: S.gutter, paddingVertical: 10 },

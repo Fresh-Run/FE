@@ -32,7 +32,8 @@ import { Icon } from '@/components/ui';
 import { ApiError } from '@/lib/api';
 import { getMonthlyInsight, type MonthlyInsight, type MonthRank, type PaceTrendPoint } from '@/lib/insights-api';
 import { distUnit, fmtDist, fmtDuration, fmtPaceIn, paceUnit } from '@/lib/run-format';
-import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
+import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
+import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { useSettings } from '@/store/use-settings';
 
 // ─── Maps ─────────────────────────────────────────────────────────────────────
@@ -78,6 +79,7 @@ function fmtRecordValue(type: string, value: number, units: 'km' | 'mi'): string
 // ─── Cards ────────────────────────────────────────────────────────────────────
 
 function SectionCard({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
+  const st = useStyles(makeSt);
   return (
     <View style={{ paddingHorizontal: S.gutter, paddingTop: 24 }}>
       <Text style={st.sectionTitle}>{title}</Text>
@@ -90,6 +92,8 @@ function SectionCard({ title, hint, children }: { title: string; hint?: string; 
 // ─── 페이스 추이 (3-point line, gap on null months) ────────────────────────────
 
 function PaceTrendChart({ points, units }: { points: PaceTrendPoint[]; units: 'km' | 'mi' }) {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   const W = 300, H = 64, PAD = 12;
   const nums = points.map(p => p.avg_pace_sec_per_km).filter((v): v is number => v != null);
   const min = Math.min(...nums), max = Math.max(...nums);
@@ -133,6 +137,8 @@ function PaceTrendChart({ points, units }: { points: PaceTrendPoint[]; units: 'k
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function MonthlyInsightScreen() {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
   const units = useSettings(s => s.settings.units);
 
@@ -415,7 +421,7 @@ export default function MonthlyInsightScreen() {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const st = StyleSheet.create({
+const makeSt = (C: Tokens) => StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
 
   appBar:      { flexDirection: 'row', alignItems: 'center', paddingHorizontal: S.md, paddingVertical: 10 },

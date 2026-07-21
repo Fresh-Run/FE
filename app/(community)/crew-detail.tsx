@@ -50,7 +50,7 @@ function isFull(crew: Crew): boolean {
 }
 
 // 랭킹 메달 — canvas FrRankMedal colors (gold = the 크루장 crown token)
-const rankMedal = (C: Tokens): Record<number, string> => ({ 1: C.crown, 2: '#AEB6BE', 3: '#D08B4F' });
+const rankMedal = (C: Tokens): Record<number, string> => ({ 1: C.medalGold, 2: C.medalSilver, 3: C.medalBronze });
 
 // ─── CTA footer ───────────────────────────────────────────────────────────────
 

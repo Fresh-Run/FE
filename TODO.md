@@ -1102,9 +1102,35 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 
 **⚠ AUTH VISUAL CHANGE (owner-eyes leg): the MD3-green fossil is repaired to app grammar** — primary CTAs `#006e1c`+white → **C.accent lime + accentText** (accentShadow replaces the green fab shadow); inputs/borders/text onto C tokens; **J2 baked: welcome route motif `#42e355` ×4 → C.accent** (canvas-true, per ruling). Auth is now scheme-capable — it themes under the dev override like every converted family.
 
+### 지연 DARK PALETTE — SOURCE ARTIFACT (provenance: 지연 chat message, 2026-07-21, transcribed by owner; repo-transcribed per the new process rider)
+
+> Surfaces: bg-base #0E120C · bg-card #171C14 · bg-elevated #20261C · divider #2A3125
+> Text: primary #EDF2E8 · secondary #A8B3A0 · muted #6B7563
+> Accent: #74E827 (pressed #5FC41E, on-accent ink #0D1A06) — matches Live Activity & route line
+> Pace: fast #74E827 · mid #C8E85A · slow #E8B84A (amber family, tonally consistent with the missed-banner)
+> Crown: gold #F5C542 · silver #C4CCC0 (green-undertone) · bronze #D89860
+> UV (5 grades, 1:1 to /weather uv.grade 낮음→위험): #6BC46B · #E8D44A · #F5A73B · #F0703B · #E85A7A (rose instead of pure red — red vibrates on dark)
+> Charts: primary #74E827 · secondary #4A9BE8 (colorblind-safe vs green) · tertiary #B08AE8 · grid = divider · labels = text-secondary
+> States: success = accent · warning #E8B84A · danger #E85A5A
+> "Treat it as a draft — tune anything that fights your FR_DARK tokens, you own the canvas."
+
+**PROCESS RIDER (owner-ledgered): chat-delivered design artifacts get transcribed into the repo (docs/ file or ledger block) AT RECEIPT** — "the artifact only exists in a message thread" was this blocker's whole cause.
+
+**WINDFALL (BE `90c3150` pull, 2026-07-21):** ROUTE_DELETE design + integration test landed (**내 코스 delete client slice unblocks on her deploy confirmation** — pre-scoped S, saved-courses slide-out grammar) · **is_one_way live on StoredRoute AND RouteResponse, 63/63 backfilled — the one-way-flag nicety RETIRES** (내 코스 편도 badge now possible) · 강-횡단 gate + gen_meta instrumentation shipped.
+
+### EPIC PHASE 3 — FINAL BATCH: RECORDS/INSIGHTS (2026-07-21, awaiting publish gate → TF [HH:MM])
+
+**Token integration (지연 palette, mapping table at checkpoint):** ADOPTED dark — UV 5 grades (1:1 on uv.grade, rose 위험; placeholder RETIRED) · medal trio gold/silver/bronze (crown debt RETIRED; light = long-standing inline values promoted) · chart trio (dark primary #74E827 = LA lime; secondary/tertiary same-both-schemes — our derivation, flagged) · pace trio (dark hers; light DERIVED from existing palette — flagged deviation) · warning → dark `sun` #E8B84A. **HELD AS JUDGMENT ROWS (not applied):** her surface/text/accent/danger families vs our owner-walked FR_DARK values — 5 batches were verified on FR_DARK; her draft's own terms allow tuning. Her on-accent ink #0D1A06 == our accentText (J1 AGREES — independent convergence).
+**UV AUDIT VERDICT (her notes, verified against consumption):** ① grade-string mapping ONLY (`C.uv[w.uv.grade]`, sole site) — the numeric re-bucketing bug class does not exist in our code, nothing to fix. ② null-uv hides the tile (+ night collapse) — contract-normal, confirmed.
+**Batch:** records/activity/edit-run/monthly-insight converted (pipeline, 0 errors first pass) · sparkline → C.chart (3 sites) · records delta badge → danger idiom · **pace tones live in SplitsTable + PaceChart (tercile mapping; opacity-as-meaning retired)** · rankMedal → medal tokens. **PHASE 3 COMPLETE: zero static-C consumers in the product tree (grep-proven).**
+
 ### EPIC PHASE 4 — SPECIALS (2026-07-21, awaiting publish gate → TF [HH:MM])
 
 **① fresh-tab-bar converted** (the last static-C file outside the design-blocked records family) — pill/labels/center CTA on tokens. **② Root chrome follows `resolved`:** NavThemeProvider Dark/DefaultTheme + StatusBar light/dark icons keyed on the scheme store — users unchanged (resolved pinned light; OS dark still reads nothing), but under the dev override transitions and status icons now theme WITH the screens (kills the inverse-flash + dark-on-dark status icons during owner previews). **③ Sheets/overlay per-color contrast audit (J4 closure): 17 identity/status colors computed vs dark surfaces — ALL PASS ≥3:1 (min faint 3.55 / UV-위험 3.58; most >5:1). Zero dark-map overrides needed; J4 stays FIXTURE-identity with numbers on record.** Scrim/dim note: black-over-dark dims read weaker but follow the standard iOS dark pattern — accepted. Snackbar C.text/C.bg inversion verified correct both schemes.
+
+**PHASE 4 VERIFIED (owner report, formalized 2026-07-21 — timestamp bracket arrived unfilled, recorded without [HH:MM]):** tab bar dark · no transition flashes · status icons readable · modal/sheet chrome dark · light lap identical · OS-dark + override off fully light (기록 tab light-as-expected — its batch was design-blocked at walk time). **Known-good production group promoted: `50251801-e0b6-41e9-883d-78b0525a4068`.**
+
+**JUDGMENT RULING (c)+ (owner):** 지연's ACCENT family adopted into darkColors (#74E827; accentGrn follows; accentText #0D1A06 unified — J1 convergence; contrast 11.4:1 on-accent, 11.37:1 on-surface) + her DANGER #E85A5A (5.16:1) · **surfaces/text HELD on FR_DARK (five owner-walked batches stand) — OUR deviation per her own terms, flagged** · pressed #5FC41E noted-unconsumable (no pressed system).
 
 **OWNER NOTE (ledgered, 2026-07-21): Phase 5 픽커 = 확정 목표 종착점** — 테마 row가 프로필 설정 그룹에 시스템/라이트/다크 3-way로 복귀 (지연과도 논의됨). 재룰링 불필요; 오너 수요 명시적 — Phase 4 + records 배치가 풀리는 즉시 신속 출하.
 

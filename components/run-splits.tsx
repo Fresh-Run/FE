@@ -25,9 +25,17 @@ import type { UserSettings } from '@/lib/settings-api';
 
 type Units = UserSettings['units'];
 
+// 지연 palette (2026-07-21): pace trio — tercile by distance from the fastest
+// split (fast third → paceFast, middle → paceMid, slow third → paceSlow).
+function paceTone(C: Tokens, sec: number, fastest: number, range: number): string {
+  const t = (sec - fastest) / range;
+  return t < 1 / 3 ? C.paceFast : t < 2 / 3 ? C.paceMid : C.paceSlow;
+}
+
 // ─── 구간 기록 — Strava-style table ───────────────────────────────────────────
 
 export function SplitsTable({ splits, units }: { splits: RunSplit[]; units: Units }) {
+  const C = useTokens();
   const st = useStyles(makeSt);
   if (splits.length === 0) return null;
   const fastest = Math.min(...splits.map(s => s.sec));
@@ -50,7 +58,7 @@ export function SplitsTable({ splits, units }: { splits: RunSplit[]; units: Unit
             <Text style={[st.kmTxt, { width: 34 }]}>{label}</Text>
             <Text style={[st.paceTxt, { width: 52 }]}>{fmtPaceIn(s.sec, units)}</Text>
             <View style={st.barTrack}>
-              <View style={[st.bar, { width: `${frac * 100}%` as `${number}%`, opacity: isFast ? 1 : 0.55 }]}>
+              <View style={[st.bar, { width: `${frac * 100}%` as `${number}%`, backgroundColor: paceTone(C, s.sec, fastest, range) }]}>
                 {isFast && <Text style={st.fastTag}>⚡</Text>}
               </View>
             </View>
@@ -93,7 +101,7 @@ export function PaceChart({ splits }: { splits: RunSplit[] }) {
           return (
             <Rect
               key={i} x={x} y={y} width={w} height={h} rx={Math.min(6, w / 2)}
-              fill={C.accent} opacity={0.5 + 0.5 * (1 - (p - pMin) / pRange)}
+              fill={paceTone(C, p, pMin, Math.max(1, pRange))} opacity={0.65 + 0.35 * (1 - (p - pMin) / pRange)}
             />
           );
         })}

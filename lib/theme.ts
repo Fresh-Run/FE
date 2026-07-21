@@ -78,7 +78,23 @@ export const colors = {
   blue:        palette.blue400,
   sun:         palette.amber400,    // sun icon, warning verdict
   crown:       '#E8B53D',           // 크루장 role badge (debt batch 2 — was inline ×5)
-  chart:       '#34B85A',           // J3 ruling: records sparkline green (was inline ×3)
+  // Medal trio (지연 palette 2026-07-21 — dark values hers; light = the
+  // long-standing inline values, promoted to tokens)
+  medalGold:   '#E8B53D',
+  medalSilver: '#AEB6BE',
+  medalBronze: '#D08B4F',
+  // Chart trio (지연 palette): primary light stays ours (J3); secondary/
+  // tertiary same both schemes (her colorblind-safe picks read on light too —
+  // our derivation choice, flagged)
+  chart:          '#34B85A',
+  chartSecondary: '#4A9BE8',
+  chartTertiary:  '#B08AE8',
+  // Pace trio (지연 palette gave DARK only — light DERIVED from existing
+  // palette values, flagged as our deviation: fast=green700, mid=amber(sun
+  // lane), slow=aqiBad amber-orange)
+  paceFast: palette.green700,
+  paceMid:  palette.amber400,
+  paceSlow: palette.aqiBad,
   danger:      palette.red500,
 
   // AQI status map (index by Korean label)
@@ -258,18 +274,33 @@ export const darkColors: Tokens = {
   text:  '#F2F3F0',
   sub:   '#9A9EA5',
   faint: '#6A6F77',
-  // Accent (canvas FR_DARK; accentGrn via the components' dark ternary)
-  accent:     '#63C23A',
-  accentText: '#0B1505',
+  // Accent — JUDGMENT (c)+ (owner, 2026-07-21): 지연's #74E827 ADOPTED
+  // (== LA lime + route-line dark tone — the brand protagonist); accentGrn
+  // follows (the canvas dark ternary = accent). accentText #0D1A06 already
+  // agreed (J1 convergence). accentDim held (her draft gave none). Her
+  // pressed #5FC41E: noted-unconsumable, no pressed system exists.
+  accent:     '#74E827',
+  accentText: '#0D1A06',
   accentDim:  '#18260D',
-  accentGrn:  '#63C23A',
+  accentGrn:  '#74E827',
   // Semantic — blue/sun scheme-invariant per canvas; danger from FR_DARK;
   // crown DERIVED (no canvas source — canvas debt)
   blue:   palette.blue400,
-  sun:    palette.amber400,
-  crown:  '#E8B53D',
-  chart:  '#34B85A',   // DERIVED placeholder (J3) — canvas debt with crown/uv
-  danger: '#F0635A',
+  // 지연 palette adoptions (2026-07-21) — placeholder debts RETIRE:
+  sun:    '#E8B84A',   // her warning state (the miss-banner/amber lane)
+  crown:  '#F5C542',   // her gold
+  medalGold:   '#F5C542',
+  medalSilver: '#C4CCC0',  // green-undertone
+  medalBronze: '#D89860',
+  chart:          '#74E827',  // her chart primary (== LA/route lime)
+  chartSecondary: '#4A9BE8',
+  chartTertiary:  '#B08AE8',
+  paceFast: '#74E827',
+  paceMid:  '#C8E85A',
+  paceSlow: '#E8B84A',
+  // JUDGMENT (c)+ (owner): her danger ADOPTED. Surfaces/text stay FR_DARK
+  // (five owner-walked batches stand) — OUR deviation per her own terms.
+  danger: '#E85A5A',
   // Status maps — aqi invariant per canvas FR_AQI_COLOR (unbranched in dark);
   // uv DERIVED (app-only ruling, no canvas source — canvas debt)
   aqi: {
@@ -278,11 +309,13 @@ export const darkColors: Tokens = {
     '나쁨':    palette.aqiBad,
     '매우나쁨': palette.aqiVeryBad,
   },
+  // 지연 palette (2026-07-21): UV 5 grades 1:1 on uv.grade — rose for 위험
+  // (red vibrates on dark). Placeholder debt RETIRED.
   uv: {
-    '낮음':    palette.aqiOk,
-    '보통':    palette.amber400,
-    '높음':    palette.aqiBad,
-    '매우높음': palette.aqiVeryBad,
-    '위험':    '#8A4FD8',
+    '낮음':    '#6BC46B',
+    '보통':    '#E8D44A',
+    '높음':    '#F5A73B',
+    '매우높음': '#F0703B',
+    '위험':    '#E85A7A',
   },
 };
