@@ -2,7 +2,7 @@
 // bookmarks, comments. Shapes mirror the backend's PublicRouteResponse /
 // CommentResponse (docs/API_GUIDE.md is the authoritative contract).
 
-import { apiFetch } from '@/lib/api';
+import { ApiError, apiFetch } from '@/lib/api';
 import type { Coordinate } from '@/types';
 
 export type PublicRoute = {
@@ -96,6 +96,20 @@ export function getMyRoute(id: string): Promise<StoredRoute> {
 /** 공개/비공개 토글 (owner-only; 404 otherwise). Returns the updated row. */
 export function setRoutePublic(id: string, isPublic: boolean): Promise<StoredRoute> {
   return apiFetch<StoredRoute>(`/api/routes/${id}`, { method: 'PATCH', body: { is_public: isPublic } });
+}
+
+/** DELETE /routes/{id} — owner-only hard delete (guide 2026-07-21, probed
+    live same day: 204 → re-DELETE 404 은닉). Cascade server-side: bookmarks/
+    likes/comments/route notifications die; LINKED RUNS AND COPIES SURVIVE
+    (runs.route_id · copied_from → null — independent assets). 404 resolves
+    as SUCCESS — deleteRun's idempotent-delete transport twin. */
+export async function deleteRoute(id: string): Promise<void> {
+  try {
+    await apiFetch<void>(`/api/routes/${id}`, { method: 'DELETE' });
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 404) return; // already gone
+    throw e;
+  }
 }
 
 // My private copy of a route (StoredRoute) — subset we consume.

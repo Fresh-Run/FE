@@ -45,6 +45,7 @@ import { openProfile } from '@/lib/profile-nav';
 import { courseStats, fmtDuration } from '@/lib/run-format';
 import {
   bookmarkRoute,
+  deleteRoute,
   getMyRoutes,
   setRoutePublic,
   unbookmarkRoute,
@@ -128,13 +129,18 @@ function CourseRow({ route, onOpen, onUnsave }: { route: PublicRoute; onOpen: ()
 // ─── 내 코스 row (no canvas design — CourseRow grammar minus owner/bookmark,
 //     plus the 공개 state pill) ─────────────────────────────────────────────────
 
-function MyCourseRow({ route, onOpen, onTogglePublic }: {
-  route: StoredRoute; onOpen: () => void; onTogglePublic: () => void;
+function MyCourseRow({ route, onOpen, onTogglePublic, onDelete }: {
+  route: StoredRoute; onOpen: () => void; onTogglePublic: () => void; onDelete: () => void;
 }) {
   const C = useTokens();
   const st = useStyles(makeSt);
   return (
     <Pressable onPress={onOpen} style={({ pressed }) => [st.row, shadows.sm, pressed && { opacity: 0.8 }]}>
+      {/* 삭제 — the sibling segment's top-right icon idiom (unsaveBtn);
+          destructive confirm Alert owns the cascade honesty copy */}
+      <Pressable onPress={onDelete} hitSlop={8} style={st.rowDelBtn}>
+        <Icon name="trash-outline" size={16} color={C.faint} />
+      </Pressable>
       <View style={{ width: 82 }}>
         {route.polyline && route.polyline.length >= 2
           ? <RealMap height={82} borderRadius={14} polyline={route.polyline} />
@@ -284,6 +290,29 @@ export default function SavedCoursesScreen() {
       comment_count: 0,
     });
     router.push('/(course)/preview' as any);
+  }
+
+  // 코스 삭제 (item-4 slice, guide 2026-07-21) — destructive confirm Alert;
+  // cascade copy verbatim + the linked-runs-survive line (guide-sanctioned).
+  // Removal is request-then-remove (no optimistic row kill on a hard delete).
+  function onDeleteMine(r: StoredRoute) {
+    Alert.alert(
+      '이 코스를 삭제할까요?',
+      '북마크·좋아요·댓글이 함께 삭제돼요. 연결된 러닝 기록은 남아요. 되돌릴 수 없어요.',
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '삭제하기',
+          style: 'destructive',
+          onPress: () => {
+            deleteRoute(r.id)
+              .then(() => setMine(prev => (prev ?? []).filter(x => x.id !== r.id)))
+              .catch((e: unknown) =>
+                Alert.alert('삭제 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요'));
+          },
+        },
+      ],
+    );
   }
 
   // 공개/비공개 toggle — confirm Alert carries the honesty copy (D2 ruling +
@@ -456,7 +485,7 @@ export default function SavedCoursesScreen() {
             data={mineList}
             keyExtractor={r => r.id}
             renderItem={({ item }) => (
-              <MyCourseRow route={item} onOpen={() => onOpenMine(item)} onTogglePublic={() => onTogglePublic(item)} />
+              <MyCourseRow route={item} onOpen={() => onOpenMine(item)} onTogglePublic={() => onTogglePublic(item)} onDelete={() => onDeleteMine(item)} />
             )}
             ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
             contentContainerStyle={{ padding: S.gutter, paddingTop: 14, paddingBottom: 90 }}
@@ -524,6 +553,8 @@ const makeSt = (C: Tokens) => StyleSheet.create({
   ownerLine: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 9 },
   ownerTxt:  { fontSize: 11.5, color: C.faint, letterSpacing: -0.2, flexShrink: 1 },
   unsaveBtn: { position: 'absolute', top: 10, right: 10, width: 30, height: 30, alignItems: 'center', justifyContent: 'center' },
+  // 내 코스 삭제 — unsaveBtn's top-right idiom on the mine segment
+  rowDelBtn: { position: 'absolute', top: 10, right: 10, width: 30, height: 30, alignItems: 'center', justifyContent: 'center', zIndex: 1 },
 
   emptyCard: { margin: S.gutter, alignItems: 'center', gap: 13, backgroundColor: C.surfaceAlt, borderWidth: 1, borderStyle: 'dashed', borderColor: C.border, borderRadius: 18, paddingVertical: 28, paddingHorizontal: 24 },
   emptyIcon: { width: 52, height: 52, borderRadius: 16, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, alignItems: 'center', justifyContent: 'center' },
