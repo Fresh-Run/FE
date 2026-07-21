@@ -1133,6 +1133,16 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 
 **VERIFIED [17:25] (owner, TF, production group `0d45c21b`):** 시스템 default — OS-dark device opens DARK · live-follows OS flips · explicit 다크 sticks across relaunch · 라이트 beats OS dark · 시스템 resumes following · map stroke themes · override dead (footer inert) · regression lap clean, unpinned. Known-good production group promoted: `0d45c21b-92ac-4331-b1ce-b0a3b07fbc60`.
 
+## UNIVERSAL "이 경로 달리기" — 지연 RULING (a′) LANDED (2026-07-21; build gated on her deploy confirm)
+
+**Privacy ruling (a′): visibility=consent APPROVED with one amendment.** (a) accepted — exposure argument endorsed (track endpoint already serves viewers, card already draws the trace, the 19/19 matrix IS the consent surface); (b) start-fuzz / (c) per-run toggle rejections agreed. **THE AMENDMENT: materialization fires a notification to the run owner** ("OO님이 회원님의 경로를 저장했어요") — new notification type, settings-gated, kudos-class. Her rationale on record: *technical exposure ≠ social signal; transparency without consent machinery; a per-run toggle becomes the follow-up ONLY if beta surfaces discomfort — not preemptive.* **Shape (ii) approved as proposed:** `source_run_id` provenance, idempotent `unique(user_id, source_run_id)`, real-run duration, **no quota**. Copy distinction (코스/경로) blessed.
+
+**BUILD GATE: her endpoint's 스테이징-반영됨 confirm (ruling ≠ deploy).** Client-side impact noted for the build's scope: the new notification type lands in OUR notification center (typeMeta gains a 경로-저장 row, accent-family tone per the identity/themed split) + notification-settings gains its toggle when her type ships.
+
+**Sequencing (owner, firm):** leg-1 overlay diagnosis → Slice A closes → funnel v1 ships → her deploy confirm → this build.
+
+**Probe windfalls (2026-07-21, world-restored):** ① **ROUTE_DELETE is LIVE on staging** — `DELETE /api/routes/{id}` present in served OpenAPI and probed 204 on an own copy → the 내 코스 delete client-half's deploy condition is **probe-satisfied** (OpenAPI-marker verification per the staging rule). ② `is_one_way` serves in live copy responses (recent BE running). ③ Full-fidelity GPS is not retained server-side — `run_tracks.points` stores a simplified line (55–110pts for 5–10km; only raw/kept counts survive), density within generated-course range (41–563pts) — materialization source is server-side by necessity, and sufficient.
+
 ## RUN-VISIBILITY MATRIX — OWNER INTENT VERIFIED TRUE, CLOSED (2026-07-21, 지연-shared priority)
 
 **The intent — "followers see BOTH 전체-공개 AND 팔로워-tier runs, everywhere runs surface, unless 나만" — is ALREADY TRUE. ALL GREEN, 19/19 live cells, zero mismatches.** Probed on staging as real accounts (test2's run walked through all three tiers · viewer test1 = follower; demo1's run for non-follower cells · viewer demo4; world fully restored — both runs back to `public`, composition run deleted, nothing left published).
