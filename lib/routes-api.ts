@@ -77,6 +77,9 @@ export type StoredRoute = {
   waypoints: { name: string; coordinate: Coordinate; is_pitstop: boolean; description: string | null }[];
   polyline: Coordinate[] | null;
   is_public: boolean;
+  /** v2.3+ (BE 리포트 D, 63/63 backfilled false): true = 편도 — pre-column
+      one-way rows were NOT retro-flagged, so the badge is go-forward only. */
+  is_one_way?: boolean;
   copied_from: string | null;
 };
 

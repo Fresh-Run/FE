@@ -141,7 +141,14 @@ function MyCourseRow({ route, onOpen, onTogglePublic }: {
           : <MiniMap seed={route.id} height={82} borderRadius={14} />}
       </View>
       <View style={{ flex: 1, minWidth: 0 }}>
-        <Text style={st.rowTitle} numberOfLines={1}>{route.summary}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          <Text style={[st.rowTitle, { flexShrink: 1 }]} numberOfLines={1}>{route.summary}</Text>
+          {/* 편도 badge (is_one_way windfall rider — go-forward: pre-column
+              rows were backfilled false) */}
+          {route.is_one_way && (
+            <View style={st.oneWayBadge}><Text style={st.oneWayTxt}>편도</Text></View>
+          )}
+        </View>
         <View style={st.statsLine}>
           <Text style={st.statTxt}>{route.total_distance_km.toFixed(1)}<Text style={st.statUnit}> km</Text></Text>
           {route.estimated_duration_min != null && (
@@ -491,6 +498,8 @@ const makeSt = (C: Tokens) => StyleSheet.create({
   pubPill:    { flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start', marginTop: 9, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999, borderWidth: 1, borderColor: C.border, backgroundColor: C.surfaceAlt },
   pubPillOn:  { borderColor: C.accent + '66', backgroundColor: C.accentDim },
   pubPillTxt: { fontSize: 11.5, fontWeight: '700', color: C.faint, letterSpacing: -0.2 },
+  oneWayBadge: { backgroundColor: C.blue + '18', borderWidth: 1, borderColor: C.blue + '44', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 1 },
+  oneWayTxt:   { fontSize: 10, fontWeight: '800', color: C.blue, letterSpacing: -0.1 },
 
   filterHead: { borderBottomWidth: 1, borderBottomColor: C.border },
   sortRow:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: S.gutter, paddingTop: 4 },

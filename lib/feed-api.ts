@@ -26,6 +26,10 @@ type FeedRunExtras = {
   allow_comments?: boolean | null;
   is_crew_session?: boolean;
   route_id?: string | null;
+  /** Linked course's summary — non-null ONLY for PUBLIC courses (server
+      filters private ones out). THE CTA GATE (repair slice, blessing ①):
+      route_summary != null ⇒ 이 코스 달리기 + bookmark render. */
+  route_summary?: string | null;
   photo_thumb?: string | null;
 };
 

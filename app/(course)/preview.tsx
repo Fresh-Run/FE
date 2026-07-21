@@ -24,7 +24,8 @@ import { Avatar } from '@/components/avatar';
 import { MiniMap } from '@/components/mini-map';
 import { RealMap } from '@/components/real-map';
 import { Icon } from '@/components/ui';
-import { copyRoute } from '@/lib/routes-api';
+import { bookmarkRoute, copyRoute, unbookmarkRoute } from '@/lib/routes-api';
+import { getBookmarkedRoutes } from '@/lib/bookmarks-api';
 import { courseStats, distUnit, fmtDist, fmtDuration, fmtPace, fmtPaceIn, paceUnit, type CourseStatsInput } from '@/lib/run-format';
 import { useSettings } from '@/store/use-settings';
 import { setActiveCourse } from '@/store/active-course';
@@ -74,6 +75,29 @@ export default function CoursePreviewScreen() {
   }, [pending, params.item]);
 
   const [starting, setStarting] = useState(false);
+
+  // ── 이 코스 저장 (repair slice ③ — the all-paths course surface gains the
+  // bookmark-add). Others' courses only (own courses are already yours);
+  // state seeded from the full-row bookmarks fetch, toggled optimistically.
+  const canBookmark = !!pending && !pending.is_mine;
+  const [saved, setSaved] = useState(false);
+  useEffect(() => {
+    if (!canBookmark || !pending) return;
+    let cancelled = false;
+    getBookmarkedRoutes()
+      .then(rows => { if (!cancelled) setSaved(rows.some(r => r.id === pending.id)); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [canBookmark, pending]);
+  const toggleSave = () => {
+    if (!pending) return;
+    const next = !saved;
+    setSaved(next);
+    (next ? bookmarkRoute(pending.id) : unbookmarkRoute(pending.id)).catch(() => {
+      setSaved(!next);
+      Alert.alert(next ? '저장 실패' : '해제 실패', '잠시 후 다시 시도해 주세요.');
+    });
+  };
 
   const confirmRun = async () => {
     if (starting) return;
@@ -203,20 +227,27 @@ export default function CoursePreviewScreen() {
       {/* ── Confirm footer ─────────────────────────────────────────── */}
       <View style={[st.footer, { paddingBottom: Math.max(insets.bottom + 10, 26) }]}>
         <Text style={st.confirmTxt}>이 코스로 뛰시겠습니까?</Text>
-        <Pressable
-          onPress={confirmRun}
-          disabled={starting}
-          style={({ pressed }) => [st.runBtn, accentShadow(C.accent), { opacity: pressed || starting ? 0.9 : 1 }]}
-        >
-          {starting
-            ? <ActivityIndicator size="small" color={C.accentText} />
-            : (
-              <>
-                <Icon name="play" size={19} color={C.accentText} />
-                <Text style={st.runTxt}>네, 뛸게요</Text>
-              </>
-            )}
-        </Pressable>
+        <View style={st.actionRow}>
+          {canBookmark && (
+            <Pressable onPress={toggleSave} style={({ pressed }) => [st.saveBtn, saved && st.saveBtnOn, pressed && { opacity: 0.8 }]} hitSlop={4}>
+              <Icon name={saved ? 'bookmark' : 'bookmark-outline'} size={20} color={saved ? C.accentGrn : C.sub} />
+            </Pressable>
+          )}
+          <Pressable
+            onPress={confirmRun}
+            disabled={starting}
+            style={({ pressed }) => [st.runBtn, accentShadow(C.accent), { opacity: pressed || starting ? 0.9 : 1 }]}
+          >
+            {starting
+              ? <ActivityIndicator size="small" color={C.accentText} />
+              : (
+                <>
+                  <Icon name="play" size={19} color={C.accentText} />
+                  <Text style={st.runTxt}>네, 뛸게요</Text>
+                </>
+              )}
+          </Pressable>
+        </View>
         <Pressable onPress={() => router.back()} style={({ pressed }) => [st.cancelBtn, { opacity: pressed ? 0.7 : 1 }]}>
           <Text style={st.cancelTxt}>취소</Text>
         </Pressable>
@@ -263,7 +294,10 @@ const makeSt = (C: Tokens) => StyleSheet.create({
   // Footer
   footer:     { paddingTop: 16, paddingHorizontal: S.gutter, borderTopWidth: 1, borderTopColor: C.border, backgroundColor: C.bg },
   confirmTxt: { fontSize: 16, fontWeight: '700', color: C.text, letterSpacing: -0.4, textAlign: 'center', marginBottom: 14 },
-  runBtn:     { height: 56, borderRadius: R.lg, backgroundColor: C.accent, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9 },
+  actionRow:  { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  saveBtn:    { width: 56, height: 56, borderRadius: R.lg, borderWidth: 1.5, borderColor: C.border, backgroundColor: C.surface, alignItems: 'center', justifyContent: 'center' },
+  saveBtnOn:  { borderColor: C.accent, backgroundColor: C.accentDim },
+  runBtn:     { flex: 1, height: 56, borderRadius: R.lg, backgroundColor: C.accent, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9 },
   runTxt:     { fontSize: 16.5, fontWeight: '700', color: C.accentText, letterSpacing: -0.3 },
   cancelBtn:  { height: 50, alignItems: 'center', justifyContent: 'center', marginTop: 6 },
   cancelTxt:  { fontSize: 15, fontWeight: '700', color: C.sub, letterSpacing: -0.3 },

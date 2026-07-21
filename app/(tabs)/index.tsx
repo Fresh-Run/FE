@@ -36,6 +36,9 @@ import { getUnreadCount } from '@/lib/notifications-api';
 import { openProfile } from '@/lib/profile-nav';
 import { type FeedRun } from '@/lib/feed-api';
 import { kudosRun, unkudosRun } from '@/lib/run-social-api';
+import { getBookmarkedRoutes } from '@/lib/bookmarks-api';
+import { bookmarkRoute, copyRoute, unbookmarkRoute } from '@/lib/routes-api';
+import { setActiveCourse } from '@/store/active-course';
 import { fmtDist } from '@/lib/run-format';
 import { shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
@@ -358,6 +361,55 @@ export default function HomeScreen() {
       .catch(() => setKudosOv(p => ({ ...p, [run.run_id]: { on: run.my_kudos, delta: 0 } })));
   }, [kudosOv]);
 
+  // ── Repair slice (canvas card B, blessing ①) ─────────────────────────────
+  // Bookmark state for CTA-eligible cards: seeded from the full-row
+  // bookmarks fetch on focus (existing consumed endpoint; ids only used
+  // here), toggled optimistically. The affordance itself is DATA-GATED —
+  // only cards whose run links a PUBLIC course (route_summary != null).
+  const [bookmarkedIds, setBookmarkedIds] = useState<Set<string>>(new Set());
+  useFocusEffect(useCallback(() => {
+    getBookmarkedRoutes()
+      .then(rows => setBookmarkedIds(new Set(rows.map(r => r.id))))
+      .catch(() => {}); // quiet — affordance still works add-first
+  }, []));
+  const toggleBookmark = useCallback((routeId: string) => {
+    setBookmarkedIds(prev => {
+      const has = prev.has(routeId);
+      const next = new Set(prev);
+      if (has) next.delete(routeId); else next.add(routeId);
+      (has ? unbookmarkRoute(routeId) : bookmarkRoute(routeId)).catch(() => {
+        setBookmarkedIds(p2 => {
+          const undo = new Set(p2);
+          if (has) undo.add(routeId); else undo.delete(routeId);
+          return undo;
+        });
+      });
+      return next;
+    });
+  }, []);
+
+  // 이 코스 달리기 — the proven copy→tracking lane (course-post/preview flow).
+  // Double-tap guarded; copy failure surfaces honestly.
+  const runCourseBusy = useRef(false);
+  const runCourse = useCallback(async (routeId: string) => {
+    if (runCourseBusy.current) return;
+    runCourseBusy.current = true;
+    try {
+      const copy = await copyRoute(routeId);
+      setActiveCourse({
+        id: copy.id,
+        title: copy.summary,
+        distanceKm: copy.total_distance_km,
+        polyline: copy.polyline ?? null,
+      });
+      router.push('/(course)/tracking' as never);
+    } catch (e: unknown) {
+      Alert.alert('시작할 수 없어요', e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요');
+    } finally {
+      runCourseBusy.current = false;
+    }
+  }, []);
+
   // Maps slice 2 — real-map-only-for-viewable-cells. Stable refs (FlatList
   // forbids changing these props mid-list); 25% visibility flips a cell live.
   const [liveIds, setLiveIds] = useState<Set<string>>(new Set());
@@ -436,6 +488,10 @@ export default function HomeScreen() {
                 })}
                 // avatar → profile (openProfile self-routes own cards to 내 프로필)
                 onAvatarPress={() => openProfile(item.user_id, item.nickname)}
+                // DATA GATE (blessing ①): linked PUBLIC course only
+                onRunCourse={item.route_summary && item.route_id ? () => runCourse(item.route_id!) : undefined}
+                bookmarked={item.route_id ? bookmarkedIds.has(item.route_id) : false}
+                onBookmark={item.route_summary && item.route_id ? () => toggleBookmark(item.route_id!) : undefined}
               />
             </View>
           );
