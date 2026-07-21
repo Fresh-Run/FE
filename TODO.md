@@ -1135,7 +1135,9 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 
 ## SLICE B + ⑦ GAP — NOTIFICATION MISROUTE FIX + RUN-POST PHOTO VIEWER (2026-07-21, awaiting TF [HH:MM])
 
-**ITEM 4 — 내 코스 DELETE (2026-07-21, awaiting TF [HH:MM]):** `deleteRoute` (404-은닉=성공, deleteRun's transport twin) + MyCourseRow trash icon → destructive Alert (cascade copy verbatim + guide-sanctioned "연결된 러닝 기록은 남아요" line) → request-then-remove. **Disclosed divergence, owner-endorsed:** icon-button+Alert over the guide's literal 스와이프/⋯ — the same screen's own grammar (저장된 코스's unsaveBtn idiom, D2's Alert confirms). Fresh `/routes` DELETE round-trip probed at build: 204 → re-DELETE 404. The 반포 walk-debris copies = the walk's first customers.
+**ITEM 4 VERIFIED [22:00] (owner, TF, group `e96f0589`) — THE QUEUE IS EMPTY:** cascade confirm (취소 honored) → 반포 debris swept · linked runs survive in 기록, eyeballed · 저장된 코스 unsave + 공개 toggle regression clean. Known-good promoted: `e96f0589-f962-48b0-82d9-295c05aa4915`. **BOARD: slice-3 one-way verification on the owner's word · dry run / build #11 on the sky (external gate). Parked lanes (post-launch): feed course affordances (82c5bc9) · universal 이-경로-달리기 ((a′) blessed) · funnel v1 (branch funnel-v1-parked) · inert notification types inventory.**
+
+**ITEM 4 — 내 코스 DELETE (2026-07-21, TF [22:00] above):** `deleteRoute` (404-은닉=성공, deleteRun's transport twin) + MyCourseRow trash icon → destructive Alert (cascade copy verbatim + guide-sanctioned "연결된 러닝 기록은 남아요" line) → request-then-remove. **Disclosed divergence, owner-endorsed:** icon-button+Alert over the guide's literal 스와이프/⋯ — the same screen's own grammar (저장된 코스's unsaveBtn idiom, D2's Alert confirms). Fresh `/routes` DELETE round-trip probed at build: 204 → re-DELETE 404. The 반포 walk-debris copies = the walk's first customers.
 
 **SLICE 2 VERIFIED [21:50] (owner, TF, group `c1856280`):** own-post ⋯ 수정하기 → edit-run → silent repaint ✓ · 삭제하기 → cascade confirm (취소 honored) → delete → 기록 landing, run gone ✓ · others' ⋯ 신고하기 only ✓. Known-good promoted: `c1856280-4d21-48ce-96b8-ed7d4c565197`.
 
