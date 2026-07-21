@@ -50,6 +50,7 @@ import { setRouteMap } from '@/store/route-map';
 import { Icon } from '@/components/ui';
 import { ApiError } from '@/lib/api';
 import { openProfile } from '@/lib/profile-nav';
+import { deleteRun } from '@/lib/runs-api';
 import {
   deleteRunComment,
   getRunComments,
@@ -110,7 +111,10 @@ export default function RunPostScreen() {
   const isOwn = params.own === '1';
   const units = useSettings(s => s.settings.units);
 
-  const { run, loading, error } = useRunDetail(params.runId ?? null);
+  const { run, loading, error, refetch } = useRunDetail(params.runId ?? null);
+  // Silent SWR-lite refetch on focus — the 수정하기 return path (edited
+  // title/notes repaint without a spinner; first load unaffected).
+  useFocusEffect(useCallback(() => { refetch(); }, [refetch]));
 
   // ♥ — entry-row seed paints instantly; server my_kudos (BE 111a446) wins
   // once the fetch lands, unless the user already toggled mid-flight
@@ -157,6 +161,26 @@ export default function RunPostScreen() {
   const [sheetView, setSheetView] = useState<'menu' | 'report'>('menu');
   // ⑦ photo enlarge — 활동 상세's wiring mirrored (per-surface gap, 2026-07-21)
   const [photoViewIdx, setPhotoViewIdx] = useState<number | null>(null);
+
+  // ── 러닝 삭제 (own-⋯ slice, 2026-07-21) — 활동 상세's contract verbatim:
+  // 2-step destructive confirm, cascade copy per guide, 404=already-gone=
+  // success (deleteRun's transport). Exit = the own-detail contract's landing
+  // (기록 tab; a feed entry point refreshes on its own next focus).
+  const [delOpen, setDelOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  async function doDelete() {
+    if (deleting || !run) return;
+    setDeleting(true);
+    try {
+      await deleteRun(run.id);
+      setDelOpen(false);
+      router.dismissAll?.();
+      router.replace('/(tabs)/records' as never);
+    } catch (e: unknown) {
+      setDeleting(false);
+      Alert.alert('삭제 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요');
+    }
+  }
   const [reportReason, setReportReason] = useState<ReportReason | null>(null);
   const [reportDetail, setReportDetail] = useState('');
   const [reportBusy, setReportBusy] = useState(false);
@@ -280,14 +304,11 @@ export default function RunPostScreen() {
           <Icon name="arrow-back" size={20} color={C.text} />
         </Pressable>
         <Text style={st.appBarTitle}>러닝</Text>
-        {/* ⋯ — report entry, others' runs only (own mode keeps the spacer) */}
-        {!isOwn ? (
-          <Pressable onPress={() => setMenuOpen(true)} hitSlop={12} style={st.backBtn}>
-            <Icon name="ellipsis-horizontal" size={20} color={C.text} />
-          </Pressable>
-        ) : (
-          <View style={{ width: 36 }} />
-        )}
+        {/* ⋯ — both modes since the own-⋯ slice (2026-07-21): own → 수정/삭제
+            (the guide's prescribed own-detail consumption), others → 신고 */}
+        <Pressable onPress={() => setMenuOpen(true)} hitSlop={12} style={st.backBtn}>
+          <Icon name="ellipsis-horizontal" size={20} color={C.text} />
+        </Pressable>
       </View>
 
       {loading ? (
@@ -455,10 +476,33 @@ export default function RunPostScreen() {
           <Pressable style={[st.sheet, { paddingBottom: Math.max(insets.bottom, 12) + 8 }]} onPress={() => {}}>
             <View style={st.sheetHandleRow}><View style={st.sheetHandle} /></View>
             {sheetView === 'menu' ? (
+              isOwn ? (
+                <>
+                  {/* own-run controls — 활동 상세's pair, sheet-row grammar */}
+                  <Pressable
+                    onPress={() => {
+                      closeSheet();
+                      if (run) router.push({ pathname: '/(records)/edit-run' as never, params: { runId: run.id } });
+                    }}
+                    style={({ pressed }) => [st.sheetRow, pressed && { opacity: 0.7 }]}
+                  >
+                    <Icon name="create-outline" size={19} color={C.text} />
+                    <Text style={st.sheetRowTxt}>수정하기</Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => { closeSheet(); setDelOpen(true); }}
+                    style={({ pressed }) => [st.sheetRow, pressed && { opacity: 0.7 }]}
+                  >
+                    <Icon name="trash-outline" size={19} color={C.danger} />
+                    <Text style={[st.sheetRowTxt, { color: C.danger }]}>삭제하기</Text>
+                  </Pressable>
+                </>
+              ) : (
               <Pressable onPress={() => setSheetView('report')} style={({ pressed }) => [st.sheetRow, pressed && { opacity: 0.7 }]}>
                 <Icon name="flag-outline" size={19} color={C.text} />
                 <Text style={st.sheetRowTxt}>신고하기</Text>
               </Pressable>
+              )
             ) : (
               <>
                 <Text style={st.sheetTitle}>신고하기</Text>
@@ -503,6 +547,27 @@ export default function RunPostScreen() {
           onClose={() => setPhotoViewIdx(null)}
         />
       )}
+
+      {/* 삭제 confirm — 활동 상세's modal verbatim (crew-해체 grammar; honest
+          cascade body; no recovery — this IS the last gate) */}
+      <Modal visible={delOpen} transparent animationType="fade" onRequestClose={() => !deleting && setDelOpen(false)}>
+        <View style={st.delRoot}>
+          <Pressable style={st.delBackdrop} onPress={() => !deleting && setDelOpen(false)} />
+          <View style={st.delCard}>
+            <View style={st.delIconWrap}>
+              <Icon name="trash-outline" size={26} color={C.danger} />
+            </View>
+            <Text style={st.delTitle}>이 러닝을 삭제할까요?</Text>
+            <Text style={st.delBody}>좋아요·댓글·사진이 함께 삭제돼요. 되돌릴 수 없어요.</Text>
+            <Pressable onPress={doDelete} disabled={deleting} style={st.delBtn}>
+              {deleting ? <ActivityIndicator size="small" color="#fff" /> : <Text style={st.delBtnTxt}>삭제하기</Text>}
+            </Pressable>
+            <Pressable onPress={() => !deleting && setDelOpen(false)} style={st.delCancelBtn}>
+              <Text style={st.delCancelTxt}>취소</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -522,6 +587,18 @@ const makeSt = (C: Tokens) => StyleSheet.create({
   sheetHandle:    { width: 38, height: 5, borderRadius: 99, backgroundColor: C.border },
   sheetRow:       { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 16, paddingHorizontal: 4 },
   sheetRowTxt:    { fontSize: 15, fontWeight: '600', color: C.text, letterSpacing: -0.3 },
+
+  // 삭제 confirm — mirrored verbatim from (records)/activity.tsx (own-⋯ slice)
+  delRoot:      { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28 },
+  delBackdrop:  { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.5)' },
+  delCard:      { width: '100%', backgroundColor: C.surface, borderRadius: 22, paddingHorizontal: 22, paddingTop: 24, paddingBottom: 18 },
+  delIconWrap:  { alignSelf: 'center', width: 54, height: 54, borderRadius: R.pill, backgroundColor: C.danger + '1A', alignItems: 'center', justifyContent: 'center' },
+  delTitle:     { fontSize: 19, fontWeight: '700', color: C.text, letterSpacing: -0.5, textAlign: 'center', marginTop: 16 },
+  delBody:      { fontSize: 13.5, lineHeight: 20, color: C.sub, textAlign: 'center', letterSpacing: -0.3, marginTop: 8, marginHorizontal: 8 },
+  delBtn:       { height: 52, borderRadius: 14, backgroundColor: C.danger, alignItems: 'center', justifyContent: 'center', marginTop: 18 },
+  delBtnTxt:    { fontSize: 16, fontWeight: '700', color: '#fff', letterSpacing: -0.3 },
+  delCancelBtn: { height: 50, alignItems: 'center', justifyContent: 'center', marginTop: 6 },
+  delCancelTxt: { fontSize: 15, fontWeight: '700', color: C.sub, letterSpacing: -0.3 },
   sheetTitle:     { fontSize: 16, fontWeight: '700', color: C.text, letterSpacing: -0.4, paddingVertical: 10, textAlign: 'center' },
   reasonRow:      { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 4 },
   reportInput:    { minHeight: 64, maxHeight: 120, borderWidth: 1, borderColor: C.border, borderRadius: 12, backgroundColor: C.surfaceAlt, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, color: C.text, letterSpacing: -0.2, textAlignVertical: 'top', marginTop: 6 },

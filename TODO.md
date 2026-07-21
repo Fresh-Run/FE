@@ -1135,6 +1135,8 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 
 ## SLICE B + ⑦ GAP — NOTIFICATION MISROUTE FIX + RUN-POST PHOTO VIEWER (2026-07-21, awaiting TF [HH:MM])
 
+**VERIFIED [21:41] (owner, TF, group `39273e0b`):** kudoed/commented/pb_achieved all land on run-post, own-mode correct, notified content visible · photo viewer opens from run-post, map enlarge intact · legacy-crew-row and push-tap brackets arrived unfilled — recorded as-is, code paths stand on desk proof. Known-good production group promoted: `39273e0b-8a16-4123-9d24-19adc41d0e8e`.
+
 **Slice B (지연 5:20 진단 + owner repro, pre-approved):** `run_kudoed`/`run_commented`/`pb_achieved` now land on **run-post** (`own='1'` — the detail payload has no is_mine; these types only target my run) — the old 활동-상세 route **and its defending comment died with the fix** (the comment argued own-run analytics; it WAS the misroute). Shared `notif-routing` module ⇒ **push taps healed in the same edit**. Legacy `crew_announcement` (null payload): **crew-list landing RULED** — "an honest imperfect landing beats a dead tap; silent-inert was baseline, not design." **⑦ per-surface gap closed:** run-post gains 활동 상세's PhotoViewer wiring (MediaCarousel `onPhotoPress` existed unused on this surface). Live-probed: all three types' target_ids → 200 on `GET /runs/{id}` from test1's real inbox; legacy crew rows = 0 there (fallback code-path-proven; owner inbox may sight it). **Inert-types inventory (parked, NOT scoped):** `route_liked`/`route_commented`/`crew_chat`/`challenge_completed` have no deepLink case — future ranking candidate.
 
 ## OWNER RULING — STRATEGIC STEP-BACK (2026-07-21): FEED COURSE AFFORDANCES REMOVED UNTIL POST-LAUNCH
