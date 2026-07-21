@@ -69,7 +69,8 @@ import { apiFetch } from '@/lib/api';
 import { distUnit, fmtDist, fmtDuration, fmtPaceIn, fmtWhen, paceUnit } from '@/lib/run-format';
 import type { SavedRun } from '@/lib/runs-api';
 import { supabase } from '@/lib/supabase';
-import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
+import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
+import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { useSettings } from '@/store/use-settings';
 
 const POLL_MS = 20_000; // guide §214: 20~30s while the room is active
@@ -91,6 +92,8 @@ function SenderAvatar({ name, photoUrl, onPress }: { name: string; photoUrl: str
 }
 
 export default function CrewChatScreen() {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
   const { crewId, crewName, memberCount, role } = useLocalSearchParams<{
     crewId: string; crewName?: string; memberCount?: string; role?: string;
@@ -626,7 +629,7 @@ export default function CrewChatScreen() {
   );
 }
 
-const st = StyleSheet.create({
+const makeSt = (C: Tokens) => StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
 
   appBar:      { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: S.md, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: C.border, backgroundColor: C.surface },

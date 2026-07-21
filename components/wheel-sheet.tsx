@@ -17,7 +17,8 @@ import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/ui';
-import { colors as C, spacing as S } from '@/lib/theme';
+import { spacing as S, type Tokens } from '@/lib/theme';
+import { useStyles, useTokens } from '@/hooks/use-tokens';
 
 // ─── Sheet housing ────────────────────────────────────────────────────────────
 
@@ -26,6 +27,7 @@ function WheelSheet({ visible, title, onClose, onDone, children }: {
   onClose: () => void; onDone: () => void;
   children: React.ReactNode;
 }) {
+  const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -46,6 +48,8 @@ function WheelSheet({ visible, title, onClose, onDone, children }: {
 // ─── Trigger row — label · green value · chevron (canvas FrWheelRow) ─────────
 
 function TriggerRow({ label, display, onPress }: { label: string; display: string; onPress: () => void }) {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   return (
     <Pressable onPress={onPress} style={({ pressed }) => [st.trigRow, pressed && { opacity: 0.7 }]}>
       <Text style={st.trigLabel}>{label}</Text>
@@ -61,6 +65,7 @@ export function NumberWheelRow({ label, value, min, max, step, suffix, onChange 
   label: string; value: number; min: number; max: number; step: number;
   suffix: string; onChange: (v: number) => void;
 }) {
+  const st = useStyles(makeSt);
   const [open, setOpen] = useState(false);
   const options: number[] = [];
   for (let v = min; v <= max + 1e-9; v += step) options.push(+v.toFixed(1));
@@ -116,6 +121,7 @@ export function fmtTimeKo(v: string): string {
 export function TimeWheelRow({ label = '시간', value, onChange }: {
   label?: string; value: string; onChange: (v24: string) => void;
 }) {
+  const st = useStyles(makeSt);
   const [open, setOpen] = useState(false);
   const [sel, setSel] = useState(() => parse24(value));
 
@@ -181,6 +187,8 @@ export function DateWheelRow({ label, value, onChange }: {
   value: string;
   onChange: (ymd: string) => void;
 }) {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   const [open, setOpen] = useState(false);
   const now = new Date();
   const tY = now.getFullYear(), tM = now.getMonth() + 1, tD = now.getDate();
@@ -270,7 +278,7 @@ export function DateWheelRow({ label, value, onChange }: {
   );
 }
 
-const st = StyleSheet.create({
+const makeSt = (C: Tokens) => StyleSheet.create({
   overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.4)' },
   sheet:   { backgroundColor: C.bg, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: S.gutter },
 

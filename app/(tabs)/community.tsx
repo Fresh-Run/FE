@@ -34,7 +34,8 @@ import {
 } from '@/hooks/use-crews';
 import { useCurrentLocation } from '@/hooks/use-current-location';
 import { getMyJoinRequests, searchCrews } from '@/lib/crews-api';
-import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
+import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
+import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { getCrewFilter, type CrewLocationFilter } from '@/store/crew-filter';
 import { useJoinRequests } from '@/store/join-requests';
 import { useQuota } from '@/store/use-quota';
@@ -49,6 +50,8 @@ function isFull(crew: Crew): boolean {
 // ─── Tab bar ─────────────────────────────────────────────────────────────────
 
 function CommTabs({ active, onChange }: { active: string; onChange: (v: string) => void }) {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   return (
     <View style={st.tabRow}>
       {([{ id: 'crew', label: '크루' }, { id: 'discover', label: '둘러보기' }]).map(t => {
@@ -71,6 +74,8 @@ function LocationCard({ filter, placeName, onPress }: {
   placeName: string | null;
   onPress: () => void;
 }) {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   const label = filter.mode === 'current'
     ? `현재 위치 · ${placeName ?? '위치 확인 중'}`
     : `${filter.sido}${filter.sigungu ? ` · ${filter.sigungu}` : ''}`;
@@ -91,6 +96,8 @@ function LocationCard({ filter, placeName, onPress }: {
 // ─── Shared states ────────────────────────────────────────────────────────────
 
 function LoadingState() {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   return (
     <View style={st.centered}>
       <ActivityIndicator size="large" color={C.accent} />
@@ -99,6 +106,8 @@ function LoadingState() {
 }
 
 function ErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   return (
     <View style={st.centered}>
       <Icon name="warning-outline" size={36} color={C.faint} />
@@ -112,6 +121,8 @@ function ErrorState({ message, onRetry }: { message: string; onRetry: () => void
 }
 
 function EmptyState({ text }: { text: string }) {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   return (
     <View style={st.centered}>
       <Icon name="people-outline" size={42} color={C.faint} />
@@ -131,6 +142,8 @@ function BrowseCrewCard({
   onPress: () => void;
   onJoin: () => void;
 }) {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   const full = isFull(crew);
   const tags = crew.active_days?.slice(0, 4) ?? [];
   // Badge state priority: member > pending (shared store) > full > policy label
@@ -197,6 +210,8 @@ function BrowseCrewCard({
 // ─── My crew card ─────────────────────────────────────────────────────────────
 
 function MyCrewCard({ crew, onPress }: { crew: Crew; onPress: () => void }) {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   return (
     <Pressable onPress={onPress} style={[st.card, shadows.sm]}>
       <View style={st.thumbWrap}>
@@ -236,6 +251,8 @@ function MyCrewCard({ crew, onPress }: { crew: Crew; onPress: () => void }) {
 // ─── Discover tab ─────────────────────────────────────────────────────────────
 
 function DiscoverTab() {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   const tabBarInset = useTabBarInset();
   const [showFull, setShowFull] = useState(false);
   // Location filter — set by the region picker (module store), read on focus
@@ -414,6 +431,9 @@ function InviteCodeSheet({
   onClose: () => void;
   onJoined: (crewId: string) => void;
 }) {
+  const C = useTokens();
+  const ics = useStyles(makeIcs);
+  const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
   const [code, setCode]       = useState('');
   const [preview, setPreview] = useState<Crew | null>(null);
@@ -522,7 +542,7 @@ function InviteCodeSheet({
   );
 }
 
-const ics = StyleSheet.create({
+const makeIcs = (C: Tokens) => StyleSheet.create({
   overlay:   { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.42)' },
   sheet:     { backgroundColor: C.bg, borderTopLeftRadius: 26, borderTopRightRadius: 26, paddingHorizontal: S.gutter },
   handleRow: { alignItems: 'center', paddingTop: 10, paddingBottom: 2 },
@@ -542,6 +562,8 @@ const ics = StyleSheet.create({
 // ─── My crews tab ─────────────────────────────────────────────────────────────
 
 function MyCrewsTab() {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   const tabBarInset = useTabBarInset();
   const { crews, loading, error, signedOut, refetch } = useMyCrews();
   const [codeSheetOpen, setCodeSheetOpen] = useState(false);
@@ -667,6 +689,8 @@ function MyCrewsTab() {
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function CommunityScreen() {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
   const [tab, setTab] = useState<'crew' | 'discover'>('crew');
 
@@ -697,7 +721,7 @@ export default function CommunityScreen() {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const st = StyleSheet.create({
+const makeSt = (C: Tokens) => StyleSheet.create({
   root:     { flex: 1, backgroundColor: C.bg },
 
   header:   { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: S.gutter, paddingTop: 12, paddingBottom: 4 },
@@ -761,7 +785,7 @@ const st = StyleSheet.create({
 
   // Owner badge
   ownerBadge:{ backgroundColor: C.crown, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
-  ownerTxt:  { fontSize: 10, fontWeight: '800', color: '#0D1A06', letterSpacing: 0.2 },
+  ownerTxt:  { fontSize: 10, fontWeight: '800', color: C.accentText, letterSpacing: 0.2 },
 
   // Section head + create CTA
   sectionHead:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 13 },

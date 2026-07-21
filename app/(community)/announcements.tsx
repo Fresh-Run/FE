@@ -22,7 +22,8 @@ import { Avatar } from '@/components/avatar';
 import { Icon } from '@/components/ui';
 import { listAnnouncements, type Announcement } from '@/lib/announcements-api';
 import { fmtWhen } from '@/lib/run-format';
-import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
+import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
+import { useStyles, useTokens } from '@/hooks/use-tokens';
 
 function fmtRunAt(iso: string): string {
   const d = new Date(iso);
@@ -30,6 +31,8 @@ function fmtRunAt(iso: string): string {
 }
 
 export default function AnnouncementsScreen() {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
   const { crewId, canManage } = useLocalSearchParams<{ crewId: string; canManage?: string }>();
   const manager = canManage === '1';
@@ -115,7 +118,7 @@ export default function AnnouncementsScreen() {
   );
 }
 
-const st = StyleSheet.create({
+const makeSt = (C: Tokens) => StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
 
   appBar:      { flexDirection: 'row', alignItems: 'center', paddingHorizontal: S.gutter, paddingVertical: 10 },

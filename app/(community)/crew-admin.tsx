@@ -51,9 +51,12 @@ import {
   type CrewPermissions,
 } from '@/lib/crews-api';
 import { supabase } from '@/lib/supabase';
-import { accentShadow, colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
+import { accentShadow, radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
+import { useStyles, useTokens } from '@/hooks/use-tokens';
 
 export default function CrewAdminScreen() {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
   // role arrives from crew-detail (the only entry) — server 403s are the
   // real gate; a forged param only shows doors that won't open.
@@ -222,7 +225,7 @@ export default function CrewAdminScreen() {
             <View style={st.idHead}>
               <SafeImage uri={crew.icon_url} style={[st.idTile, { overflow: 'hidden' }]} fallback={
                 <View style={[st.idTile, { backgroundColor: crew.color ?? C.accent }]}>
-                <Icon name="people" size={26} color="#0D1A06" />
+                <Icon name="people" size={26} color={C.accentText} />
               </View>
               } />
               <View style={{ flex: 1, minWidth: 0 }}>
@@ -339,7 +342,7 @@ export default function CrewAdminScreen() {
   );
 }
 
-const st = StyleSheet.create({
+const makeSt = (C: Tokens) => StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
 
   appBar:      { flexDirection: 'row', alignItems: 'center', paddingHorizontal: S.gutter, paddingVertical: 10 },
@@ -353,7 +356,7 @@ const st = StyleSheet.create({
   idName: { fontSize: 16.5, fontWeight: '700', color: C.text, letterSpacing: -0.4, flexShrink: 1 },
   idArea: { fontSize: 12.5, color: C.faint, letterSpacing: -0.2, marginTop: 3 },
   roleBadge:    { borderRadius: 5, paddingHorizontal: 6, paddingVertical: 2, flexShrink: 0 },
-  roleBadgeTxt: { fontSize: 10, fontWeight: '800', color: '#0D1A06', letterSpacing: 0.2 },
+  roleBadgeTxt: { fontSize: 10, fontWeight: '800', color: C.accentText, letterSpacing: 0.2 },
 
   statsRow:       { flexDirection: 'row', marginTop: 16, paddingTop: 14, borderTopWidth: 1, borderTopColor: C.border },
   statCol:        { flex: 1, alignItems: 'center' },

@@ -29,9 +29,12 @@ import { Icon } from '@/components/ui';
 import { NumberWheelRow } from '@/components/wheel-sheet';
 import { ApiError } from '@/lib/api';
 import { createChallenge, dateToKstIsoDay, kstDateStr } from '@/lib/challenges-api';
-import { colors as C, radius as R, spacing as S } from '@/lib/theme';
+import { radius as R, spacing as S, type Tokens } from '@/lib/theme';
+import { useStyles, useTokens } from '@/hooks/use-tokens';
 
 export default function ChallengeCreateScreen() {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
   const { crewId } = useLocalSearchParams<{ crewId: string }>();
 
@@ -111,7 +114,7 @@ export default function ChallengeCreateScreen() {
   );
 }
 
-const st = StyleSheet.create({
+const makeSt = (C: Tokens) => StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
 
   appBar:      { flexDirection: 'row', alignItems: 'center', paddingHorizontal: S.gutter, paddingVertical: 10, gap: 8 },

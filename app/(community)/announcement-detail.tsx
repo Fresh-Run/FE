@@ -41,7 +41,8 @@ import {
 import { getCrewMembers } from '@/lib/crews-api';
 import { fmtWhen } from '@/lib/run-format';
 import { supabase } from '@/lib/supabase';
-import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
+import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
+import { useStyles, useTokens } from '@/hooks/use-tokens';
 
 const RSVP_OPTS: { value: RsvpStatus; label: string }[] = [
   { value: 'going',     label: '참석' },
@@ -56,6 +57,8 @@ function fmtRunAt(iso: string): string {
 }
 
 export default function AnnouncementDetailScreen() {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
   const { crewId, announcementId } = useLocalSearchParams<{ crewId: string; announcementId: string }>();
 
@@ -279,7 +282,7 @@ export default function AnnouncementDetailScreen() {
   );
 }
 
-const st = StyleSheet.create({
+const makeSt = (C: Tokens) => StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
 
   appBar:      { flexDirection: 'row', alignItems: 'center', paddingHorizontal: S.gutter, paddingVertical: 10 },

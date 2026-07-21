@@ -20,11 +20,14 @@ import { Avatar } from '@/components/avatar';
 import { getRunKudos, type RunKudoser } from '@/lib/kudos-api';
 import { openProfile } from '@/lib/profile-nav';
 import { fmtAgo } from '@/lib/run-format';
-import { colors as C, shadows } from '@/lib/theme';
+import { shadows, type Tokens } from '@/lib/theme';
+import { useStyles, useTokens } from '@/hooks/use-tokens';
 
 export function KudosSheet({ runId, kudosCount, onClose }: {
   runId: string; kudosCount: number; onClose: () => void;
 }) {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   const [rows, setRows]       = React.useState<RunKudoser[] | null>(null);
   const [failed, setFailed]   = React.useState(false);
   const [attempt, setAttempt] = React.useState(0);
@@ -86,7 +89,7 @@ export function KudosSheet({ runId, kudosCount, onClose }: {
   );
 }
 
-const st = StyleSheet.create({
+const makeSt = (C: Tokens) => StyleSheet.create({
   sheetRoot:     { flex: 1, justifyContent: 'flex-end' },
   sheetBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.45)' },
   sheet:         { backgroundColor: C.bg, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '68%' },

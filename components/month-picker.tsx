@@ -10,7 +10,8 @@ import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/ui';
-import { colors as C } from '@/lib/theme';
+import { type Tokens } from '@/lib/theme';
+import { useStyles, useTokens } from '@/hooks/use-tokens';
 
 export function MonthPicker({ visible, year, month, isEnabled, onSelect, onClose }: {
   visible: boolean;
@@ -22,6 +23,8 @@ export function MonthPicker({ visible, year, month, isEnabled, onSelect, onClose
   onSelect: (year: number, month: number) => void;
   onClose: () => void;
 }) {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
   const [yr, setYr] = useState(year);
   // Re-open always starts at the selected year, not where the user last browsed
@@ -78,7 +81,7 @@ export function MonthPicker({ visible, year, month, isEnabled, onSelect, onClose
   );
 }
 
-const st = StyleSheet.create({
+const makeSt = (C: Tokens) => StyleSheet.create({
   root:     { flex: 1, justifyContent: 'flex-end' },
   backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(10,12,8,0.34)' },
   sheet:    { backgroundColor: C.bg, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: 18, paddingTop: 10 },

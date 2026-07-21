@@ -40,7 +40,8 @@ import { Icon } from '@/components/ui';
 import { getInviteCode, inviteToCrew, issueInviteCode, searchCrews, type Crew } from '@/lib/crews-api';
 import { searchUsers, type UserSearchItem } from '@/lib/profile-api';
 import { openProfile } from '@/lib/profile-nav';
-import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
+import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
+import { useStyles, useTokens } from '@/hooks/use-tokens';
 
 const MIN_Q = 2;
 const DEBOUNCE_MS = 400;
@@ -48,6 +49,8 @@ type Seg = 'user' | 'crew';
 type InviteState = 'idle' | 'sending' | 'sent' | 'member';
 
 export default function UserSearchScreen() {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
   const { crewId, crewName } = useLocalSearchParams<{ crewId?: string; crewName?: string }>();
   const inviteMode = !!crewId;
@@ -163,7 +166,7 @@ export default function UserSearchScreen() {
         <View style={st.rowInner}>
           <SafeImage uri={c.icon_url} style={st.crewIcon} fallback={
             <View style={[st.crewIcon, { backgroundColor: c.color ?? C.accent, alignItems: 'center', justifyContent: 'center' }]}>
-              <Icon name="people" size={22} color="#0D1A06" />
+              <Icon name="people" size={22} color={C.accentText} />
             </View>
           } />
           <View style={{ flex: 1, minWidth: 0 }}>
@@ -274,7 +277,7 @@ export default function UserSearchScreen() {
   );
 }
 
-const st = StyleSheet.create({
+const makeSt = (C: Tokens) => StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
 
   appBar:      { flexDirection: 'row', alignItems: 'center', paddingHorizontal: S.gutter, paddingVertical: 10 },

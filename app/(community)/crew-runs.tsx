@@ -44,7 +44,8 @@ import { Icon } from '@/components/ui';
 import { getCrewRuns, CREW_FEED_PAGE, type CrewRunItem } from '@/lib/crews-api';
 import { openProfile } from '@/lib/profile-nav';
 import { distUnit, fmtAgo, fmtDist, fmtDuration, fmtPaceIn, paceUnit, timeTitle } from '@/lib/run-format';
-import { colors as C, shadows, spacing as S } from '@/lib/theme';
+import { shadows, spacing as S, type Tokens } from '@/lib/theme';
+import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { useSettings } from '@/store/use-settings';
 
 function RunCard({ run, units, mapLive, onOpen }: {
@@ -53,6 +54,8 @@ function RunCard({ run, units, mapLive, onOpen }: {
   mapLive: boolean;
   onOpen: () => void;
 }) {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   return (
     <Pressable onPress={onOpen} style={({ pressed }) => [st.card, shadows.sm, pressed && { opacity: 0.85 }]}>
       <View style={st.cardHead}>
@@ -112,6 +115,8 @@ function RunCard({ run, units, mapLive, onOpen }: {
 }
 
 export default function CrewRunsScreen() {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
   const { crewId } = useLocalSearchParams<{ crewId: string }>();
   const units = useSettings(s => s.settings.units);
@@ -221,7 +226,7 @@ export default function CrewRunsScreen() {
   );
 }
 
-const st = StyleSheet.create({
+const makeSt = (C: Tokens) => StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
 
   appBar:      { flexDirection: 'row', alignItems: 'center', paddingHorizontal: S.gutter, paddingVertical: 10 },

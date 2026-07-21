@@ -36,7 +36,8 @@ import {
   updateAnnouncement,
   type AnnouncementInput,
 } from '@/lib/announcements-api';
-import { colors as C, radius as R, spacing as S } from '@/lib/theme';
+import { radius as R, spacing as S, type Tokens } from '@/lib/theme';
+import { useStyles, useTokens } from '@/hooks/use-tokens';
 
 function partsFromIso(iso: string | null): { date: string; time: string } {
   if (!iso) return { date: '', time: '' };
@@ -49,6 +50,8 @@ function partsFromIso(iso: string | null): { date: string; time: string } {
 }
 
 export default function AnnouncementComposeScreen() {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
   const { crewId, announcementId } = useLocalSearchParams<{ crewId: string; announcementId?: string }>();
   const editing = !!announcementId;
@@ -239,7 +242,7 @@ export default function AnnouncementComposeScreen() {
   );
 }
 
-const st = StyleSheet.create({
+const makeSt = (C: Tokens) => StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
 
   appBar:      { flexDirection: 'row', alignItems: 'center', paddingHorizontal: S.gutter, paddingVertical: 10, gap: 8 },

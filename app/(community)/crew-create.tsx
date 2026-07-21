@@ -35,7 +35,8 @@ import { NumberWheelRow } from '@/components/wheel-sheet';
 import { createChallenge, dateToKstIsoDay, kstDateStr } from '@/lib/challenges-api';
 import { createCrew, CREW_TAG_GROUPS, CREW_TAG_MAX, type Crew, type CrewLevel } from '@/lib/crews-api';
 import { useCurrentLocation } from '@/hooks/use-current-location';
-import { accentShadow, colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
+import { accentShadow, radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
+import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { takePendingCrewRegion } from '@/store/pending-crew-region';
 
 export const CREW_COLORS = ['#74E827', '#2F8FE8', '#E8703D', '#A24DE8', '#E8B53D'];
@@ -61,6 +62,7 @@ export function privacyToFields(p: Privacy): { is_public: boolean; join_policy: 
 // ─── Local form primitives (screen-local per app pattern) ─────────────────────
 
 export function Group({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
+  const st = useStyles(makeSt);
   return (
     <View style={{ paddingHorizontal: S.gutter }}>
       <Text style={st.groupTitle}>{title}</Text>
@@ -73,6 +75,8 @@ export function Group({ title, hint, children }: { title: string; hint?: string;
 export function FieldRow({ label, value, onChange, placeholder, maxLength }: {
   label: string; value: string; onChange: (v: string) => void; placeholder?: string; maxLength?: number;
 }) {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   return (
     <View style={st.fieldRow}>
       <Text style={st.fieldLabel}>{label}</Text>
@@ -89,6 +93,8 @@ export function FieldRow({ label, value, onChange, placeholder, maxLength }: {
 }
 
 export function Chip({ label, on, onPress }: { label: string; on: boolean; onPress: () => void }) {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   return (
     <Pressable onPress={onPress} style={[st.chip, on && st.chipOn]}>
       <Text style={[st.chipTxt, on && { color: C.accentGrn }]}>{label}</Text>
@@ -97,6 +103,8 @@ export function Chip({ label, on, onPress }: { label: string; on: boolean; onPre
 }
 
 export function SelectRow({ label, sub, selected, onSelect }: { label: string; sub: string; selected: boolean; onSelect: () => void }) {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   return (
     <Pressable onPress={onSelect} style={st.selectRow}>
       <View style={{ flex: 1, minWidth: 0 }}>
@@ -118,6 +126,8 @@ export function SelectRow({ label, sub, selected, onSelect }: { label: string; s
 export function RegionRow({ sido, sigungu, onPress, onClear }: {
   sido: string | null; sigungu: string | null; onPress: () => void; onClear?: () => void;
 }) {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   const label = sido ? (sigungu ? `${sido} ${sigungu}` : sido) : '지역 선택';
   return (
     <Pressable onPress={onPress} style={st.regionRow}>
@@ -139,6 +149,7 @@ export function RegionRow({ sido, sigungu, onPress, onClear }: {
 
 /** 13-item server vocabulary, grouped; ≤5 enforced by the caller's onToggle. */
 export function TagPicker({ selected, onToggle }: { selected: string[]; onToggle: (tag: string) => void }) {
+  const st = useStyles(makeSt);
   return (
     <View style={{ paddingHorizontal: S.gutter }}>
       <View style={st.tagHead}>
@@ -162,6 +173,8 @@ export function TagPicker({ selected, onToggle }: { selected: string[]; onToggle
 function CreatedModal({ crew, onInvite, onLater, onDismiss }: {
   crew: Crew | null; onInvite: () => void; onLater: () => void; onDismiss: () => void;
 }) {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   if (!crew) return null;
   const col = crew.color ?? C.accent;
   return (
@@ -170,7 +183,7 @@ function CreatedModal({ crew, onInvite, onLater, onDismiss }: {
         <Pressable style={st.mCard} onPress={() => {}}>
           <View style={st.mTileWrap}>
             <View style={[st.mTile, { backgroundColor: col, shadowColor: col }]}>
-              <Icon name="people" size={34} color="#0D1A06" />
+              <Icon name="people" size={34} color={C.accentText} />
             </View>
           </View>
           <Text style={st.mTitle}>크루가 만들어졌어요!</Text>
@@ -192,6 +205,8 @@ function CreatedModal({ crew, onInvite, onLater, onDismiss }: {
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function CrewCreateScreen() {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
   const { placeName } = useCurrentLocation();
 
@@ -327,7 +342,7 @@ export default function CrewCreateScreen() {
         {/* Identity preview */}
         <View style={st.previewWrap}>
           <View style={[st.previewTile, { backgroundColor: color, shadowColor: color }]}>
-            <Icon name="people" size={34} color="#0D1A06" />
+            <Icon name="people" size={34} color={C.accentText} />
           </View>
           <Text style={[st.previewName, { color: name.trim() ? C.text : C.faint }]}>
             {name.trim() || '크루 이름'}
@@ -492,7 +507,8 @@ export default function CrewCreateScreen() {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-export const st = StyleSheet.create({
+// Shared with crew-edit (imports makeSt) — factory since the dark-mode batch.
+export const makeSt = (C: Tokens) => StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
 
   appBar:      { flexDirection: 'row', alignItems: 'center', paddingHorizontal: S.gutter, paddingVertical: 12 },

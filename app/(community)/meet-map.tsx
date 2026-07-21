@@ -38,9 +38,12 @@ import { PlacePickSheet } from '@/components/place-pick-sheet';
 import { RealMap } from '@/components/real-map';
 import { Icon } from '@/components/ui';
 import { updateCrew } from '@/lib/crews-api';
-import { accentShadow, colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
+import { accentShadow, radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
+import { useStyles, useTokens } from '@/hooks/use-tokens';
 
 export default function MeetMapScreen() {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
   const { height: winH } = useWindowDimensions();
   const params = useLocalSearchParams<{ name?: string; lat: string; lng: string; crewId?: string; canEdit?: string; mode?: string }>();
@@ -187,7 +190,7 @@ export default function MeetMapScreen() {
   );
 }
 
-const st = StyleSheet.create({
+const makeSt = (C: Tokens) => StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
 
   topBar:   { position: 'absolute', top: 0, left: 0, right: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: S.lg, gap: 8, zIndex: 2 },

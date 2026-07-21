@@ -15,7 +15,8 @@ import { ActivityIndicator, Alert, Modal, Pressable, StyleSheet, Text, View } fr
 
 import { Icon } from '@/components/ui';
 import { deleteCrew } from '@/lib/crews-api';
-import { colors as C, radius as R } from '@/lib/theme';
+import { radius as R, type Tokens } from '@/lib/theme';
+import { useStyles, useTokens } from '@/hooks/use-tokens';
 
 export function CrewDeleteModal({ visible, crewId, crewName, memberCount, onClose }: {
   visible: boolean;
@@ -24,6 +25,8 @@ export function CrewDeleteModal({ visible, crewId, crewName, memberCount, onClos
   memberCount: number;
   onClose: () => void;
 }) {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   const [deleting, setDeleting] = useState(false);
 
   async function doDelete() {
@@ -80,7 +83,7 @@ export function CrewDeleteModal({ visible, crewId, crewName, memberCount, onClos
   );
 }
 
-const st = StyleSheet.create({
+const makeSt = (C: Tokens) => StyleSheet.create({
   root:     { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28 },
   backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.5)' },
   card:     { width: '100%', backgroundColor: C.surface, borderRadius: 22, paddingHorizontal: 22, paddingTop: 24, paddingBottom: 18 },

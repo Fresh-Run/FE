@@ -38,7 +38,8 @@ import { getCurrentChallenge, type Challenge } from '@/lib/challenges-api';
 import { getUnread } from '@/lib/chat-api';
 import { getCrewRanking, getCrewRuns, listJoinRequests, uploadCrewImage, type CrewRankingEntry, type CrewRunItem } from '@/lib/crews-api';
 import { distUnit, fmtAgo, fmtDist, fmtDuration, fmtPaceIn, paceUnit } from '@/lib/run-format';
-import { accentShadow, colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
+import { accentShadow, radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
+import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { setActiveCourse } from '@/store/active-course';
 import { useSettings } from '@/store/use-settings';
 
@@ -49,7 +50,7 @@ function isFull(crew: Crew): boolean {
 }
 
 // 랭킹 메달 — canvas FrRankMedal colors (gold = the 크루장 crown token)
-const RANK_MEDAL: Record<number, string> = { 1: C.crown, 2: '#AEB6BE', 3: '#D08B4F' };
+const rankMedal = (C: Tokens): Record<number, string> => ({ 1: C.crown, 2: '#AEB6BE', 3: '#D08B4F' });
 
 // ─── CTA footer ───────────────────────────────────────────────────────────────
 
@@ -63,6 +64,8 @@ function CtaButton({
   crew: Crew; requestPending: boolean; busy: boolean;
   onJoin: () => void; onCancelRequest: () => void;
 }) {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   // Pending join request (approval crew) — cancellable
   if (requestPending) {
     return (
@@ -118,6 +121,8 @@ function CtaButton({
 const HERO_H = 220;
 
 export default function CrewDetailScreen() {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
   const { crewId } = useLocalSearchParams<{ crewId: string }>();
   const { crew, members, myPerms, myRequestStatus, loading, error, refetch } = useCrewDetail(crewId ?? null);
@@ -447,7 +452,7 @@ export default function CrewDetailScreen() {
                   {/* SafeImage: broken icon → color tile, not a blank square */}
                   <SafeImage uri={crew.icon_url} style={st.heroIconImg} fallback={
                     <View style={[st.heroIconImg, { backgroundColor: crew.color ?? C.accent, alignItems: 'center', justifyContent: 'center' }]}>
-                      <Icon name="people" size={26} color="#0D1A06" />
+                      <Icon name="people" size={26} color={C.accentText} />
                     </View>
                   } />
                   {canEditCrew && (
@@ -792,7 +797,7 @@ export default function CrewDetailScreen() {
                       <React.Fragment key={r.user_id}>
                         {i > 0 && <View style={st.divider} />}
                         <View style={[st.rankRow, r.me && st.rankRowMe]}>
-                          <View style={[st.rankMedal, { backgroundColor: RANK_MEDAL[r.rank] ?? C.faint }]}>
+                          <View style={[st.rankMedal, { backgroundColor: rankMedal(C)[r.rank] ?? C.faint }]}>
                             <Text style={st.rankMedalTxt}>{r.rank}</Text>
                           </View>
                           <Avatar name={r.nickname} size={30} photoUrl={r.avatar_url} letterSpacing={-0.3} />
@@ -933,7 +938,7 @@ export default function CrewDetailScreen() {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const st = StyleSheet.create({
+const makeSt = (C: Tokens) => StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
 
   // Hero
@@ -952,7 +957,7 @@ const st = StyleSheet.create({
   managePillDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: C.danger },
   leaveIconBtn:  { width: 40, height: 40, borderRadius: R.pill, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center' },
   roleBadge:     { borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2 },
-  roleBadgeTxt:  { fontSize: 10.5, fontWeight: '800', color: '#0D1A06', letterSpacing: 0.2 },
+  roleBadgeTxt:  { fontSize: 10.5, fontWeight: '800', color: C.accentText, letterSpacing: 0.2 },
   quickRow:      { flexDirection: 'row', gap: 9, paddingHorizontal: S.gutter, paddingTop: 16 },
   quickTile:     { flex: 1, alignItems: 'center', gap: 6, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 14, paddingVertical: 12, paddingHorizontal: 4 },
   quickTxt:      { fontSize: 12, fontWeight: '700', color: C.text, letterSpacing: -0.2 },
@@ -973,7 +978,7 @@ const st = StyleSheet.create({
 
   divider:    { height: 1, backgroundColor: C.border, marginHorizontal: 14 },
   ownerBadge: { backgroundColor: C.crown, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
-  ownerTxt:   { fontSize: 10, fontWeight: '800', color: '#0D1A06', letterSpacing: 0.2 },
+  ownerTxt:   { fontSize: 10, fontWeight: '800', color: C.accentText, letterSpacing: 0.2 },
   adminBadge: { backgroundColor: C.accentDim, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
   adminTxt:   { fontSize: 10, fontWeight: '800', color: C.accentGrn, letterSpacing: 0.2 },
   meBadge:    { backgroundColor: C.accent, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
@@ -1068,7 +1073,7 @@ const st = StyleSheet.create({
   retryTxt: { fontSize: 14, fontWeight: '700', color: C.text },
 
   // Error banner (above footer)
-  errBanner:    { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: S.gutter, paddingVertical: 10, backgroundColor: '#EF444412', borderTopWidth: 1, borderTopColor: '#EF444430' },
+  errBanner:    { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: S.gutter, paddingVertical: 10, backgroundColor: C.danger + '12', borderTopWidth: 1, borderTopColor: C.danger + '30' },
   errBannerTxt: { flex: 1, fontSize: 13, color: C.danger, letterSpacing: -0.2 },
 
   // Footer CTA

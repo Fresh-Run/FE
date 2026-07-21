@@ -39,7 +39,8 @@ import {
   type CrewPermissions,
 } from '@/lib/crews-api';
 import { supabase } from '@/lib/supabase';
-import { accentShadow, colors as C, spacing as S } from '@/lib/theme';
+import { accentShadow, spacing as S, type Tokens } from '@/lib/theme';
+import { useStyles, useTokens } from '@/hooks/use-tokens';
 
 // Canvas FR_PERM_DEFS, scoped to the 5 server keys (labels/descs verbatim
 // where the canvas has them; edit_crew desc trimmed of 공개 범위 — that is
@@ -53,6 +54,8 @@ const PERM_DEFS: { key: keyof CrewPermissions; label: string; desc: string; dang
 ];
 
 function Toggle({ on, disabled, onPress }: { on: boolean; disabled?: boolean; onPress: () => void }) {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   return (
     <Pressable
       onPress={disabled ? undefined : onPress}
@@ -66,6 +69,8 @@ function Toggle({ on, disabled, onPress }: { on: boolean; disabled?: boolean; on
 }
 
 export default function CrewPermsScreen() {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
   const { crewId, userId } = useLocalSearchParams<{ crewId: string; userId: string }>();
 
@@ -232,7 +237,7 @@ export default function CrewPermsScreen() {
   );
 }
 
-const st = StyleSheet.create({
+const makeSt = (C: Tokens) => StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
 
   appBar:      { flexDirection: 'row', alignItems: 'center', paddingHorizontal: S.gutter, paddingVertical: 10 },

@@ -29,11 +29,14 @@ import { SafeImage } from '@/components/safe-image';
 import { Icon } from '@/components/ui';
 import { ApiError } from '@/lib/api';
 import { joinCrewByCode, previewCrewByCode } from '@/lib/crews-api';
-import { accentShadow, colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
+import { accentShadow, radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
+import { useStyles, useTokens } from '@/hooks/use-tokens';
 
 type Preview = { id: string; name: string; description: string | null; area: string | null; member_count: number; max_members: number | null; icon_url: string | null; color: string | null; owner_nickname: string | null };
 
 export default function CrewInviteScreen() {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
   const { code, crewName } = useLocalSearchParams<{ code: string; crewName?: string }>();
 
@@ -99,7 +102,7 @@ export default function CrewInviteScreen() {
           <View style={[st.card, shadows.sm]}>
             <SafeImage uri={preview.icon_url} style={st.crewIcon} fallback={
               <View style={[st.crewIcon, { backgroundColor: preview.color ?? C.accent, alignItems: 'center', justifyContent: 'center' }]}>
-                <Icon name="people" size={34} color="#0D1A06" />
+                <Icon name="people" size={34} color={C.accentText} />
               </View>
             } />
             <Text style={st.crewName} numberOfLines={2}>{preview.name || crewName || '크루'}</Text>
@@ -136,7 +139,7 @@ export default function CrewInviteScreen() {
   );
 }
 
-const st = StyleSheet.create({
+const makeSt = (C: Tokens) => StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
 
   appBar:      { flexDirection: 'row', alignItems: 'center', paddingHorizontal: S.gutter, paddingVertical: 10 },

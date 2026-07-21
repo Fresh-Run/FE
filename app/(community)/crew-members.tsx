@@ -35,11 +35,14 @@ import { Icon } from '@/components/ui';
 import { getCrewMembers, kickMember, setMemberRole, transferCrew, type CrewMember } from '@/lib/crews-api';
 import { openProfile } from '@/lib/profile-nav';
 import { supabase } from '@/lib/supabase';
-import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
+import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
+import { useStyles, useTokens } from '@/hooks/use-tokens';
 
 const ROLE_ORDER: Record<CrewMember['role'], number> = { owner: 0, admin: 1, member: 2 };
 
 export default function CrewMembersScreen() {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
   const { crewId } = useLocalSearchParams<{ crewId: string }>();
 
@@ -293,7 +296,7 @@ export default function CrewMembersScreen() {
   );
 }
 
-const st = StyleSheet.create({
+const makeSt = (C: Tokens) => StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
 
   appBar:      { flexDirection: 'row', alignItems: 'center', paddingHorizontal: S.gutter, paddingVertical: 10 },
@@ -311,7 +314,7 @@ const st = StyleSheet.create({
   meBadge:    { backgroundColor: C.accent, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
   meBadgeTxt: { fontSize: 10, fontWeight: '800', color: C.accentText, letterSpacing: 0.2 },
   ownerBadge: { backgroundColor: C.crown, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
-  ownerTxt:   { fontSize: 10, fontWeight: '800', color: '#0D1A06', letterSpacing: 0.2 },
+  ownerTxt:   { fontSize: 10, fontWeight: '800', color: C.accentText, letterSpacing: 0.2 },
   adminBadge: { backgroundColor: C.accentDim, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
   adminTxt:   { fontSize: 10, fontWeight: '800', color: C.accentGrn, letterSpacing: 0.2 },
 

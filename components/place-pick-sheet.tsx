@@ -21,7 +21,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '@/components/ui';
 import { SEOUL_FALLBACK } from '@/hooks/use-current-location';
 import { searchPlaces, type Place } from '@/lib/places-api';
-import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
+import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
+import { useStyles, useTokens } from '@/hooks/use-tokens';
 
 // her server bbox (422 outside) — mirrored client-side
 const KR_BBOX = { latMin: 33, latMax: 39, lngMin: 124, lngMax: 132 };
@@ -38,6 +39,8 @@ export function PlacePickSheet({ visible, initial, onClose, onPick }: {
   onClose: () => void;
   onPick: (coords: { lat: number; lng: number }) => void;
 }) {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
   const mapRef = useRef<MapView>(null);
   // start region resolves BEFORE the map renders — no Seoul-then-jump
@@ -231,7 +234,7 @@ export function PlacePickSheet({ visible, initial, onClose, onPick }: {
   );
 }
 
-const st = StyleSheet.create({
+const makeSt = (C: Tokens) => StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
 
   pinWrap: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center', marginTop: -34 },

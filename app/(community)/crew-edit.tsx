@@ -45,7 +45,8 @@ import {
   type Crew,
   type CrewLevel,
 } from '@/lib/crews-api';
-import { accentShadow, colors as C, shadows, spacing as S } from '@/lib/theme';
+import { accentShadow, shadows, spacing as S, type Tokens } from '@/lib/theme';
+import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { takePendingCrewRegion } from '@/store/pending-crew-region';
 
 import {
@@ -60,7 +61,7 @@ import {
   RegionRow,
   SelectRow,
   SPORTS,
-  st,
+  makeSt,
   TagPicker,
   type Privacy,
 } from './crew-create';
@@ -74,6 +75,9 @@ function fieldsToPrivacy(isPublic: boolean, joinPolicy: 'open' | 'approval'): Pr
 }
 
 export default function CrewEditScreen() {
+  const C = useTokens();
+  const est = useStyles(makeEst);
+  const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
   const { crewId, owner } = useLocalSearchParams<{ crewId: string; owner?: string }>();
   // absent param (stale deep link) fails CLOSED — delete is the dangerous door
@@ -231,7 +235,7 @@ export default function CrewEditScreen() {
         {/* Identity preview */}
         <View style={st.previewWrap}>
           <View style={[st.previewTile, { backgroundColor: color, shadowColor: color }]}>
-            <Icon name="people" size={34} color="#0D1A06" />
+            <Icon name="people" size={34} color={C.accentText} />
           </View>
           <Text style={[st.previewName, { color: name.trim() ? C.text : C.faint }]}>
             {name.trim() || '크루 이름'}
@@ -442,7 +446,7 @@ export default function CrewEditScreen() {
 }
 
 // Edit-only styles (form styles come from crew-create's shared st)
-const est = StyleSheet.create({
+const makeEst = (C: Tokens) => StyleSheet.create({
   meetPickRow: { flexDirection: 'row', alignItems: 'center', gap: 9, paddingVertical: 12, paddingHorizontal: 4 },
   meetPickTxt: { flex: 1, fontSize: 14, fontWeight: '600', color: C.accentGrn, letterSpacing: -0.3 },
   meetPreview: { marginBottom: 10, borderRadius: 12, overflow: 'hidden' },
