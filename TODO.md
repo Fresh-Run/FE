@@ -24,7 +24,7 @@ Original payload spec (for reference):
 
 **GATE CHAIN VERDICT (2026-07-12): CLOSED** — (a) calibration ✓ (b) fix field-verified ✓ (c) route_id ✓ (copy_count client-unverifiable, accepted) (d) PB modal ✓ (CTAs = re-confirm items) (e) mi-integrity ✓ **rerouted to test1**: 단위워크 stored `distance_km` 0.29km true-km (client reported 0.32 = exactly 0.2mi×1.609), has_track ✓ verified ✓ (f) ✓. **Item-17 sequence may proceed.**
 
-**Post-walk notes (2026-07-12):** ① NEW BUG (committed territory, does NOT block the gate): profile-less settings PATCH → 404 "Create a profile first" — see the use-profile follow-up entry below. ② `is_flagged` 조정 UI: both walks got the intended ±10% server recompute-and-replace (0.20→0.17, 0.32→0.29) — guide recommends a "서버가 기록을 조정했어요" caption we don't render; small committed follow-up, post-gate queue. ③ soft 지연 observation: her recompute reads LOW on short walks vs ground truth (server 0.17 vs Strava-verified ~0.20 actual = −15%) — the client filter is now the accurate one; not urgent, worth a line when convenient.
+**Post-walk notes (2026-07-12):** ① NEW BUG (committed territory, does NOT block the gate): profile-less settings PATCH → 404 "Create a profile first" — see the use-profile follow-up entry below. ~~② `is_flagged` 조정 UI: guide recommends a caption we don't render; small committed follow-up, post-gate queue.~~ **DONE — S-cluster batch 1 (2026-07-14) shipped the "조정됨" caption (probed live: 0.29-vs-0.32 render); stale note struck 2026-07-21 (desk-work sweep #5).** ③ soft 지연 observation: her recompute reads LOW on short walks vs ground truth (server 0.17 vs Strava-verified ~0.20 actual = −15%) — the client filter is now the accurate one; not urgent, worth a line when convenient.
 
 **Skeleton rider (gated, rides this commit — logged 2026-07-09):** home greeting + 수고했어요 fallback `displayName ?? '러너'` → skeleton (shimmer bar + neutral avatar circle) on true first-load. The data-side fix (use-store per-user name cache + /me/profile sync) shipped separately; this rider is the residual first-frame polish. Identity-stable rule: correct name or visibly-nothing, never a wrong name.
 
@@ -1132,6 +1132,46 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 **routeStroke moved onto `resolved`** — zero `useColorScheme` readers remain outside the scheme store (sweep-proven); manual 다크 now gets the dark stroke.
 
 **VERIFIED [17:25] (owner, TF, production group `0d45c21b`):** 시스템 default — OS-dark device opens DARK · live-follows OS flips · explicit 다크 sticks across relaunch · 라이트 beats OS dark · 시스템 resumes following · map stroke themes · override dead (footer inert) · regression lap clean, unpinned. Known-good production group promoted: `0d45c21b-92ac-4331-b1ce-b0a3b07fbc60`.
+
+## 🏃 DRY-RUN OUTING MANIFEST (consolidated 2026-07-21 — the one document for the one outdoor hour)
+
+**Trigger: the sky. Build: TF #10 (production bundle — NO METRO: every capture is on-screen numbers, screenshots, or post-hoc API debrief.)**
+
+**Phone prep (before leaving, 5 min):** ① `curl https://freshrun-api.fly.dev/health` (fly outage ≠ impossible) + 지연's latest 스테이징-반영됨 covers the BE hash the day assumes. ② OTA dance (open → kill → reopen) — confirm current bundle (내 코스 has trash icons = `e96f0589`+). ③ iOS 설정 → FreshRun: 위치 = 항상, 동작 및 피트니스 ON, 건강 권한 granted (build #10 HealthKit). ④ Battery ≥60%. ⑤ Strava (or second tracker) ready as ground truth.
+
+**THE HELD CLAIMS (5 sections consolidated → one route, ≥2km, phone POCKETED-LOCKED mid-run):**
+1. **① locked-pocket odometer** — run ≥2km with the phone locked in a pocket for sustained stretches. Capture: app final distance vs ground-truth tracker (photo of both). PASS = within the exonerated-filter envelope (~≥90% credit).
+2. **④ LA live flow** — mid-run, lock the phone: lock-screen card shows LIVE distance/pace/route progressing (indoors-verified: pause-freeze/resume; HELD: the live tick). Capture: lock-screen screenshot ~mid-run. Watch-line (reactCompiler regression class, fix = experiments removed): in-app elapsed/pace/live-path must tick continuously, not only on state transitions.
+3. **B2 outdoor half** — finish → 수고했어요: real 구간 페이스 splits render + 누적 상승 고도 (client-side from own altitudes; renders only ≥5m — flat route may honestly hide it, that's a PASS not a FAIL). Capture: screenshot.
+4. **(f) re-confirm items** — PB modal if triggered: 성과 공유하기 (준비 중 state?) + 기록 자세히 보기 routing. 30 seconds, capture verbal verdict.
+5. **Post-outing desk debrief (self-service, no 지연 ask):** `GET /runs/{id}/track` → `point_count_raw/kept` + `server_distance_km` vs app-credited vs ground truth — the three-number layer attribution, from the sofa.
+
+**OPTIONAL RIDER — slice-3 편도 resume (owner's word + legs permitting):** generate 편도 (start → real destination; v2.3 corridor + v2.4 band deployed since the 용산 2× 전패 — retry justified). If too-far: the 422 gate shows 최소 X km + the 설정 chip fixes the slider. Run it: course line visible (proven rails), destination arrival behavior, save → run links route + 편도 badge in 내 코스. Budget: ≤2 generation attempts (quota is real).
+
+## 🔨 BUILD #11 RUNBOOK (pre-written 2026-07-21 — build day is an hour, not an afternoon)
+
+**Trigger: dry run passes (external gate) or next native need. RUNTIME RULING (owner, 2026-07-21, on the record): the runtimeVersion sdkVersion→appVersion switch does NOT ride #11** — no new native module (env rebuild + LA-widget colors only); standing policy holds; **version increment only**.
+
+**Pre-staged already (verified, zero build-day cost):** R-a env blocks ×3 profiles in eas.json (`EXPO_PUBLIC_API_URL`/`SUPABASE_URL`/`ANON_KEY` — read-verified 2026-07-21) · LA-widget dark rider (#3, ships pre-built ahead of the build) · submit keys wired in eas.json (ascApiKey, machine-local .p8).
+
+**Steps:** ① version bump (1.0.2 → 1.0.3; buildNumber autoIncrement stands) ② `npx eas-cli build --platform ios --profile production` ③ **phantom-twin lesson (ledger 0dfaf9a): check ASC for an existing processing build BEFORE any (re)submit** ④ `npx eas-cli submit` (headless, wired) ⑤ TF processing → artifact gate ⑥ internal TF install both phones → OTA doctrine unchanged (production channel serves it immediately — the embedded bundle now self-sufficient per R-a).
+
+**ARTIFACT GATE — 6 fields (5 standing + R-b, ALL must pass before install):**
+1. Camera/permission strings verbatim in the built Info.plist.
+2. `CFBundleShortVersionString` == intended version (1.0.3).
+3. Runtime `1.0.3`(post-bump) + `expo-channel-name: production` baked.
+4. `ITSAppUsesNonExemptEncryption` false.
+5. Both embedded profiles true APP_STORE · `aps-environment` production · healthkit entitled.
+6. **R-b (NEW, permanent):** raw-byte scan of the EMBEDDED js bundle — unzip the .ipa, locate `main.jsbundle`/`.hbc`, byte-grep: `https://freshrun-api.fly.dev` present ≥1 (ASCII) · `localhost|192.168|127.0.0.1` == 0. (The OTA-lane scan tooling adapts directly.)
+
+**ASC checklist (OWNER's checklist — drafted, NOT repo-verified claims):** □ beta app description/review notes current □ privacy policy URL set (App Privacy + TestFlight beta info) □ external-tester group exists, build assigned post-gate □ export compliance answer consistent with field 4 □ 지연 pre-notified of the build (doctrine).
+
+## 📋 PUBLISH-DOCTRINE REVISIT — OPTIONS PRE-DRAFT (#5 rider; the ruling becomes a 5-minute read on dry-run-pass day)
+
+Standing REVISIT: "at the external gate, production-only publishing is re-evaluated (strangers must not receive unverified bundles)." Two shapes:
+- **(A) Dev-lane returns:** publishes go `development` first → owner TF-verifies via a dev-channel build → re-publish to `production`. Cost: a second build lineage + double publish per slice; the exact lane retired 07-20 for friction.
+- **(B) Internal staging channel (recommended-shape candidate):** new `staging` channel + a TF build pointed at it for owner+지연; `production` serves external testers only, promoted via `update:republish --group` AFTER the [HH:MM]. Cost: one extra build at #11 time (same binary, channel param); publish flow gains one republish step; verified-group promotion becomes the release act itself — the compensating controls (hash-tie, rollback-armed) already fit it.
+Decision owed at the gate, not before. Both drafted so the REVISIT is a choice, not a design session.
 
 ## SLICE B + ⑦ GAP — NOTIFICATION MISROUTE FIX + RUN-POST PHOTO VIEWER (2026-07-21, awaiting TF [HH:MM])
 
