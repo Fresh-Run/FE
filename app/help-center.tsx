@@ -18,7 +18,8 @@ import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-na
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/ui';
-import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
+import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
+import { useStyles, useTokens } from '@/hooks/use-tokens';
 
 const FAQ: [string, string][] = [
   ['AI 코스는 어떻게 만들어지나요?', '거리·경유지 선호도와 실시간 날씨를 분석해 최적의 경로를 생성해요. 선호도는 프로필 > AI 코스 선호도에서 조정할 수 있어요.'],
@@ -28,6 +29,8 @@ const FAQ: [string, string][] = [
 ];
 
 export default function HelpCenterScreen() {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
   const [open, setOpen] = useState(-1);
 
@@ -79,7 +82,7 @@ export default function HelpCenterScreen() {
   );
 }
 
-const st = StyleSheet.create({
+const makeSt = (C: Tokens) => StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
 
   appBar:      { flexDirection: 'row', alignItems: 'center', paddingHorizontal: S.md, paddingVertical: 10 },

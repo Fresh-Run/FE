@@ -68,7 +68,8 @@ import {
   paceUnit,
   timeTitle,
 } from '@/lib/run-format';
-import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
+import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
+import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { useRunDetail } from '@/hooks/use-runs';
 import { useSettings } from '@/store/use-settings';
 import { useStore } from '@/store/use-store';
@@ -77,6 +78,7 @@ import type { Coordinate } from '@/types';
 const HERO_H = 210;
 
 function StatTile({ label, value, unit }: { label: string; value: string; unit?: string }) {
+  const st = useStyles(makeSt);
   return (
     <View style={[st.statTile, shadows.sm]}>
       <Text style={st.statVal} numberOfLines={1}>
@@ -88,6 +90,8 @@ function StatTile({ label, value, unit }: { label: string; value: string; unit?:
 }
 
 export default function RunPostScreen() {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{
     runId: string;
@@ -490,7 +494,7 @@ export default function RunPostScreen() {
   );
 }
 
-const st = StyleSheet.create({
+const makeSt = (C: Tokens) => StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
 
   appBar:      { flexDirection: 'row', alignItems: 'center', paddingHorizontal: S.gutter, paddingVertical: 10 },
@@ -533,7 +537,7 @@ const st = StyleSheet.create({
   analysisLinkTxt: { fontSize: 13, fontWeight: '700', color: C.accentGrn, letterSpacing: -0.2 },
 
   kudosBtn:       { height: 46, borderRadius: R.md, borderWidth: 1, borderColor: C.border, backgroundColor: C.surface, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, marginTop: 12 },
-  kudosBtnActive: { borderColor: C.danger, backgroundColor: '#EF444414' },
+  kudosBtnActive: { borderColor: C.danger, backgroundColor: C.danger + '14' },
   kudosTxt:       { fontSize: 13.5, fontWeight: '700', color: C.sub, letterSpacing: -0.2 },
 
   commentsHead:  { fontSize: 13.5, fontWeight: '700', color: C.text, letterSpacing: -0.3, marginTop: 22, marginBottom: 10 },

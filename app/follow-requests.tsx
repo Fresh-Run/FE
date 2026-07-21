@@ -26,9 +26,12 @@ import { Icon } from '@/components/ui';
 import { listFollowRequests, respondFollowRequest, type FollowRequestItem } from '@/lib/profile-api';
 import { openProfile } from '@/lib/profile-nav';
 import { fmtWhen } from '@/lib/run-format';
-import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
+import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
+import { useStyles, useTokens } from '@/hooks/use-tokens';
 
 export default function FollowRequestsScreen() {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
   const [rows, setRows]   = useState<FollowRequestItem[] | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -115,7 +118,7 @@ export default function FollowRequestsScreen() {
   );
 }
 
-const st = StyleSheet.create({
+const makeSt = (C: Tokens) => StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
 
   appBar:      { flexDirection: 'row', alignItems: 'center', paddingHorizontal: S.gutter, paddingVertical: 10 },

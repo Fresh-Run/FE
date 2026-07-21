@@ -32,7 +32,8 @@ import { Icon } from '@/components/ui';
 import { ApiError, apiFetch, apiRequest } from '@/lib/api';
 import { blockUser } from '@/lib/blocks-api';
 import { REPORT_REASONS, reportUser, type ReportReason } from '@/lib/reports-api';
-import { colors as C, radius as R, spacing as S } from '@/lib/theme';
+import { radius as R, spacing as S, type Tokens } from '@/lib/theme';
+import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { useUserProfile, type UserRun } from '@/hooks/use-user-profile';
 import { usePendingFollows } from '@/store/pending-follows';
 import { useSettings } from '@/store/use-settings';
@@ -43,6 +44,8 @@ import { useStore } from '@/store/use-store';
 // BE 4cd5685 opened non-owner run detail) with entry-payload seeds.
 
 export default function UserProfileScreen() {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
   const { uid, nickname: nickParam } = useLocalSearchParams<{ uid: string; nickname?: string }>();
   const units = useSettings(s => s.settings.units);
@@ -439,7 +442,7 @@ export default function UserProfileScreen() {
   );
 }
 
-const st = StyleSheet.create({
+const makeSt = (C: Tokens) => StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
 
   // ⋯ overflow sheet (mirrors crew-members)

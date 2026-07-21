@@ -22,7 +22,8 @@ import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanima
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/ui';
-import { accentShadow, colors as C } from '@/lib/theme';
+import { accentShadow, type Tokens } from '@/lib/theme';
+import { useStyles, useTokens } from '@/hooks/use-tokens';
 
 export type CropSource = { uri: string; width: number; height: number };
 
@@ -42,6 +43,8 @@ export function AvatarCrop({ src, aspect = 1, onClose, onConfirm, onRetake }: {
   /** Called AFTER the modal has really dismissed — safe to relaunch the picker. */
   onRetake: () => void;
 }) {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
   const [saving, setSaving] = useState(false);
 
@@ -189,7 +192,7 @@ export function AvatarCrop({ src, aspect = 1, onClose, onConfirm, onRetake }: {
   );
 }
 
-const st = StyleSheet.create({
+const makeSt = (C: Tokens) => StyleSheet.create({
   root:    { flex: 1, backgroundColor: '#0B0D09' },
   stage:   { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   imgWrap: { alignItems: 'center', justifyContent: 'center' },

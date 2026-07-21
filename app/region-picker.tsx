@@ -20,11 +20,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/ui';
 import { SIDO_LIST, SIGUNGU, type Sido } from '@/lib/korea-regions';
-import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
+import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
+import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { setCrewFilter } from '@/store/crew-filter';
 import { setPendingCrewRegion } from '@/store/pending-crew-region';
 
 export default function RegionPickerScreen() {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
   // target=form → crew create/edit (writes pending-crew-region); default →
   // the 둘러보기 filter (crew-filter). One picker, two consumers.
@@ -125,7 +128,7 @@ export default function RegionPickerScreen() {
   );
 }
 
-const st = StyleSheet.create({
+const makeSt = (C: Tokens) => StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
 
   appBar:      { flexDirection: 'row', alignItems: 'center', paddingHorizontal: S.md, paddingVertical: 10 },

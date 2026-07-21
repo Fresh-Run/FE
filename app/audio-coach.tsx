@@ -18,7 +18,8 @@ import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-nat
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/ui';
-import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
+import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
+import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { useAudioCoach } from '@/store/use-audio-coach';
 import { useSettings } from '@/store/use-settings';
 
@@ -26,6 +27,8 @@ function SliderRow({ label, value, min, max, step, fmt, onChange }: {
   label: string; value: number; min: number; max: number; step: number;
   fmt: (v: number) => string; onChange: (v: number) => void;
 }) {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   return (
     <View style={st.sliderRow}>
       <View style={st.sliderHead}>
@@ -42,6 +45,8 @@ function SliderRow({ label, value, min, max, step, fmt, onChange }: {
 }
 
 export default function AudioCoachScreen() {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
   const voiceCue = useSettings(s => s.settings.run.voice_cue);
   const setRunSetting = useSettings(s => s.setRunSetting);
@@ -117,7 +122,7 @@ export default function AudioCoachScreen() {
   );
 }
 
-const st = StyleSheet.create({
+const makeSt = (C: Tokens) => StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
 
   appBar:      { flexDirection: 'row', alignItems: 'center', paddingHorizontal: S.md, paddingVertical: 10 },

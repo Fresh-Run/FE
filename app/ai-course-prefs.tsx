@@ -16,7 +16,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/ui';
 import type { AiCourseSettings } from '@/lib/settings-api';
-import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
+import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
+import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { useSettings } from '@/store/use-settings';
 
 const TERRAINS: { value: AiCourseSettings['terrain']; label: string; sub: string }[] = [
@@ -40,6 +41,8 @@ const DIST_MAX = 32;
 function SelectRow({ label, sub, selected, onSelect }: {
   label: string; sub?: string; selected: boolean; onSelect: () => void;
 }) {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   return (
     <Pressable onPress={onSelect} style={({ pressed }) => [st.row, pressed && { opacity: 0.6 }]}>
       <View style={{ flex: 1, minWidth: 0 }}>
@@ -54,6 +57,8 @@ function SelectRow({ label, sub, selected, onSelect }: {
 }
 
 function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   return (
     <Pressable
       onPress={() => onChange(!on)}
@@ -68,6 +73,7 @@ function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void 
 function ToggleRow({ label, sub, on, onChange }: {
   label: string; sub: string; on: boolean; onChange: (v: boolean) => void;
 }) {
+  const st = useStyles(makeSt);
   return (
     <View style={st.row}>
       <View style={{ flex: 1, minWidth: 0 }}>
@@ -82,6 +88,8 @@ function ToggleRow({ label, sub, on, onChange }: {
 function StepperRow({ label, value, onChange }: {
   label: string; value: number; onChange: (v: number) => void;
 }) {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   const bump = (dir: 1 | -1) => {
     // Integer steps; a stored fractional value (e.g. 5.5) rounds toward the grid
     const next = Math.min(DIST_MAX, Math.max(DIST_MIN, Math.round(value + dir)));
@@ -104,6 +112,7 @@ function StepperRow({ label, value, onChange }: {
 }
 
 function Group({ title, children }: { title: string; children: React.ReactNode }) {
+  const st = useStyles(makeSt);
   const items = React.Children.toArray(children);
   return (
     <View style={{ paddingHorizontal: S.gutter }}>
@@ -123,6 +132,8 @@ function Group({ title, children }: { title: string; children: React.ReactNode }
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function AiCoursePrefsScreen() {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
   const ai = useSettings(s => s.settings.ai_course);
   const setAiCourse = useSettings(s => s.setAiCourse);
@@ -210,7 +221,7 @@ export default function AiCoursePrefsScreen() {
   );
 }
 
-const st = StyleSheet.create({
+const makeSt = (C: Tokens) => StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
 
   appBar:      { flexDirection: 'row', alignItems: 'center', paddingHorizontal: S.gutter, paddingVertical: 12 },

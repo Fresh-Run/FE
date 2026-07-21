@@ -30,7 +30,8 @@ import { Icon } from '@/components/ui';
 import { ApiError } from '@/lib/api';
 import { listMyCrews, mapCrew, type Crew } from '@/lib/crews-api';
 import { deleteAccount } from '@/lib/profile-api';
-import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
+import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
+import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { useStore } from '@/store/use-store';
 
 const CONSEQUENCES: [string, string][] = [
@@ -42,6 +43,8 @@ const CONSEQUENCES: [string, string][] = [
 ];
 
 export default function DeleteAccountScreen() {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
   const signOut = useStore(s => s.signOut);
 
@@ -151,7 +154,7 @@ export default function DeleteAccountScreen() {
   );
 }
 
-const st = StyleSheet.create({
+const makeSt = (C: Tokens) => StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
 
   appBar:      { flexDirection: 'row', alignItems: 'center', paddingHorizontal: S.gutter, paddingVertical: 10 },

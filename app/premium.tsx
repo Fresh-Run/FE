@@ -21,7 +21,8 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/ui';
-import { colors as C, shadows, spacing as S } from '@/lib/theme';
+import { shadows, spacing as S, type Tokens } from '@/lib/theme';
+import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { useQuota } from '@/store/use-quota';
 
 const FEATURES: { icon: string; title: string; desc: string; soon?: boolean }[] = [
@@ -31,6 +32,8 @@ const FEATURES: { icon: string; title: string; desc: string; soon?: boolean }[] 
 ];
 
 export default function PremiumScreen() {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
   const isPremium = useQuota(s => s.isPremium);
 
@@ -108,7 +111,7 @@ export default function PremiumScreen() {
   );
 }
 
-const st = StyleSheet.create({
+const makeSt = (C: Tokens) => StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
 
   appBar:   { flexDirection: 'row', alignItems: 'center', paddingHorizontal: S.md, paddingVertical: 8 },

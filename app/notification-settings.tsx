@@ -20,7 +20,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/ui';
 import type { NotifSettings } from '@/lib/settings-api';
-import { colors as C, shadows, spacing as S } from '@/lib/theme';
+import { shadows, spacing as S, type Tokens } from '@/lib/theme';
+import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { useSettings } from '@/store/use-settings';
 
 const GROUPS: { title: string; hint?: string; rows: { key: keyof NotifSettings; label: string; sub: string }[] }[] = [
@@ -60,6 +61,8 @@ const GROUPS: { title: string; hint?: string; rows: { key: keyof NotifSettings; 
 ];
 
 export default function NotificationSettingsScreen() {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
   const notif = useSettings(st_ => st_.settings.notif);
   const setNotifSetting = useSettings(st_ => st_.setNotifSetting);
@@ -136,7 +139,7 @@ export default function NotificationSettingsScreen() {
   );
 }
 
-const st = StyleSheet.create({
+const makeSt = (C: Tokens) => StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
 
   appBar:      { flexDirection: 'row', alignItems: 'center', paddingHorizontal: S.gutter, paddingVertical: 10 },

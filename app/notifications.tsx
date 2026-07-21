@@ -43,7 +43,8 @@ import {
   type AppNotification,
 } from '@/lib/notifications-api';
 import { fmtAgo } from '@/lib/run-format';
-import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
+import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
+import { useStyles, useTokens } from '@/hooks/use-tokens';
 
 // ─── Type mapping (owner-approved 2026-07-07; no design source) ──────────────
 
@@ -59,7 +60,7 @@ type Meta = {
   actorless?: boolean;
 };
 
-const TYPE_META: Record<string, Meta> = {
+const typeMeta = (C: Tokens): Record<string, Meta> => ({
   route_liked:         { tag: '좋아요',   tone: C.accentGrn, icon: 'avatar', copy: '님이 내 코스를 좋아해요' },
   route_commented:     { tag: '댓글',     tone: C.accentGrn, icon: 'avatar', copy: '님이 내 코스에 댓글을 남겼어요' },
   run_kudoed:          { tag: '응원',     tone: C.accentGrn, icon: 'avatar', copy: '님이 내 러닝을 응원해요' },
@@ -85,7 +86,7 @@ const TYPE_META: Record<string, Meta> = {
   // pb_achieved (BE 8cee8d8) — SELF-targeted (수신자==행위자); actorless per
   // guide (actor is you). Copy is dynamic (record_types). Row tap → 활동 상세.
   pb_achieved:         { tag: '기록',     tone: TROPHY_ORG,  icon: { name: 'ribbon-outline',    color: TROPHY_ORG, bg: TROPHY_ORG + '22' }, copy: '새 기록을 세웠어요! 🎉', actorless: true },
-};
+});
 
 // pb_achieved record-type labels — "최고 5K 환산" aligned with the insights
 // screen (pace-equivalent, never implies a 5K distance run).
@@ -112,7 +113,7 @@ function dynamicCopy(n: AppNotification): string | null {
 }
 
 // Unknown future types still render, generically
-const FALLBACK_META: Meta = { tag: '알림', tone: C.faint, icon: { name: 'notifications-outline', color: C.sub, bg: C.surfaceAlt }, copy: '새 소식이 있어요', actorless: true };
+const fallbackMeta = (C: Tokens): Meta => ({ tag: '알림', tone: C.faint, icon: { name: 'notifications-outline', color: C.sub, bg: C.surfaceAlt }, copy: '새 소식이 있어요', actorless: true });
 
 // ─── Tabs (owner UX calls 2026-07-07; underline pattern from the concept
 //     canvas, membership over the REAL types) ────────────────────────────────
@@ -150,6 +151,7 @@ function inTab(n: AppNotification, tab: TabKey): boolean {
 // ─── Row ──────────────────────────────────────────────────────────────────────
 
 function NotifIcon({ meta, actor, photoUrl }: { meta: Meta; actor: string; photoUrl?: string | null }) {
+  const st = useStyles(makeSt);
   if (meta.icon === 'avatar') {
     return <Avatar name={actor} size={42} photoUrl={photoUrl} initialsRatio={0.38} upper />;
   }
@@ -161,7 +163,9 @@ function NotifIcon({ meta, actor, photoUrl }: { meta: Meta; actor: string; photo
 }
 
 function NotifRow({ n, onPress, onDelete }: { n: AppNotification; onPress: () => void; onDelete: () => void }) {
-  const meta = TYPE_META[n.type] ?? FALLBACK_META;
+  const C = useTokens();
+  const st = useStyles(makeSt);
+  const meta = typeMeta(C)[n.type] ?? fallbackMeta(C);
   const actor = n.actor_nickname ?? '러너';
   const linked = deepLink(n) !== null;
   return (
@@ -219,6 +223,8 @@ function NotifRow({ n, onPress, onDelete }: { n: AppNotification; onPress: () =>
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function NotificationsScreen() {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
   const [rows, setRows]           = useState<AppNotification[] | null>(null);
   const [error, setError]         = useState(false);
@@ -330,7 +336,7 @@ export default function NotificationsScreen() {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const st = StyleSheet.create({
+const makeSt = (C: Tokens) => StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
 
   appBar:      { flexDirection: 'row', alignItems: 'center', paddingHorizontal: S.md, paddingVertical: 10 },

@@ -9,6 +9,10 @@
 //      call `const st = useStyles(makeSt);`
 // A converted file must take EVERY color through these — a leftover static
 // import renders stale-light inside a dark screen.
+// CAPTURE SUBCLASSES to hunt per file (all found in the wild, phase 3):
+//   module consts holding C values (RANK_MEDAL/TYPE_META class) → factory fns;
+//   DEFAULT PARAMETERS reading C (subColor = C.faint class) → optional + ??;
+//   module IIFEs baking colors (CONFETTI/BITS class) → resolve at render.
 import { StyleSheet } from 'react-native';
 
 import { colors, darkColors, type Tokens } from '@/lib/theme';

@@ -11,7 +11,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/ui';
 import type { UserSettings } from '@/lib/settings-api';
-import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
+import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
+import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { useSettings } from '@/store/use-settings';
 
 const OPTIONS: { value: UserSettings['theme']; label: string; sub: string }[] = [
@@ -20,6 +21,8 @@ const OPTIONS: { value: UserSettings['theme']; label: string; sub: string }[] = 
 ];
 
 export default function ThemeScreen() {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
   const theme = useSettings(s => s.settings.theme);
   const setTheme = useSettings(s => s.setTheme);
@@ -69,7 +72,7 @@ export default function ThemeScreen() {
   );
 }
 
-const st = StyleSheet.create({
+const makeSt = (C: Tokens) => StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
 
   appBar:      { flexDirection: 'row', alignItems: 'center', paddingHorizontal: S.gutter, paddingVertical: 12 },

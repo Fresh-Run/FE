@@ -38,7 +38,8 @@ import { useHealth } from '@/store/use-health';
 import { uploadAvatar } from '@/lib/avatar-api';
 import { avatarBg } from '@/lib/fr-hash';
 import { updateNickname, updateProfile } from '@/lib/profile-api';
-import { accentShadow, colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
+import { accentShadow, radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
+import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { useLocalProfile, type Gender } from '@/store/use-local-profile';
 import { useStore } from '@/store/use-store';
 
@@ -53,6 +54,8 @@ function FieldRow({
   placeholder?: string; keyboardType?: 'number-pad' | 'email-address';
   editable?: boolean; error?: string | null;
 }) {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   return (
     <View style={st.fieldRow}>
       <Text style={st.fieldLabel}>{label}</Text>
@@ -73,6 +76,8 @@ function FieldRow({
 }
 
 function SelectRow({ label, selected, onSelect }: { label: string; selected: boolean; onSelect: () => void }) {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   return (
     <Pressable onPress={onSelect} style={st.selectRow}>
       <Text style={[st.fieldLabel, { flex: 1 }, selected && { color: C.text }]}>{label}</Text>
@@ -84,6 +89,7 @@ function SelectRow({ label, selected, onSelect }: { label: string; selected: boo
 }
 
 function Group({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
+  const st = useStyles(makeSt);
   const items = React.Children.toArray(children);
   return (
     <View style={{ paddingHorizontal: S.gutter }}>
@@ -104,6 +110,8 @@ function Group({ title, hint, children }: { title: string; hint?: string; childr
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function PersonalInfoScreen() {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ nickname?: string }>();
   const session = useStore(s => s.session);
@@ -439,7 +447,7 @@ export default function PersonalInfoScreen() {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const st = StyleSheet.create({
+const makeSt = (C: Tokens) => StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
 
   appBar:      { flexDirection: 'row', alignItems: 'center', paddingHorizontal: S.gutter, paddingVertical: 12 },

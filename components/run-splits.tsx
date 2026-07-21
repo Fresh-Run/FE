@@ -19,7 +19,8 @@ import Svg, { Line, Rect, Text as SvgText } from 'react-native-svg';
 
 import type { RunSplit } from '@/hooks/use-runs';
 import { fmtPaceIn } from '@/lib/run-format';
-import { colors as C, radius as R, shadows } from '@/lib/theme';
+import { radius as R, shadows, type Tokens } from '@/lib/theme';
+import { useStyles, useTokens } from '@/hooks/use-tokens';
 import type { UserSettings } from '@/lib/settings-api';
 
 type Units = UserSettings['units'];
@@ -27,6 +28,7 @@ type Units = UserSettings['units'];
 // ─── 구간 기록 — Strava-style table ───────────────────────────────────────────
 
 export function SplitsTable({ splits, units }: { splits: RunSplit[]; units: Units }) {
+  const st = useStyles(makeSt);
   if (splits.length === 0) return null;
   const fastest = Math.min(...splits.map(s => s.sec));
   const slowest = Math.max(...splits.map(s => s.sec));
@@ -64,6 +66,8 @@ export function SplitsTable({ splits, units }: { splits: RunSplit[]; units: Unit
 const W = 320, H = 150, PAD_L = 6, PAD_R = 6, PAD_T = 12, PAD_B = 22;
 
 export function PaceChart({ splits }: { splits: RunSplit[] }) {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   if (splits.length < 2) return null;
   const paces = splits.map(s => s.sec);
   const n = paces.length;
@@ -107,7 +111,7 @@ export function PaceChart({ splits }: { splits: RunSplit[] }) {
   );
 }
 
-const st = StyleSheet.create({
+const makeSt = (C: Tokens) => StyleSheet.create({
   card: { backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: R.xl, padding: 14, marginTop: 12 },
 
   headRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingBottom: 9, borderBottomWidth: 1, borderBottomColor: C.border },

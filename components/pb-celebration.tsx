@@ -27,7 +27,8 @@ import {
   paceUnit,
   type Units,
 } from '@/lib/run-format';
-import { accentShadow, colors as C, radius as R } from '@/lib/theme';
+import { accentShadow, radius as R, type Tokens } from '@/lib/theme';
+import { useStyles, useTokens } from '@/hooks/use-tokens';
 
 // Priority when one run sets several records (approved: pace > 5k > dist > dur)
 const PRIORITY: NewRecord['type'][] = ['best_pace', 'best_5k', 'longest_distance', 'longest_duration'];
@@ -51,9 +52,10 @@ function fmtValue(type: NewRecord['type'], value: number, units: Units): { text:
 
 // ─── Confetti (16 seeded falling squares, one-shot — bundle FrConfetti) ───────
 
-const CONFETTI_COLORS = [C.accent, '#3D8BFF', '#E0A52E', '#E0703D', C.accent];
+// J4: identity palette stays fixed; the two accent slots follow the token.
+const confettiColors = (C: Tokens) => [C.accent, '#3D8BFF', '#E0A52E', '#E0703D', C.accent];
 
-type Bit = { left: number; delay: number; dur: number; size: number; rot: number; color: string };
+type Bit = { left: number; delay: number; dur: number; size: number; rot: number };
 
 const BITS: Bit[] = (() => {
   const rnd = frHash('pb-confetti-seed');
@@ -63,11 +65,12 @@ const BITS: Bit[] = (() => {
     dur:   1400 + rnd() * 1100,
     size:  6 + rnd() * 6,
     rot:   rnd() * 360,
-    color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
   }));
 })();
 
 function Confetti() {
+  const C = useTokens();
+  const colors = confettiColors(C);
   const progress = useRef(BITS.map(() => new Animated.Value(0))).current;
 
   useEffect(() => {
@@ -95,7 +98,7 @@ function Confetti() {
             width: b.size,
             height: b.size,
             borderRadius: 2,
-            backgroundColor: b.color,
+            backgroundColor: colors[i % colors.length],
             opacity: progress[i].interpolate({ inputRange: [0, 0.85, 1], outputRange: [0.9, 0.9, 0] }),
             transform: [
               { translateY: progress[i].interpolate({ inputRange: [0, 1], outputRange: [0, 640] }) },
@@ -117,6 +120,8 @@ export function PbCelebration({
   units: Units;
   onClose: () => void;
 }) {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   const pop = useRef(new Animated.Value(0.8)).current;
   useEffect(() => {
     if (!records) return;
@@ -198,7 +203,7 @@ export function PbCelebration({
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const st = StyleSheet.create({
+const makeSt = (C: Tokens) => StyleSheet.create({
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', paddingHorizontal: 18 },
   card:    { backgroundColor: C.surface, borderRadius: 26, paddingTop: 30, paddingBottom: 22, paddingHorizontal: 22, shadowColor: '#000', shadowOpacity: 0.4, shadowRadius: 30, shadowOffset: { width: 0, height: 12 }, elevation: 12 },
 

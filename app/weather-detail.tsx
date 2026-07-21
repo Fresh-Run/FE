@@ -12,14 +12,12 @@ import Svg, { Circle, G } from 'react-native-svg';
 import { Icon } from '@/components/ui';
 import { useWeather } from '@/hooks/use-weather';
 import { weatherIcon, weatherTone } from '@/lib/weather-api';
-import {
-  accentShadow,
-  colors as C,
+import { accentShadow,
   radius as R,
   shadows,
   spacing as S,
-  type as T,
-} from '@/lib/theme';
+  type as T, type Tokens } from '@/lib/theme';
+import { useStyles, useTokens } from '@/hooks/use-tokens';
 
 // Data contract: real weather via use-weather (W1, 2026-07-08) — the inline
 // DEFAULT_DATA mock this screen shipped with is retired.
@@ -35,6 +33,8 @@ const RING_CTR  = RING_SIZE / 2;
 const CIRC      = 2 * Math.PI * RING_R;
 
 function AiScoreRing({ score }: { score: number }) {
+  const C = useTokens();
+  const styles = useStyles(makeStyles);
   const offset = CIRC * (1 - Math.min(score, 100) / 100);
   return (
     <View style={styles.ringWrap}>
@@ -80,7 +80,9 @@ interface MetricTileProps {
   subColor?: string;
 }
 
-function MetricTile({ iconName, label, value, sub, subColor = C.faint }: MetricTileProps) {
+function MetricTile({ iconName, label, value, sub, subColor }: MetricTileProps) {
+  const C = useTokens();
+  const styles = useStyles(makeStyles);
   return (
     <View style={styles.tile}>
       <View style={styles.tileHeader}>
@@ -89,7 +91,7 @@ function MetricTile({ iconName, label, value, sub, subColor = C.faint }: MetricT
       </View>
       <View style={styles.tileValueRow}>
         <Text style={styles.tileValue}>{value}</Text>
-        {sub ? <Text style={[styles.tileSub, { color: subColor }]}>{sub}</Text> : null}
+        {sub ? <Text style={[styles.tileSub, { color: subColor ?? C.faint }]}>{sub}</Text> : null}
       </View>
     </View>
   );
@@ -110,6 +112,8 @@ const BADGE_COPY: Record<ReturnType<typeof weatherTone>, string> = {
 };
 
 export default function WeatherDetailScreen() {
+  const C = useTokens();
+  const styles = useStyles(makeStyles);
   const insets = useSafeAreaInsets();
   // Real data (W1) — quiet-dashes contract while loading/offline-uncached
   const { weather: w, placeName } = useWeather();
@@ -266,7 +270,7 @@ export default function WeatherDetailScreen() {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
+const makeStyles = (C: Tokens) => StyleSheet.create({
   root:   { flex: 1, backgroundColor: C.bg },
 
   // Header bar

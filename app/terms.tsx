@@ -11,7 +11,8 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/ui';
-import { colors as C, spacing as S } from '@/lib/theme';
+import { spacing as S, type Tokens } from '@/lib/theme';
+import { useStyles, useTokens } from '@/hooks/use-tokens';
 
 const SECTIONS: [string, string][] = [
   ['1. 서비스 이용', 'FreshRun은 AI 기반 러닝 코스 추천과 활동 기록 서비스를 제공합니다. 본 약관에 동의하면 서비스를 이용할 수 있습니다.'],
@@ -22,6 +23,8 @@ const SECTIONS: [string, string][] = [
 ];
 
 export default function TermsScreen() {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
   return (
     <View style={[st.root, { paddingTop: insets.top }]}>
@@ -46,7 +49,7 @@ export default function TermsScreen() {
   );
 }
 
-const st = StyleSheet.create({
+const makeSt = (C: Tokens) => StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
   appBar:      { flexDirection: 'row', alignItems: 'center', paddingHorizontal: S.md, paddingVertical: 10 },
   backBtn:     { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },

@@ -25,13 +25,16 @@ import { Icon } from '@/components/ui';
 import { useFollowList, type FollowUser } from '@/hooks/use-follow-list';
 import { ApiError, apiFetch, apiRequest } from '@/lib/api';
 import { openProfile } from '@/lib/profile-nav';
-import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
+import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
+import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { usePendingFollows } from '@/store/pending-follows';
 import { useStore } from '@/store/use-store';
 
 type Tab = 'following' | 'followers';
 
 export default function FollowListScreen() {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
   // uid/name absent → own lists (existing behavior); present → that user's
   const params = useLocalSearchParams<{ tab?: string; uid?: string; name?: string }>();
@@ -219,7 +222,7 @@ export default function FollowListScreen() {
   );
 }
 
-const st = StyleSheet.create({
+const makeSt = (C: Tokens) => StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
 
   appBar:      { flexDirection: 'row', alignItems: 'center', paddingHorizontal: S.md, paddingVertical: 10 },

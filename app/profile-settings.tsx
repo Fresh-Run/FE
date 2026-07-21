@@ -26,7 +26,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/ui';
 import { getMyProfile, listFollowRequests, updateProfile, type ProfileVisibility } from '@/lib/profile-api';
-import { colors as C, shadows, spacing as S } from '@/lib/theme';
+import { shadows, spacing as S, type Tokens } from '@/lib/theme';
+import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { useSettings } from '@/store/use-settings';
 
 const VISIBILITY_OPTS: { value: ProfileVisibility; label: string; sub: string }[] = [
@@ -36,6 +37,7 @@ const VISIBILITY_OPTS: { value: ProfileVisibility; label: string; sub: string }[
 ];
 
 function Group({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
+  const st = useStyles(makeSt);
   const items = React.Children.toArray(children);
   return (
     <View style={{ paddingHorizontal: S.gutter, paddingTop: 22 }}>
@@ -56,6 +58,8 @@ function Group({ title, hint, children }: { title: string; hint?: string; childr
 function NavRow({ icon, label, value, onPress }: {
   icon: string; label: string; value?: string; onPress: () => void;
 }) {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   return (
     <Pressable onPress={onPress} style={({ pressed }) => [st.row, pressed && { opacity: 0.7 }]}>
       <View style={st.rowIcon}><Icon name={icon} size={18} color={C.sub} /></View>
@@ -69,6 +73,8 @@ function NavRow({ icon, label, value, onPress }: {
 const VIS_TIMEOUT_MS = 10_000; // optimistic-write clock (timeout rider)
 
 export default function ProfileSettingsScreen() {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
   // v1.5: feed prefs are SERVER settings now (settings.feed — the device-
   // local feed-prefs store died with the migration; hydrate runs it once)
@@ -264,7 +270,7 @@ export default function ProfileSettingsScreen() {
   );
 }
 
-const st = StyleSheet.create({
+const makeSt = (C: Tokens) => StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
 
   appBar:      { flexDirection: 'row', alignItems: 'center', paddingHorizontal: S.gutter, paddingVertical: 10 },

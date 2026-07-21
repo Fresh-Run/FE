@@ -20,7 +20,8 @@ import { useProfile, type Profile, type RunStats } from '@/hooks/use-profile';
 import { healthAvailable, requestHealthAuthorization } from '@/lib/health';
 import { distUnit, fmtDist, fmtPaceIn, type Units } from '@/lib/run-format';
 import type { RunSettings } from '@/lib/settings-api';
-import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
+import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
+import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { useHealth } from '@/store/use-health';
 import { useQuota } from '@/store/use-quota';
 import { useScheme } from '@/store/use-scheme';
@@ -30,6 +31,8 @@ import { useStore } from '@/store/use-store';
 // ─── Toggle ───────────────────────────────────────────────────────────────────
 
 function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   return (
     <Pressable
       onPress={() => onChange(!on)}
@@ -55,6 +58,8 @@ interface SettingRowProps {
 }
 
 function SettingRow({ icon, iconBg, label, value, badge, danger, locked, onPress }: SettingRowProps) {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   return (
     <Pressable
       onPress={onPress}
@@ -86,6 +91,7 @@ function SettingRow({ icon, iconBg, label, value, badge, danger, locked, onPress
 // ─── ToggleRow ────────────────────────────────────────────────────────────────
 
 function ToggleRow({ label, on, onChange }: { label: string; on: boolean; onChange: (v: boolean) => void }) {
+  const st = useStyles(makeSt);
   return (
     <View style={st.toggleRow}>
       <Text style={st.settingLabel}>{label}</Text>
@@ -97,6 +103,7 @@ function ToggleRow({ label, on, onChange }: { label: string; on: boolean; onChan
 // ─── SettingGroup ─────────────────────────────────────────────────────────────
 
 function SettingGroup({ title, children }: { title: string; children: React.ReactNode }) {
+  const st = useStyles(makeSt);
   const items = React.Children.toArray(children);
   return (
     <View style={st.groupWrap}>
@@ -116,6 +123,8 @@ function SettingGroup({ title, children }: { title: string; children: React.Reac
 // ─── IdentityCard ─────────────────────────────────────────────────────────────
 
 function IdentityCard({ profile, stats, units, premium, onEdit }: { profile: Profile; stats: RunStats; units: Units; premium: boolean; onEdit: () => void }) {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   const dist     = fmtDist(stats.totalDistKm, units, 1);
   const runs     = String(stats.totalRuns);
   const bestPace = stats.bestPaceSec != null ? fmtPaceIn(stats.bestPaceSec, units) : '--';
@@ -171,6 +180,8 @@ function IdentityCard({ profile, stats, units, premium, onEdit }: { profile: Pro
 // the honest pre-IAP FrPremium page (B1, 2026-07-14) — the 준비 중 dead-end
 // closed; purchase itself lights at build #1 (IAP).
 function PremiumBanner() {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   return (
     <Pressable
       onPress={() => router.push('/premium' as never)}
@@ -192,6 +203,7 @@ const APP_VERSION = Constants.expoConfig?.version ?? '1.0.0';
 
 // ⚠ TEMPORARY (dark-mode epic Phase 1) — dies with Phase 5's real picker.
 function VersionFooter() {
+  const st = useStyles(makeSt);
   const devOverride = useScheme(s => s.devOverride);
   const cycle = useScheme(s => s.cycleDevOverride);
   const taps = useRef({ count: 0, last: 0 });
@@ -215,6 +227,8 @@ function VersionFooter() {
 }
 
 export default function ProfileScreen() {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   const insets  = useSafeAreaInsets();
   const tabBarInset = useTabBarInset();
   const signOut = useStore(s => s.signOut);
@@ -359,8 +373,8 @@ export default function ProfileScreen() {
             65) and design-ahead (FrAudioCoach has no code screen yet) */}
         <SettingGroup title="러닝 & AI">
           <SettingRow
-            icon={<Icon name="sparkles-outline" size={19} color="#3D8BFF" />}
-            iconBg="#3D8BFF18"
+            icon={<Icon name="sparkles-outline" size={19} color={C.blue} />}
+            iconBg={C.blue + '18'}
             label="AI 코스 선호도"
             onPress={() => router.push('/ai-course-prefs' as any)}
           />
@@ -389,7 +403,7 @@ export default function ProfileScreen() {
         <SettingGroup title="연결">
           <SettingRow
             icon={<Icon name="heart-outline" size={19} color={C.danger} />}
-            iconBg="#EF444418"
+            iconBg={C.danger + '18'}
             label="Apple 건강"
             value={healthOn ? '연결됨' : '연결 안 됨'}
             onPress={handleHealthRow}
@@ -450,7 +464,7 @@ export default function ProfileScreen() {
         <View style={{ paddingHorizontal: S.gutter, paddingTop: S.sm }}>
           <SettingRow
             icon={<Icon name="log-out-outline" size={19} color={C.danger} />}
-            iconBg="#EF444412"
+            iconBg={C.danger + '12'}
             label="로그아웃"
             danger
             onPress={handleSignOut}
@@ -472,7 +486,7 @@ export default function ProfileScreen() {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const st = StyleSheet.create({
+const makeSt = (C: Tokens) => StyleSheet.create({
   root:        { flex: 1, backgroundColor: C.bg },
   loadingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   headerPad:   { paddingTop: S.xl },

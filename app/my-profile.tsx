@@ -35,7 +35,8 @@ import { RealMap } from '@/components/real-map';
 import { Icon } from '@/components/ui';
 import { useMyPublicProfile, type MyRun } from '@/hooks/use-my-public-profile';
 import { distUnit, fmtDist, fmtDuration, fmtPaceIn, fmtWhen, paceUnit, timeTitle } from '@/lib/run-format';
-import { colors as C, radius as R, shadows, spacing as S } from '@/lib/theme';
+import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
+import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { useSettings } from '@/store/use-settings';
 
 // Own-list visibility is never null (legacy rows = 'followers' server-side)
@@ -48,6 +49,8 @@ const VIS_CAPTION: Record<MyRun['visibility'], string> = {
 // Reduced feed-style run card (canvas shows area/tags — no backend source
 // for own runs; honest subset, tap → activity detail)
 function RunCard({ run, name, photoUrl, units, mapLive, onKudos }: { run: MyRun; name: string; photoUrl?: string | null; units: ReturnType<typeof useSettings.getState>['settings']['units']; mapLive: boolean; onKudos: () => void }) {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   return (
     // Whole card → own-run SOCIAL view (owner correction 2026-07-12); the
     // 활동 상세 analysis screen's home is the 기록 tab — social links to it
@@ -117,6 +120,8 @@ function RunCard({ run, name, photoUrl, units, mapLive, onKudos }: { run: MyRun;
 // note's graduation condition).
 
 export default function MyProfileScreen() {
+  const C = useTokens();
+  const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
   const units = useSettings(s => s.settings.units);
   const { profile, runs, loading, error, refetch } = useMyPublicProfile();
@@ -247,7 +252,7 @@ export default function MyProfileScreen() {
   );
 }
 
-const st = StyleSheet.create({
+const makeSt = (C: Tokens) => StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
 
   appBar:      { flexDirection: 'row', alignItems: 'center', paddingHorizontal: S.md, paddingVertical: 10 },
