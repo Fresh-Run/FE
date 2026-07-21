@@ -1133,6 +1133,20 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 
 **VERIFIED [17:25] (owner, TF, production group `0d45c21b`):** 시스템 default — OS-dark device opens DARK · live-follows OS flips · explicit 다크 sticks across relaunch · 라이트 beats OS dark · 시스템 resumes following · map stroke themes · override dead (footer inert) · regression lap clean, unpinned. Known-good production group promoted: `0d45c21b-92ac-4331-b1ce-b0a3b07fbc60`.
 
+## RUN-VISIBILITY MATRIX — OWNER INTENT VERIFIED TRUE, CLOSED (2026-07-21, 지연-shared priority)
+
+**The intent — "followers see BOTH 전체-공개 AND 팔로워-tier runs, everywhere runs surface, unless 나만" — is ALREADY TRUE. ALL GREEN, 19/19 live cells, zero mismatches.** Probed on staging as real accounts (test2's run walked through all three tiers · viewer test1 = follower; demo1's run for non-follower cells · viewer demo4; world fully restored — both runs back to `public`, composition run deleted, nothing left published).
+
+| Tier | 친구 activities (follower) | user-profile (follower) | user-profile (non-follower) | 전체 nearby (stranger) |
+|---|---|---|---|---|
+| 전체 공개 | ✅ visible | ✅ visible | ✅ visible (public acct) | ✅ visible |
+| 팔로워만 | ✅ **visible** | ✅ **visible** | ✅ hidden | ✅ hidden (by design) |
+| 나만 | ✅ hidden | ✅ hidden | ✅ hidden | ✅ hidden |
+
+**Composition cell (the full intent in one probe):** a 팔로워-tier run linked to a PUBLIC course, viewed by a follower, appeared on /feed/activities **with `route_summary` populated** (`'서울숲 아침 조깅 3.2km'`) — BE's summary attach filters only route `is_public`, run tier doesn't gate it, so the repair-slice CTA + bookmark render on 팔로워-tier rows exactly as on 전체-공개 rows. Friend sees it, friend can run it. **Write side:** run-save defines all three tiers (default 전체 공개) and edit-run imports the SAME `VISIBILITY_OPTIONS` list — single source, both screens write all three.
+
+**Three footnotes:** ① private-**account** lock supersedes run tier — demo4 saw 0 rows on test2's profile at every tier (the account gate working, not a run-tier cell). ② Crew tap-through edge (`_can_see_run` 결정 A′+엣지ⓑ): crewmates can open a non-private run from crew surfaces even when the profile is A′-locked — **documented-not-probed**, deliberate per BE comments. ③ BE HEAD moved 90c3150→4c37151 during recon (distance band v2.4 + gen_meta — generation-side only, visibility paths untouched); probes ran against LIVE staging, so the matrix reflects the running server either way.
+
 ## REPAIR SLICE — ITEM-4 EXPANDED (2026-07-21, 지연 blessing 17:09 — awaiting publish gate → TF [HH:MM])
 
 **The b7ca600 orphaning heals demand-side; the locked showroom gets its demand valve.** ① RunCard gains the 이 코스 달리기 CTA — **DATA-GATED per blessing ①** (rendered only when `route_summary != null`; the caller applies the gate, profile surfaces pass nothing); action = copyRoute → tracking (the proven course-post lane, double-tap guarded). `route_summary` typed onto FeedRunExtras. ② RunCard gains the canvas card-B bookmark (header top-right) — **the bookmark-add path dead since b7ca600 REVIVES**; state seeded from the full-row bookmarks fetch on home focus, optimistic toggle, same data gate. ③ preview.tsx gains 이 코스 저장 (square bookmark beside 네-뛸게요; others' courses only — own courses are already yours). ④ **is_one_way rider: 내 코스 rows badge 편도** (probe note: backfill defaulted ALL pre-column rows false — even genuinely one-way old rows; badge is go-forward, honest). Post-epic rebase as disclosed: additive elements into the style factories, zero resolve changes.
