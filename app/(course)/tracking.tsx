@@ -16,7 +16,7 @@
 import * as Haptics from 'expo-haptics';
 import { useKeepAwake } from 'expo-keep-awake';
 import { router, useNavigation } from 'expo-router';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   Animated,
@@ -361,14 +361,32 @@ export default function TrackingScreen() {
     mapRef.current?.animateCamera({ center: { latitude: hereCoord.lat, longitude: hereCoord.lng } }, { duration: 400 });
   }, [hasCoursePath, locStatus, hereCoord]);
 
-  const onMapReady = () => {
-    if (courseCoords.length > 1) {
-      mapRef.current?.fitToCoordinates(courseCoords, {
-        edgePadding: { top: 90, right: 50, bottom: 50, left: 50 },
-        animated: false,
-      });
-    }
-  };
+  // (hoisted from the T-B block below — the visible-strip fit needs it)
+  const { height: winH } = useWindowDimensions();
+
+  // Course fit — TO THE VISIBLE STRIP, not the full frame (leg-1 walk
+  // conviction, 2026-07-21): the map is screen-sized behind the sheet, and
+  // at idle the sheet is pinned expanded (canSlide gates on running/paused),
+  // so only the top SHEET_TOP px are visible. The old full-frame fit
+  // centered the course BEHIND the sheet — line rendered, never seen.
+  // bottom padding = everything the sheet occludes; top clears the pill.
+  // Called from onMapReady AND the MapView's onLayout: on iOS a fit inside
+  // onMapReady can silently no-op when the frame hasn't settled — the
+  // layout-settled call kills that branch. Guards: idle-only (the follow
+  // camera owns a live run) and never after a user pan.
+  const fitCourse = useCallback(() => {
+    if (courseCoords.length < 2) return;
+    if (state !== 'idle' || lastUserPanRef.current !== 0) return;
+    mapRef.current?.fitToCoordinates(courseCoords, {
+      edgePadding: {
+        top: insets.top + 48,
+        right: 40,
+        bottom: winH - SHEET_TOP + 24,
+        left: 40,
+      },
+      animated: false,
+    });
+  }, [courseCoords, state, insets.top, winH]);
 
   const onUserPan = () => {
     lastUserPanRef.current = Date.now();
@@ -398,7 +416,6 @@ export default function TrackingScreen() {
   // both directions — is this library's core job and no longer ours to
   // hand-validate). Built on the SAME RNGH+Reanimated already in the tree;
   // pure JS, Expo Go-safe. ──
-  const { height: winH } = useWindowDimensions();
   const sheetH = winH - SHEET_TOP;
   const runSnaps = useMemo(() => [COMPACT_VISIBLE, sheetH], [sheetH]);
   const [detent, setDetent] = useState<'expanded' | 'compact'>('expanded');
@@ -535,7 +552,8 @@ export default function TrackingScreen() {
             latitudeDelta: 0.006,
             longitudeDelta: 0.006,
           }}
-          onMapReady={onMapReady}
+          onMapReady={fitCourse}
+          onLayout={fitCourse}
           onPanDrag={onUserPan}
           showsUserLocation
           showsMyLocationButton={false}
