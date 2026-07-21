@@ -208,7 +208,7 @@ const md3Typography = {
   statDisplay: { fontSize: 24, fontWeight: '700', lineHeight: 30, letterSpacing: 0.5 },
 } satisfies Record<string, TextStyle>;
 
-const md3Elevation: Record<'card' | 'sheet' | 'fab', ViewStyle> = {
+const md3Elevation: Record<'card' | 'sheet', ViewStyle> = {
   card: Platform.select({
     ios:     { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 12 },
     android: { elevation: 2 },
@@ -217,11 +217,6 @@ const md3Elevation: Record<'card' | 'sheet' | 'fab', ViewStyle> = {
   sheet: Platform.select({
     ios:     { shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.10, shadowRadius: 24 },
     android: { elevation: 8 },
-    default: {},
-  }) as ViewStyle,
-  fab: Platform.select({
-    ios:     { shadowColor: '#006e1c', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.30, shadowRadius: 12 },
-    android: { elevation: 10 },
     default: {},
   }) as ViewStyle,
 };
