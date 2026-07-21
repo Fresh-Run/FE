@@ -51,6 +51,15 @@ export const palette = {
 export const routeStroke = (scheme: 'light' | 'dark' | null | undefined): string =>
   scheme === 'dark' ? '#74E827' : '#2E7D32';
 
+/** Course under-layer on the live tracking map — the "where to go" line,
+    visually DISTINCT from the accent "where I've been" path (deep green vs
+    vivid lime, width 4 vs 5). Contrast-picked ≥3.2:1 on Apple map tiles in
+    BOTH schemes (leg-1 stroke conviction 2026-07-21 — the old translucent
+    gray read 2.0–2.7:1, sub-perceptual at course scale, and was the app's
+    only route stroke the ⑥ unification missed). */
+export const courseStroke = (scheme: 'light' | 'dark' | null | undefined): string =>
+  scheme === 'dark' ? '#549C2D' : '#2E7D32';
+
 export const colors = {
   // Surfaces
   bg:          palette.warmWhite,   // screen background

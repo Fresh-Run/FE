@@ -50,7 +50,8 @@ import { setPendingRun } from '@/store/pending-run';
 import { useLocalProfile } from '@/store/use-local-profile';
 import { useSettings } from '@/store/use-settings';
 import { distUnit, fmtDist, fmtPaceIn, paceUnit } from '@/lib/run-format';
-import { accentShadow, radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
+import { accentShadow, courseStroke, radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
+import { useScheme } from '@/store/use-scheme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 
 const MAP_H = 330;                    // expanded-detent map viewport (canvas)
@@ -254,6 +255,7 @@ export default function TrackingScreen() {
   // Course mode ("이 코스 달리기"): map shows the course shape, pill shows its
   // title, and the finished run links route_id. Absent → free run, as before.
   const [course] = useState(() => getActiveCourse());
+  const resolved = useScheme(s => s.resolved); // course under-layer stroke keys on scheme
   useEffect(() => () => clearActiveCourse(), []);
 
   // Settings (run.haptics gates hold-stop feedback) — hydrate in case the
@@ -560,9 +562,12 @@ export default function TrackingScreen() {
           showsCompass={false}
           toolbarEnabled={false}
         >
-          {/* Course shape (dim neutral) UNDER the live track (accent) */}
+          {/* Course shape ("where to go") UNDER the live track ("where I've
+              been") — scheme-keyed courseStroke, deep green vs the vivid
+              accent, width 4 vs 5. The old rgba(110,120,132,0.75) read
+              2.0–2.7:1 on map tiles (sub-perceptual — leg-1 conviction). */}
           {courseCoords.length > 1 && (
-            <Polyline coordinates={courseCoords} strokeColor="rgba(110,120,132,0.75)" strokeWidth={4} />
+            <Polyline coordinates={courseCoords} strokeColor={courseStroke(resolved)} strokeWidth={4} />
           )}
           {drawnPath.length > 1 && (
             <Polyline coordinates={drawnPath} strokeColor={C.accent} strokeWidth={5} />

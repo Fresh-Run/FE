@@ -1151,6 +1151,11 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 
 **WINDFALL RIDER (owner): the 내 코스 delete client slice (pre-scoped S) is UNBLOCKED** — ROUTE_DELETE probe-satisfied on staging; queued behind the current stack, no build yet.
 
+**RE-CONVICTION (2026-07-21, second walk + close-zoom observation): the STROKE, not (only) the viewport.** The course under-layer `rgba(110,120,132,0.75)` computed 2.0–2.7:1 against Apple map tiles in BOTH schemes — sub-perceptual at course scale — while every other route line renders via ⑥'s routeStroke (dark lime 7–10:1). Riders, owner-ordered:
+- **(a) Honest verdict, verbatim: the viewport fix was a real second bug presented as THE conviction; the walk proved the overclaim.** The fit math stands and the fix stays — but the reported symptom's root was the stroke.
+- **(b) The ⑥-sweep gap:** the unification's grep covered live paths (RealMap ×3 + tracking live track); this under-layer escaped as **the app's only un-unified route stroke** — and it had never once been walked (MiniMap-era ✓ predates the real map; T-A/T-B walks were free-run; D3 verified by row count).
+- **(c) Both bugs' fix now complete:** fit-to-visible-strip (live, group ffa37869) + perceptible scheme-keyed `courseStroke` (this commit: dark #549C2D ≥3.33:1 all tile classes, 2.16:1 dimmer than the live lime; light #2E7D32 = routeStroke light, 3.2–5.1:1) — "where to go" vs "where I've been" stay distinguishable mid-run (deep-vs-vivid + width 4-vs-5).
+
 ## RUN-VISIBILITY MATRIX — OWNER INTENT VERIFIED TRUE, CLOSED (2026-07-21, 지연-shared priority)
 
 **The intent — "followers see BOTH 전체-공개 AND 팔로워-tier runs, everywhere runs surface, unless 나만" — is ALREADY TRUE. ALL GREEN, 19/19 live cells, zero mismatches.** Probed on staging as real accounts (test2's run walked through all three tiers · viewer test1 = follower; demo1's run for non-follower cells · viewer demo4; world fully restored — both runs back to `public`, composition run deleted, nothing left published).
