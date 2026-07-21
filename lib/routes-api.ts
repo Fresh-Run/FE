@@ -112,6 +112,14 @@ export async function deleteRoute(id: string): Promise<void> {
   }
 }
 
+/** Public course rows (PublicRouteResponse — REAL social fields, OWN rows
+    included; probed 2026-07-21). #4 slice: the notification landing's
+    hydration source for route_liked/route_commented — the owner read
+    (GET /routes/{id}) is StoredRoute and has no social fields. */
+export function getPublicRoutes(): Promise<PublicRoute[]> {
+  return apiFetch<PublicRoute[]>('/api/routes/public?limit=100');
+}
+
 // My private copy of a route (StoredRoute) — subset we consume.
 export type CopiedRoute = {
   id: string;

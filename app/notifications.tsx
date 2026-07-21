@@ -78,6 +78,9 @@ const typeMeta = (C: Tokens): Record<string, Meta> => ({
   join_requested:      { tag: '크루 신청', tone: CREW_BLUE,   icon: { name: 'people-outline',    color: CREW_BLUE,  bg: CREW_BLUE + '22' },  copy: '님이 크루 가입을 신청했어요' },
   join_approved:       { tag: '크루 승인', tone: CREW_BLUE,   icon: { name: 'people-outline',    color: CREW_BLUE,  bg: CREW_BLUE + '22' },  copy: '님이 크루 가입을 승인했어요' },
   crew_announcement:   { tag: '공지',     tone: CREW_BLUE,   icon: { name: 'megaphone-outline', color: CREW_BLUE,  bg: CREW_BLUE + '22' },  copy: '님이 크루에 새 공지를 올렸어요' },
+  // #4 slice (2026-07-21): was falling to FALLBACK_META (generic + inert);
+  // actor = the sender (probed). Deep link → crew-chat (crewId-only entry).
+  crew_chat:           { tag: '크루 채팅', tone: CREW_BLUE,   icon: 'avatar', copy: '님이 크루 채팅에 메시지를 보냈어요' },
   challenge_completed: { tag: '챌린지',   tone: TROPHY_ORG,  icon: { name: 'trophy-outline',    color: TROPHY_ORG, bg: TROPHY_ORG + '22' }, copy: '챌린지를 달성했어요. 축하해요!', actorless: true },
   // crew_invited (BE 23d2936) — a person invited you; actor avatar (like
   // user_followed), 크루 tab. Copy is dynamic (crew_name); row tap → the
