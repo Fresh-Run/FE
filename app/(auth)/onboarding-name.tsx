@@ -135,7 +135,9 @@ export default function OnboardingScreen() {
 
       setDisplayName(nickname);
       markProfileCreated(); // guard releases to (tabs)
-      router.replace('/(tabs)');
+      // Funnel v1 (owner ruling 2026-07-21): first landing = the 러닝 hub tab —
+      // AI 코스 and 자유 러닝 introduced as equal cards, no hijack.
+      router.replace('/(tabs)/create');
     } catch (e: unknown) {
       if (e instanceof ApiError && e.status === 409) {
         setStep(1);

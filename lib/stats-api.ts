@@ -53,3 +53,34 @@ export type MyStats = {
 export function getMyStats(): Promise<MyStats> {
   return apiFetch<MyStats>('/api/me/stats');
 }
+
+// ─── 코스-런 비율 — GET /stats/course-run-share (funnel v1, 2026-07-21) ────────
+// The endpoint DOES NOT EXIST YET — ask drafted, goes to 지연 verbatim on the
+// owner's send (live-probed 404 at build time). Consumption built AHEAD per
+// owner ruling: any failure/absence → null → the social-proof line renders
+// NOTHING. No fake numbers, ever — the line appears when her endpoint lands.
+export type CourseRunShare = {
+  scope: 'global' | 'me';
+  window_days: number;
+  total_runs: number;
+  course_runs: number;
+  /** null when total_runs is below the server threshold (thin-window guard). */
+  share: number | null;
+};
+
+/** Below this the line is anti-proof ("러너 12%가…" argues AGAINST courses) —
+    hidden client-side even if the server ships a number. */
+export const SHARE_FLOOR = 0.2;
+
+/** Global course-run share for nudge copy — null means "render nothing"
+    (endpoint absent, request failed, thin window, or below the floor). */
+export async function getCourseRunShare(windowDays = 30): Promise<number | null> {
+  try {
+    const r = await apiFetch<CourseRunShare>(
+      `/api/stats/course-run-share?window_days=${windowDays}&scope=global`,
+    );
+    return r.share != null && r.share >= SHARE_FLOOR ? r.share : null;
+  } catch {
+    return null;
+  }
+}

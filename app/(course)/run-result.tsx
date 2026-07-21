@@ -47,6 +47,8 @@ import { getMyStats, type MyStats } from '@/lib/stats-api';
 import { maybeWriteRunToHealth } from '@/lib/health';
 import { accentShadow, radius as R, shadows, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
+import { shouldShowPostRunNudge, stampPostRunNudge } from '@/lib/course-funnel';
+import { getCourseRunShare } from '@/lib/stats-api';
 import { clearPendingRun, getPendingDraft, getPendingRun, getSavedResult } from '@/store/pending-run';
 import { useSettings } from '@/store/use-settings';
 import { useStore } from '@/store/use-store';
@@ -233,6 +235,32 @@ export default function RunResultScreen() {
     });
   }, [navigation]);
 
+  // ── Funnel v1: post-free-run nudge — a THIRD sanctioned exit ────────────────
+  // Gates: this run was FREE (no course) ∧ save landed ∧ lib gate (≥7-day
+  // stamp ∧ generator not degraded). Stamped on SHOW (anti-nag), not on tap.
+  const [nudge, setNudge] = useState(false);
+  const [share, setShare] = useState<number | null>(null);
+  useEffect(() => {
+    if (!run || run.course || saveState !== 'saved') return;
+    let alive = true;
+    shouldShowPostRunNudge().then(ok => {
+      if (!alive || !ok) return;
+      setNudge(true);
+      stampPostRunNudge();
+    });
+    getCourseRunShare().then(s => { if (alive) setShare(s); });
+    return () => { alive = false; };
+  }, [run, saveState]);
+
+  const goCourse = () => {
+    if (!run) return;
+    exitingRef.current = true;
+    const km = run.distanceKm;
+    clearPendingRun();
+    // create.tsx clamps the seed to the active unit's slider range
+    router.replace({ pathname: '/(course)/create', params: { seedKm: km.toFixed(2) } } as any);
+  };
+
   const finish = () => {
     const leave = () => {
       exitingRef.current = true;
@@ -411,6 +439,18 @@ export default function RunResultScreen() {
 
       {/* ── Actions — 공유하기 (secondary) + 완료 (primary) ── */}
       <View style={[st.footer, { paddingBottom: Math.max(insets.bottom, 12) + 14 }]}>
+        {nudge && (
+          <Pressable onPress={goCourse} style={({ pressed }) => [st.nudgeBtn, pressed && { opacity: 0.85 }]}>
+            <Icon name="navigate-outline" size={15} color={C.accentGrn} />
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={st.nudgeTxt}>다음엔 AI 코스로 달려볼까요?</Text>
+              <Text style={st.nudgeSub} numberOfLines={1}>
+                {share != null ? `러너 ${Math.round(share * 100)}%가 코스로 달려요 · ` : ''}방금 거리 그대로 만들어드려요
+              </Text>
+            </View>
+            <Icon name="chevron-forward" size={16} color={C.faint} />
+          </Pressable>
+        )}
         {!tooShort && (
           <Pressable onPress={shareRun} style={({ pressed }) => [st.shareBtn, shadows.sm, pressed && { opacity: 0.85 }]}>
             <Icon name="share-outline" size={17} color={C.text} />
@@ -473,6 +513,10 @@ const makeSt = (C: Tokens) => StyleSheet.create({
   elevVal: { marginLeft: 'auto', fontSize: 14, fontWeight: '700', color: C.accentGrn, letterSpacing: -0.2 },
 
   footer:   { paddingTop: 14, paddingHorizontal: 24, gap: 10, backgroundColor: C.bg },
+  // Funnel v1 nudge — house CTA-pill grammar (accentDim/accent, cf. RunCard)
+  nudgeBtn: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: C.accentDim, borderWidth: 1, borderColor: C.accent, borderRadius: 15, paddingHorizontal: 14, paddingVertical: 10 },
+  nudgeTxt: { fontSize: 13.5, fontWeight: '700', color: C.accentGrn, letterSpacing: -0.3 },
+  nudgeSub: { fontSize: 11.5, color: C.sub, letterSpacing: -0.2, marginTop: 2 },
   shareBtn: { height: 50, borderRadius: 15, borderWidth: 1, borderColor: C.border, backgroundColor: C.surface, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   shareTxt: { fontSize: 15, fontWeight: '700', color: C.text, letterSpacing: -0.3 },
   doneBtn:  { height: 56, borderRadius: 16, backgroundColor: C.accent, alignItems: 'center', justifyContent: 'center' },

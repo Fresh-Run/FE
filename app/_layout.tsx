@@ -51,7 +51,10 @@ function AuthGuard() {
       router.replace('/(tabs)');
     } else if (session && inOnboarding && profileMissing === false) {
       // Gate satisfied (profile created or already existed) → release.
-      router.replace('/(tabs)');
+      // Funnel v1 (owner ruling 2026-07-21): release lands on the 러닝 hub —
+      // MUST match onboarding-name's own replace (the two race; same target
+      // makes the race harmless). Sign-in re-entry (branch above) stays home.
+      router.replace('/(tabs)/create');
     }
   }, [session, sessionLoading, profileMissing, segments]);
 

@@ -13,7 +13,7 @@
  */
 import Slider from '@react-native-community/slider';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -29,6 +29,7 @@ import { MiniMap } from '@/components/mini-map';
 import { RealMap } from '@/components/real-map';
 import { Icon } from '@/components/ui';
 import { useCurrentLocation } from '@/hooks/use-current-location';
+import { recordGenOutcome } from '@/lib/course-funnel';
 import { distUnit, fmtDist, KM_PER_MI } from '@/lib/run-format';
 import { haversineKm } from '@/lib/run-metrics';
 import { setActiveCourse } from '@/store/active-course';
@@ -177,10 +178,16 @@ export default function CreateScreen() {
   // only when the body omits distance, and this form always sends it — so the
   // pref lands here as the slider's initial value instead. Clamped to the
   // active unit's slider range; pre-sync cold start = server default (5.0).
+  // Funnel v1: the post-run nudge pre-seeds THIS run's distance via ?seedKm
+  // (km, string) — the param outranks the pref, same clamp.
+  const { seedKm: seedParam } = useLocalSearchParams<{ seedKm?: string }>();
   const seedKm = useMemo(() => {
     const { units: u, ai_course } = useSettings.getState().settings;
     const [lo, hi] = u === 'mi' ? [0.5 * KM_PER_MI, 20 * KM_PER_MI] : [1, 30];
-    return Math.min(hi, Math.max(lo, ai_course.default_distance_km));
+    const fromNudge = seedParam ? Number(seedParam) : NaN;
+    const base = Number.isFinite(fromNudge) && fromNudge > 0 ? fromNudge : ai_course.default_distance_km;
+    return Math.min(hi, Math.max(lo, base));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const [distanceKm, setDistanceKm] = useState(seedKm);
   const units = useSettings(s => s.settings.units);
@@ -259,6 +266,7 @@ export default function CreateScreen() {
         end: oneWay ? endCoord : null,
       }, controller.signal);
       if (genCancelledRef.current) return;
+      recordGenOutcome(true); // funnel v1 degradation memory (fire-and-forget)
       setRoute(result);
       setViewState('result');
     } catch (e: unknown) {
@@ -267,7 +275,10 @@ export default function CreateScreen() {
         // Server min is authoritative (guide: feed it into the slider
         // suggestion) — the inline warn row's 설정 chip carries the fix.
         setGenError(`이 거리로는 도착지가 너무 멀어요 — 최소 ${fmtDist(e.minTargetKm, units, 1)}${distUnit(units)}가 필요해요.`);
+        // NOT recorded: feasibility 422 is a deterministic input outcome,
+        // not generator health — it must never suppress the nudge.
       } else {
+        recordGenOutcome(false); // funnel v1 degradation memory
         setGenError(e instanceof Error ? e.message : '코스 생성에 실패했어요');
       }
       setViewState('form');
