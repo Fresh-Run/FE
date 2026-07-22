@@ -40,6 +40,7 @@ import { fmtDist } from '@/lib/run-format';
 import { shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { useQuota } from '@/store/use-quota';
+import { getMyStats } from '@/lib/stats-api';
 import { useSettings } from '@/store/use-settings';
 import { useStore } from '@/store/use-store';
 import type { Coordinate } from '@/types';
@@ -211,8 +212,37 @@ const makeFtt = (C: Tokens) => StyleSheet.create({
 
 // ─── AI banner ────────────────────────────────────────────────────────────────
 
+// Copy-truth fix (owner ruling + 지연 register, 2026-07-22): the old banner
+// claimed a made course ("준비됐어요") with FICTIONAL stats (7.4km/43분 were
+// hardcoded) and a weather-matching promise generate never had. Now: a
+// PROMISE-to-make, personalized from the runner's real recent pattern
+// (/me/stats — already-consumed endpoint; fetch failure/no history → the
+// plain promise, never invented numbers). The M build (tap→derived-params
+// generation, single round-trip, no cache — her veto) rides separately.
+const TERRAIN_BANNER_LABEL = { flat: '평지 우선', mixed: '균형 코스', hill: '언덕 훈련' } as const;
+
 function AIBanner({ locked, onPress }: { locked?: boolean; onPress: () => void }) {
   const abt = useStyles(makeAbt);
+  const aiPrefs = useSettings(s => s.settings.ai_course);
+  // one-shot pattern fetch — quiet fallback keeps the banner honest offline
+  const [pattern, setPattern] = useState<{ km: number; estMin: number } | null>(null);
+  useEffect(() => {
+    let alive = true;
+    getMyStats()
+      .then(st2 => {
+        if (!alive) return;
+        const p = st2.week.run_count > 0 ? st2.week : st2.month.run_count > 0 ? st2.month : st2.all_time;
+        if (p.run_count <= 0 || p.total_distance_km <= 0) return;
+        const km = Math.max(1, Math.round((p.total_distance_km / p.run_count) * 2) / 2); // nearest 0.5
+        const estMin = p.avg_pace_sec_per_km != null && p.avg_pace_sec_per_km > 0
+          ? Math.round((km * p.avg_pace_sec_per_km) / 60)
+          : Math.round(km * 6.5); // create.tsx's own estimate formula
+        setPattern({ km, estMin });
+      })
+      .catch(() => {}); // no history claim on failure — the plain promise stands
+    return () => { alive = false; };
+  }, []);
+  const fmtBannerKm = (km: number) => (Number.isInteger(km) ? `${km}` : km.toFixed(1));
   return (
     <Pressable onPress={onPress} style={abt.banner}>
       <LinearGradient
@@ -231,11 +261,17 @@ function AIBanner({ locked, onPress }: { locked?: boolean; onPress: () => void }
         <RNText style={abt.title}>
           {locked
             ? '날씨·체력 맞춤 AI 코스를\n프리미엄에서 만나보세요'
-            : '오늘 날씨에 딱 맞는\n새 코스가 준비됐어요'}
+            : pattern
+              ? `요즘 ${fmtBannerKm(pattern.km)}km 페이스네요 —\n지금 위치에서 만들까요?`
+              : '내 취향에 맞는 코스를\n만들어드릴게요'}
         </RNText>
         <View style={abt.sub}>
           <RNText style={abt.subTxt}>
-            {locked ? '프리미엄으로 잠금 해제하기' : '7.4 km · 예상 43분 · 한적함'}
+            {locked
+              ? '프리미엄으로 잠금 해제하기'
+              : pattern
+                ? `약 ${pattern.estMin}분 · ${TERRAIN_BANNER_LABEL[aiPrefs.terrain]}`
+                : `약 ${fmtBannerKm(aiPrefs.default_distance_km)}km · ${TERRAIN_BANNER_LABEL[aiPrefs.terrain]}`}
           </RNText>
           <View style={{ transform: [{ rotate: '-45deg' }] }}>
             <Icon name="arrow-forward-outline" size={15} color="#fff" />
