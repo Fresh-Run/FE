@@ -107,8 +107,9 @@ export function RealMap({ height, borderRadius = 0, polyline, center, marker = f
   // km/mi markers — interpolated ON the drawn segments; circle = the route
   // stroke's own color family so they read as part of the line, number ink
   // = accentText-class on the dark-lime stroke / white on the light green
-  // (contrast desk-proven ≥3:1 both). tracksViewChanges={false}: static
-  // bitmaps, no per-frame churn.
+  // (contrast desk-proven ≥3:1 both). Markers use DEFAULT tracksViewChanges
+  // — the ={false} flag snapshots an empty bitmap at mount (convicted
+  // 2026-07-22); re-render cost at ≤30 static markers is trivial.
   const crossings = useMemo(
     () => (distanceMarkers && line ? distanceCrossings(line, units === 'mi' ? KM_PER_MI : 1) : []),
     [distanceMarkers, line, units],
@@ -165,8 +166,12 @@ export function RealMap({ height, borderRadius = 0, polyline, center, marker = f
             <Marker coordinate={toLatLng(line[line.length - 1])} anchor={{ x: 0.5, y: 0.5 }}>
               <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: stroke, borderWidth: 3, borderColor: '#fff' }} />
             </Marker>
+            {/* km markers — default tracksViewChanges (the dots' proven
+                config): the ={false} "optimization" snapshotted an EMPTY
+                bitmap at mount (the known iOS pitfall, convicted by the
+                in-file control group 2026-07-22) */}
             {crossings.map(c => (
-              <Marker key={`km-${c.n}`} coordinate={{ latitude: c.lat, longitude: c.lng }} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={false}>
+              <Marker key={`km-${c.n}`} coordinate={{ latitude: c.lat, longitude: c.lng }} anchor={{ x: 0.5, y: 0.5 }}>
                 <View style={{ minWidth: 19, height: 19, borderRadius: 10, paddingHorizontal: 3, backgroundColor: stroke, borderWidth: 1.5, borderColor: '#fff', alignItems: 'center', justifyContent: 'center' }}>
                   <Text style={{ fontSize: 10, fontWeight: '800', color: markerInk }}>{c.n}</Text>
                 </View>
