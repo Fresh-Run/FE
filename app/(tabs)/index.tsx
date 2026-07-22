@@ -41,7 +41,6 @@ import { shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { useQuota } from '@/store/use-quota';
 import { getMyRecentRuns } from '@/lib/runs-api';
-import { getSettings } from '@/lib/settings-api'; // TEMP PROBE import — strips with it
 import { useSettings } from '@/store/use-settings';
 import { useStore } from '@/store/use-store';
 import type { Coordinate } from '@/types';
@@ -275,15 +274,9 @@ function AIBanner({ onStart, onUpsell }: { onStart: (km: number) => void; onUpse
   // band roll — per home focus, anti-repeat stamped; stable between focuses
   // (no mid-session flicker: the state only moves on a focus event)
   const [km, setKm] = useState(() => bannerPool(aiPrefs.default_distance_km)[0]);
-  // ── SANCTIONED TEMP PROBE (reader-split hunt, owner GO 2026-07-22) —
-  // STRIPS IN THE FIX COMMIT. One glance = which reader diverges from raw
-  // truth: server value (store-bypassing GET) · AsyncStorage cache · the
-  // value compose received · the pool · the roll.
-  const [bannerProbe, setBannerProbe] = useState('probe…');
   useFocusEffect(useCallback(() => {
     let alive = true;
-    const got = useSettings.getState().settings.ai_course.default_distance_km;
-    const pool = bannerPool(got);
+    const pool = bannerPool(useSettings.getState().settings.ai_course.default_distance_km);
     AsyncStorage.getItem(BANNER_ROLL_KEY)
       .then(raw => {
         if (!alive) return;
@@ -291,14 +284,6 @@ function AIBanner({ onStart, onUpsell }: { onStart: (km: number) => void; onUpse
         const rolled = rollBanner(pool, Number.isFinite(last as number) ? last : null);
         setKm(rolled);
         AsyncStorage.setItem(BANNER_ROLL_KEY, String(rolled)).catch(() => {});
-        // TEMP PROBE: raw truths, store-bypassing
-        const uid = useStore.getState().session?.user?.id;
-        Promise.all([
-          getSettings().then(s2 => s2.ai_course?.default_distance_km).catch(() => 'ERR'),
-          uid ? AsyncStorage.getItem(`@fr_settings:${uid}`).then(c => c ? (JSON.parse(c).ai_course?.default_distance_km ?? '∅') : '∅').catch(() => 'ERR') : Promise.resolve('no-uid'),
-        ]).then(([srv, cache]) => {
-          if (alive) setBannerProbe(`srv:${srv} cache:${cache} got:${got} pool:[${pool.join(',')}] roll:${rolled}`);
-        });
       })
       .catch(() => { if (alive) setKm(rollBanner(pool, null)); });
     return () => { alive = false; };
@@ -313,9 +298,6 @@ function AIBanner({ onStart, onUpsell }: { onStart: (km: number) => void; onUpse
     ? ['일', '월', '화', '수', '목', '금', '토'][new Date(quota.reset_at).getDay()] + '요일'
     : '월요일';
   return (
-    <View>
-    {/* SANCTIONED TEMP PROBE line — strips in the fix commit */}
-    <RNText style={{ fontSize: 10, color: '#888', paddingHorizontal: 4, paddingBottom: 3, fontVariant: ['tabular-nums'] }}>{bannerProbe}</RNText>
     <Pressable onPress={exhausted ? onUpsell : () => onStart(km)} style={abt.banner}>
       <LinearGradient
         colors={['#3BC55E', '#2BA94F']}
@@ -347,7 +329,6 @@ function AIBanner({ onStart, onUpsell }: { onStart: (km: number) => void; onUpse
         </View>
       </View>
     </Pressable>
-    </View>
   );
 }
 
