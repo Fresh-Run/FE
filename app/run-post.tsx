@@ -351,6 +351,8 @@ export default function RunPostScreen() {
                   router.push('/(course)/route-map' as never);
                 }}
               />
+              {/* SANCTIONED TEMP PROBE chip (B7 lane) — strips in the fix commit */}
+              <Text style={{ fontSize: 9, color: '#888', paddingHorizontal: 16, paddingTop: 3, fontVariant: ['tabular-nums'] }}>{run.id.slice(0, 8)} · hero:{track ? `track:${track.length}pts` : `thumb:${run.polyline_thumb?.length ?? 0}pts`} · failed:{String(trackFailed)} · has_track:{String(!!run.has_track)}</Text>
             </View>
 
             <View style={{ paddingHorizontal: S.gutter }}>

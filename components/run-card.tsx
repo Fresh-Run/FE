@@ -36,7 +36,7 @@ export function RunCard({ run, units, mapLive, onKudos, kudosOff, onOpen, onAvat
   const C = useTokens();
   const st = useStyles(makeSt);
   // visual-split ruling: full track when fetched, thumb while loading
-  const cardLine = useRunTrackLine(mapLive ? run.run_id : null, run.polyline_thumb);
+  const { line: cardLine, dbg: cardDbg } = useRunTrackLine(mapLive ? run.run_id : null, run.polyline_thumb); // TEMP PROBE
   return (
     <Pressable onPress={onOpen} disabled={!onOpen} style={({ pressed }) => [st.card, shadows.sm, pressed && !!onOpen && { opacity: 0.85 }]}>
       <View style={st.cardHead}>
@@ -55,6 +55,8 @@ export function RunCard({ run, units, mapLive, onKudos, kudosOff, onOpen, onAvat
       ) : (
         <MiniMap seed={run.run_id} height={200} polyline={cardLine ?? undefined} />
       )}
+      {/* SANCTIONED TEMP PROBE chip — strips in the fix commit */}
+      <Text style={{ fontSize: 9, color: '#888', paddingHorizontal: 14, paddingTop: 3, fontVariant: ['tabular-nums'] }}>{run.run_id.slice(0, 8)} · {cardDbg} · draw:{(cardLine ?? []).length}pts</Text>
       <View style={st.cardBody}>
         <Text style={st.cardTitle}>{run.title ?? timeTitle(run.ran_at)}</Text>
         <View style={st.statsRow}>
