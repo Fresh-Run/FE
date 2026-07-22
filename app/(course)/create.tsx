@@ -13,7 +13,7 @@
  */
 import Slider from '@react-native-community/slider';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -177,10 +177,18 @@ export default function CreateScreen() {
   // only when the body omits distance, and this form always sends it — so the
   // pref lands here as the slider's initial value instead. Clamped to the
   // active unit's slider range; pre-sync cold start = server default (5.0).
+  // AI-banner tap-direct (M build, 2026-07-22): ?auto=1&seedKm= — the banner's
+  // derived distance outranks the pref seed, same clamp. (Note: the parked
+  // funnel-v1 branch carries its own seedKm intake — merge point when it
+  // unparks, flagged.)
+  const { seedKm: seedParam, auto: autoParam } = useLocalSearchParams<{ seedKm?: string; auto?: string }>();
   const seedKm = useMemo(() => {
     const { units: u, ai_course } = useSettings.getState().settings;
     const [lo, hi] = u === 'mi' ? [0.5 * KM_PER_MI, 20 * KM_PER_MI] : [1, 30];
-    return Math.min(hi, Math.max(lo, ai_course.default_distance_km));
+    const fromBanner = seedParam ? Number(seedParam) : NaN;
+    const base = Number.isFinite(fromBanner) && fromBanner > 0 ? fromBanner : ai_course.default_distance_km;
+    return Math.min(hi, Math.max(lo, base));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const [distanceKm, setDistanceKm] = useState(seedKm);
   const units = useSettings(s => s.settings.units);
@@ -224,7 +232,13 @@ export default function CreateScreen() {
   const sliderMaxKm = isMi ? 20 * KM_PER_MI : 30;
 
   // ── Flow state ──────────────────────────────────────────────────────────────
-  const [viewState, setViewState] = useState<ViewState>('form');
+  // auto mode opens ON the generating shell (single round-trip — nothing
+  // between tap and generation); the effect below fires the real call the
+  // moment a REAL location resolves (granted-key rule — never the Seoul
+  // fallback: the banner's 지금-위치 promise). DENIED drops to the form,
+  // the honest fallback surface. Cancel also lands on the form.
+  const [autoMode] = useState(autoParam === '1');
+  const [viewState, setViewState] = useState<ViewState>(autoParam === '1' ? 'generating' : 'form');
   const [route, setRoute]         = useState<GeneratedRoute | null>(null);
   const [genError, setGenError]   = useState<string | null>(null);
   // Target captured at request time — the miss banner's delta must compare
@@ -237,6 +251,21 @@ export default function CreateScreen() {
   const genAbortRef = useRef<AbortController | null>(null);
 
   // ── Generation ──────────────────────────────────────────────────────────────
+  // banner tap-direct auto-fire — once, on real location (M build)
+  const autoFiredRef = useRef(false);
+  useEffect(() => {
+    if (!autoMode || autoFiredRef.current) return;
+    if (manualStart == null && locationStatus === 'denied') {
+      autoFiredRef.current = true;
+      setViewState('form'); // no honest location → the form is the fallback
+      return;
+    }
+    if (manualStart == null && locationStatus !== 'granted') return; // still resolving
+    autoFiredRef.current = true;
+    handleGenerate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoMode, locationStatus, manualStart]);
+
   async function handleGenerate() {
     if (oneWay && !endCoord) return; // CTA is disabled; belt for the retry paths
     genCancelledRef.current = false;
@@ -304,6 +333,10 @@ export default function CreateScreen() {
           <ActivityIndicator size="large" color={C.accent} style={{ marginTop: S.lg }} />
           <Text style={st.genTitle}>AI가 최적의 코스를{'\n'}설계하고 있어요</Text>
           <Text style={st.genSub}>잠시만 기다려 주세요</Text>
+          {/* tap-direct: the derived params, visible (M build spec) */}
+          {autoMode && (
+            <Text style={st.genSub}>약 {fmtDist(distanceKm, units, 1)}{distUnit(units)} · 내 위치에서 시작</Text>
+          )}
         </View>
       </View>
     );

@@ -12,7 +12,6 @@ import { router } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   Pressable,
   Linking,
@@ -221,9 +220,16 @@ const makeFtt = (C: Tokens) => StyleSheet.create({
 // generation, single round-trip, no cache — her veto) rides separately.
 const TERRAIN_BANNER_LABEL = { flat: '평지 우선', mixed: '균형 코스', hill: '언덕 훈련' } as const;
 
-function AIBanner({ locked, onPress }: { locked?: boolean; onPress: () => void }) {
+// M build (2026-07-22, quota gate open — 지연 co-sign, both conditions HARD):
+// one quota all doors; ① remaining VISIBLE before tap; ② exhaustion
+// TRANSFORMS, never hides. Copy re-ruling rides here: direct invitation
+// ("주변 Xkm ... 달려보세요!") — personalization lives in the derived
+// params, not commentary. Free tier now gets the REAL banner (the old
+// premium-locked variant died with the one-quota ruling).
+function AIBanner({ onStart, onUpsell }: { onStart: (km: number) => void; onUpsell: () => void }) {
   const abt = useStyles(makeAbt);
   const aiPrefs = useSettings(s => s.settings.ai_course);
+  const quota = useQuota(s => s.aiGeneration);
   // one-shot pattern fetch — quiet fallback keeps the banner honest offline
   const [pattern, setPattern] = useState<{ km: number; estMin: number } | null>(null);
   useEffect(() => {
@@ -243,8 +249,16 @@ function AIBanner({ locked, onPress }: { locked?: boolean; onPress: () => void }
     return () => { alive = false; };
   }, []);
   const fmtBannerKm = (km: number) => (Number.isInteger(km) ? `${km}` : km.toFixed(1));
+  const km = pattern?.km ?? Math.max(1, Math.round(aiPrefs.default_distance_km * 2) / 2);
+  const estMin = pattern?.estMin ?? Math.round(km * 6.5);
+  const exhausted = !quota.unlimited && (quota.remaining ?? 0) <= 0;
+  // reset weekday from server truth; the quota copy's own promise ("월요일에
+  // 초기화") is the fallback when reset_at is absent
+  const resetDay = quota.reset_at
+    ? ['일', '월', '화', '수', '목', '금', '토'][new Date(quota.reset_at).getDay()] + '요일'
+    : '월요일';
   return (
-    <Pressable onPress={onPress} style={abt.banner}>
+    <Pressable onPress={exhausted ? onUpsell : () => onStart(km)} style={abt.banner}>
       <LinearGradient
         colors={['#3BC55E', '#2BA94F']}
         start={{ x: 0, y: 0 }}
@@ -255,23 +269,19 @@ function AIBanner({ locked, onPress }: { locked?: boolean; onPress: () => void }
       <View style={abt.circle2} />
       <View style={{ position: 'relative' }}>
         <View style={abt.badge}>
-          <Icon name={locked ? 'lock-closed-outline' : 'sparkles'} size={13} color="#fff" />
+          <Icon name={exhausted ? 'lock-closed-outline' : 'sparkles'} size={13} color="#fff" />
           <RNText style={abt.badgeTxt}>AI 추천 코스</RNText>
         </View>
         <RNText style={abt.title}>
-          {locked
-            ? '날씨·체력 맞춤 AI 코스를\n프리미엄에서 만나보세요'
-            : pattern
-              ? `요즘 ${fmtBannerKm(pattern.km)}km 페이스네요 —\n지금 위치에서 만들까요?`
-              : '내 취향에 맞는 코스를\n만들어드릴게요'}
+          {exhausted
+            ? '이번 주 무료 생성을\n다 썼어요'
+            : `주변 ${fmtBannerKm(km)}km ${TERRAIN_BANNER_LABEL[aiPrefs.terrain]} 코스를\n달려보세요!`}
         </RNText>
         <View style={abt.sub}>
           <RNText style={abt.subTxt}>
-            {locked
-              ? '프리미엄으로 잠금 해제하기'
-              : pattern
-                ? `약 ${pattern.estMin}분 · ${TERRAIN_BANNER_LABEL[aiPrefs.terrain]}`
-                : `약 ${fmtBannerKm(aiPrefs.default_distance_km)}km · ${TERRAIN_BANNER_LABEL[aiPrefs.terrain]}`}
+            {exhausted
+              ? `다음 초기화 ${resetDay} · 프리미엄은 무제한`
+              : `약 ${estMin}분${!quota.unlimited ? ` · 이번 주 ${quota.remaining ?? 0}회 남았어요` : ''}`}
           </RNText>
           <View style={{ transform: [{ rotate: '-45deg' }] }}>
             <Icon name="arrow-forward-outline" size={15} color="#fff" />
@@ -346,8 +356,7 @@ export default function HomeScreen() {
   const displayName = useStore((s) => s.displayName);
   const photoUrl    = useStore((s) => s.photoUrl);
   const signOut     = useStore((s) => s.signOut);
-  const premium     = useQuota((s) => s.isPremium);
-  useEffect(() => { useQuota.getState().hydrate(); }, []);
+  useEffect(() => { useQuota.getState().hydrate(); }, []); // banner quota truth
 
   // Bell dot = real unread count (GET /notifications/unread-count), refreshed
   // on every home focus (back from the notifications screen clears it).
@@ -355,6 +364,10 @@ export default function HomeScreen() {
   const [unread, setUnread] = useState(0);
   useFocusEffect(useCallback(() => {
     getUnreadCount().then(r => setUnread(r.count)).catch(() => {});
+    // quota condition ① integrity: the banner's remaining count refreshes on
+    // return (a banner generation just spent one — mount-only hydrate would
+    // show it stale). Failed sync never silently downgrades (store rule).
+    useQuota.getState().hydrate(true);
   }, []));
 
   const [tab, setTab]           = useState('친구');
@@ -507,11 +520,10 @@ export default function HomeScreen() {
             )}
             <View style={{ paddingHorizontal: S.gutter, paddingTop: 26, paddingBottom: 26 }}>
               <AIBanner
-                locked={!premium}
-                // TODO(PR-2): locked → push the premium upsell screen once it exists
-                onPress={() => premium
-                  ? router.push('/(course)/create')
-                  : Alert.alert('준비 중', '프리미엄 안내는 다음 업데이트에서 지원됩니다.')}
+                // tap-direct: single round-trip into generation, form skipped
+                // (M build; quota gating + exhausted→premium live in the banner)
+                onStart={km => router.push({ pathname: '/(course)/create', params: { auto: '1', seedKm: String(km) } } as never)}
+                onUpsell={() => router.push('/premium' as never)}
               />
             </View>
             {__DEV__ && (
