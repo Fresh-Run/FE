@@ -22,13 +22,12 @@ import { Icon } from '@/components/ui';
 // MiniMap fallback now lives inside MediaCarousel (no polyline → seed map)
 import { useRunDetail } from '@/hooks/use-runs';
 import { deleteRun } from '@/lib/runs-api';
-import { getRunTrack } from '@/lib/run-social-api';
+import { useRunTrackLine } from '@/lib/track-cache';
 import { distUnit, fmtDist, fmtDuration, fmtPaceIn, fmtWhen, timeTitle } from '@/lib/run-format';
 import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { KCAL_PER_KG_KM, useLocalProfile } from '@/store/use-local-profile';
 import { useSettings } from '@/store/use-settings';
-import type { Coordinate } from '@/types';
 
 // ACSM flat-running approximation: ~1.036 kcal per kg per km. Shown only
 // with a USER-CONFIRMED weight (owner rule: never guess off the default),
@@ -75,25 +74,13 @@ export default function ActivityScreen() {
   const lpSaved  = useLocalProfile(s => s.saved);
   useEffect(() => { useLocalProfile.getState().hydrate(); }, []);
 
-  // Real track hero — fetched when the run reports has_track.
-  // Retry-on-refocus (SWR-lite, audit finding): a failed fetch marks
-  // trackFailed; the next screen focus re-attempts, so one bad fetch never
-  // leaves a tracked run stylized for the whole visit.
-  const [track, setTrack] = useState<Coordinate[] | null>(null);
-  const [trackFailed, setTrackFailed] = useState(false);
-  const [trackAttempt, setTrackAttempt] = useState(0);
-  useEffect(() => {
-    if (!run?.has_track || !run.id) return;
-    let cancelled = false;
-    setTrackFailed(false);
-    getRunTrack(run.id)
-      .then(t => { if (!cancelled) setTrack(t.polyline); })
-      .catch(() => { if (!cancelled) setTrackFailed(true); }); // seed fallback stands until refocus
-    return () => { cancelled = true; };
-  }, [run?.has_track, run?.id, trackAttempt]);
-  useFocusEffect(useCallback(() => {
-    if (trackFailed) setTrackAttempt(a => a + 1);
-  }, [trackFailed]));
+  // Hero line — the SHARED (a) cache lane (hero-joins ruling 2026-07-23:
+  // ALL surfaces match the real track). Instant from session cache when the
+  // user arrived through a card; failed-TTL + foreground-clear come free;
+  // the per-screen B7 fetch/retry machinery retires. `track` name kept —
+  // null when the line is still the thumb (drives the upgradeRunId handoff).
+  const heroLine = useRunTrackLine(run?.id ?? null, run?.polyline_thumb);
+  const track = heroLine !== null && heroLine !== (run?.polyline_thumb ?? null) ? heroLine : null;
 
   // Refetch on focus (silent — useRunDetail's SWR-lite): returning from
   // 러닝 편집 shows the new title/visibility/memo without a spinner flash
@@ -191,8 +178,6 @@ export default function ActivityScreen() {
               router.push('/(course)/route-map' as never);
             }}
           />
-          {/* SANCTIONED TEMP PROBE chip (B7 lane) — strips in the fix commit */}
-          <Text style={{ fontSize: 9, color: '#888', paddingHorizontal: 16, paddingTop: 3, fontVariant: ['tabular-nums'] }}>{run.id.slice(0, 8)} · hero:{track ? `track:${track.length}pts` : `thumb:${run.polyline_thumb?.length ?? 0}pts`} · failed:{String(trackFailed)} · has_track:{String(!!run.has_track)}</Text>
           <LinearGradient
             colors={['rgba(8,12,4,0.0)', 'rgba(8,12,4,0.72)']}
             style={StyleSheet.absoluteFillObject}

@@ -53,7 +53,7 @@ function RunCard({ run, name, photoUrl, units, mapLive, onKudos }: { run: MyRun;
   const C = useTokens();
   const st = useStyles(makeSt);
   // visual-split ruling: full track when fetched, thumb while loading
-  const { line: cardLine, dbg: cardDbg } = useRunTrackLine(mapLive ? run.id : null, run.polyline_thumb); // TEMP PROBE
+  const cardLine = useRunTrackLine(mapLive ? run.id : null, run.polyline_thumb);
   return (
     // Whole card → own-run SOCIAL view (owner correction 2026-07-12); the
     // 활동 상세 analysis screen's home is the 기록 tab — social links to it
@@ -80,8 +80,6 @@ function RunCard({ run, name, photoUrl, units, mapLive, onKudos }: { run: MyRun;
       ) : (
         <MiniMap seed={run.id} height={150} polyline={cardLine ?? undefined} />
       )}
-      {/* SANCTIONED TEMP PROBE chip — strips in the fix commit */}
-      <Text style={{ fontSize: 9, color: '#888', paddingHorizontal: 14, paddingTop: 3, fontVariant: ['tabular-nums'] }}>{run.id.slice(0, 8)} · {cardDbg} · draw:{(cardLine ?? []).length}pts</Text>
       <View style={st.cardBody}>
         <Text style={st.cardTitle}>{run.title ?? timeTitle(run.ran_at)}</Text>
         <View style={st.statsRow}>

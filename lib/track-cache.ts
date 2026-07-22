@@ -7,7 +7,6 @@
 import { useEffect, useState } from 'react';
 import { AppState } from 'react-native';
 
-import { ApiError } from '@/lib/api';
 import { getRunTrack } from '@/lib/run-social-api';
 import type { Coordinate } from '@/types';
 
@@ -34,38 +33,28 @@ function isFailedFresh(runId: string): boolean {
 export function useRunTrackLine(
   runId: string | null | undefined,
   thumb: Coordinate[] | null | undefined,
-): { line: Coordinate[] | null; dbg: string } {
-  // SANCTIONED TEMP PROBE (reopened arc, 2026-07-23): dbg names each card's
-  // actual line source + failure class. STRIPS IN THE FIX COMMIT.
+): Coordinate[] | null {
   const [line, setLine] = useState<Coordinate[] | null>(() => (runId && cache.get(runId)) || null);
-  const [dbg, setDbg] = useState('init');
   useEffect(() => {
-    if (!runId) { setDbg('disabled'); return; }
+    if (!runId) return;
     const hit = cache.get(runId);
-    if (hit) { setLine(hit); setDbg(`cache:${hit.length}pts`); return; }
-    if (!thumb || thumb.length < 2) { setDbg('no-thumb'); return; }
-    if (isFailedFresh(runId)) { setDbg('failed-fresh'); return; }
-    if (pending.has(runId)) { setDbg('pending-other'); return; }
+    if (hit) { setLine(hit); return; }
+    if (!thumb || thumb.length < 2 || isFailedFresh(runId) || pending.has(runId)) return;
     pending.add(runId);
-    setDbg('fetching');
     let alive = true;
     getRunTrack(runId)
       .then(t => {
         if (t.polyline && t.polyline.length >= 2) {
           cache.set(runId, t.polyline);
-          if (alive) { setLine(t.polyline); setDbg(`fetched:${t.polyline.length}pts`); }
+          if (alive) setLine(t.polyline);
         } else {
           failed.set(runId, Date.now());
-          if (alive) setDbg('empty-track');
         }
       })
-      .catch(e => {
-        failed.set(runId, Date.now());
-        if (alive) setDbg(`failed:${e instanceof ApiError ? e.status : 'net'}`);
-      })
+      .catch(() => failed.set(runId, Date.now()))
       .finally(() => pending.delete(runId));
     return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [runId]);
-  return { line: line ?? thumb ?? null, dbg };
+  return line ?? thumb ?? null;
 }

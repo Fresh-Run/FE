@@ -51,10 +51,10 @@ import { Icon } from '@/components/ui';
 import { ApiError } from '@/lib/api';
 import { openProfile } from '@/lib/profile-nav';
 import { deleteRun } from '@/lib/runs-api';
+import { useRunTrackLine } from '@/lib/track-cache';
 import {
   deleteRunComment,
   getRunComments,
-  getRunTrack,
   kudosRun,
   postRunComment,
   unkudosRun,
@@ -75,7 +75,6 @@ import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { useRunDetail } from '@/hooks/use-runs';
 import { useSettings } from '@/store/use-settings';
 import { useStore } from '@/store/use-store';
-import type { Coordinate } from '@/types';
 
 const HERO_H = 210;
 
@@ -130,26 +129,10 @@ export default function RunPostScreen() {
   const baseCount = run?.kudos_count ?? (Number(params.kudosCount) || 0);
   const likeCount = Math.max(0, baseCount + likeDelta);
 
-  // Track hero — fetched only when the run reports has_track.
-  // Retry-on-refocus (debt batch 1, the activity.tsx pattern): a transient
-  // failure marks trackFailed; the next focus re-attempts — one bad fetch
-  // no longer costs the whole visit. Expired-scope 404s simply fail again
-  // quietly (the MiniMap fallback stands either way).
-  const [track, setTrack] = useState<Coordinate[] | null>(null);
-  const [trackFailed, setTrackFailed] = useState(false);
-  const [trackAttempt, setTrackAttempt] = useState(0);
-  useEffect(() => {
-    if (!run?.has_track || !run.id) return;
-    let cancelled = false;
-    setTrackFailed(false);
-    getRunTrack(run.id)
-      .then(t => { if (!cancelled) setTrack(t.polyline); })
-      .catch(() => { if (!cancelled) setTrackFailed(true); });
-    return () => { cancelled = true; };
-  }, [run?.has_track, run?.id, trackAttempt]);
-  useFocusEffect(useCallback(() => {
-    if (trackFailed) setTrackAttempt(a => a + 1);
-  }, [trackFailed]));
+  // Hero line — the SHARED (a) cache lane (hero-joins ruling 2026-07-23);
+  // see activity.tsx's twin comment. `track` name kept — null while thumb.
+  const heroLine = useRunTrackLine(run?.id ?? null, run?.polyline_thumb);
+  const track = heroLine !== null && heroLine !== (run?.polyline_thumb ?? null) ? heroLine : null;
 
   // Likers sheet (own mode — ♥ is count-only)
   const [likersOpen, setLikersOpen] = useState(false);
@@ -351,8 +334,6 @@ export default function RunPostScreen() {
                   router.push('/(course)/route-map' as never);
                 }}
               />
-              {/* SANCTIONED TEMP PROBE chip (B7 lane) — strips in the fix commit */}
-              <Text style={{ fontSize: 9, color: '#888', paddingHorizontal: 16, paddingTop: 3, fontVariant: ['tabular-nums'] }}>{run.id.slice(0, 8)} · hero:{track ? `track:${track.length}pts` : `thumb:${run.polyline_thumb?.length ?? 0}pts`} · failed:{String(trackFailed)} · has_track:{String(!!run.has_track)}</Text>
             </View>
 
             <View style={{ paddingHorizontal: S.gutter }}>
