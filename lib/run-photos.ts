@@ -41,6 +41,26 @@ export async function reencodeForUpload(uri: string, width?: number, height?: nu
     order = display order); onProgress fires before each photo starts.
     Throws on the first failure — the caller retries the whole cycle
     (upload-urls re-issue cleanly, the final PATCH replaces). */
+/** Edit-surface single upload (photo build, 2026-07-22): one re-encoded URI
+    → one explicit slot → its path. NO PATCH here — the edit screen assembles
+    the final ordered array (kept existing paths + new paths, display order)
+    and PATCHes once; missing paths = server-side Storage delete (guide §112,
+    교체·삭제 겸용). */
+export async function uploadRunPhotoToSlot(runId: string, localUri: string, slot: number): Promise<string> {
+  const { upload_url, path } = await apiFetch<UploadUrlResponse>(
+    `/api/runs/${runId}/photos/upload-url`,
+    { method: 'POST', body: { slot, content_type: 'image/jpeg' } },
+  );
+  const bytes = await (await fetch(localUri)).blob();
+  const put = await fetch(upload_url, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'image/jpeg' },
+    body: bytes,
+  });
+  if (!put.ok) throw new Error(`사진 업로드 실패 (${put.status})`);
+  return path;
+}
+
 export async function uploadRunPhotos(
   runId: string,
   localUris: string[],

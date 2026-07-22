@@ -30,6 +30,7 @@ import { SEOUL_FALLBACK } from '@/hooks/use-current-location';
 import { searchPlaces, type Place } from '@/lib/places-api';
 import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
+import { useScheme } from '@/store/use-scheme';
 import { useEndPoint } from '@/store/end-point';
 import { useStartPoint } from '@/store/start-point';
 
@@ -68,6 +69,8 @@ export default function StartPickerScreen() {
   // (nationwide results can be a cross-country hop from the current view)
   const centerRef = useRef({ lat: initLat, lng: initLng });
   const mapRef = useRef<MapView>(null);
+  const resolved = useScheme(s => s.resolved); // map obeys the app scheme picker
+
 
   useEffect(() => {
     if (debounceTimer.current) clearTimeout(debounceTimer.current);
@@ -137,6 +140,7 @@ export default function StartPickerScreen() {
     <View style={st.root}>
       <MapView
         ref={mapRef}
+        userInterfaceStyle={resolved}
         style={StyleSheet.absoluteFillObject}
         initialRegion={{
           latitude: initLat,

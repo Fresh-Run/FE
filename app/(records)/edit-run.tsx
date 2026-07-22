@@ -11,11 +11,14 @@
  * 지연-observation ledgered.
  */
 import { router, useLocalSearchParams } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import * as ImagePicker from 'expo-image-picker';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Image,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   Pressable,
   ScrollView,
@@ -28,6 +31,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/ui';
 import { timeTitle } from '@/lib/run-format';
+import { MAX_RUN_PHOTOS, reencodeForUpload, uploadRunPhotoToSlot } from '@/lib/run-photos';
 import { updateRun, type RunVisibility } from '@/lib/runs-api';
 import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
@@ -47,14 +51,80 @@ export default function EditRunScreen() {
   const [seeded, setSeeded]         = useState(false);
   const [saving, setSaving]         = useState(false);
 
+  // ── 사진 편집 (photo build, 2026-07-22) — unified display-ordered list:
+  // existing = {path (v77), signedUrl}; new = {localUri, EXIF-stripped at
+  // pick}. Save assembles [kept paths + new-upload paths] and PATCHes once
+  // (replace-array; dropped paths die server-side, guide §112).
+  type EditPhoto = { key: string; path?: string; signedUrl?: string; localUri?: string };
+  const [photos, setPhotos]   = useState<EditPhoto[]>([]);
+  const [picking, setPicking] = useState(false);
+  const origPathsRef = useRef<string[]>([]);
+
   // Seed once from server truth (useRunDetail refetches don't clobber edits)
   useEffect(() => {
     if (!run || seeded) return;
     setTitle(run.title ?? '');
     setNotes(run.notes ?? '');
     setVisibility((run.visibility as RunVisibility) ?? 'public');
+    const urls = run.photos ?? [];
+    const paths = run.photo_paths ?? [];
+    const n = Math.min(urls.length, paths.length); // parallel by contract
+    origPathsRef.current = paths.slice(0, n);
+    setPhotos(paths.slice(0, n).map((p, i) => ({ key: p, path: p, signedUrl: urls[i] })));
     setSeeded(true);
   }, [run, seeded]);
+
+  async function addPhotos() {
+    if (picking || photos.length >= MAX_RUN_PHOTOS) return;
+    setPicking(true);
+    try {
+      const res = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: 'images',
+        allowsMultipleSelection: true,
+        selectionLimit: MAX_RUN_PHOTOS - photos.length,
+        quality: 1, // full-quality handoff — our re-encode owns compression
+      });
+      if (res.canceled) return;
+      const clean: EditPhoto[] = [];
+      for (const a of res.assets.slice(0, MAX_RUN_PHOTOS - photos.length)) {
+        const uri = await reencodeForUpload(a.uri, a.width, a.height);
+        clean.push({ key: uri, localUri: uri });
+      }
+      setPhotos(p => [...p, ...clean].slice(0, MAX_RUN_PHOTOS));
+    } catch {
+      Alert.alert('사진 추가 실패', '사진을 불러오지 못했어요. 다시 시도해 주세요.');
+    } finally {
+      setPicking(false);
+    }
+  }
+
+  async function takePhoto() {
+    if (picking || photos.length >= MAX_RUN_PHOTOS) return;
+    setPicking(true);
+    try {
+      const perm = await ImagePicker.requestCameraPermissionsAsync();
+      if (!perm.granted) {
+        Alert.alert(
+          '카메라 권한이 필요해요',
+          '러닝 사진을 찍으려면 카메라 접근을 허용해 주세요.',
+          [
+            { text: '취소', style: 'cancel' },
+            { text: '설정 열기', onPress: () => Linking.openSettings() },
+          ],
+        );
+        return;
+      }
+      const res = await ImagePicker.launchCameraAsync({ quality: 1 });
+      if (res.canceled || !res.assets[0]) return;
+      const a = res.assets[0];
+      const uri = await reencodeForUpload(a.uri, a.width, a.height);
+      setPhotos(p => [...p, { key: uri, localUri: uri }].slice(0, MAX_RUN_PHOTOS));
+    } catch {
+      Alert.alert('사진 추가 실패', '사진을 불러오지 못했어요. 다시 시도해 주세요.');
+    } finally {
+      setPicking(false);
+    }
+  }
 
   const suggestedTitle = run ? timeTitle(run.ran_at) : '';
 
@@ -62,11 +132,32 @@ export default function EditRunScreen() {
     if (!runId || saving) return;
     setSaving(true);
     try {
+      // 사진 변경분: new photos upload to FREE slots (parsed from kept
+      // paths "{run_id}/{n}.{ext}") BEFORE the single PATCH — a failed
+      // upload aborts the whole save honestly (nothing half-applied).
+      let finalPaths: string[] | undefined;
+      const kept = photos.filter(p => p.path).map(p => p.path!);
+      const news = photos.filter(p => p.localUri);
+      const changed = news.length > 0 || kept.length !== origPathsRef.current.length
+        || kept.some((p, i) => p !== origPathsRef.current[i]);
+      if (changed) {
+        const usedSlots = new Set(kept.map(p => {
+          const m = p.match(/\/(\d+)\.\w+$/);
+          if (!m) throw new Error('사진 경로 형식을 알 수 없어요');
+          return Number(m[1]);
+        }));
+        const free = [1, 2, 3].filter(s => !usedSlots.has(s));
+        const uploaded: string[] = [];
+        for (const p of news) uploaded.push(await uploadRunPhotoToSlot(runId, p.localUri!, free.shift()!));
+        let ui = 0;
+        finalPaths = photos.map(p => p.path ?? uploaded[ui++]); // display order
+      }
       await updateRun(runId, {
         // Same promise as run-save: empty title → the suggestion IS the title
         title: (title.trim() || suggestedTitle).slice(0, 60),
         visibility,
         notes: notes.trim() || null,
+        ...(finalPaths ? { photos: finalPaths } : {}),
       });
       router.back(); // 활동 상세 + 기록 focus-refetch pick it up
     } catch (e: unknown) {
@@ -109,6 +200,55 @@ export default function EditRunScreen() {
               placeholderTextColor={C.faint}
               style={st.titleInput}
             />
+          </View>
+
+          {/* ── 사진 (photo build 2026-07-22) — run-save's picker grammar
+                 verbatim: dashed add square + camera square + 76px thumbs
+                 with × badges; existing photos render from signed URLs ── */}
+          <View style={{ paddingHorizontal: S.gutter, paddingTop: 18 }}>
+            <Text style={st.fieldLabel}>사진</Text>
+            <View style={st.photoRow}>
+              <Pressable
+                onPress={addPhotos}
+                disabled={picking || photos.length >= MAX_RUN_PHOTOS}
+                style={({ pressed }) => [
+                  st.photoSquare,
+                  { opacity: photos.length >= MAX_RUN_PHOTOS ? 0.45 : pressed ? 0.7 : 1 },
+                ]}
+              >
+                {picking
+                  ? <ActivityIndicator size="small" color={C.faint} />
+                  : <Icon name="add" size={22} color={C.faint} />}
+              </Pressable>
+              <Pressable
+                onPress={takePhoto}
+                disabled={picking || photos.length >= MAX_RUN_PHOTOS}
+                style={({ pressed }) => [
+                  st.photoSquare,
+                  { opacity: photos.length >= MAX_RUN_PHOTOS ? 0.45 : pressed ? 0.7 : 1 },
+                ]}
+              >
+                <Icon name="camera-outline" size={20} color={C.faint} />
+              </Pressable>
+              {photos.length === 0 ? (
+                <Text style={st.photoTxt}>사진 추가</Text>
+              ) : (
+                <ScrollView horizontal showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false} style={{ flex: 1 }} contentContainerStyle={{ gap: 8, paddingTop: 6, paddingRight: 6 }}>
+                  {photos.map(p => (
+                    <View key={p.key} style={st.thumbWrap}>
+                      <Image source={{ uri: p.localUri ?? p.signedUrl }} style={st.thumb} />
+                      <Pressable
+                        onPress={() => setPhotos(prev => prev.filter(x => x.key !== p.key))}
+                        hitSlop={8}
+                        style={st.thumbRemove}
+                      >
+                        <Icon name="close" size={11} color={C.bg} />
+                      </Pressable>
+                    </View>
+                  ))}
+                </ScrollView>
+              )}
+            </View>
           </View>
 
           {/* 공개 범위 — the run-save 3-way picker, inline */}
@@ -180,6 +320,14 @@ const makeSt = (C: Tokens) => StyleSheet.create({
   radioInner: { width: 12, height: 12, borderRadius: 6, backgroundColor: C.accent },
 
   notesInput: { minHeight: 120, textAlignVertical: 'top', fontSize: 14.5, color: C.text, letterSpacing: -0.3, lineHeight: 21, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12 },
+
+  // 사진 — run-save's photo-strip styles verbatim (photo build 2026-07-22)
+  photoRow:    { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  photoSquare: { width: 52, height: 52, borderRadius: 12, borderWidth: 1.5, borderColor: C.border, borderStyle: 'dashed', backgroundColor: C.surfaceAlt, alignItems: 'center', justifyContent: 'center' },
+  photoTxt:    { fontSize: 14, fontWeight: '600', color: C.sub, letterSpacing: -0.2 },
+  thumbWrap:   { position: 'relative' },
+  thumb:       { width: 76, height: 76, borderRadius: 12, backgroundColor: C.surfaceAlt },
+  thumbRemove: { position: 'absolute', top: -6, right: -6, width: 20, height: 20, borderRadius: 999, borderWidth: 1.5, borderColor: C.surface, backgroundColor: C.text, alignItems: 'center', justifyContent: 'center' },
 
   footNote: { fontSize: 12, color: C.faint, letterSpacing: -0.2, textAlign: 'center', paddingTop: 24 },
 });

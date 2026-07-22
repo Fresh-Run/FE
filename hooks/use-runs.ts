@@ -40,6 +40,10 @@ export type Run = {
   splits?: RunSplit[];
   /** Signed URLs, 1h expiry — use response values directly, NEVER cache (계약). Detail responses only. */
   photos?: string[] | null;
+  /** v77 (BE 985bc2c, own-run detail only): raw Storage paths PARALLEL to
+      photos[] (same order) — what PATCH {photos} consumes. The edit-run
+      photo-mutation dependency (probed live 2026-07-22). */
+  photo_paths?: string[] | null;
   /** v1.5 pre-render flags — see use-user-profile note. ⚠️ own detail serves
       the RAW flag (not always-true; contract deviation flagged to 지연) —
       consumers must ignore these in own mode. */

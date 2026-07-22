@@ -556,6 +556,7 @@ export default function TrackingScreen() {
       <View style={StyleSheet.absoluteFill}>
         <MapView
           ref={mapRef}
+          userInterfaceStyle={resolved}
           style={StyleSheet.absoluteFill}
           initialRegion={{
             latitude: courseCoords[0]?.latitude ?? hereCoord?.lat ?? SEOUL_FALLBACK.lat,

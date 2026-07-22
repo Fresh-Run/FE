@@ -75,7 +75,11 @@ type Props = {
 export function RealMap({ height, borderRadius = 0, polyline, center, marker = false, startPin = false, showsUser = false, interactive = false, cache = true }: Props) {
   // 지연 two-tone — keys on the RESOLVED scheme since Phase 5 (manual 다크
   // gets the dark stroke; 시스템 mode behaves as before via the store).
-  const stroke = routeStroke(useScheme(s => s.resolved));
+  // Map-theme binding (2026-07-22): the map obeys the APP's scheme picker,
+  // not the OS — same `resolved` input routeStroke already consumes (unify,
+  // not conflict: night-canvas fixtures + courseStroke key on it too).
+  const resolved = useScheme(s => s.resolved);
+  const stroke = routeStroke(resolved);
   const line = polyline && polyline.length >= 2 ? polyline : null;
   const mapRef = useRef<MapView>(null);
 
@@ -107,6 +111,7 @@ export function RealMap({ height, borderRadius = 0, polyline, center, marker = f
     >
       <MapView
         ref={mapRef}
+        userInterfaceStyle={resolved}
         style={{ flex: 1 }}
         initialRegion={region}
         onMapReady={onMapReady}

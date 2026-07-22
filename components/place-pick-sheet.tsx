@@ -23,6 +23,7 @@ import { SEOUL_FALLBACK } from '@/hooks/use-current-location';
 import { searchPlaces, type Place } from '@/lib/places-api';
 import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
+import { useScheme } from '@/store/use-scheme';
 
 // her server bbox (422 outside) — mirrored client-side
 const KR_BBOX = { latMin: 33, latMax: 39, lngMin: 124, lngMax: 132 };
@@ -43,6 +44,8 @@ export function PlacePickSheet({ visible, initial, onClose, onPick }: {
   const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
   const mapRef = useRef<MapView>(null);
+  const resolved = useScheme(s => s.resolved); // map obeys the app scheme picker
+
   // start region resolves BEFORE the map renders — no Seoul-then-jump
   const [startRegion, setStartRegion] = useState<{ lat: number; lng: number } | null>(null);
   const [center, setCenter] = useState<{ lat: number; lng: number }>(SEOUL_FALLBACK);
@@ -142,6 +145,7 @@ export function PlacePickSheet({ visible, initial, onClose, onPick }: {
         ) : (
         <MapView
           ref={mapRef}
+          userInterfaceStyle={resolved}
           style={StyleSheet.absoluteFillObject}
           initialRegion={{
             latitude: startRegion.lat, longitude: startRegion.lng,
