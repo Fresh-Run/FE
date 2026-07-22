@@ -5,13 +5,27 @@
 // the thumb stands, honestly. Retires wholesale if 지연 ships the denser
 // feed payload (the non-blocking (c) ask).
 import { useEffect, useState } from 'react';
+import { AppState } from 'react-native';
 
 import { getRunTrack } from '@/lib/run-social-api';
 import type { Coordinate } from '@/types';
 
 const cache = new Map<string, Coordinate[]>();
 const pending = new Set<string>(); // dedupe concurrent card mounts
-const failed = new Set<string>();  // no per-session retry storms
+// Failed-set SOFTENING (latch episode, owner GO 2026-07-22): a 502-burst
+// launch window latched a whole session onto thumbs. Failures now EXPIRE
+// (TTL) and CLEAR on app-foreground — one bad window can never blind a
+// session again; the no-retry-storm intent survives via the TTL.
+const FAILED_TTL_MS = 3 * 60_000;
+const failed = new Map<string, number>(); // runId → failure timestamp
+AppState.addEventListener('change', st => { if (st === 'active') failed.clear(); });
+function isFailedFresh(runId: string): boolean {
+  const at = failed.get(runId);
+  if (at == null) return false;
+  if (Date.now() - at < FAILED_TTL_MS) return true;
+  failed.delete(runId); // expired — eligible again
+  return false;
+}
 
 /** The card's line: cached full track when available, else the thumb.
     Pass runId=null to disable (e.g. mapLive off — no fetch, no churn).
@@ -25,7 +39,7 @@ export function useRunTrackLine(
     if (!runId) return;
     const hit = cache.get(runId);
     if (hit) { setLine(hit); return; }
-    if (!thumb || thumb.length < 2 || failed.has(runId) || pending.has(runId)) return;
+    if (!thumb || thumb.length < 2 || isFailedFresh(runId) || pending.has(runId)) return;
     pending.add(runId);
     let alive = true;
     getRunTrack(runId)
@@ -34,10 +48,10 @@ export function useRunTrackLine(
           cache.set(runId, t.polyline);
           if (alive) setLine(t.polyline);
         } else {
-          failed.add(runId);
+          failed.set(runId, Date.now());
         }
       })
-      .catch(() => failed.add(runId))
+      .catch(() => failed.set(runId, Date.now()))
       .finally(() => pending.delete(runId));
     return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
