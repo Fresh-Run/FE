@@ -6,6 +6,7 @@
  * left home entirely (owner ruling — 코스 surfaces keep courses; the
  * canvas home-cards.jsx 친구 feed is run cards).
  */
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
@@ -224,22 +225,31 @@ const makeFtt = (C: Tokens) => StyleSheet.create({
 // composes clean with all three: 평지 우선/균형/언덕 훈련 + 코스를.)
 const TERRAIN_BANNER_LABEL = { flat: '평지 우선', mixed: '균형', hill: '언덕 훈련' } as const;
 
-// Banner distance derivation (presentability rule, owner-ruled 2026-07-22):
-// median of recent runs ≥1km (test-walk noise excluded) → whole-km round →
-// clamped [3, 30] — honest signal, presentable invitation. No qualifying
-// history → the pref default through the same floor. Pace = mean of the
-// qualifying runs' paces (est fallback: create.tsx's 6.5 formula).
-const BANNER_QUAL_KM = 1, BANNER_FLOOR_KM = 3, BANNER_CAP_KM = 30;
-function deriveBanner(runs: { distance_km: number; avg_pace_sec_per_km: number | null }[], prefKm: number) {
-  const qual = runs.filter(r => r.distance_km >= BANNER_QUAL_KM).map(r => r.distance_km).sort((a, b) => a - b);
-  const rawKm = qual.length ? qual[Math.floor((qual.length - 1) / 2)] : prefKm;
-  const km = Math.min(BANNER_CAP_KM, Math.max(BANNER_FLOOR_KM, Math.round(rawKm)));
+// Banner distance = a VARIED BAND around the declared pref (owner amendment,
+// 2026-07-22 — raw pref = repetitive wallpaper; history = second-guessing;
+// the band = intent + freshness). Pool [pref−0.5, pref+1] in 0.5 steps —
+// asymmetric BY SPEC: more upward room than down (a fitness nudge, never a
+// big cut). Clamped to the generation slider's own range (min 1km — the
+// ONLY hard floor; the old presentability floor is dead), deduped after
+// clamp. Rolled per home focus with an anti-repeat stamp; the rolled value
+// IS the tap's seedKm (promise/action lock). Pace derivation (recent
+// qualifying runs) STAYS — 예상 tracks the rolled value × real pace.
+const BANNER_QUAL_KM = 1, SLIDER_MIN_KM = 1, SLIDER_MAX_KM = 30;
+const BANNER_ROLL_KEY = '@fr_banner_roll';
+function bannerPool(prefKm: number): number[] {
+  const raw = [-0.5, 0, 0.5, 1].map(d => prefKm + d)
+    .map(v => Math.min(SLIDER_MAX_KM, Math.max(SLIDER_MIN_KM, Math.round(v * 2) / 2)));
+  return [...new Set(raw)].sort((a, b) => a - b);
+}
+function rollBanner(pool: number[], last: number | null): number {
+  const candidates = pool.length > 1 && last != null ? pool.filter(v => v !== last) : pool;
+  return candidates[Math.floor(Math.random() * candidates.length)];
+}
+function derivePace(runs: { distance_km: number; avg_pace_sec_per_km: number | null }[]): number | null {
   const paces = runs
     .filter(r => r.distance_km >= BANNER_QUAL_KM && r.avg_pace_sec_per_km != null && r.avg_pace_sec_per_km > 0)
     .map(r => r.avg_pace_sec_per_km!);
-  const pace = paces.length ? paces.reduce((a, b) => a + b, 0) / paces.length : null;
-  const estMin = pace != null ? Math.round((km * pace) / 60) : Math.round(km * 6.5);
-  return { km, estMin };
+  return paces.length ? paces.reduce((a, b) => a + b, 0) / paces.length : null;
 }
 
 // M build (2026-07-22, quota gate open — 지연 co-sign, both conditions HARD):
@@ -252,17 +262,35 @@ function AIBanner({ onStart, onUpsell }: { onStart: (km: number) => void; onUpse
   const abt = useStyles(makeAbt);
   const aiPrefs = useSettings(s => s.settings.ai_course);
   const quota = useQuota(s => s.aiGeneration);
-  // one-shot rows fetch — fetch failure = pref-derived banner, never blank
+  // pace rows — one-shot; failure = the 6.5 fallback, never blank
   const [rows, setRows] = useState<{ distance_km: number; avg_pace_sec_per_km: number | null }[]>([]);
   useEffect(() => {
     let alive = true;
     getMyRecentRuns()
       .then(r => { if (alive) setRows(r); })
-      .catch(() => {}); // quiet — the pref-fill keeps the banner honest offline
+      .catch(() => {});
     return () => { alive = false; };
   }, []);
-  const { km, estMin } = deriveBanner(rows, aiPrefs.default_distance_km);
-  const fmtBannerKm = (n: number) => String(n); // whole-km by derivation
+  // band roll — per home focus, anti-repeat stamped; stable between focuses
+  // (no mid-session flicker: the state only moves on a focus event)
+  const [km, setKm] = useState(() => bannerPool(aiPrefs.default_distance_km)[0]);
+  useFocusEffect(useCallback(() => {
+    let alive = true;
+    const pool = bannerPool(useSettings.getState().settings.ai_course.default_distance_km);
+    AsyncStorage.getItem(BANNER_ROLL_KEY)
+      .then(raw => {
+        if (!alive) return;
+        const last = raw != null ? Number(raw) : null;
+        const rolled = rollBanner(pool, Number.isFinite(last as number) ? last : null);
+        setKm(rolled);
+        AsyncStorage.setItem(BANNER_ROLL_KEY, String(rolled)).catch(() => {});
+      })
+      .catch(() => { if (alive) setKm(rollBanner(pool, null)); });
+    return () => { alive = false; };
+  }, []));
+  const pace = derivePace(rows);
+  const estMin = pace != null ? Math.round((km * pace) / 60) : Math.round(km * 6.5);
+  const fmtBannerKm = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
   const exhausted = !quota.unlimited && (quota.remaining ?? 0) <= 0;
   // reset weekday from server truth; the quota copy's own promise ("월요일에
   // 초기화") is the fallback when reset_at is absent
