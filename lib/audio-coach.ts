@@ -19,8 +19,11 @@ function fmtMinSec(totalSec: number): string {
   return s > 0 ? `${m}분 ${s}초` : `${m}분`;
 }
 
-export function composeStartCue(): string {
-  return '러닝을 시작합니다.';
+/** Self-verifying start cue (M1 episode fix, 2026-07-22): announces the
+    ARMED interval so a surprise value is audible in the first three seconds
+    of every run — the armed-value-invisibility defect's cure. */
+export function composeStartCue(intervalKm: number): string {
+  return `러닝을 시작합니다. ${fmtKm(intervalKm)}킬로미터마다 안내할게요.`;
 }
 
 /** null when every enabled item has nothing to say (e.g. all toggles off). */
