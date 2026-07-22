@@ -41,6 +41,7 @@ import { shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { useQuota } from '@/store/use-quota';
 import { getMyRecentRuns } from '@/lib/runs-api';
+import { prewarmTracks } from '@/lib/track-cache';
 import { useSettings } from '@/store/use-settings';
 import { useStore } from '@/store/use-store';
 import type { Coordinate } from '@/types';
@@ -465,6 +466,12 @@ export default function HomeScreen() {
 
   const name = displayName ?? '러너';
   const list: FeedRun[] = tab === '전체' ? nearby.items : feed.items;
+  // No-swap pre-warm (ruling ③, 2026-07-23): fire track fetches at
+  // data-arrival so cards are usually track-ready before the eye lands.
+  useEffect(() => {
+    prewarmTracks(list.filter(r => r.polyline_thumb && r.polyline_thumb.length >= 2).map(r => r.run_id));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [list.length, tab]);
   const loading = tab === '전체' ? nearby.loading || (locStatus === 'fetching' && nearby.items.length === 0) : feed.loading;
   const error = tab === '전체' ? nearby.error : feed.error;
 

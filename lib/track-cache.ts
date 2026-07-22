@@ -27,34 +27,72 @@ function isFailedFresh(runId: string): boolean {
   return false;
 }
 
-/** The card's line: cached full track when available, else the thumb.
-    Pass runId=null to disable (e.g. mapLive off — no fetch, no churn).
-    thumb presence gates the fetch (thumb ⟺ track exists, probed rule). */
-export function useRunTrackLine(
+/** No-swap render policy (owner ruling 2026-07-23: real track only, no
+    intermediate blocky line — a line that appears once, correct, beats a
+    line that transforms). States:
+    - READY  → { line: fullTrack, pending: false }  (cache hit = first frame)
+    - LOADING→ { line: null,      pending: true  }  (caller hides the line,
+                thumb still frames the map region)
+    - FAILED / disabled / trackless → { line: thumb, pending: false }
+                (the thumb is the best REAL geometry available and will not
+                swap later — coarse-but-stable beats empty-forever; a TTL
+                retry succeeding is the one rare later-swap, accepted). */
+export function useRunTrack(
   runId: string | null | undefined,
   thumb: Coordinate[] | null | undefined,
-): Coordinate[] | null {
-  const [line, setLine] = useState<Coordinate[] | null>(() => (runId && cache.get(runId)) || null);
+): { line: Coordinate[] | null; pending: boolean } {
+  const [track, setTrack] = useState<Coordinate[] | null>(() => (runId && cache.get(runId)) || null);
+  const [inFlight, setInFlight] = useState(false);
   useEffect(() => {
     if (!runId) return;
     const hit = cache.get(runId);
-    if (hit) { setLine(hit); return; }
-    if (!thumb || thumb.length < 2 || isFailedFresh(runId) || pending.has(runId)) return;
-    pending.add(runId);
+    if (hit) { setTrack(hit); setInFlight(false); return; }
+    if (!thumb || thumb.length < 2 || isFailedFresh(runId)) return;
     let alive = true;
-    getRunTrack(runId)
-      .then(t => {
-        if (t.polyline && t.polyline.length >= 2) {
-          cache.set(runId, t.polyline);
-          if (alive) setLine(t.polyline);
-        } else {
-          failed.set(runId, Date.now());
-        }
-      })
-      .catch(() => failed.set(runId, Date.now()))
-      .finally(() => pending.delete(runId));
+    setInFlight(true);
+    if (!pending.has(runId)) {
+      pending.add(runId);
+      getRunTrack(runId)
+        .then(t => {
+          if (t.polyline && t.polyline.length >= 2) {
+            cache.set(runId, t.polyline);
+            if (alive) setTrack(t.polyline);
+          } else {
+            failed.set(runId, Date.now());
+          }
+        })
+        .catch(() => failed.set(runId, Date.now()))
+        .finally(() => { pending.delete(runId); if (alive) setInFlight(false); });
+    } else {
+      // another mount owns the fetch — poll-free: our card shows the gap
+      // until this effect re-runs (remount/focus); rare same-run-twice case
+      setInFlight(false);
+    }
     return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [runId]);
-  return line ?? thumb ?? null;
+  if (track) return { line: track, pending: false };
+  if (inFlight) return { line: null, pending: true };
+  return { line: thumb ?? null, pending: false };
+}
+
+/** Pre-warm (owner ruling ③): lists know their runIds at data-arrival —
+    fire the fetches BEFORE cards mount/paint so most cards are track-ready
+    before the eye lands. Same cache/pending/failed gates; fire-and-forget;
+    capped. */
+export function prewarmTracks(runIds: (string | null | undefined)[], cap = 10): void {
+  let fired = 0;
+  for (const id of runIds) {
+    if (!id || fired >= cap) break;
+    if (cache.has(id) || pending.has(id) || isFailedFresh(id)) continue;
+    pending.add(id);
+    fired += 1;
+    getRunTrack(id)
+      .then(t => {
+        if (t.polyline && t.polyline.length >= 2) cache.set(id, t.polyline);
+        else failed.set(id, Date.now());
+      })
+      .catch(() => failed.set(id, Date.now()))
+      .finally(() => pending.delete(id));
+  }
 }

@@ -22,7 +22,7 @@ import { Icon } from '@/components/ui';
 // MiniMap fallback now lives inside MediaCarousel (no polyline → seed map)
 import { useRunDetail } from '@/hooks/use-runs';
 import { deleteRun } from '@/lib/runs-api';
-import { useRunTrackLine } from '@/lib/track-cache';
+import { useRunTrack } from '@/lib/track-cache';
 import { distUnit, fmtDist, fmtDuration, fmtPaceIn, fmtWhen, timeTitle } from '@/lib/run-format';
 import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
@@ -79,7 +79,7 @@ export default function ActivityScreen() {
   // user arrived through a card; failed-TTL + foreground-clear come free;
   // the per-screen B7 fetch/retry machinery retires. `track` name kept —
   // null when the line is still the thumb (drives the upgradeRunId handoff).
-  const heroLine = useRunTrackLine(run?.id ?? null, run?.polyline_thumb);
+  const { line: heroLine, pending: heroPending } = useRunTrack(run?.id ?? null, run?.polyline_thumb);
   const track = heroLine !== null && heroLine !== (run?.polyline_thumb ?? null) ? heroLine : null;
 
   // Refetch on focus (silent — useRunDetail's SWR-lite): returning from
@@ -166,7 +166,8 @@ export default function ActivityScreen() {
             // from the payload; the server-simplified full track replaces it
             // when the fetch lands. Failed/offline → the thumb stays (real
             // geometry, just coarser — no error theater).
-            polyline={track ?? run.polyline_thumb ?? null}
+            polyline={heroLine ?? run.polyline_thumb ?? null}
+            lineHidden={heroPending}
             seed={run.id}
             photos={run.photos ?? []}
             onPhotoPress={i => setPhotoViewIdx(i)}

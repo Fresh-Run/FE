@@ -16,7 +16,7 @@
  */
 import { useFocusEffect } from '@react-navigation/native';
 import { router } from 'expo-router';
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -37,7 +37,7 @@ import { useMyPublicProfile, type MyRun } from '@/hooks/use-my-public-profile';
 import { distUnit, fmtDist, fmtDuration, fmtPaceIn, fmtWhen, paceUnit, timeTitle } from '@/lib/run-format';
 import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
-import { useRunTrackLine } from '@/lib/track-cache';
+import { prewarmTracks, useRunTrack } from '@/lib/track-cache';
 import { useSettings } from '@/store/use-settings';
 
 // Own-list visibility is never null (legacy rows = 'followers' server-side)
@@ -53,7 +53,7 @@ function RunCard({ run, name, photoUrl, units, mapLive, onKudos }: { run: MyRun;
   const C = useTokens();
   const st = useStyles(makeSt);
   // visual-split ruling: full track when fetched, thumb while loading
-  const cardLine = useRunTrackLine(mapLive ? run.id : null, run.polyline_thumb);
+  const { line: cardLine, pending: linePending } = useRunTrack(mapLive ? run.id : null, run.polyline_thumb);
   return (
     // Whole card → own-run SOCIAL view (owner correction 2026-07-12); the
     // 활동 상세 analysis screen's home is the 기록 tab — social links to it
@@ -75,8 +75,8 @@ function RunCard({ run, name, photoUrl, units, mapLive, onKudos }: { run: MyRun;
       {/* polyline_thumb slice: viewable + thumb → real map (card-mode, same
           perf pattern as the feed); off-screen/trackless → route-shaped or
           seed SVG per the ledger rulings */}
-      {mapLive && cardLine && cardLine.length >= 2 ? (
-        <RealMap height={150} polyline={cardLine} />
+      {mapLive && ((cardLine && cardLine.length >= 2) || linePending) ? (
+        <RealMap height={150} polyline={cardLine ?? run.polyline_thumb} lineHidden={linePending} />
       ) : (
         <MiniMap seed={run.id} height={150} polyline={cardLine ?? undefined} />
       )}
@@ -128,6 +128,11 @@ export default function MyProfileScreen() {
   const insets = useSafeAreaInsets();
   const units = useSettings(s => s.settings.units);
   const { profile, runs, loading, error, refetch } = useMyPublicProfile();
+  // No-swap pre-warm (ruling ③): tracks ready before the eye lands
+  useEffect(() => {
+    prewarmTracks(runs.filter(r => r.polyline_thumb && r.polyline_thumb.length >= 2).map(r => r.id));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [runs.length]);
   const [kudosRun, setKudosRun] = React.useState<MyRun | null>(null);
 
   // polyline_thumb slice — real-map-only-for-viewable-cells (feed pattern:

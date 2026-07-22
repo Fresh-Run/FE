@@ -51,7 +51,7 @@ import { Icon } from '@/components/ui';
 import { ApiError } from '@/lib/api';
 import { openProfile } from '@/lib/profile-nav';
 import { deleteRun } from '@/lib/runs-api';
-import { useRunTrackLine } from '@/lib/track-cache';
+import { useRunTrack } from '@/lib/track-cache';
 import {
   deleteRunComment,
   getRunComments,
@@ -131,7 +131,7 @@ export default function RunPostScreen() {
 
   // Hero line — the SHARED (a) cache lane (hero-joins ruling 2026-07-23);
   // see activity.tsx's twin comment. `track` name kept — null while thumb.
-  const heroLine = useRunTrackLine(run?.id ?? null, run?.polyline_thumb);
+  const { line: heroLine, pending: heroPending } = useRunTrack(run?.id ?? null, run?.polyline_thumb);
   const track = heroLine !== null && heroLine !== (run?.polyline_thumb ?? null) ? heroLine : null;
 
   // Likers sheet (own mode — ♥ is count-only)
@@ -322,7 +322,8 @@ export default function RunPostScreen() {
                 units={units}
                 officialDistanceKm={run.distance_km}
                 // thumb-first + tap-to-enlarge (B7) — same grammar as 활동 상세
-                polyline={track ?? run.polyline_thumb ?? null}
+                polyline={heroLine ?? run.polyline_thumb ?? null}
+                lineHidden={heroPending}
                 seed={run.id}
                 photos={run.photos ?? []}
                 height={HERO_H}

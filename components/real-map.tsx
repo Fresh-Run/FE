@@ -81,9 +81,13 @@ type Props = {
   /** (b) ruling: the run's OFFICIAL distance — crossings scale to it so the
       map tells the record's story (absent = as-drawn). */
   officialDistanceKm?: number;
+  /** No-swap policy (2026-07-23): polyline frames the REGION but nothing
+      line-derived draws (line/dots/markers) — the track appears once,
+      complete, when the caller flips this off. */
+  lineHidden?: boolean;
 };
 
-export function RealMap({ height, borderRadius = 0, polyline, center, marker = false, startPin = false, showsUser = false, interactive = false, cache = true, distanceMarkers = false, units = 'km', officialDistanceKm }: Props) {
+export function RealMap({ height, borderRadius = 0, polyline, center, marker = false, startPin = false, showsUser = false, interactive = false, cache = true, distanceMarkers = false, units = 'km', officialDistanceKm, lineHidden = false }: Props) {
   // 지연 two-tone — keys on the RESOLVED scheme since Phase 5 (manual 다크
   // gets the dark stroke; 시스템 mode behaves as before via the store).
   // Map-theme binding (2026-07-22): the map obeys the APP's scheme picker,
@@ -154,7 +158,7 @@ export function RealMap({ height, borderRadius = 0, polyline, center, marker = f
         {marker && center && !line && (
           <Marker coordinate={{ latitude: center.lat, longitude: center.lng }} />
         )}
-        {line && (
+        {line && !lineHidden && (
           <>
             <Polyline
               coordinates={line.map(toLatLng)}
