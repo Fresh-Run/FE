@@ -2,7 +2,7 @@
   "expo": {
     "name": "FreshRun",
     "slug": "freshrun",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "freshrun",
@@ -17,7 +17,8 @@
       "bundleIdentifier": "com.freshrun.app",
       "appleTeamId": "ZSM9CJXQ8C",
       "infoPlist": {
-        "NSSupportsLiveActivities": true
+        "NSSupportsLiveActivities": true,
+        "UIBackgroundModes": ["audio"]
       },
       "config": {
         "usesNonExemptEncryption": false
