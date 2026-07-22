@@ -53,6 +53,7 @@ export default function RouteMapScreen() {
           interactive
           distanceMarkers={payload?.distanceMarkers}
           units={units}
+          officialDistanceKm={payload?.officialDistanceKm}
           cache={false}
           borderRadius={0}
         />

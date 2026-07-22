@@ -46,6 +46,7 @@ import { openProfile } from '@/lib/profile-nav';
 import { distUnit, fmtAgo, fmtDist, fmtDuration, fmtPaceIn, paceUnit, timeTitle } from '@/lib/run-format';
 import { shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
+import { useRunTrackLine } from '@/lib/track-cache';
 import { useSettings } from '@/store/use-settings';
 
 function RunCard({ run, units, mapLive, onOpen }: {
@@ -56,6 +57,8 @@ function RunCard({ run, units, mapLive, onOpen }: {
 }) {
   const C = useTokens();
   const st = useStyles(makeSt);
+  // visual-split ruling: full track when fetched, thumb while loading
+  const cardLine = useRunTrackLine(mapLive ? run.run_id : null, run.polyline_thumb);
   return (
     <Pressable onPress={onOpen} style={({ pressed }) => [st.card, shadows.sm, pressed && { opacity: 0.85 }]}>
       <View style={st.cardHead}>
@@ -85,10 +88,10 @@ function RunCard({ run, units, mapLive, onOpen }: {
           </View>
         </View>
       </View>
-      {mapLive && run.polyline_thumb && run.polyline_thumb.length >= 2 ? (
-        <RealMap height={160} polyline={run.polyline_thumb} />
+      {mapLive && cardLine && cardLine.length >= 2 ? (
+        <RealMap height={160} polyline={cardLine} />
       ) : (
-        <MiniMap seed={run.run_id} height={160} polyline={run.polyline_thumb ?? undefined} />
+        <MiniMap seed={run.run_id} height={160} polyline={cardLine ?? undefined} />
       )}
       <View style={st.cardBody}>
         <Text style={st.cardTitle}>{run.title ?? timeTitle(run.ran_at)}</Text>

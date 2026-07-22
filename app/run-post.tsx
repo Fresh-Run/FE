@@ -337,6 +337,7 @@ export default function RunPostScreen() {
               <MediaCarousel
                 distanceMarkers
                 units={units}
+                officialDistanceKm={run.distance_km}
                 // thumb-first + tap-to-enlarge (B7) — same grammar as 활동 상세
                 polyline={track ?? run.polyline_thumb ?? null}
                 seed={run.id}
@@ -346,7 +347,7 @@ export default function RunPostScreen() {
                 onMapPress={() => {
                   const line = track ?? run.polyline_thumb;
                   if (!line || line.length < 2) return;
-                  setRouteMap({ title: run.title ?? timeTitle(run.ran_at), polyline: line, distanceMarkers: true, ...(track ? {} : { upgradeRunId: run.id }) });
+                  setRouteMap({ title: run.title ?? timeTitle(run.ran_at), polyline: line, distanceMarkers: true, officialDistanceKm: run.distance_km, ...(track ? {} : { upgradeRunId: run.id }) });
                   router.push('/(course)/route-map' as never);
                 }}
               />

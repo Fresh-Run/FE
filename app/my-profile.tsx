@@ -37,6 +37,7 @@ import { useMyPublicProfile, type MyRun } from '@/hooks/use-my-public-profile';
 import { distUnit, fmtDist, fmtDuration, fmtPaceIn, fmtWhen, paceUnit, timeTitle } from '@/lib/run-format';
 import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
+import { useRunTrackLine } from '@/lib/track-cache';
 import { useSettings } from '@/store/use-settings';
 
 // Own-list visibility is never null (legacy rows = 'followers' server-side)
@@ -51,6 +52,8 @@ const VIS_CAPTION: Record<MyRun['visibility'], string> = {
 function RunCard({ run, name, photoUrl, units, mapLive, onKudos }: { run: MyRun; name: string; photoUrl?: string | null; units: ReturnType<typeof useSettings.getState>['settings']['units']; mapLive: boolean; onKudos: () => void }) {
   const C = useTokens();
   const st = useStyles(makeSt);
+  // visual-split ruling: full track when fetched, thumb while loading
+  const cardLine = useRunTrackLine(mapLive ? run.id : null, run.polyline_thumb);
   return (
     // Whole card → own-run SOCIAL view (owner correction 2026-07-12); the
     // 활동 상세 analysis screen's home is the 기록 tab — social links to it
@@ -72,10 +75,10 @@ function RunCard({ run, name, photoUrl, units, mapLive, onKudos }: { run: MyRun;
       {/* polyline_thumb slice: viewable + thumb → real map (card-mode, same
           perf pattern as the feed); off-screen/trackless → route-shaped or
           seed SVG per the ledger rulings */}
-      {mapLive && run.polyline_thumb && run.polyline_thumb.length >= 2 ? (
-        <RealMap height={150} polyline={run.polyline_thumb} />
+      {mapLive && cardLine && cardLine.length >= 2 ? (
+        <RealMap height={150} polyline={cardLine} />
       ) : (
-        <MiniMap seed={run.id} height={150} polyline={run.polyline_thumb ?? undefined} />
+        <MiniMap seed={run.id} height={150} polyline={cardLine ?? undefined} />
       )}
       <View style={st.cardBody}>
         <Text style={st.cardTitle}>{run.title ?? timeTitle(run.ran_at)}</Text>

@@ -14,6 +14,8 @@ export type RouteMapPayload = {
   upgradeRunId?: string;
   /** km/mi markers on the line (run surfaces pass true; course callers off) */
   distanceMarkers?: boolean;
+  /** the run's official distance — (b) scaling on the enlarge */
+  officialDistanceKm?: number;
 };
 
 let pending: RouteMapPayload | null = null;

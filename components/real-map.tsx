@@ -78,9 +78,12 @@ type Props = {
   distanceMarkers?: boolean;
   /** unit for the markers (defaults km) — callers pass the settings unit */
   units?: 'km' | 'mi';
+  /** (b) ruling: the run's OFFICIAL distance — crossings scale to it so the
+      map tells the record's story (absent = as-drawn). */
+  officialDistanceKm?: number;
 };
 
-export function RealMap({ height, borderRadius = 0, polyline, center, marker = false, startPin = false, showsUser = false, interactive = false, cache = true, distanceMarkers = false, units = 'km' }: Props) {
+export function RealMap({ height, borderRadius = 0, polyline, center, marker = false, startPin = false, showsUser = false, interactive = false, cache = true, distanceMarkers = false, units = 'km', officialDistanceKm }: Props) {
   // 지연 two-tone — keys on the RESOLVED scheme since Phase 5 (manual 다크
   // gets the dark stroke; 시스템 mode behaves as before via the store).
   // Map-theme binding (2026-07-22): the map obeys the APP's scheme picker,
@@ -111,8 +114,8 @@ export function RealMap({ height, borderRadius = 0, polyline, center, marker = f
   // — the ={false} flag snapshots an empty bitmap at mount (convicted
   // 2026-07-22); re-render cost at ≤30 static markers is trivial.
   const crossings = useMemo(
-    () => (distanceMarkers && line ? distanceCrossings(line, units === 'mi' ? KM_PER_MI : 1) : []),
-    [distanceMarkers, line, units],
+    () => (distanceMarkers && line ? distanceCrossings(line, units === 'mi' ? KM_PER_MI : 1, officialDistanceKm) : []),
+    [distanceMarkers, line, units, officialDistanceKm],
   );
   const markerInk = resolved === 'dark' ? '#0D1A06' : '#fff';
 

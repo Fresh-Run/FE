@@ -30,13 +30,14 @@ type Props = {
   /** km/mi route markers → RealMap (detail heroes opt in; minis stay off) */
   distanceMarkers?: boolean;
   units?: 'km' | 'mi';
+  officialDistanceKm?: number;
 };
 
-function MapSlide({ polyline, seed, height, onPress, distanceMarkers, units }: { polyline: Coordinate[] | null; seed: string; height: number; onPress?: () => void; distanceMarkers?: boolean; units?: 'km' | 'mi' }) {
+function MapSlide({ polyline, seed, height, onPress, distanceMarkers, units, officialDistanceKm }: { polyline: Coordinate[] | null; seed: string; height: number; onPress?: () => void; distanceMarkers?: boolean; units?: 'km' | 'mi'; officialDistanceKm?: number }) {
   const map = polyline && polyline.length >= 2
     // cache={false}: this is a single async-mounted HERO, not a list thumbnail
     // — live tiles avoid the blank-snapshot race (지연 bug 2026-07-13).
-    ? <RealMap height={height} polyline={polyline} cache={false} distanceMarkers={distanceMarkers} units={units} />
+    ? <RealMap height={height} polyline={polyline} cache={false} distanceMarkers={distanceMarkers} units={units} officialDistanceKm={officialDistanceKm} />
     : <MiniMap seed={seed} height={height} borderRadius={0} polyline={polyline ?? undefined} />;
   // tap-to-enlarge (B7): only the MAP slide taps — photo slides keep their
   // own semantics; horizontal swipes are untouched (Pressable vs pan).
@@ -46,7 +47,7 @@ function MapSlide({ polyline, seed, height, onPress, distanceMarkers, units }: {
   return map;
 }
 
-export function MediaCarousel({ polyline, seed, photos = [], height, onMapPress, onPhotoPress, distanceMarkers, units }: Props) {
+export function MediaCarousel({ polyline, seed, photos = [], height, onMapPress, onPhotoPress, distanceMarkers, units, officialDistanceKm }: Props) {
   const C = useTokens();
   const st = useStyles(makeSt);
   const [width, setWidth] = useState(0);
@@ -55,7 +56,7 @@ export function MediaCarousel({ polyline, seed, photos = [], height, onMapPress,
 
   // Canvas-exact: no photos → plain static map, no pager, no dots
   if (photos.length === 0) {
-    return <MapSlide polyline={polyline} seed={seed} height={height} onPress={onMapPress} distanceMarkers={distanceMarkers} units={units} />;
+    return <MapSlide polyline={polyline} seed={seed} height={height} onPress={onMapPress} distanceMarkers={distanceMarkers} units={units} officialDistanceKm={officialDistanceKm} />;
   }
 
   const slides: Slide[] = [
@@ -79,7 +80,7 @@ export function MediaCarousel({ polyline, seed, photos = [], height, onMapPress,
           renderItem={({ item }) => (
             <View style={{ width, height }}>
               {item.type === 'map'
-                ? <MapSlide polyline={polyline} seed={seed} height={height} onPress={onMapPress} distanceMarkers={distanceMarkers} units={units} />
+                ? <MapSlide polyline={polyline} seed={seed} height={height} onPress={onMapPress} distanceMarkers={distanceMarkers} units={units} officialDistanceKm={officialDistanceKm} />
                 : onPhotoPress
                   ? <Pressable onPress={() => onPhotoPress(slides.findIndex(s => s.key === item.key) - 1)}>
                       <Image source={{ uri: item.uri }} style={{ width, height }} resizeMode="cover" />

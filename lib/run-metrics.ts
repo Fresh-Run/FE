@@ -46,24 +46,36 @@ export function computeKmSplits(track: GpsPoint[] | undefined): number[] {
     noise and ignored. null when the track carries no altitude data. */
 /** km/mi marker positions (NRC-style, 2026-07-22): walk the polyline with
     haversine accumulation and linearly interpolate every whole-step crossing
-    — markers land ON the drawn segments by construction (same segments, same
-    math family as the odometer). Multiple crossings per segment handled
-    (coarse lines). step = 1 (km mode) or KM_PER_MI (mi mode). */
+    — markers land ON the drawn segments by construction. Multiple crossings
+    per segment handled (coarse lines). step = 1 (km) or KM_PER_MI (mi).
+    (b) RULING (2026-07-22): when officialKm is passed, crossings SCALE to
+    the official distance — marker k sits at the line fraction where
+    official-km k occurred. The served line is a shortened simplification;
+    as-drawn systematically eats the tail marker, while scaling distributes
+    the error uniformly (meters per marker). Official is the record. */
 export function distanceCrossings(
   polyline: { lat: number; lng: number }[],
   stepKm: number,
+  officialKm?: number,
 ): { n: number; lat: number; lng: number }[] {
   if (polyline.length < 2 || stepKm <= 0) return [];
-  const out: { n: number; lat: number; lng: number }[] = [];
-  let cum = 0;
-  let next = stepKm;
+  const segs: number[] = [];
+  let total = 0;
   for (let i = 1; i < polyline.length; i++) {
-    const a = polyline[i - 1], b = polyline[i];
-    const seg = haversineKm(a, b);
+    const d = haversineKm(polyline[i - 1], polyline[i]);
+    segs.push(d); total += d;
+  }
+  if (total <= 0) return [];
+  const eff = officialKm != null && officialKm > 0 ? stepKm * (total / officialKm) : stepKm;
+  if (eff <= 0) return [];
+  const out: { n: number; lat: number; lng: number }[] = [];
+  let cum = 0, next = eff, n = 1;
+  for (let i = 1; i < polyline.length; i++) {
+    const a = polyline[i - 1], b = polyline[i], seg = segs[i - 1];
     while (seg > 0 && cum + seg >= next) {
       const t = (next - cum) / seg;
-      out.push({ n: Math.round(next / stepKm), lat: a.lat + (b.lat - a.lat) * t, lng: a.lng + (b.lng - a.lng) * t });
-      next += stepKm;
+      out.push({ n, lat: a.lat + (b.lat - a.lat) * t, lng: a.lng + (b.lng - a.lng) * t });
+      n += 1; next += eff;
     }
     cum += seg;
   }

@@ -174,6 +174,7 @@ export default function ActivityScreen() {
           <MediaCarousel
             distanceMarkers
             units={units}
+            officialDistanceKm={run.distance_km}
             // thumb-first (B7 SWR grammar): the ≤36pt thumb paints INSTANTLY
             // from the payload; the server-simplified full track replaces it
             // when the fetch lands. Failed/offline → the thumb stays (real
@@ -186,7 +187,7 @@ export default function ActivityScreen() {
             onMapPress={() => {
               const line = track ?? run.polyline_thumb;
               if (!line || line.length < 2) return;
-              setRouteMap({ title: run.title ?? timeTitle(run.ran_at), polyline: line, distanceMarkers: true, ...(track ? {} : { upgradeRunId: run.id }) });
+              setRouteMap({ title: run.title ?? timeTitle(run.ran_at), polyline: line, distanceMarkers: true, officialDistanceKm: run.distance_km, ...(track ? {} : { upgradeRunId: run.id }) });
               router.push('/(course)/route-map' as never);
             }}
           />
