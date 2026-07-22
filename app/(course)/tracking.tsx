@@ -288,6 +288,10 @@ export default function TrackingScreen() {
   const [coachMuted, setCoachMuted] = useState(false);
   useEffect(() => { useQuota.getState().hydrate(); useAudioCoach.getState().hydrate(); }, []);
   const coachActive = isPremium && voiceCue && !coachMuted;
+  // ── SANCTIONED TEMP PROBE (loop hunt, owner GO 2026-07-22) — STRIPS IN THE
+  // FIX COMMIT. Watcher-effect entry counter + last branch, sofa-readable.
+  const probeCount = useRef(0);
+  const [probeLine, setProbeLine] = useState('probe: mounted');
   const nextCueKmRef = useRef<number>(useAudioCoach.getState().intervalKm);
   const prevStateRef = useRef(state);
 
@@ -298,6 +302,7 @@ export default function TrackingScreen() {
     if (prev === 'countdown' && state === 'running') {
       const coach = useAudioCoach.getState(); // fire-time snapshot
       nextCueKmRef.current = coach.intervalKm; // fresh run
+      setProbeLine(`start-reset nx=${coach.intervalKm} rate=${coach.rate} act=${coachActive ? 1 : 0}`); // TEMP PROBE
       if (coachActive) speakCue(composeStartCue(), coach.rate);
     }
     if (state === 'paused' || state === 'idle') stopSpeech();
@@ -307,8 +312,12 @@ export default function TrackingScreen() {
 
   // interval-split watcher — catch-up-safe (advances past every crossed threshold)
   useEffect(() => {
-    if (state !== 'running' || !coachActive) return;
-    if (distanceKm < nextCueKmRef.current) return;
+    // TEMP PROBE: entry counter + branch reporter (strips in the fix commit)
+    probeCount.current += 1;
+    const px = (branch: string) =>
+      setProbeLine(`eff:${probeCount.current} · d=${distanceKm.toFixed(2)} nx=${nextCueKmRef.current} act=${coachActive ? 1 : 0} st=${state} · ${branch}`);
+    if (state !== 'running' || !coachActive) { px('EXIT-state'); return; }
+    if (distanceKm < nextCueKmRef.current) { px('EXIT-thresh'); return; }
     const coach = useAudioCoach.getState(); // fire-time snapshot (지연 fix)
     const spokenAt = nextCueKmRef.current;
     while (distanceKm >= nextCueKmRef.current) nextCueKmRef.current += coach.intervalKm;
@@ -319,7 +328,7 @@ export default function TrackingScreen() {
       kcal, // estimateKcal-driven — null without confirmed weight (honest rule)
       items: coach.items,
     });
-    if (text) speakCue(text, coach.rate);
+    if (text) { speakCue(text, coach.rate); px('FIRE'); } else { px('NULLTEXT'); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [distanceKm, state, coachActive]);
 
@@ -582,6 +591,11 @@ export default function TrackingScreen() {
           )}
         </MapView>
 
+        {/* SANCTIONED TEMP PROBE row — strips in the fix commit */}
+        <View pointerEvents="none" style={[st.probeWrap, { top: insets.top + 44 }]}>
+          <Text style={st.probeTxt}>{probeLine}</Text>
+        </View>
+
         {/* Course title pill (bundle: tracking-screen.jsx course mode) */}
         {course && (
           <View pointerEvents="none" style={[st.coursePillWrap, { top: insets.top + 8 }]}>
@@ -768,6 +782,9 @@ const makeSt = (C: Tokens) => StyleSheet.create({
 
   // Course title pill (course mode)
   coursePillWrap: { position: 'absolute', left: 0, right: 0, alignItems: 'center' },
+  // TEMP PROBE (strips in the fix commit)
+  probeWrap: { position: 'absolute', left: 8, right: 8, alignItems: 'flex-start' },
+  probeTxt:  { fontSize: 10, fontVariant: ['tabular-nums'], color: '#fff', backgroundColor: 'rgba(0,0,0,0.7)', paddingHorizontal: 6, paddingVertical: 3, borderRadius: 6, overflow: 'hidden' },
   coursePill:     { flexDirection: 'row', alignItems: 'center', gap: 6, maxWidth: '64%', backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: R.pill, paddingHorizontal: 13, paddingVertical: 7 },
   coursePillTxt:  { fontSize: 12, fontWeight: '700', color: '#fff', letterSpacing: -0.2 },
 
