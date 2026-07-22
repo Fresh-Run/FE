@@ -119,6 +119,12 @@ export function submitFeedback(runId: string, liked: boolean, tags: string[]): P
   });
 }
 
+/** Own runs, newest first — the AI-banner derivation's row source (median
+    needs per-run distances; /me/stats aggregates can't exclude test noise). */
+export function getMyRecentRuns(limit = 10): Promise<{ distance_km: number; avg_pace_sec_per_km: number | null }[]> {
+  return apiFetch<{ distance_km: number; avg_pace_sec_per_km: number | null }[]>(`/api/runs?limit=${limit}`);
+}
+
 /** DELETE /runs/{id} — owner-only; 204 success, 404 everything-else (guide:
     not-mine runs are 은닉'd as 404). Probed live 2026-07-16: 204 → re-DELETE
     404 → GET 404; not-owner delete = 404. 404 resolves as SUCCESS here —

@@ -39,7 +39,7 @@ import { fmtDist } from '@/lib/run-format';
 import { shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { useQuota } from '@/store/use-quota';
-import { getMyStats } from '@/lib/stats-api';
+import { getMyRecentRuns } from '@/lib/runs-api';
 import { useSettings } from '@/store/use-settings';
 import { useStore } from '@/store/use-store';
 import type { Coordinate } from '@/types';
@@ -218,7 +218,29 @@ const makeFtt = (C: Tokens) => StyleSheet.create({
 // (/me/stats — already-consumed endpoint; fetch failure/no history → the
 // plain promise, never invented numbers). The M build (tap→derived-params
 // generation, single round-trip, no cache — her veto) rides separately.
-const TERRAIN_BANNER_LABEL = { flat: '평지 우선', mixed: '균형 코스', hill: '언덕 훈련' } as const;
+// Terrain labels = create.tsx's CANONICAL map (the stutter fix: my '균형
+// 코스' deviation put 코스 inside a label the template also appends —
+// "코스 코스를". Canonical labels carry no 코스; the template's own 코스
+// composes clean with all three: 평지 우선/균형/언덕 훈련 + 코스를.)
+const TERRAIN_BANNER_LABEL = { flat: '평지 우선', mixed: '균형', hill: '언덕 훈련' } as const;
+
+// Banner distance derivation (presentability rule, owner-ruled 2026-07-22):
+// median of recent runs ≥1km (test-walk noise excluded) → whole-km round →
+// clamped [3, 30] — honest signal, presentable invitation. No qualifying
+// history → the pref default through the same floor. Pace = mean of the
+// qualifying runs' paces (est fallback: create.tsx's 6.5 formula).
+const BANNER_QUAL_KM = 1, BANNER_FLOOR_KM = 3, BANNER_CAP_KM = 30;
+function deriveBanner(runs: { distance_km: number; avg_pace_sec_per_km: number | null }[], prefKm: number) {
+  const qual = runs.filter(r => r.distance_km >= BANNER_QUAL_KM).map(r => r.distance_km).sort((a, b) => a - b);
+  const rawKm = qual.length ? qual[Math.floor((qual.length - 1) / 2)] : prefKm;
+  const km = Math.min(BANNER_CAP_KM, Math.max(BANNER_FLOOR_KM, Math.round(rawKm)));
+  const paces = runs
+    .filter(r => r.distance_km >= BANNER_QUAL_KM && r.avg_pace_sec_per_km != null && r.avg_pace_sec_per_km > 0)
+    .map(r => r.avg_pace_sec_per_km!);
+  const pace = paces.length ? paces.reduce((a, b) => a + b, 0) / paces.length : null;
+  const estMin = pace != null ? Math.round((km * pace) / 60) : Math.round(km * 6.5);
+  return { km, estMin };
+}
 
 // M build (2026-07-22, quota gate open — 지연 co-sign, both conditions HARD):
 // one quota all doors; ① remaining VISIBLE before tap; ② exhaustion
@@ -230,27 +252,17 @@ function AIBanner({ onStart, onUpsell }: { onStart: (km: number) => void; onUpse
   const abt = useStyles(makeAbt);
   const aiPrefs = useSettings(s => s.settings.ai_course);
   const quota = useQuota(s => s.aiGeneration);
-  // one-shot pattern fetch — quiet fallback keeps the banner honest offline
-  const [pattern, setPattern] = useState<{ km: number; estMin: number } | null>(null);
+  // one-shot rows fetch — fetch failure = pref-derived banner, never blank
+  const [rows, setRows] = useState<{ distance_km: number; avg_pace_sec_per_km: number | null }[]>([]);
   useEffect(() => {
     let alive = true;
-    getMyStats()
-      .then(st2 => {
-        if (!alive) return;
-        const p = st2.week.run_count > 0 ? st2.week : st2.month.run_count > 0 ? st2.month : st2.all_time;
-        if (p.run_count <= 0 || p.total_distance_km <= 0) return;
-        const km = Math.max(1, Math.round((p.total_distance_km / p.run_count) * 2) / 2); // nearest 0.5
-        const estMin = p.avg_pace_sec_per_km != null && p.avg_pace_sec_per_km > 0
-          ? Math.round((km * p.avg_pace_sec_per_km) / 60)
-          : Math.round(km * 6.5); // create.tsx's own estimate formula
-        setPattern({ km, estMin });
-      })
-      .catch(() => {}); // no history claim on failure — the plain promise stands
+    getMyRecentRuns()
+      .then(r => { if (alive) setRows(r); })
+      .catch(() => {}); // quiet — the pref-fill keeps the banner honest offline
     return () => { alive = false; };
   }, []);
-  const fmtBannerKm = (km: number) => (Number.isInteger(km) ? `${km}` : km.toFixed(1));
-  const km = pattern?.km ?? Math.max(1, Math.round(aiPrefs.default_distance_km * 2) / 2);
-  const estMin = pattern?.estMin ?? Math.round(km * 6.5);
+  const { km, estMin } = deriveBanner(rows, aiPrefs.default_distance_km);
+  const fmtBannerKm = (n: number) => String(n); // whole-km by derivation
   const exhausted = !quota.unlimited && (quota.remaining ?? 0) <= 0;
   // reset weekday from server truth; the quota copy's own promise ("월요일에
   // 초기화") is the fallback when reset_at is absent
