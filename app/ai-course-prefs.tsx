@@ -10,12 +10,12 @@
  * canvas 42 — backend bound is default_distance_km le=32.2 (422 above it).
  */
 import { router } from 'expo-router';
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/ui';
-import type { AiCourseSettings } from '@/lib/settings-api';
+import { getSettings, type AiCourseSettings } from '@/lib/settings-api';
 import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { useSettings } from '@/store/use-settings';
@@ -141,9 +141,19 @@ export default function AiCoursePrefsScreen() {
 
   useEffect(() => { hydrate(); }, [hydrate]);
 
+  // ── SANCTIONED TEMP PROBE (write round-trip, owner GO 2026-07-22) —
+  // STRIPS IN THE FIX COMMIT. After every save: store-bypassing raw GET →
+  // does the server hold what was just sent? Surfaces the swallowed-PATCH
+  // class the optimistic screen could mask.
+  const [writeProbe, setWriteProbe] = useState('write-probe: 대기');
   async function save(patch: Partial<AiCourseSettings>) {
     const ok = await setAiCourse(patch); // optimistic; rolls back on failure
     if (!ok) Alert.alert('저장 실패', '설정을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.');
+    // TEMP PROBE: raw re-read
+    const sent = patch.default_distance_km;
+    getSettings()
+      .then(s2 => setWriteProbe(`sent:${sent ?? '(non-dist)'} ok:${ok ? 1 : 0} → srv:${s2.ai_course?.default_distance_km} store:${useSettings.getState().settings.ai_course.default_distance_km}`))
+      .catch(() => setWriteProbe(`sent:${sent ?? '(non-dist)'} ok:${ok ? 1 : 0} → srv:ERR`));
   }
 
   return (
@@ -184,6 +194,8 @@ export default function AiCoursePrefsScreen() {
             onChange={v => save({ default_distance_km: v })}
           />
         </Group>
+        {/* SANCTIONED TEMP PROBE — strips in the fix commit */}
+        <Text style={{ fontSize: 10, color: '#888', paddingHorizontal: 4, paddingTop: 6, fontVariant: ['tabular-nums'] }}>{writeProbe}</Text>
 
         <Group title="노면">
           {SURFACES.map(o => (
