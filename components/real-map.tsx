@@ -117,7 +117,11 @@ export function RealMap({ height, borderRadius = 0, polyline, center, marker = f
     () => (distanceMarkers && line ? distanceCrossings(line, units === 'mi' ? KM_PER_MI : 1, officialDistanceKm) : []),
     [distanceMarkers, line, units, officialDistanceKm],
   );
-  const markerInk = resolved === 'dark' ? '#0D1A06' : '#fff';
+  // Legibility re-pair (owner finding 2026-07-22: route-color FILL
+  // camouflaged the circles against the line itself). Inversion: scheme
+  // surface fill · route color as number ink + ring — identity via ink,
+  // separation-from-line via fill, edge-vs-tiles carried by the ring.
+  const markerFill = resolved === 'dark' ? '#15171C' : '#fff'; // surface family
 
   const onMapReady = () => {
     if (!line) return;
@@ -175,8 +179,8 @@ export function RealMap({ height, borderRadius = 0, polyline, center, marker = f
                 in-file control group 2026-07-22) */}
             {crossings.map(c => (
               <Marker key={`km-${c.n}`} coordinate={{ latitude: c.lat, longitude: c.lng }} anchor={{ x: 0.5, y: 0.5 }}>
-                <View style={{ minWidth: 19, height: 19, borderRadius: 10, paddingHorizontal: 3, backgroundColor: stroke, borderWidth: 1.5, borderColor: '#fff', alignItems: 'center', justifyContent: 'center' }}>
-                  <Text style={{ fontSize: 10, fontWeight: '800', color: markerInk }}>{c.n}</Text>
+                <View style={{ minWidth: 19, height: 19, borderRadius: 10, paddingHorizontal: 3, backgroundColor: markerFill, borderWidth: 2, borderColor: stroke, alignItems: 'center', justifyContent: 'center' }}>
+                  <Text style={{ fontSize: 10, fontWeight: '800', color: stroke }}>{c.n}</Text>
                 </View>
               </Marker>
             ))}
