@@ -44,6 +44,32 @@ export function computeKmSplits(track: GpsPoint[] | undefined): number[] {
 /** Cumulative POSITIVE elevation gain (m) from point altitudes. Per-step
     |delta| ≥ 30m is discarded as a GPS altitude spike; sub-1m rises are
     noise and ignored. null when the track carries no altitude data. */
+/** km/mi marker positions (NRC-style, 2026-07-22): walk the polyline with
+    haversine accumulation and linearly interpolate every whole-step crossing
+    — markers land ON the drawn segments by construction (same segments, same
+    math family as the odometer). Multiple crossings per segment handled
+    (coarse lines). step = 1 (km mode) or KM_PER_MI (mi mode). */
+export function distanceCrossings(
+  polyline: { lat: number; lng: number }[],
+  stepKm: number,
+): { n: number; lat: number; lng: number }[] {
+  if (polyline.length < 2 || stepKm <= 0) return [];
+  const out: { n: number; lat: number; lng: number }[] = [];
+  let cum = 0;
+  let next = stepKm;
+  for (let i = 1; i < polyline.length; i++) {
+    const a = polyline[i - 1], b = polyline[i];
+    const seg = haversineKm(a, b);
+    while (seg > 0 && cum + seg >= next) {
+      const t = (next - cum) / seg;
+      out.push({ n: Math.round(next / stepKm), lat: a.lat + (b.lat - a.lat) * t, lng: a.lng + (b.lng - a.lng) * t });
+      next += stepKm;
+    }
+    cum += seg;
+  }
+  return out;
+}
+
 export function computeElevGain(track: GpsPoint[] | undefined): number | null {
   if (!track) return null;
   let gain = 0, seen = false, prev: number | null = null;

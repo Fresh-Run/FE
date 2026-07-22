@@ -13,9 +13,11 @@
  *  - center: single {lat,lng} → region-only view (e.g. current location).
  */
 import React, { useMemo, useRef } from 'react';
-import { View } from 'react-native';
+import { Text, View } from 'react-native';
 import MapView, { Marker, Polyline } from 'react-native-maps';
 
+import { KM_PER_MI } from '@/lib/run-format';
+import { distanceCrossings } from '@/lib/run-metrics';
 import { routeStroke } from '@/lib/theme';
 import { useScheme } from '@/store/use-scheme';
 import type { Coordinate } from '@/types';
@@ -70,9 +72,15 @@ type Props = {
       blank tiles). Pass false on single hero maps. Default true; forced off
       when interactive. */
   cache?: boolean;
+  /** km/mi markers on the route line (NRC-style, 2026-07-22) — OFF by
+      default so feed minis stay clean; detail/result/enlarge surfaces opt
+      in. Positions interpolated on the drawn segments (lib/run-metrics). */
+  distanceMarkers?: boolean;
+  /** unit for the markers (defaults km) — callers pass the settings unit */
+  units?: 'km' | 'mi';
 };
 
-export function RealMap({ height, borderRadius = 0, polyline, center, marker = false, startPin = false, showsUser = false, interactive = false, cache = true }: Props) {
+export function RealMap({ height, borderRadius = 0, polyline, center, marker = false, startPin = false, showsUser = false, interactive = false, cache = true, distanceMarkers = false, units = 'km' }: Props) {
   // 지연 two-tone — keys on the RESOLVED scheme since Phase 5 (manual 다크
   // gets the dark stroke; 시스템 mode behaves as before via the store).
   // Map-theme binding (2026-07-22): the map obeys the APP's scheme picker,
@@ -96,6 +104,17 @@ export function RealMap({ height, borderRadius = 0, polyline, center, marker = f
   // blank tiles. fitToCoordinates on ready forces a post-init camera set that
   // renders tiles into the (re)snapshot. No-op-equivalent for the feed cards
   // that already framed correctly.
+  // km/mi markers — interpolated ON the drawn segments; circle = the route
+  // stroke's own color family so they read as part of the line, number ink
+  // = accentText-class on the dark-lime stroke / white on the light green
+  // (contrast desk-proven ≥3:1 both). tracksViewChanges={false}: static
+  // bitmaps, no per-frame churn.
+  const crossings = useMemo(
+    () => (distanceMarkers && line ? distanceCrossings(line, units === 'mi' ? KM_PER_MI : 1) : []),
+    [distanceMarkers, line, units],
+  );
+  const markerInk = resolved === 'dark' ? '#0D1A06' : '#fff';
+
   const onMapReady = () => {
     if (!line) return;
     mapRef.current?.fitToCoordinates(line.map(toLatLng), {
@@ -146,6 +165,13 @@ export function RealMap({ height, borderRadius = 0, polyline, center, marker = f
             <Marker coordinate={toLatLng(line[line.length - 1])} anchor={{ x: 0.5, y: 0.5 }}>
               <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: stroke, borderWidth: 3, borderColor: '#fff' }} />
             </Marker>
+            {crossings.map(c => (
+              <Marker key={`km-${c.n}`} coordinate={{ latitude: c.lat, longitude: c.lng }} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={false}>
+                <View style={{ minWidth: 19, height: 19, borderRadius: 10, paddingHorizontal: 3, backgroundColor: stroke, borderWidth: 1.5, borderColor: '#fff', alignItems: 'center', justifyContent: 'center' }}>
+                  <Text style={{ fontSize: 10, fontWeight: '800', color: markerInk }}>{c.n}</Text>
+                </View>
+              </Marker>
+            ))}
           </>
         )}
       </MapView>

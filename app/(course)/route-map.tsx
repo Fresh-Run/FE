@@ -16,6 +16,7 @@ import { Icon } from '@/components/ui';
 import { getRunTrack } from '@/lib/run-social-api';
 import { shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
+import { useSettings } from '@/store/use-settings';
 import { takeRouteMap } from '@/store/route-map';
 
 export default function RouteMapScreen() {
@@ -24,6 +25,7 @@ export default function RouteMapScreen() {
   const insets = useSafeAreaInsets();
   const { height: winH } = useWindowDimensions();
   const [payload] = useState(() => takeRouteMap()); // one-shot; survives re-render
+  const units = useSettings(s2 => s2.settings.units);
   // B7 upgrade decision (owner flag): tapping the hero BEFORE the full track
   // loads must not freeze this view on the coarse thumb — when the payload
   // carries upgradeRunId, fetch the full track and swap it in (silent fail →
@@ -49,6 +51,8 @@ export default function RouteMapScreen() {
           polyline={line}
           startPin
           interactive
+          distanceMarkers={payload?.distanceMarkers}
+          units={units}
           cache={false}
           borderRadius={0}
         />

@@ -172,6 +172,8 @@ export default function ActivityScreen() {
                keep the seed-stylized fallback inside the carousel ── */}
         <View style={[st.hero, { height: HERO_H + insets.top }]}>
           <MediaCarousel
+            distanceMarkers
+            units={units}
             // thumb-first (B7 SWR grammar): the ≤36pt thumb paints INSTANTLY
             // from the payload; the server-simplified full track replaces it
             // when the fetch lands. Failed/offline → the thumb stays (real
@@ -184,7 +186,7 @@ export default function ActivityScreen() {
             onMapPress={() => {
               const line = track ?? run.polyline_thumb;
               if (!line || line.length < 2) return;
-              setRouteMap({ title: run.title ?? timeTitle(run.ran_at), polyline: line, ...(track ? {} : { upgradeRunId: run.id }) });
+              setRouteMap({ title: run.title ?? timeTitle(run.ran_at), polyline: line, distanceMarkers: true, ...(track ? {} : { upgradeRunId: run.id }) });
               router.push('/(course)/route-map' as never);
             }}
           />

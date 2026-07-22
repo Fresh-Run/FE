@@ -279,7 +279,7 @@ export default function RunResultScreen() {
         <View style={{ paddingHorizontal: 24, paddingTop: 20 }}>
           <View style={[st.recordCard, shadows.md]}>
             {run.path.length >= 2
-              ? <RealMap height={230} borderRadius={0} polyline={run.path} cache={false} />
+              ? <RealMap height={230} borderRadius={0} polyline={run.path} cache={false} distanceMarkers units={units} />
               : <MiniMap seed="run-result" height={230} borderRadius={0} />}
             <LinearGradient
               colors={['rgba(8,12,4,0.62)', 'rgba(8,12,4,0.1)', 'rgba(8,12,4,0.85)']}

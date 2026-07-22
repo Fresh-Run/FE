@@ -12,6 +12,8 @@ export type RouteMapPayload = {
       not yet loaded at tap time) — route-map fetches and upgrades itself.
       Absent = the geometry is already the best available (no fetch). */
   upgradeRunId?: string;
+  /** km/mi markers on the line (run surfaces pass true; course callers off) */
+  distanceMarkers?: boolean;
 };
 
 let pending: RouteMapPayload | null = null;
