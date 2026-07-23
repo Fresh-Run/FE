@@ -74,7 +74,8 @@ function fmtShortfall(km: number, units: 'km' | 'mi'): string {
     const mi = Math.max(0.1, Math.round((km / KM_PER_MI) * 10) / 10);
     return `${mi.toFixed(1)}mi`;
   }
-  if (km < 1) return `${Math.max(50, Math.round((km * 1000) / 50) * 50)}m`;
+  const m = Math.max(50, Math.round((km * 1000) / 50) * 50);
+  if (m < 1000) return `${m}m`; // boundary keyed on the ROUNDED value: 975m → "1.0km", not "1000m"
   return `${(Math.round(km * 10) / 10).toFixed(1)}km`;
 }
 
