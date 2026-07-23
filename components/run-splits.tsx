@@ -32,17 +32,34 @@ function paceTone(C: Tokens, sec: number, fastest: number, range: number): strin
   return t < 1 / 3 ? C.paceFast : t < 2 / 3 ? C.paceMid : C.paceSlow;
 }
 
+// Lap pace (partial-arithmetic conviction, 2026-07-23): a FULL km lap's sec
+// IS its per-km pace (1km denominator); the PARTIAL's sec is raw lap time —
+// rendering it pace-formatted fabricated "sprint" tails (owner steady-walk
+// arithmetic: 0.24km/163s displayed 2'43" instead of the true 11'19"/km).
+// Partial pace = sec / its own distance (s.km − fullLapCount).
+function lapPaceSec(s: RunSplit, fullCount: number): number {
+  const sec = s.moving_sec ?? s.sec; // v88 moving-based, sec fallback
+  if (!s.partial) return sec;
+  const d = s.km - fullCount;
+  return d > 0.01 ? Math.round(sec / d) : sec;
+}
+const clamp01 = (t: number) => Math.min(1, Math.max(0, t));
+
 // ─── 구간 기록 — Strava-style table ───────────────────────────────────────────
 
 export function SplitsTable({ splits, units }: { splits: RunSplit[]; units: Units }) {
   const C = useTokens();
   const st = useStyles(makeSt);
   if (splits.length === 0) return null;
-  // v88 moving-based pace (owner GO 2026-07-23): the elapsed-definition gap
-  // closes — lap pace = moving_sec where served, sec fallback (old runs)
-  const lapSec = (s: RunSplit) => s.moving_sec ?? s.sec;
-  const fastest = Math.min(...splits.map(lapSec));
-  const slowest = Math.max(...splits.map(lapSec));
+  const fullCount = splits.filter(x => !x.partial).length;
+  const lapSec = (s: RunSplit) => lapPaceSec(s, fullCount);
+  // ⚡/tone competition is FULL-LAPS-ONLY (owner ruling — matches 최고 구간
+  // and Strava); sub-km runs (partial-only) fall back to what exists. The
+  // partial renders de-emphasized in competition but honest in number.
+  const fullPaces = splits.filter(x => !x.partial).map(lapSec);
+  const basis = fullPaces.length ? fullPaces : splits.map(lapSec);
+  const fastest = Math.min(...basis);
+  const slowest = Math.max(...basis);
   const range = Math.max(1, slowest - fastest);
 
   return (
@@ -54,15 +71,15 @@ export function SplitsTable({ splits, units }: { splits: RunSplit[]; units: Unit
       </View>
       {splits.map((s, i) => {
         const sec = lapSec(s);
-        const frac = 0.3 + 0.7 * (1 - (sec - fastest) / range); // faster → longer bar
-        const isFast = sec === fastest && splits.length > 1;
+        const frac = 0.3 + 0.7 * (1 - clamp01((sec - fastest) / range)); // faster → longer bar (clamped: partial may sit outside the full-lap scale)
+        const isFast = !s.partial && sec === fastest && fullPaces.length > 1;
         const label = s.partial ? s.km.toFixed(1) : String(Math.round(s.km));
         return (
           <View key={i} style={st.row}>
             <Text style={[st.kmTxt, { width: 34 }]}>{label}</Text>
             <Text style={[st.paceTxt, { width: 52 }]}>{fmtPaceIn(sec, units)}</Text>
             <View style={st.barTrack}>
-              <View style={[st.bar, { width: `${frac * 100}%` as `${number}%`, backgroundColor: paceTone(C, sec, fastest, range) }]}>
+              <View style={[st.bar, s.partial && { opacity: 0.55 }, { width: `${frac * 100}%` as `${number}%`, backgroundColor: paceTone(C, sec, fastest, range) }]}>
                 {isFast && <Text style={st.fastTag}>⚡</Text>}
               </View>
             </View>
@@ -87,20 +104,29 @@ export function PaceChart({ splits, units }: { splits: RunSplit[]; units: Units 
   const C = useTokens();
   const st = useStyles(makeSt);
   if (splits.length < 2) return null;
-  const paces = splits.map(s => s.moving_sec ?? s.sec); // v88 moving-based (sec fallback)
+  const fullCount = splits.filter(x => !x.partial).length;
+  const paces = splits.map(s => lapPaceSec(s, fullCount)); // true pace per lap (partial normalized)
   const n = paces.length;
   const innerW = W - PAD_L - PAD_R, innerH = H - PAD_T - PAD_B;
   const bw = innerW / n;
-  const pMin = Math.min(...paces), pMax = Math.max(...paces);
+  // Normalization scale is FULL-LAPS-ONLY (owner ruling); partial bars clamp
+  // into it, de-emphasized (fixed low opacity) but honest in height/number.
+  const fullIdx = splits.map((s, i) => (!s.partial ? i : -1)).filter(i => i >= 0);
+  const normBasis = fullIdx.length ? fullIdx.map(i => paces[i]) : paces;
+  const pMin = Math.min(...normBasis), pMax = Math.max(...normBasis);
   const pRange = Math.max(1, pMax - pMin);
   // Bar height: faster (lower sec) → taller. Normalize 0.4..1 (canvas math)
-  const barH = (p: number) => innerH * (0.4 + (1 - (p - pMin) / pRange) * 0.6);
+  const barH = (p: number) => innerH * (0.4 + (1 - clamp01((p - pMin) / pRange)) * 0.6);
   // Per-bar value labels (the table's own numbers — fmtPaceIn, unit-aware,
-  // consistent to the second). Dense charts label the extremes only.
+  // consistent to the second). Dense charts label the extremes only —
+  // extremes chosen among FULL laps (first/last stay regardless).
+  const extremeIdx = fullIdx.length
+    ? [fullIdx.reduce((a, b) => (paces[a] <= paces[b] ? a : b)), fullIdx.reduce((a, b) => (paces[a] >= paces[b] ? a : b))]
+    : [paces.indexOf(pMin), paces.indexOf(pMax)];
   const labeled = new Set<number>(
     n <= LABEL_EVERY_BAR_MAX
       ? paces.map((_, i) => i)
-      : [0, n - 1, paces.indexOf(pMin), paces.indexOf(pMax)],
+      : [0, n - 1, ...extremeIdx],
   );
 
   return (
@@ -118,7 +144,7 @@ export function PaceChart({ splits, units }: { splits: RunSplit[]; units: Units 
           return (
             <Rect
               key={i} x={x} y={y} width={w} height={h} rx={Math.min(6, w / 2)}
-              fill={paceTone(C, p, pMin, Math.max(1, pRange))} opacity={0.65 + 0.35 * (1 - (p - pMin) / pRange)}
+              fill={paceTone(C, p, pMin, Math.max(1, pRange))} opacity={splits[i].partial ? 0.45 : 0.65 + 0.35 * (1 - clamp01((p - pMin) / pRange))}
             />
           );
         })}
