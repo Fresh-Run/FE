@@ -18,14 +18,23 @@
  *  - HONEST NO-EXPORT interim (stated adaptation): 텍스트로 공유 stays the
  *    WORKING primary action; 이미지 저장 renders disabled with the honest
  *    caption — the button is never a dead end.
+ *
+ * V2 (owner expansion 2026-07-24):
+ *  - 앨범에서 선택 joins the bg picker (expo-image-picker — already in tree,
+ *    the avatar/run-photo lane; pure JS).
+ *  - FREE-PLACED METRICS: each enabled metric is its OWN draggable layer
+ *    (drag + pinch, NO rotation — rotated text is a regret) — the
+ *    story-editor grammar; placement persists as canvas FRACTIONS so
+ *    format flips keep relative positions. Fully free, no snap (v2 call).
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Image, Pressable, ScrollView, Share, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
-import Reanimated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
+import Reanimated, { runOnJS, useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Path } from 'react-native-svg';
 
@@ -42,10 +51,13 @@ import type { Coordinate } from '@/types';
 // ─── Prefs (persisted metric selection — v1 local; settings.share later) ─────
 
 export type ShareMetricKey = 'dist' | 'pace' | 'time';
+type MetricPlacement = { x: number; y: number; s: number }; // x/y = canvas fractions, s = scale
 type SharePrefs = {
   metrics: Record<ShareMetricKey, boolean>;
   format: '1:1' | '9:16';
   wordmark: boolean;
+  /** v2 free-placement — absent keys fall to the default stack (merge-safe) */
+  placements?: Partial<Record<ShareMetricKey, MetricPlacement>>;
 };
 const PREFS_KEY = '@fr_share_prefs';
 const DEFAULT_PREFS: SharePrefs = {
@@ -58,6 +70,12 @@ const DEFAULT_PREFS: SharePrefs = {
 };
 const METRIC_LABELS: Record<ShareMetricKey, string> = {
   dist: '거리', pace: '평균 페이스', time: '시간',
+};
+// default stack ≈ the old bottom-left block (canvas fractions)
+const DEFAULT_PLACEMENT: Record<ShareMetricKey, MetricPlacement> = {
+  dist: { x: 0.06, y: 0.60, s: 1 },
+  pace: { x: 0.06, y: 0.73, s: 1 },
+  time: { x: 0.06, y: 0.86, s: 1 },
 };
 
 // ─── Backgrounds — dark-fixture house family (night-canvas precedent) ─────────
@@ -86,6 +104,45 @@ function routePath(polyline: Coordinate[], size: number, pad: number): { d: stri
   const d = polyline.map((c, i) => `${i === 0 ? 'M' : 'L'} ${px(c).toFixed(1)} ${py(c).toFixed(1)}`).join(' ');
   const first = polyline[0], last = polyline[polyline.length - 1];
   return { d, start: [px(first), py(first)], end: [px(last), py(last)] };
+}
+
+// ─── Free-placed metric layer (v2) — drag + pinch, NO rotation ───────────────
+// One hook instance per metric (fixed count of 3 — hooks stay unconditional).
+// Position lives in shared values (px), persists as canvas FRACTIONS on
+// gesture end; canvas-dim changes (format flip) re-derive px from fractions.
+
+function useMetricLayer(
+  key: ShareMetricKey,
+  canvasW: number,
+  canvasH: number,
+  stored: MetricPlacement | undefined,
+  persist: (key: ShareMetricKey, p: MetricPlacement) => void,
+) {
+  const base = stored ?? DEFAULT_PLACEMENT[key];
+  const tx = useSharedValue(base.x * canvasW);
+  const ty = useSharedValue(base.y * canvasH);
+  const sc = useSharedValue(base.s);
+  // reposition on hydrate/format-flip (fractions are the truth)
+  useEffect(() => {
+    tx.value = base.x * canvasW;
+    ty.value = base.y * canvasH;
+    sc.value = base.s;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canvasW, canvasH, stored]);
+  const gesture = useMemo(() => {
+    const end = () => {
+      'worklet';
+      runOnJS(persist)(key, { x: tx.value / canvasW, y: ty.value / canvasH, s: sc.value });
+    };
+    return Gesture.Simultaneous(
+      Gesture.Pan().onChange(e => { tx.value += e.changeX; ty.value += e.changeY; }).onEnd(end),
+      Gesture.Pinch().onChange(e => { sc.value *= e.scaleChange; }).onEnd(end),
+    );
+  }, [key, canvasW, canvasH, persist, tx, ty, sc]);
+  const style = useAnimatedStyle(() => ({
+    transform: [{ translateX: tx.value }, { translateY: ty.value }, { scale: sc.value }],
+  }));
+  return { gesture, style };
 }
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
@@ -126,7 +183,20 @@ export default function ShareCardScreen() {
     [photos.length],
   );
   const [bgIdx, setBgIdx] = useState(0);
-  const bg = bgs[Math.min(bgIdx, bgs.length - 1)];
+  // 앨범에서 선택 (v2 lane 1 — expo-image-picker already in tree, the
+  // avatar/run-photo lane; session-local like the run photos)
+  const [albumBgs, setAlbumBgs] = useState<Bg[]>([]);
+  const allBgs = useMemo(() => [...albumBgs, ...bgs], [albumBgs, bgs]);
+  const pickAlbumBg = async () => {
+    try {
+      const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: 'images', quality: 1 });
+      const uri = res.assets?.[0]?.uri;
+      if (!uri) return;
+      setAlbumBgs(prev => [{ kind: 'photo', url: uri }, ...prev]);
+      setBgIdx(0); // the fresh pick leads and selects
+    } catch { /* picker dismissed/denied — nothing changes */ }
+  };
+  const bg = allBgs[Math.min(bgIdx, allBgs.length - 1)];
 
   // ── canvas geometry — fit the format inside the viewport ────────────────────
   const maxW = winW - S.gutter * 2;
@@ -159,6 +229,20 @@ export default function ShareCardScreen() {
       { rotateZ: `${rot.value}rad` },
     ],
   }));
+
+  // v2 free-placed metric layers — fixed three (hooks unconditional; the
+  // toggle hides the RENDER, never the hook)
+  const persistPlacement = useMemo(() => (key: ShareMetricKey, p: MetricPlacement) => {
+    setPrefs(prev => {
+      const next = { ...prev, placements: { ...(prev.placements ?? {}), [key]: p } };
+      AsyncStorage.setItem(PREFS_KEY, JSON.stringify(next)).catch(() => {});
+      return next;
+    });
+  }, []);
+  const distLayer = useMetricLayer('dist', canvasW, canvasH, prefs.placements?.dist, persistPlacement);
+  const paceLayer = useMetricLayer('pace', canvasW, canvasH, prefs.placements?.pace, persistPlacement);
+  const timeLayer = useMetricLayer('time', canvasW, canvasH, prefs.placements?.time, persistPlacement);
+  const layerFor = { dist: distLayer, pace: paceLayer, time: timeLayer } as const;
 
   if (!run) return <View style={st.root} />;
 
@@ -215,15 +299,16 @@ export default function ShareCardScreen() {
               </GestureDetector>
             )}
 
-            {/* stats block — fixture white ink (dark-canvas family by design) */}
-            <View style={st.statsBlock} pointerEvents="none">
-              {rows.map(([k, v, l]) => (
-                <View key={k} style={st.statRow}>
+            {/* v2: each metric = its own free layer (fixture white ink —
+                dark-canvas family by design). Drag to place, pinch to size. */}
+            {rows.map(([k, v, l]) => (
+              <GestureDetector key={k} gesture={layerFor[k].gesture}>
+                <Reanimated.View style={[st.metricLayer, layerFor[k].style]}>
                   <Text style={st.statVal}>{v}</Text>
                   <Text style={st.statLbl}>{l}</Text>
-                </View>
-              ))}
-            </View>
+                </Reanimated.View>
+              </GestureDetector>
+            ))}
 
             {prefs.wordmark && <Text style={st.wordmark} pointerEvents="none">FreshRun</Text>}
           </View>
@@ -231,7 +316,10 @@ export default function ShareCardScreen() {
 
         {/* ── background picker ── */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={st.bgRow}>
-          {bgs.map((b, i) => (
+          <Pressable onPress={pickAlbumBg} style={[st.bgSwatch, st.albumTile]}>
+            <Icon name="images-outline" size={17} color={C.sub} />
+          </Pressable>
+          {allBgs.map((b, i) => (
             <Pressable key={i} onPress={() => setBgIdx(i)} style={[st.bgSwatch, i === bgIdx && { borderColor: C.accent }]}>
               {b.kind === 'photo' && <Image source={{ uri: b.url }} style={st.bgFill} />}
               {b.kind === 'gradient' && <LinearGradient colors={b.colors} style={st.bgFill} />}
@@ -297,14 +385,14 @@ const makeSt = (C: Tokens) => StyleSheet.create({
   canvas:     { borderRadius: 18, overflow: 'hidden', backgroundColor: '#0C0F14' },
   routeLayer: { position: 'absolute' },
 
-  statsBlock: { position: 'absolute', left: 16, bottom: 14, gap: 7 },
-  statRow:    { flexDirection: 'row', alignItems: 'baseline', gap: 7 },
+  metricLayer: { position: 'absolute', left: 0, top: 0, flexDirection: 'row', alignItems: 'baseline', gap: 7 },
   statVal:    { fontSize: 21, fontWeight: '800', color: '#fff', letterSpacing: -0.6, fontVariant: ['tabular-nums'], textShadowColor: 'rgba(0,0,0,0.55)', textShadowRadius: 5 },
   statLbl:    { fontSize: 11, fontWeight: '600', color: 'rgba(255,255,255,0.75)', letterSpacing: -0.2, textShadowColor: 'rgba(0,0,0,0.55)', textShadowRadius: 4 },
   wordmark:   { position: 'absolute', right: 14, bottom: 12, fontSize: 12, fontWeight: '800', letterSpacing: -0.3, color: 'rgba(255,255,255,0.82)', textShadowColor: 'rgba(0,0,0,0.5)', textShadowRadius: 4 },
 
   bgRow:    { gap: 8, paddingHorizontal: S.gutter, paddingTop: 14 },
-  bgSwatch: { width: 46, height: 46, borderRadius: 12, overflow: 'hidden', borderWidth: 2, borderColor: 'transparent' },
+  bgSwatch:  { width: 46, height: 46, borderRadius: 12, overflow: 'hidden', borderWidth: 2, borderColor: 'transparent' },
+  albumTile: { borderColor: C.border, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center', backgroundColor: C.surface },
   bgFill:   { width: '100%', height: '100%' },
   bgPhotoTag: { position: 'absolute', right: 3, bottom: 3, backgroundColor: 'rgba(0,0,0,0.45)', borderRadius: 5, padding: 2 },
 
