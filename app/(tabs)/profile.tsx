@@ -391,12 +391,15 @@ export default function ProfileScreen() {
         </SettingGroup>
 
         {/* 러닝 동작 — persisted via PATCH /me/settings.
-            Runtime effects: haptics is live (gates hold-stop feedback);
+            Runtime effects: haptics gates hold-stop feedback;
             voice_cue is LIVE (오디오 코치 v1 master, 2026-07-14);
-            auto_pause persist-only (feature unbuilt);
-            keep_screen_on persist-only for now (see TODO(keep-awake) in tracking.tsx). */}
+            keep_screen_on is LIVE (useKeepAwake in tracking.tsx, verified 2026-07-23).
+            자동 일시정지 row REMOVED (owner ruling 2026-07-23: a dead
+            ON-default switch sells a feature that doesn't exist — zero
+            mid-run readers). The setting persists server-side untouched;
+            the row returns WITH the real feature (post-gate item, must
+            route through togglePause). */}
         <SettingGroup title="러닝 동작">
-          <ToggleRow label="자동 일시정지"  on={runSettings.auto_pause}     onChange={v => toggleRun('auto_pause',     v)} />
           <ToggleRow label="음성 안내"      on={runSettings.voice_cue}      onChange={v => toggleRun('voice_cue',      v)} />
           <ToggleRow label="햅틱 피드백"    on={runSettings.haptics}        onChange={v => toggleRun('haptics',        v)} />
           <ToggleRow label="화면 항상 켜기" on={runSettings.keep_screen_on} onChange={v => toggleRun('keep_screen_on', v)} />

@@ -37,6 +37,8 @@ import { setRouteMap } from '@/store/route-map';
 import { useStartPoint } from '@/store/start-point';
 import { useSettings } from '@/store/use-settings';
 import {
+  LOOP_MIN_TARGET_KM,
+  LoopTooShortError,
   OneWayTooFarError,
   useGenerateRoute,
   type GeneratedRoute,
@@ -161,6 +163,11 @@ function WaypointRow({ wp, index }: { wp: Waypoint; index: number }) {
 
 const HERO_H = 210;
 
+// Loop floor sync (error-lane slice 2026-07-23): the mi-mode slider floor is
+// the smallest 0.5mi detent that COVERS the km floor (1.5mi ≥ 2.0km) — a
+// detent below it would still 422.
+const LOOP_MIN_MI = Math.ceil((LOOP_MIN_TARGET_KM / KM_PER_MI) * 2) / 2;
+
 export default function CreateScreen() {
   const C = useTokens();
   const st = useStyles(makeSt);
@@ -184,7 +191,9 @@ export default function CreateScreen() {
   const { seedKm: seedParam, auto: autoParam } = useLocalSearchParams<{ seedKm?: string; auto?: string }>();
   const seedKm = useMemo(() => {
     const { units: u, ai_course } = useSettings.getState().settings;
-    const [lo, hi] = u === 'mi' ? [0.5 * KM_PER_MI, 20 * KM_PER_MI] : [1, 30];
+    // seed lo = the LOOP floor (the form mounts in loop mode; a sub-floor
+    // pref/banner seed would land on an illegal detent)
+    const [lo, hi] = u === 'mi' ? [LOOP_MIN_MI * KM_PER_MI, 20 * KM_PER_MI] : [LOOP_MIN_TARGET_KM, 30];
     const fromBanner = seedParam ? Number(seedParam) : NaN;
     const base = Number.isFinite(fromBanner) && fromBanner > 0 ? fromBanner : ai_course.default_distance_km;
     return Math.min(hi, Math.max(lo, base));
@@ -296,6 +305,11 @@ export default function CreateScreen() {
         // Server min is authoritative (guide: feed it into the slider
         // suggestion) — the inline warn row's 설정 chip carries the fix.
         setGenError(`이 거리로는 도착지가 너무 멀어요 — 최소 ${fmtDist(e.minTargetKm, units, 1)}${distUnit(units)}가 필요해요.`);
+      } else if (e instanceof LoopTooShortError) {
+        // Loop floor — the slider floor already mirrors the server gate, so
+        // this fires only on drift (server raised its floor). Copy composed
+        // here, unit-aware, from the server's authoritative min.
+        setGenError(`순환 코스는 최소 ${fmtDist(e.minTargetKm, units, 1)}${distUnit(units)}부터 만들 수 있어요 — 목표를 올려 다시 시도해 주세요.`);
       } else {
         setGenError(e instanceof Error ? e.message : '코스 생성에 실패했어요');
       }
@@ -536,9 +550,14 @@ export default function CreateScreen() {
             </Text>
             <Text style={st.distanceEst}>약 {fmtMin(estMinForm)} 예상</Text>
           </View>
+          {/* Route-type-scoped floor (checkpoint resolution 2026-07-23):
+              loop mode mirrors the server's loop gate (LOOP_MIN_TARGET_KM —
+              stop selling detents the server 422s); 일방통행 keeps 1km/0.5mi
+              — its own end-distance gate governs there and short
+              point-to-point runs are legal. */}
           <Slider
             style={st.slider}
-            minimumValue={isMi ? 0.5 : 1}
+            minimumValue={oneWay ? (isMi ? 0.5 : 1) : (isMi ? LOOP_MIN_MI : LOOP_MIN_TARGET_KM)}
             maximumValue={isMi ? 20 : 30}
             step={0.5}
             value={distDisplay}
@@ -548,7 +567,9 @@ export default function CreateScreen() {
             thumbTintColor={C.accent}
           />
           <View style={st.sliderLabels}>
-            <Text style={st.sliderLabel}>{isMi ? '0.5 mi' : '1 km'}</Text>
+            <Text style={st.sliderLabel}>
+              {oneWay ? (isMi ? '0.5 mi' : '1 km') : (isMi ? `${LOOP_MIN_MI} mi` : `${LOOP_MIN_TARGET_KM} km`)}
+            </Text>
             <Text style={st.sliderLabel}>{isMi ? '20 mi' : '30 km'}</Text>
           </View>
         </View>
@@ -596,7 +617,16 @@ export default function CreateScreen() {
         <View style={st.section}>
           <SectionLabel text="경로 유형" />
           <View style={st.routeTypeRow}>
-            <Pressable onPress={() => setOneWay(false)} style={[st.routeTypeBtn, !oneWay && st.routeTypeBtnActive]}>
+            <Pressable
+              onPress={() => {
+                setOneWay(false);
+                // one-way→loop with a sub-floor target: the slider would
+                // DISPLAY the floor while state stayed below it (a silent
+                // 422 in waiting) — clamp the state to the floor explicitly
+                if (distanceKm < LOOP_MIN_TARGET_KM) setDistanceKm(LOOP_MIN_TARGET_KM);
+              }}
+              style={[st.routeTypeBtn, !oneWay && st.routeTypeBtnActive]}
+            >
               <Icon name="refresh-outline" size={16} color={!oneWay ? C.accentGrn : C.faint} />
               <Text style={[st.routeTypeTxt, { color: !oneWay ? C.accentGrn : C.faint }]}>원점 복귀</Text>
             </Pressable>

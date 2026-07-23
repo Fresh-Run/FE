@@ -32,6 +32,7 @@ import * as Location from 'expo-location';
 import { RunCard } from '@/components/run-card';
 import { useCurrentLocation } from '@/hooks/use-current-location';
 import { useFeed, useNearbyFeed } from '@/hooks/use-feed';
+import { LOOP_MIN_TARGET_KM } from '@/hooks/use-generate-route';
 import { getUnreadCount } from '@/lib/notifications-api';
 import { openProfile } from '@/lib/profile-nav';
 import { type FeedRun } from '@/lib/feed-api';
@@ -230,12 +231,13 @@ const TERRAIN_BANNER_LABEL = { flat: '평지 우선', mixed: '균형', hill: '�
 // 2026-07-22 — raw pref = repetitive wallpaper; history = second-guessing;
 // the band = intent + freshness). Pool [pref−0.5, pref+1] in 0.5 steps —
 // asymmetric BY SPEC: more upward room than down (a fitness nudge, never a
-// big cut). Clamped to the generation slider's own range (min 1km — the
-// ONLY hard floor; the old presentability floor is dead), deduped after
-// clamp. Rolled per home focus with an anti-repeat stamp; the rolled value
-// IS the tap's seedKm (promise/action lock). Pace derivation (recent
-// qualifying runs) STAYS — 예상 tracks the rolled value × real pace.
-const BANNER_QUAL_KM = 1, SLIDER_MIN_KM = 1, SLIDER_MAX_KM = 30;
+// big cut). Clamped to the generation slider's own range — the floor is the
+// server's LOOP floor (error-lane sync 2026-07-23: banner asks are always
+// loop-type, and sub-floor seeds now 422; the old presentability floor is
+// dead), deduped after clamp. Rolled per home focus with an anti-repeat
+// stamp; the rolled value IS the tap's seedKm (promise/action lock). Pace
+// derivation (recent qualifying runs) STAYS — 예상 tracks rolled × real pace.
+const BANNER_QUAL_KM = 1, SLIDER_MIN_KM = LOOP_MIN_TARGET_KM, SLIDER_MAX_KM = 30;
 const BANNER_ROLL_KEY = '@fr_banner_roll';
 function bannerPool(prefKm: number): number[] {
   const raw = [-0.5, 0, 0.5, 1].map(d => prefKm + d)

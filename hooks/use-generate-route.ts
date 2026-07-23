@@ -55,6 +55,26 @@ export class OneWayTooFarError extends Error {
   }
 }
 
+/** Loop floor gate (지연 batch; staging-probed 2026-07-23): a loop ask (no
+    end) below the minimum viable loop → 422 BEFORE credit spend (probe:
+    quota unchanged). detail = { error: 'loop_target_too_short', message,
+    min_target_km }. The typed error carries the number and the CALLER
+    composes copy — the server message is km-only and the client is
+    unit-aware (mi mode). */
+export class LoopTooShortError extends Error {
+  minTargetKm: number;
+  constructor(message: string, minTargetKm: number) {
+    super(message);
+    this.minTargetKm = minTargetKm;
+  }
+}
+
+/** The server's loop floor, mirrored client-side (probed min_target_km =
+    2.0). Drives the loop-mode slider minimum + the AI-banner band clamp so
+    the UI stops selling sub-floor loops; the 422 above stays the
+    authoritative backstop if the server floor ever drifts. */
+export const LOOP_MIN_TARGET_KM = 2.0;
+
 // ─── generate ─────────────────────────────────────────────────────────────────
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? '';
@@ -126,7 +146,25 @@ async function generate(input: RouteInput, signal?: AbortSignal): Promise<Genera
       if (d?.error === 'one_way_end_too_far' && typeof d.min_target_km === 'number') {
         throw new OneWayTooFarError('도착지가 목표 거리에 비해 너무 멀어요', d.min_target_km);
       }
+      if (d?.error === 'loop_target_too_short' && typeof d.min_target_km === 'number') {
+        throw new LoopTooShortError('순환 코스 최소 거리보다 짧아요', d.min_target_km);
+      }
       throw new Error('입력값을 확인해 주세요 (422)');
+    }
+    if (res.status === 503) {
+      // Honest-503 (지연 batch 2026-07-23): route_generation_unavailable =
+      // the upstream generator is down/overloaded — the ASK was fine, so the
+      // copy carries retry-SAME semantics (vs 502's change-conditions lane).
+      // Other 503s (fly gateway) share the transient framing.
+      let code: string | null = null;
+      try {
+        const body = await res.json();
+        code = typeof body?.detail?.error === 'string' ? body.detail.error : null;
+      } catch { /* non-JSON 503 — generic fallback */ }
+      if (code === 'route_generation_unavailable') {
+        throw new Error('코스 생성 서비스가 잠시 불안정해요. 조건은 그대로 두고 잠시 후 다시 시도해 주세요.');
+      }
+      throw new Error('서버가 잠시 응답하지 않아요. 잠시 후 다시 시도해 주세요.');
     }
     if (res.status === 502) {
       // v2.1 계약 (BE routes.py 502 detail.error): route_generation_failed =
