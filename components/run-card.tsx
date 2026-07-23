@@ -22,7 +22,7 @@ import type { useSettings } from '@/store/use-settings';
 // Course affordances (이 코스 달리기 CTA + header bookmark, canvas card B)
 // REMOVED 2026-07-21 — owner step-back ruling; the feature returns
 // post-launch. Full prop/UI/style implementation lives at commit 82c5bc9.
-export function RunCard({ run, units, mapLive, onKudos, kudosOff, onOpen, onAvatarPress, onShare }: {
+export function RunCard({ run, units, mapLive, onKudos, kudosOff, onOpen, onAvatarPress }: {
   run: UserRun;
   units: ReturnType<typeof useSettings.getState>['settings']['units'];
   mapLive: boolean;
@@ -32,18 +32,13 @@ export function RunCard({ run, units, mapLive, onKudos, kudosOff, onOpen, onAvat
   onOpen?: () => void;
   /** discovery funnel: avatar tap → profile (absent = not tappable) */
   onAvatarPress?: () => void;
-  /** share-card door (2026-07-24): LONG-PRESS opens the composer — the
-      house own-content idiom (onLongPress={cond ? fn : undefined}, the
-      comment-delete grammar). Parents pass it ONLY for own runs (scope
-      ruling: own-runs-only v1; others' runs post-gate w/ 지연 privacy). */
-  onShare?: () => void;
 }) {
   const C = useTokens();
   const st = useStyles(makeSt);
   // visual-split ruling: full track when fetched, thumb while loading
   const { line: cardLine, pending: linePending } = useRunTrack(mapLive ? run.run_id : null, run.polyline_thumb);
   return (
-    <Pressable onPress={onOpen} onLongPress={onShare} disabled={!onOpen && !onShare} style={({ pressed }) => [st.card, shadows.sm, pressed && !!(onOpen || onShare) && { opacity: 0.85 }]}>
+    <Pressable onPress={onOpen} disabled={!onOpen} style={({ pressed }) => [st.card, shadows.sm, pressed && !!onOpen && { opacity: 0.85 }]}>
       <View style={st.cardHead}>
         <Pressable onPress={onAvatarPress} disabled={!onAvatarPress} hitSlop={6}>
           <Avatar name={run.nickname} size={36} photoUrl={run.avatar_url} ring={C.border} initialsRatio={0.38} upper />

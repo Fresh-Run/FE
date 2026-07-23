@@ -337,7 +337,6 @@ export default function UserProfileScreen() {
                   run={shown}
                   units={units}
                   mapLive={liveIds.has(item.run_id)}
-                  onShare={shown.is_mine ? () => router.push({ pathname: '/share-card' as never, params: { runId: shown.run_id } }) : undefined}
                   onKudos={() => toggleKudos(item)}
                   kudosOff={likesOff}
                   // Own rows keep no tap here (내 프로필/기록 → activity is

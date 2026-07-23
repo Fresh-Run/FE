@@ -287,6 +287,21 @@ export default function RunPostScreen() {
           <Icon name="arrow-back" size={20} color={C.text} />
         </Pressable>
         <Text style={st.appBarTitle}>러닝</Text>
+        {/* 공유 — the run-detail header idiom (활동 상세's icon; joined at
+            the 2026-07-24 revision: card long-press RETIRED, every screen a
+            run opens on carries the header share instead). Own-runs-only:
+            isOwn (내 프로필 door passes own=1) OR detail user_id match —
+            feed/crew doors open OWN posts without own=1, and sanitized
+            others' detail omits user_id → hidden, honest. */}
+        {(isOwn || (run?.user_id != null && run.user_id === myUid)) && (
+          <Pressable
+            onPress={() => router.push({ pathname: '/share-card' as never, params: { runId: params.runId } })}
+            hitSlop={12}
+            style={st.backBtn}
+          >
+            <Icon name="share-outline" size={19} color={C.text} />
+          </Pressable>
+        )}
         {/* ⋯ — both modes since the own-⋯ slice (2026-07-21): own → 수정/삭제
             (the guide's prescribed own-detail consumption), others → 신고 */}
         <Pressable onPress={() => setMenuOpen(true)} hitSlop={12} style={st.backBtn}>

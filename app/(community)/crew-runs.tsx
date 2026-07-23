@@ -48,23 +48,19 @@ import { shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { useRunTrack } from '@/lib/track-cache';
 import { useSettings } from '@/store/use-settings';
-import { useStore } from '@/store/use-store';
 
-function RunCard({ run, units, mapLive, onOpen, onShare }: {
+function RunCard({ run, units, mapLive, onOpen }: {
   run: CrewRunItem;
   units: ReturnType<typeof useSettings.getState>['settings']['units'];
   mapLive: boolean;
   onOpen: () => void;
-  /** share-card door — long-press, own runs only (uid compare: CrewRunItem
-      has no is_mine; user_id === myUid is the run-post comment idiom) */
-  onShare?: () => void;
 }) {
   const C = useTokens();
   const st = useStyles(makeSt);
   // visual-split ruling: full track when fetched, thumb while loading
   const { line: cardLine, pending: linePending } = useRunTrack(mapLive ? run.run_id : null, run.polyline_thumb);
   return (
-    <Pressable onPress={onOpen} onLongPress={onShare} style={({ pressed }) => [st.card, shadows.sm, pressed && { opacity: 0.85 }]}>
+    <Pressable onPress={onOpen} style={({ pressed }) => [st.card, shadows.sm, pressed && { opacity: 0.85 }]}>
       <View style={st.cardHead}>
         <Pressable onPress={() => run.user_id && openProfile(run.user_id, run.nickname ?? '러너')} hitSlop={6}>
           <Avatar name={run.nickname} size={36} photoUrl={run.avatar_url} ring={C.border} initialsRatio={0.38} upper />
@@ -123,7 +119,6 @@ function RunCard({ run, units, mapLive, onOpen, onShare }: {
 
 export default function CrewRunsScreen() {
   const C = useTokens();
-  const myUid = useStore(st => st.session?.user.id);
   const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
   const { crewId } = useLocalSearchParams<{ crewId: string }>();
@@ -218,7 +213,7 @@ export default function CrewRunsScreen() {
           data={rows}
           keyExtractor={r => r.run_id}
           renderItem={({ item }) => (
-            <RunCard run={item} units={units} mapLive={liveIds.has(item.run_id)} onOpen={() => openRun(item)} onShare={item.user_id === myUid ? () => router.push({ pathname: '/share-card' as never, params: { runId: item.run_id } }) : undefined} />
+            <RunCard run={item} units={units} mapLive={liveIds.has(item.run_id)} onOpen={() => openRun(item)} />
           )}
           viewabilityConfig={viewabilityConfig}
           onViewableItemsChanged={onViewableItemsChanged}

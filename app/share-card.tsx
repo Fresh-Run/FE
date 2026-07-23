@@ -32,17 +32,16 @@ import Svg, { Circle, Path } from 'react-native-svg';
 import { Icon } from '@/components/ui';
 import { useRunDetail } from '@/hooks/use-runs';
 import { useRunTrack } from '@/lib/track-cache';
-import { distUnit, fmtDist, fmtDuration, fmtPaceIn, fmtWhen, paceUnit, timeTitle } from '@/lib/run-format';
+import { distUnit, fmtDist, fmtDuration, fmtPaceIn, paceUnit, timeTitle } from '@/lib/run-format';
 import { routeStroke } from '@/lib/theme';
 import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
-import { KCAL_PER_KG_KM, useLocalProfile } from '@/store/use-local-profile';
 import { useSettings } from '@/store/use-settings';
 import type { Coordinate } from '@/types';
 
 // ─── Prefs (persisted metric selection — v1 local; settings.share later) ─────
 
-export type ShareMetricKey = 'dist' | 'time' | 'pace' | 'best' | 'splits' | 'kcal' | 'date';
+export type ShareMetricKey = 'dist' | 'pace' | 'time';
 type SharePrefs = {
   metrics: Record<ShareMetricKey, boolean>;
   format: '1:1' | '9:16';
@@ -50,13 +49,15 @@ type SharePrefs = {
 };
 const PREFS_KEY = '@fr_share_prefs';
 const DEFAULT_PREFS: SharePrefs = {
-  metrics: { dist: true, time: true, pace: true, best: false, splits: false, kcal: false, date: true },
+  // Owner trim 2026-07-24: exactly three — 거리·평균 페이스·시간. The old
+  // keys (best/splits/kcal/date) live on inert in stale stored blobs (the
+  // merge keeps them; nothing reads them) — v2 candidates, ledgered.
+  metrics: { dist: true, pace: true, time: true },
   format: '9:16',
   wordmark: true,
 };
 const METRIC_LABELS: Record<ShareMetricKey, string> = {
-  dist: '거리', time: '시간', pace: '페이스', best: '최고 구간',
-  splits: '스플릿', kcal: '칼로리', date: '날짜',
+  dist: '거리', pace: '평균 페이스', time: '시간',
 };
 
 // ─── Backgrounds — dark-fixture house family (night-canvas precedent) ─────────
@@ -99,11 +100,6 @@ export default function ShareCardScreen() {
   const units = useSettings(s => s.settings.units);
   const { line } = useRunTrack(run?.id ?? null, run?.polyline_thumb);
   const routeLine = line ?? run?.polyline_thumb ?? null;
-
-  // kcal — the honest-estimate rule follows the metric onto the card
-  const lpFields = useLocalProfile(s => s.fields);
-  const lpSaved  = useLocalProfile(s => s.saved);
-  useEffect(() => { useLocalProfile.getState().hydrate(); }, []);
 
   // ── prefs (hydrate once; every change persists) ─────────────────────────────
   const [prefs, setPrefs] = useState<SharePrefs>(DEFAULT_PREFS);
@@ -166,30 +162,18 @@ export default function ShareCardScreen() {
 
   if (!run) return <View style={st.root} />;
 
-  // ── metric values (v88-aware, same fallback chains as 활동 상세) ────────────
-  const movingSec = run.moving_sec ?? run.duration_sec;
-  const fullLaps = (run.splits ?? []).filter(s => !s.partial);
-  const bestSec = fullLaps.length ? Math.min(...fullLaps.map(s => s.moving_sec ?? s.sec)) : null;
+  // ── metric values — the ruled three. 시간 = SINGLE 총 시간 (owner lean
+  // adopted: the stranger reading a story understands wall time; the
+  // moving·총 pair is analysis-grade and lives on 활동 상세). 페이스 keeps
+  // the moving-based VALUE (fallback-chained) — the honest average.
   const avgPace = run.moving_sec != null && run.distance_km > 0
     ? Math.round(run.moving_sec / run.distance_km)
     : run.avg_pace_sec_per_km;
-  const kcal = lpSaved && lpFields.weightKg > 0
-    ? Math.round(KCAL_PER_KG_KM * lpFields.weightKg * run.distance_km)
-    : null;
   const title = run.title ?? timeTitle(run.ran_at);
   const rows: [ShareMetricKey, string, string][] = [];
   if (prefs.metrics.dist) rows.push(['dist', `${fmtDist(run.distance_km, units, 2)}${distUnit(units)}`, '거리']);
-  if (prefs.metrics.time) rows.push(['time', run.moving_sec != null && run.moving_sec !== run.duration_sec
-    ? `${fmtDuration(movingSec)} · 총 ${fmtDuration(run.duration_sec)}`
-    : fmtDuration(movingSec), '시간']);
-  if (prefs.metrics.pace && avgPace != null) rows.push(['pace', `${fmtPaceIn(avgPace, units)}${paceUnit(units)}`, '페이스']);
-  if (prefs.metrics.best && bestSec != null) rows.push(['best', `${fmtPaceIn(bestSec, units)}${paceUnit(units)}`, '최고 구간']);
-  if (prefs.metrics.kcal && kcal != null) rows.push(['kcal', `${kcal} kcal`, '칼로리 (추정)']);
-
-  const splitBars = prefs.metrics.splits && (run.splits ?? []).length >= 2 ? (run.splits ?? []) : null;
-  const splitSecs = splitBars ? splitBars.map(s => s.moving_sec ?? s.sec) : [];
-  const sMin = splitSecs.length ? Math.min(...splitSecs) : 0;
-  const sMax = splitSecs.length ? Math.max(...splitSecs) : 1;
+  if (prefs.metrics.pace && avgPace != null) rows.push(['pace', `${fmtPaceIn(avgPace, units)}${paceUnit(units)}`, '평균 페이스']);
+  if (prefs.metrics.time) rows.push(['time', fmtDuration(run.duration_sec), '시간']);
 
   const shareText = () => {
     const parts = [
@@ -233,21 +217,12 @@ export default function ShareCardScreen() {
 
             {/* stats block — fixture white ink (dark-canvas family by design) */}
             <View style={st.statsBlock} pointerEvents="none">
-              {prefs.metrics.date && <Text style={st.cardDate}>{fmtWhen(run.ran_at)} · {title}</Text>}
               {rows.map(([k, v, l]) => (
                 <View key={k} style={st.statRow}>
                   <Text style={st.statVal}>{v}</Text>
                   <Text style={st.statLbl}>{l}</Text>
                 </View>
               ))}
-              {splitBars && (
-                <View style={st.splitRow}>
-                  {splitSecs.slice(0, 10).map((sec, i) => {
-                    const t = (sec - sMin) / Math.max(1, sMax - sMin);
-                    return <View key={i} style={[st.splitBar, { height: 8 + (1 - t) * 18, opacity: splitBars[i].partial ? 0.5 : 0.9 }]} />;
-                  })}
-                </View>
-              )}
             </View>
 
             {prefs.wordmark && <Text style={st.wordmark} pointerEvents="none">FreshRun</Text>}
@@ -323,12 +298,9 @@ const makeSt = (C: Tokens) => StyleSheet.create({
   routeLayer: { position: 'absolute' },
 
   statsBlock: { position: 'absolute', left: 16, bottom: 14, gap: 7 },
-  cardDate:   { fontSize: 11, fontWeight: '600', color: 'rgba(255,255,255,0.85)', letterSpacing: -0.2, marginBottom: 2, textShadowColor: 'rgba(0,0,0,0.55)', textShadowRadius: 4 },
   statRow:    { flexDirection: 'row', alignItems: 'baseline', gap: 7 },
   statVal:    { fontSize: 21, fontWeight: '800', color: '#fff', letterSpacing: -0.6, fontVariant: ['tabular-nums'], textShadowColor: 'rgba(0,0,0,0.55)', textShadowRadius: 5 },
   statLbl:    { fontSize: 11, fontWeight: '600', color: 'rgba(255,255,255,0.75)', letterSpacing: -0.2, textShadowColor: 'rgba(0,0,0,0.55)', textShadowRadius: 4 },
-  splitRow:   { flexDirection: 'row', alignItems: 'flex-end', gap: 3, marginTop: 3 },
-  splitBar:   { width: 5, borderRadius: 2.5, backgroundColor: '#74E827' },
   wordmark:   { position: 'absolute', right: 14, bottom: 12, fontSize: 12, fontWeight: '800', letterSpacing: -0.3, color: 'rgba(255,255,255,0.82)', textShadowColor: 'rgba(0,0,0,0.5)', textShadowRadius: 4 },
 
   bgRow:    { gap: 8, paddingHorizontal: S.gutter, paddingTop: 14 },
