@@ -63,6 +63,21 @@ type ViewState     = 'form' | 'generating' | 'result';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+/** Friendly-rounded shortfall for the undershoot invitation (지연 copy,
+    2026-07-23). km mode: <1km → meters in 50m steps ("600m"), ≥1km → 0.1km
+    ("1.2km"). mi mode: 0.1mi steps ("0.4mi"). target_missed only fires
+    beyond the ±0.5km 보장, so the value never rounds to zero in km mode;
+    the mi floor guards the 0.31mi minimum from displaying as 0.3→ fine,
+    but a sub-step value clamps UP to one step (never "0 부족"). */
+function fmtShortfall(km: number, units: 'km' | 'mi'): string {
+  if (units === 'mi') {
+    const mi = Math.max(0.1, Math.round((km / KM_PER_MI) * 10) / 10);
+    return `${mi.toFixed(1)}mi`;
+  }
+  if (km < 1) return `${Math.max(50, Math.round((km * 1000) / 50) * 50)}m`;
+  return `${(Math.round(km * 10) / 10).toFixed(1)}km`;
+}
+
 function fmtMin(min: number): string {
   if (min < 60) return `${min}분`;
   const h = Math.floor(min / 60);
@@ -412,8 +427,13 @@ export default function CreateScreen() {
                 <Icon name="alert-circle-outline" size={16} color={C.sun} />
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <Text style={st.missTitle}>요청 거리와 조금 달라요</Text>
+                  {/* Undershoot = action-framed (지연 copy upgrade 2026-07-23):
+                      the shortfall becomes an invitation, friendly-rounded
+                      (fmtShortfall). Overshoot keeps the factual delta line. */}
                   <Text style={st.missSub}>
-                    {`${fmtDist(genTargetKm, units, 1)}${distUnit(units)} 요청 → ${fmtDist(route.total_distance_km, units, 1)}${distUnit(units)} (${deltaKm >= 0 ? '+' : '-'}${fmtDist(Math.abs(deltaKm), units, 1)}${distUnit(units)})`}
+                    {deltaKm < 0
+                      ? `목표까지 약 ${fmtShortfall(-deltaKm, units)} 부족해요 — 마지막에 한 블록만 더!`
+                      : `${fmtDist(genTargetKm, units, 1)}${distUnit(units)} 요청 → ${fmtDist(route.total_distance_km, units, 1)}${distUnit(units)} (+${fmtDist(deltaKm, units, 1)}${distUnit(units)})`}
                   </Text>
                 </View>
                 <Pressable onPress={handleGenerate} hitSlop={6} style={({ pressed }) => [st.missRetryBtn, pressed && { opacity: 0.7 }]}>
