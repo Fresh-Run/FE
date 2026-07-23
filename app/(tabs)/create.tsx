@@ -295,6 +295,10 @@ const makeSt = (C: Tokens) => StyleSheet.create({
 
   // Map card
   mapCard: { height: 164, borderRadius: R.xl, overflow: 'hidden', marginBottom: S.md },
+  // Re-pair (half-converted-pair class, inverse limb, 2026-07-23): the bg
+  // was a white FIXTURE while the label went token — white-on-white in dark.
+  // Joins the pills-over-maps convention (route-map/meet-map titlePill):
+  // scheme-keyed surface × token text, contrast by construction both schemes.
   locationPill: {
     position:          'absolute',
     top:               12,
@@ -302,10 +306,11 @@ const makeSt = (C: Tokens) => StyleSheet.create({
     flexDirection:     'row',
     alignItems:        'center',
     gap:               5,
-    backgroundColor:   'rgba(255,255,255,0.92)',
+    backgroundColor:   C.surface,
     borderRadius:      R.pill,
     paddingHorizontal: 10,
     paddingVertical:   6,
+    ...shadows.sm,
   },
   locationTxt: { fontSize: 12, fontWeight: '600', color: C.text, letterSpacing: -0.2 },
 
