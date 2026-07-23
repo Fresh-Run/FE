@@ -14,7 +14,10 @@
  *    via gesture-handler + Reanimated, house lime stroke.
  *  - Metrics: ruled enumeration (고도 EXCLUDED — privacy-null); selection
  *    persisted (@fr_share_prefs, AsyncStorage v1).
- *  - Wordmark default-ON with off toggle (organic growth, canvas ownership).
+ *  - Wordmark PERMANENT (re-ruling 2026-07-24 supersedes the off-toggle:
+ *    marketing/organic growth) — renders unconditionally, both formats;
+ *    persisted wordmark:false blobs are INERT KEYS (the stale-blob class —
+ *    nothing reads them, no migration write needed).
  *  - HONEST NO-EXPORT interim (stated adaptation): 텍스트로 공유 stays the
  *    WORKING primary action; 이미지 저장 renders disabled with the honest
  *    caption — the button is never a dead end.
@@ -56,7 +59,6 @@ type MetricPlacement = { x: number; y: number; s: number }; // x/y = canvas frac
 type SharePrefs = {
   metrics: Record<ShareMetricKey, boolean>;
   format: '1:1' | '9:16';
-  wordmark: boolean;
   /** v2 free-placement — absent keys fall to the default stack (merge-safe) */
   placements?: Partial<Record<ShareMetricKey, MetricPlacement>>;
   /** v2.1 — route stroke styling (global taste, like metric selection) */
@@ -75,7 +77,6 @@ const DEFAULT_PREFS: SharePrefs = {
   // merge keeps them; nothing reads them) — v2 candidates, ledgered.
   metrics: { dist: true, pace: true, time: true },
   format: '9:16',
-  wordmark: true,
 };
 const METRIC_LABELS: Record<ShareMetricKey, string> = {
   dist: '거리', pace: '평균 페이스', time: '시간',
@@ -412,7 +413,8 @@ export default function ShareCardScreen() {
               </GestureDetector>
             ))}
 
-            {prefs.wordmark && <Text style={st.wordmark} pointerEvents="none">FreshRun</Text>}
+            {/* permanent wordmark (re-ruling) — subtle corner, both formats */}
+            <Text style={st.wordmark} pointerEvents="none">FreshRun</Text>
           </View>
         </View>
 
@@ -439,9 +441,6 @@ export default function ShareCardScreen() {
                 <Text style={[st.chipTxt, prefs.format === f && st.chipTxtOn]}>{f === '1:1' ? '정방형 1:1' : '스토리 9:16'}</Text>
               </Pressable>
             ))}
-            <Pressable onPress={() => save({ ...prefs, wordmark: !prefs.wordmark })} style={[st.chip, prefs.wordmark && st.chipOn]}>
-              <Text style={[st.chipTxt, prefs.wordmark && st.chipTxtOn]}>워드마크</Text>
-            </Pressable>
           </View>
           <Text style={st.groupLbl}>루트 스타일</Text>
           <View style={st.chipRow}>
