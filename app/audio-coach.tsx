@@ -14,10 +14,11 @@
 import Slider from '@react-native-community/slider';
 import { router } from 'expo-router';
 import React, { useEffect } from 'react';
-import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/ui';
+import { Toggle } from '@/components/toggle';
 import { composeIntervalSample, composeRateSample, speakCue } from '@/lib/audio-coach';
 import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
@@ -72,12 +73,7 @@ export default function AudioCoachScreen() {
             <Text style={st.masterTitle}>실시간 음성 코칭</Text>
             <Text style={st.masterSub}>러닝 중 구간마다 음성으로 안내해요</Text>
           </View>
-          <Switch
-            value={voiceCue}
-            onValueChange={v => { void setRunSetting('voice_cue', v); }}
-            trackColor={{ true: C.accent, false: C.border }}
-            thumbColor="#fff"
-          />
+          <Toggle on={voiceCue} onChange={v => { void setRunSetting('voice_cue', v); }} />
         </View>
 
         <View style={{ opacity: voiceCue ? 1 : 0.4 }} pointerEvents={voiceCue ? 'auto' : 'none'}>
@@ -118,12 +114,7 @@ export default function AudioCoachScreen() {
                     <Text style={st.rowLabel}>{label}</Text>
                     <Text style={st.rowSub}>{sub}</Text>
                   </View>
-                  <Switch
-                    value={coach.items[k]}
-                    onValueChange={v => coach.setItem(k, v)}
-                    trackColor={{ true: C.accent, false: C.border }}
-                    thumbColor="#fff"
-                  />
+                  <Toggle on={coach.items[k]} onChange={v => coach.setItem(k, v)} />
                 </View>
               </React.Fragment>
             ))}

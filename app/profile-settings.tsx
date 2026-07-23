@@ -21,10 +21,11 @@
  */
 import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/ui';
+import { Toggle } from '@/components/toggle';
 import { getMyProfile, listFollowRequests, updateProfile, type ProfileVisibility } from '@/lib/profile-api';
 import { shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
@@ -191,12 +192,7 @@ export default function ProfileSettingsScreen() {
               <Text style={st.rowLabel}>러닝 자동 게시</Text>
               <Text style={st.rowSub}>러닝 저장 시 프로필 피드에 자동 공개</Text>
             </View>
-            <Switch
-              value={feed.auto_publish}
-              onValueChange={v => toggleFeed('auto_publish', v)}
-              trackColor={{ true: C.accent, false: C.border }}
-              thumbColor="#fff"
-            />
+            <Toggle on={feed.auto_publish} onChange={v => toggleFeed('auto_publish', v)} />
           </View>
           <View style={st.row}>
             <View style={st.rowIcon}><Icon name="heart-outline" size={18} color={C.sub} /></View>
@@ -204,12 +200,7 @@ export default function ProfileSettingsScreen() {
               <Text style={st.rowLabel}>좋아요 허용</Text>
               <Text style={st.rowSub}>다른 러너가 내 러닝에 좋아요를 남길 수 있어요</Text>
             </View>
-            <Switch
-              value={feed.allow_likes}
-              onValueChange={v => toggleFeed('allow_likes', v)}
-              trackColor={{ true: C.accent, false: C.border }}
-              thumbColor="#fff"
-            />
+            <Toggle on={feed.allow_likes} onChange={v => toggleFeed('allow_likes', v)} />
           </View>
           <View style={st.row}>
             <View style={st.rowIcon}><Icon name="chatbubble-outline" size={18} color={C.sub} /></View>
@@ -217,12 +208,7 @@ export default function ProfileSettingsScreen() {
               <Text style={st.rowLabel}>댓글 허용</Text>
               <Text style={st.rowSub}>내 러닝에 댓글을 남길 수 있어요</Text>
             </View>
-            <Switch
-              value={feed.allow_comments}
-              onValueChange={v => toggleFeed('allow_comments', v)}
-              trackColor={{ true: C.accent, false: C.border }}
-              thumbColor="#fff"
-            />
+            <Toggle on={feed.allow_comments} onChange={v => toggleFeed('allow_comments', v)} />
           </View>
         </Group>
 
@@ -233,12 +219,7 @@ export default function ProfileSettingsScreen() {
               <Text style={st.rowLabel}>팔로우 승인제</Text>
               <Text style={st.rowSub}>새 팔로워를 직접 승인해요</Text>
             </View>
-            <Switch
-              value={approval}
-              onValueChange={toggleApproval}
-              trackColor={{ true: C.accent, false: C.border }}
-              thumbColor="#fff"
-            />
+            <Toggle on={approval} onChange={toggleApproval} />
           </View>
           <NavRow
             icon="mail-unread-outline"

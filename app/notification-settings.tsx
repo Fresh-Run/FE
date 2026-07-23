@@ -15,10 +15,11 @@
  */
 import { router } from 'expo-router';
 import React, { useEffect } from 'react';
-import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/ui';
+import { Toggle } from '@/components/toggle';
 import type { NotifSettings } from '@/lib/settings-api';
 import { shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
@@ -89,12 +90,7 @@ export default function NotificationSettingsScreen() {
               <Text style={st.masterTitle}>푸시 알림</Text>
               <Text style={st.masterSub}>끄면 모든 알림이 오지 않아요</Text>
             </View>
-            <Switch
-              value={notif.master}
-              onValueChange={v => { setNotifSetting('master', v); }}
-              trackColor={{ true: C.accent, false: C.border }}
-              thumbColor="#fff"
-            />
+            <Toggle on={notif.master} onChange={v => { setNotifSetting('master', v); }} />
           </View>
           {/* the delivery truth — store-now, push-later, in-app unaffected */}
           <Text style={st.deliveryNote}>
@@ -120,12 +116,7 @@ export default function NotificationSettingsScreen() {
                         <Text style={st.rowLabel}>{r.label}</Text>
                         <Text style={st.rowSub}>{r.sub}</Text>
                       </View>
-                      <Switch
-                        value={notif[r.key]}
-                        onValueChange={v => { setNotifSetting(r.key, v); }}
-                        trackColor={{ true: C.accent, false: C.border }}
-                        thumbColor="#fff"
-                      />
+                      <Toggle on={notif[r.key]} onChange={v => { setNotifSetting(r.key, v); }} />
                     </View>
                   </React.Fragment>
                 ))}

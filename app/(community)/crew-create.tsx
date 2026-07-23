@@ -23,7 +23,6 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  Switch,
   Text,
   TextInput,
   View,
@@ -31,6 +30,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/ui';
+import { Toggle } from '@/components/toggle';
 import { NumberWheelRow } from '@/components/wheel-sheet';
 import { createChallenge, dateToKstIsoDay, kstDateStr } from '@/lib/challenges-api';
 import { createCrew, CREW_TAG_GROUPS, CREW_TAG_MAX, type Crew, type CrewLevel } from '@/lib/crews-api';
@@ -463,12 +463,7 @@ export default function CrewCreateScreen() {
               <Text style={st.challengeToggleLabel}>크루 챌린지 시작하기</Text>
               <Text style={st.challengeToggleSub}>크루원과 함께 달릴 첫 목표를 만들어요</Text>
             </View>
-            <Switch
-              value={challengeOn}
-              onValueChange={setChallengeOn}
-              trackColor={{ true: C.accent, false: C.border }}
-              thumbColor="#fff"
-            />
+            <Toggle on={challengeOn} onChange={setChallengeOn} />
           </View>
           {challengeOn && (
             <>

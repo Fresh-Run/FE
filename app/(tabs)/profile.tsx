@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Avatar } from '@/components/avatar';
 import { useTabBarInset } from '@/components/fresh-tab-bar';
 import { Icon } from '@/components/ui';
+import { Toggle } from '@/components/toggle';
 import { useProfile, type Profile, type RunStats } from '@/hooks/use-profile';
 import { healthAvailable, requestHealthAuthorization } from '@/lib/health';
 import { distUnit, fmtDist, fmtPaceIn, type Units } from '@/lib/run-format';
@@ -30,19 +31,8 @@ import { useStore } from '@/store/use-store';
 
 // ─── Toggle ───────────────────────────────────────────────────────────────────
 
-function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
-  const C = useTokens();
-  const st = useStyles(makeSt);
-  return (
-    <Pressable
-      onPress={() => onChange(!on)}
-      style={[st.toggleTrack, { backgroundColor: on ? C.accent : C.border }]}
-      hitSlop={6}
-    >
-      <View style={[st.toggleThumb, { transform: [{ translateX: on ? 18 : 0 }] }]} />
-    </Pressable>
-  );
-}
+// Toggle — now the shared house component (components/toggle.tsx, extraction
+// 2026-07-23): gated buzz-when-ON rides there; the local copy is retired.
 
 // ─── SettingRow ───────────────────────────────────────────────────────────────
 
@@ -411,7 +401,7 @@ export default function ProfileScreen() {
             route through togglePause). */}
         <SettingGroup title="러닝 동작">
           <ToggleRow label="음성 안내"      on={runSettings.voice_cue}      onChange={v => toggleRun('voice_cue',      v)} />
-          <ToggleRow label="햅틱 피드백"    on={runSettings.haptics}        onChange={v => toggleRun('haptics',        v)} caption="기기의 시스템 햅틱 설정도 켜져 있어야 해요" />
+          <ToggleRow label="햅틱 피드백"    on={runSettings.haptics}        onChange={v => toggleRun('haptics',        v)} caption="기기의 시스템 햅틱 설정도 켜져 있어야 해요 · 휠 선택기는 시스템 자체 햅틱을 써요" />
           <ToggleRow label="화면 항상 켜기" on={runSettings.keep_screen_on} onChange={v => toggleRun('keep_screen_on', v)} />
         </SettingGroup>
 
@@ -510,8 +500,6 @@ const makeSt = (C: Tokens) => StyleSheet.create({
 
   // Toggle row
   toggleRow:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 13, paddingHorizontal: 4 },
-  toggleTrack:  { width: 46, height: 28, borderRadius: 14, padding: 3, justifyContent: 'center' },
-  toggleThumb:  { width: 22, height: 22, borderRadius: 11, backgroundColor: '#fff', shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 3, shadowOffset: { width: 0, height: 1 }, elevation: 2 },
 
   // States
   centeredState: { paddingTop: 60, alignItems: 'center', gap: 12 },

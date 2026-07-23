@@ -28,6 +28,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MiniMap } from '@/components/mini-map';
 import { RealMap } from '@/components/real-map';
 import { Icon } from '@/components/ui';
+import { Toggle } from '@/components/toggle';
 import { useCurrentLocation } from '@/hooks/use-current-location';
 import { distUnit, fmtDist, KM_PER_MI } from '@/lib/run-format';
 import { haversineKm } from '@/lib/run-metrics';
@@ -95,19 +96,8 @@ function Chip({
   );
 }
 
-function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
-  const C = useTokens();
-  const st = useStyles(makeSt);
-  return (
-    <Pressable
-      onPress={() => onChange(!on)}
-      style={[st.toggleTrack, { backgroundColor: on ? C.accent : C.border }]}
-      hitSlop={6}
-    >
-      <View style={[st.toggleThumb, { transform: [{ translateX: on ? 18 : 0 }] }]} />
-    </Pressable>
-  );
-}
+// Toggle — shared house component now (components/toggle.tsx, 2026-07-23):
+// gated buzz-when-ON rides there; the local copy is retired.
 
 function AdvToggleRow({ label, sub, on, onChange }: {
   label: string; sub: string; on: boolean; onChange: (v: boolean) => void;
@@ -831,8 +821,6 @@ const makeSt = (C: Tokens) => StyleSheet.create({
   advToggleRow:   { flexDirection: 'row', alignItems: 'center', gap: 12, paddingTop: S.lg },
   advToggleLabel: { fontSize: 14.5, fontWeight: '600', color: C.text, letterSpacing: -0.3 },
   advToggleSub:   { fontSize: 12, color: C.faint, letterSpacing: -0.2, marginTop: 3 },
-  toggleTrack:    { width: 46, height: 28, borderRadius: 14, padding: 3, justifyContent: 'center' },
-  toggleThumb:    { width: 22, height: 22, borderRadius: 11, backgroundColor: '#fff' },
   advFooter:    { marginTop: S.lg, backgroundColor: C.surfaceAlt, borderRadius: R.md, padding: 12 },
   advFooterTxt: { fontSize: 12.5, color: C.sub, letterSpacing: -0.2, lineHeight: 18 },
   advFooterSub: { fontSize: 11.5, color: C.faint, letterSpacing: -0.2, marginTop: 4 },

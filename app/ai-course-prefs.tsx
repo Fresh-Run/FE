@@ -15,6 +15,7 @@ import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/ui';
+import { Toggle } from '@/components/toggle';
 import type { AiCourseSettings } from '@/lib/settings-api';
 import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
@@ -56,19 +57,8 @@ function SelectRow({ label, sub, selected, onSelect }: {
   );
 }
 
-function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
-  const C = useTokens();
-  const st = useStyles(makeSt);
-  return (
-    <Pressable
-      onPress={() => onChange(!on)}
-      style={[st.toggleTrack, { backgroundColor: on ? C.accent : C.border }]}
-      hitSlop={6}
-    >
-      <View style={[st.toggleThumb, { transform: [{ translateX: on ? 18 : 0 }] }]} />
-    </Pressable>
-  );
-}
+// Toggle — shared house component now (components/toggle.tsx, 2026-07-23):
+// gated buzz-when-ON rides there; the local copy is retired.
 
 function ToggleRow({ label, sub, on, onChange }: {
   label: string; sub: string; on: boolean; onChange: (v: boolean) => void;
@@ -242,8 +232,6 @@ const makeSt = (C: Tokens) => StyleSheet.create({
   radioOuter: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: C.border, alignItems: 'center', justifyContent: 'center' },
   radioInner: { width: 12, height: 12, borderRadius: 6, backgroundColor: C.accent },
 
-  toggleTrack: { width: 46, height: 28, borderRadius: 14, padding: 3, justifyContent: 'center' },
-  toggleThumb: { width: 22, height: 22, borderRadius: 11, backgroundColor: '#fff' },
 
   stepperCtrls: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   stepBtn:      { width: 34, height: 34, borderRadius: R.md, borderWidth: 1, borderColor: C.border, backgroundColor: C.surface, alignItems: 'center', justifyContent: 'center' },

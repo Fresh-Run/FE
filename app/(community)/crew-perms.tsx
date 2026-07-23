@@ -32,6 +32,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/avatar';
 import { Icon } from '@/components/ui';
+import { Toggle } from '@/components/toggle';
 import {
   getCrewMembers,
   updateMemberPermissions,
@@ -53,20 +54,8 @@ const PERM_DEFS: { key: keyof CrewPermissions; label: string; desc: string; dang
   { key: 'manage_admins', label: '다른 운영진 임명', desc: '크루원을 운영진으로 지정·해제해요',    danger: true },
 ];
 
-function Toggle({ on, disabled, onPress }: { on: boolean; disabled?: boolean; onPress: () => void }) {
-  const C = useTokens();
-  const st = useStyles(makeSt);
-  return (
-    <Pressable
-      onPress={disabled ? undefined : onPress}
-      disabled={disabled}
-      hitSlop={6}
-      style={[st.togTrack, { backgroundColor: on ? C.accent : C.border }, disabled && { opacity: 0.4 }]}
-    >
-      <View style={[st.togThumb, { transform: [{ translateX: on ? 18 : 0 }] }]} />
-    </Pressable>
-  );
-}
+// Toggle — shared house component now (components/toggle.tsx, 2026-07-23):
+// the 4th local variant retired; its disabled prop moved into the shared one.
 
 export default function CrewPermsScreen() {
   const C = useTokens();
@@ -148,7 +137,7 @@ export default function CrewPermsScreen() {
         <Toggle
           on={!!perms?.[d.key]}
           disabled={!!reason || saving}
-          onPress={() => setPerms(p => p ? { ...p, [d.key]: !p[d.key] } : p)}
+          onChange={() => setPerms(p => p ? { ...p, [d.key]: !p[d.key] } : p)}
         />
       </View>
     );
@@ -268,6 +257,4 @@ const makeSt = (C: Tokens) => StyleSheet.create({
   saveBtn: { height: 56, borderRadius: 16, backgroundColor: C.accent, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 },
   saveTxt: { fontSize: 16.5, fontWeight: '700', color: C.accentText, letterSpacing: -0.3 },
 
-  togTrack: { width: 46, height: 28, borderRadius: 99, padding: 3, flexShrink: 0 },
-  togThumb: { width: 22, height: 22, borderRadius: 11, backgroundColor: '#fff' },
 });
