@@ -251,8 +251,14 @@ export default function RunResultScreen() {
 
   const shareRun = async () => {
     if (!run) return;
-    // OS share sheet with a text summary — the canvas's branded-card image
-    // export needs a view-capture dep (not approved); stated adaptation.
+    // Share-card composer door (Slice 1, 2026-07-24): a SAVED run opens the
+    // composer; an unsaved run (save error) keeps the old text-share — the
+    // honest fallback, since the composer needs the server run.
+    const savedId = savedRunRef.current?.id;
+    if (savedId) {
+      router.push({ pathname: '/share-card' as never, params: { runId: savedId } });
+      return;
+    }
     const title = savedRunRef.current?.title ?? run.course?.title ?? '러닝';
     const pace = avgPace > 0 ? fmtPaceIn(avgPace, units) + paceUnit(units) : null;
     const msg = [

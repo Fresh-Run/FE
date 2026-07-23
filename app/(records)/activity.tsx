@@ -193,9 +193,17 @@ export default function ActivityScreen() {
               <Pressable onPress={() => router.back()} hitSlop={12} style={st.backBtn}>
                 <Icon name="arrow-back" size={20} color="#fff" />
               </Pressable>
-              {/* 편집 + 삭제 (own-run screen by contract) — the screen's
-                  action idiom is header icon buttons; delete joins it */}
+              {/* 공유 + 편집 + 삭제 (own-run screen by contract) — the
+                  screen's action idiom is header icon buttons; the share-card
+                  composer door joins it (Slice 1, 2026-07-24) */}
               <View style={{ flexDirection: 'row', gap: 4 }}>
+                <Pressable
+                  onPress={() => router.push({ pathname: '/share-card' as never, params: { runId: run.id } })}
+                  hitSlop={12}
+                  style={st.backBtn}
+                >
+                  <Icon name="share-outline" size={19} color="#fff" />
+                </Pressable>
                 <Pressable
                   onPress={() => router.push({
                     pathname: '/(records)/edit-run' as never,
