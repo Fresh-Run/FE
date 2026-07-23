@@ -13,7 +13,11 @@ const RUNS_PAGE_SIZE = 50;
 
 export type RunSplit = {
   km: number;             // cumulative km mark (1.0, 2.0, …; partial = total)
-  sec: number;            // this split's duration
+  sec: number;            // this split's ELAPSED duration (pause/stops included)
+  /** v88 (2026-07-23 additive, staging-probed): lap MOVING time — Strava-
+      style, instantaneous <0.5m/s stretches excluded (her ~8s smoothing
+      nuance ledgered). null on pre-v88 runs → fall back to sec. */
+  moving_sec?: number | null;
   elev_gain_m: number | null;
   partial: boolean;       // last split under a full km
 };
@@ -23,6 +27,11 @@ export type Run = {
   ran_at: string;
   distance_km: number;
   duration_sec: number;
+  /** v88 (2026-07-23 additive): run-level MOVING time (=Σ splits.moving_sec).
+      duration_sec pairs as the ELAPSED side (client-reported — caveat: OUR
+      tracker's clock freezes on manual pause, so it undercounts paused
+      stretches; her contract note ledgered). null on trackless/old runs. */
+  moving_sec?: number | null;
   avg_pace_sec_per_km: number | null;
   notes: string | null;
   route_id: string | null;

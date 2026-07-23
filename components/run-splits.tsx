@@ -38,8 +38,11 @@ export function SplitsTable({ splits, units }: { splits: RunSplit[]; units: Unit
   const C = useTokens();
   const st = useStyles(makeSt);
   if (splits.length === 0) return null;
-  const fastest = Math.min(...splits.map(s => s.sec));
-  const slowest = Math.max(...splits.map(s => s.sec));
+  // v88 moving-based pace (owner GO 2026-07-23): the elapsed-definition gap
+  // closes — lap pace = moving_sec where served, sec fallback (old runs)
+  const lapSec = (s: RunSplit) => s.moving_sec ?? s.sec;
+  const fastest = Math.min(...splits.map(lapSec));
+  const slowest = Math.max(...splits.map(lapSec));
   const range = Math.max(1, slowest - fastest);
 
   return (
@@ -50,15 +53,16 @@ export function SplitsTable({ splits, units }: { splits: RunSplit[]; units: Unit
         <View style={{ flex: 1 }} />
       </View>
       {splits.map((s, i) => {
-        const frac = 0.3 + 0.7 * (1 - (s.sec - fastest) / range); // faster → longer bar
-        const isFast = s.sec === fastest && splits.length > 1;
+        const sec = lapSec(s);
+        const frac = 0.3 + 0.7 * (1 - (sec - fastest) / range); // faster → longer bar
+        const isFast = sec === fastest && splits.length > 1;
         const label = s.partial ? s.km.toFixed(1) : String(Math.round(s.km));
         return (
           <View key={i} style={st.row}>
             <Text style={[st.kmTxt, { width: 34 }]}>{label}</Text>
-            <Text style={[st.paceTxt, { width: 52 }]}>{fmtPaceIn(s.sec, units)}</Text>
+            <Text style={[st.paceTxt, { width: 52 }]}>{fmtPaceIn(sec, units)}</Text>
             <View style={st.barTrack}>
-              <View style={[st.bar, { width: `${frac * 100}%` as `${number}%`, backgroundColor: paceTone(C, s.sec, fastest, range) }]}>
+              <View style={[st.bar, { width: `${frac * 100}%` as `${number}%`, backgroundColor: paceTone(C, sec, fastest, range) }]}>
                 {isFast && <Text style={st.fastTag}>⚡</Text>}
               </View>
             </View>
@@ -83,7 +87,7 @@ export function PaceChart({ splits, units }: { splits: RunSplit[]; units: Units 
   const C = useTokens();
   const st = useStyles(makeSt);
   if (splits.length < 2) return null;
-  const paces = splits.map(s => s.sec);
+  const paces = splits.map(s => s.moving_sec ?? s.sec); // v88 moving-based (sec fallback)
   const n = paces.length;
   const innerW = W - PAD_L - PAD_R, innerH = H - PAD_T - PAD_B;
   const bw = innerW / n;
