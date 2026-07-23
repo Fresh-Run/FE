@@ -14,6 +14,7 @@
  *    comments unshipped server-side — 지연 ask logged);
  *  - 프로필 공유 → 준비 중 (no shareable URL yet).
  */
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import { router } from 'expo-router';
 import React, { useCallback, useEffect } from 'react';
@@ -49,7 +50,7 @@ const VIS_CAPTION: Record<MyRun['visibility'], string> = {
 
 // Reduced feed-style run card (canvas shows area/tags — no backend source
 // for own runs; honest subset, tap → activity detail)
-function RunCard({ run, name, photoUrl, units, mapLive, onKudos }: { run: MyRun; name: string; photoUrl?: string | null; units: ReturnType<typeof useSettings.getState>['settings']['units']; mapLive: boolean; onKudos: () => void }) {
+function RunCard({ run, name, photoUrl, units, mapLive, onKudos, onShare }: { run: MyRun; name: string; photoUrl?: string | null; units: ReturnType<typeof useSettings.getState>['settings']['units']; mapLive: boolean; onKudos: () => void; onShare?: () => void }) {
   const C = useTokens();
   const st = useStyles(makeSt);
   // visual-split ruling: full track when fetched, thumb while loading
@@ -63,6 +64,7 @@ function RunCard({ run, name, photoUrl, units, mapLive, onKudos }: { run: MyRun;
         pathname: '/run-post' as never,
         params: { runId: run.id, own: '1', nickname: name, kudosCount: String(run.kudos_count) },
       })}
+      onLongPress={onShare}
       style={[st.card, shadows.sm]}
     >
       <View style={st.cardHead}>
@@ -134,6 +136,18 @@ export default function MyProfileScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [runs.length]);
   const [kudosRun, setKudosRun] = React.useState<MyRun | null>(null);
+  // One-time share hint (affordance ruling 2026-07-24: long-press = the
+  // house own-content idiom, zero permanent chrome — discoverability via
+  // this chip). Persistent until DISMISSED (X or a first long-press) —
+  // show-once-then-gone risks an unnoticed hint; dismissal is the one-time.
+  const [shareHint, setShareHint] = React.useState(false);
+  useEffect(() => {
+    AsyncStorage.getItem('@fr_share_hint').then(v => { if (v == null) setShareHint(true); }).catch(() => {});
+  }, []);
+  const dismissShareHint = () => {
+    setShareHint(false);
+    AsyncStorage.setItem('@fr_share_hint', '1').catch(() => {});
+  };
 
   // polyline_thumb slice — real-map-only-for-viewable-cells (feed pattern:
   // stable refs, 25% threshold; off-screen cells keep the SVG)
@@ -150,6 +164,15 @@ export default function MyProfileScreen() {
 
   const header = profile && (
     <View>
+      {shareHint && runs.length > 0 && (
+        <View style={st.shareHint}>
+          <Icon name="share-outline" size={14} color={C.accentGrn} />
+          <Text style={st.shareHintTxt}>카드를 길게 누르면 바로 공유할 수 있어요</Text>
+          <Pressable onPress={dismissShareHint} hitSlop={8}>
+            <Icon name="close" size={14} color={C.faint} />
+          </Pressable>
+        </View>
+      )}
       {/* Identity */}
       <View style={st.identity}>
         <Avatar name={profile.nickname} size={76} photoUrl={profile.avatarUrl} ring={C.accent} initialsRatio={0.38} upper />
@@ -240,7 +263,7 @@ export default function MyProfileScreen() {
           ListHeaderComponent={header}
           renderItem={({ item }) => (
             <View style={{ paddingHorizontal: S.gutter }}>
-              <RunCard run={item} name={profile.nickname} photoUrl={profile.avatarUrl} units={units} mapLive={liveIds.has(item.id)} onKudos={() => setKudosRun(item)} />
+              <RunCard run={item} name={profile.nickname} photoUrl={profile.avatarUrl} units={units} mapLive={liveIds.has(item.id)} onKudos={() => setKudosRun(item)} onShare={() => { dismissShareHint(); router.push({ pathname: '/share-card' as never, params: { runId: item.id } }); }} />
             </View>
           )}
           ItemSeparatorComponent={() => <View style={{ height: 14 }} />}
@@ -285,6 +308,8 @@ const makeSt = (C: Tokens) => StyleSheet.create({
   sectionTitle: { fontSize: 17, fontWeight: '700', letterSpacing: -0.4, color: C.text },
   sectionCount: { fontSize: 13, color: C.faint, letterSpacing: -0.2 },
 
+  shareHint:    { flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: S.gutter, marginBottom: 12, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 12, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border },
+  shareHintTxt: { flex: 1, fontSize: 12.5, fontWeight: '600', color: C.sub, letterSpacing: -0.2 },
   card:      { backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 20, overflow: 'hidden' },
   cardHead:  { flexDirection: 'row', alignItems: 'center', gap: 9, paddingVertical: 11, paddingHorizontal: 14 },
   cardName:  { fontSize: 14, fontWeight: '700', color: C.text, letterSpacing: -0.3 },

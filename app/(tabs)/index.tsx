@@ -526,6 +526,7 @@ export default function HomeScreen() {
                 run={shown}
                 units={units}
                 mapLive={liveIds.has(item.run_id)}
+                  onShare={shown.is_mine ? () => router.push({ pathname: '/share-card' as never, params: { runId: shown.run_id } }) : undefined}
                 onKudos={() => toggleRunKudos(item)}
                 kudosOff={item.allow_likes === false}
                 onOpen={() => router.push({
