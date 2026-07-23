@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '@/components/ui';
 import { accentShadow, shadows, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
+import { useSettings } from '@/store/use-settings';
 
 type TabDef = {
   route: string;
@@ -45,7 +46,11 @@ export function FreshTabBar({ state, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
 
   function handlePress(routeName: string, routeKey: string, isFocused: boolean) {
-    if (Platform.OS === 'ios') {
+    // Toggle-scope ruling (2026-07-23): 햅틱 피드백 governs ALL app-origin
+    // haptics — the tab bar was the audit's ungated control group, now a
+    // convicted scope violation. Fire-time snapshot (the staleness-class
+    // idiom): no render-path subscription needed for a press handler.
+    if (Platform.OS === 'ios' && useSettings.getState().settings.run.haptics) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
     const event = navigation.emit({

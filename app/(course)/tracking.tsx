@@ -298,6 +298,9 @@ export default function TrackingScreen() {
     if (prev === 'countdown' && state === 'running') {
       const coach = useAudioCoach.getState(); // fire-time snapshot
       nextCueKmRef.current = coach.intervalKm; // fresh run
+      // countdown-go (haptics enumeration 2026-07-23): Light impact at 출발 —
+      // fire-time gate, same idiom as every cue-time read on this screen
+      if (useSettings.getState().settings.run.haptics) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       // self-verifying start cue — names the armed interval (M1 episode fix)
       if (coachActive) speakCue(composeStartCue(coach.intervalKm), coach.rate);
     }
@@ -306,21 +309,33 @@ export default function TrackingScreen() {
   }, [state]);
   useEffect(() => () => stopSpeech(), []); // unmount safety
 
-  // interval-split watcher — catch-up-safe (advances past every crossed threshold)
+  // interval-split watcher — catch-up-safe (advances past every crossed
+  // threshold). ONE EVENT, TWO CHANNELS (haptics ruling 2026-07-23): the
+  // crossing feeds voice AND buzz, each behind its own gate — so the buzz
+  // fires for voice-off/free runners too. Neither channel live → the
+  // threshold is LEFT for catch-up (pre-existing mid-run re-enable
+  // semantics, unchanged). Buzz gate is a fire-time snapshot; the threshold
+  // itself stays the coach's intervalKm for both channels.
   useEffect(() => {
-    if (state !== 'running' || !coachActive) return;
+    if (state !== 'running') return;
     if (distanceKm < nextCueKmRef.current) return;
+    const buzzOn = useSettings.getState().settings.run.haptics;
+    if (!coachActive && !buzzOn) return;
     const coach = useAudioCoach.getState(); // fire-time snapshot (지연 fix)
     const spokenAt = nextCueKmRef.current;
     while (distanceKm >= nextCueKmRef.current) nextCueKmRef.current += coach.intervalKm;
-    const text = composeSplitCue({
-      km: spokenAt,
-      elapsedSec,
-      paceSecPerKm,
-      kcal, // estimateKcal-driven — null without confirmed weight (honest rule)
-      items: coach.items,
-    });
-    if (text) speakCue(text, coach.rate);
+    // Medium — distinct from the tab bars' Light and hold-stop's Success
+    if (buzzOn) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    if (coachActive) {
+      const text = composeSplitCue({
+        km: spokenAt,
+        elapsedSec,
+        paceSecPerKm,
+        kcal, // estimateKcal-driven — null without confirmed weight (honest rule)
+        items: coach.items,
+      });
+      if (text) speakCue(text, coach.rate);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [distanceKm, state, coachActive]);
 

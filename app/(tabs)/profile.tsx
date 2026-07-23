@@ -90,11 +90,18 @@ function SettingRow({ icon, iconBg, label, value, badge, danger, locked, onPress
 
 // ─── ToggleRow ────────────────────────────────────────────────────────────────
 
-function ToggleRow({ label, on, onChange }: { label: string; on: boolean; onChange: (v: boolean) => void }) {
+function ToggleRow({ label, caption, on, onChange }: { label: string; caption?: string; on: boolean; onChange: (v: boolean) => void }) {
   const st = useStyles(makeSt);
   return (
     <View style={st.toggleRow}>
-      <Text style={st.settingLabel}>{label}</Text>
+      <View style={{ flex: 1, minWidth: 0, gap: 2, paddingRight: 10 }}>
+        <Text style={st.settingLabel}>{label}</Text>
+        {/* invisible-conditions cure class: armed states announce their real
+            requirements (haptics recon 2026-07-23: system-haptic state is
+            UNDETECTABLE from JS — expo-haptics has no query API and iOS
+            exposes none — so the caption is static, not state-reactive) */}
+        {caption != null && <Text style={st.toggleCaption}>{caption}</Text>}
+      </View>
       <Toggle on={on} onChange={onChange} />
     </View>
   );
@@ -391,7 +398,10 @@ export default function ProfileScreen() {
         </SettingGroup>
 
         {/* 러닝 동작 — persisted via PATCH /me/settings.
-            Runtime effects: haptics gates hold-stop feedback;
+            Runtime effects: haptics gates ALL app-origin haptics (toggle-
+            scope ruling 2026-07-23: tab bars + countdown-go + split buzz +
+            hold-stop — OFF = zero buzzes from this app; it's a GATE, not a
+            generator: it can never force haptics past system-OFF);
             voice_cue is LIVE (오디오 코치 v1 master, 2026-07-14);
             keep_screen_on is LIVE (useKeepAwake in tracking.tsx, verified 2026-07-23).
             자동 일시정지 row REMOVED (owner ruling 2026-07-23: a dead
@@ -401,7 +411,7 @@ export default function ProfileScreen() {
             route through togglePause). */}
         <SettingGroup title="러닝 동작">
           <ToggleRow label="음성 안내"      on={runSettings.voice_cue}      onChange={v => toggleRun('voice_cue',      v)} />
-          <ToggleRow label="햅틱 피드백"    on={runSettings.haptics}        onChange={v => toggleRun('haptics',        v)} />
+          <ToggleRow label="햅틱 피드백"    on={runSettings.haptics}        onChange={v => toggleRun('haptics',        v)} caption="기기의 시스템 햅틱 설정도 켜져 있어야 해요" />
           <ToggleRow label="화면 항상 켜기" on={runSettings.keep_screen_on} onChange={v => toggleRun('keep_screen_on', v)} />
         </SettingGroup>
 
@@ -493,6 +503,7 @@ const makeSt = (C: Tokens) => StyleSheet.create({
   settingRow:   { flexDirection: 'row', alignItems: 'center', gap: 13, paddingVertical: 12, paddingHorizontal: 4 },
   settingIcon:  { width: 38, height: 38, borderRadius: R.md, backgroundColor: C.surfaceAlt, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   settingLabel: { fontSize: 15, fontWeight: '600', letterSpacing: -0.3, color: C.text },
+  toggleCaption: { fontSize: 11.5, color: C.faint, letterSpacing: -0.2 },
   settingValue: { fontSize: 12.5, color: C.faint, letterSpacing: -0.2, marginTop: 2 },
   badgePill:    { backgroundColor: C.accentDim, borderRadius: R.sm, paddingHorizontal: 6, paddingVertical: 2 },
   badgeTxt:     { fontSize: 10, fontWeight: '700', letterSpacing: 0.4, color: C.accentGrn, textTransform: 'uppercase' },
