@@ -267,7 +267,30 @@ export default function ActivityScreen() {
           {splits.length >= 2 && (
             <>
               <Text style={st.sectionTitle}>페이스 분석</Text>
-              <PaceChart splits={splits} />
+              {/* 기록/분석 upgrade (2026-07-23, Strava quartet minus one):
+                  이동 시간 = duration_sec IS moving time (the session clock
+                  freezes on pause — run-session contract), labeled honestly.
+                  총 시간 (wall elapsed) is OMITTED: the server computes
+                  elapsed_s but doesn't serve it, and sum-of-splits telescopes
+                  wall time EXCEPT a dropped sub-0.2km tail — which silently
+                  eats an end-of-run pause, lying exactly when 총 시간
+                  matters. Arrives with 지연's additive field (ledgered). */}
+              <View style={[st.paceStatsCard, shadows.sm]}>
+                {([
+                  ['평균 페이스', run.avg_pace_sec_per_km != null ? fmtPaceIn(run.avg_pace_sec_per_km, units) : '--'],
+                  ['이동 시간', fmtDuration(run.duration_sec)],
+                  ['최고 구간', (() => {
+                    const full = splits.filter(s => !s.partial);
+                    return full.length ? fmtPaceIn(Math.min(...full.map(s => s.sec)), units) : '--';
+                  })()],
+                ] as [string, string][]).map(([label, val], i) => (
+                  <View key={label} style={[st.paceStatCell, i > 0 && st.paceStatBorder]}>
+                    <Text style={st.paceStatVal}>{val}</Text>
+                    <Text style={st.paceStatLbl}>{label}</Text>
+                  </View>
+                ))}
+              </View>
+              <PaceChart splits={splits} units={units} />
             </>
           )}
 
@@ -346,6 +369,11 @@ const makeSt = (C: Tokens) => StyleSheet.create({
   tileUnit:  { fontSize: 11, fontWeight: '600', color: C.faint },
   tileHint:  { fontSize: 10.5, color: C.faint, letterSpacing: -0.2, marginTop: 3 },
 
+  paceStatsCard: { flexDirection: 'row', backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: R.xl, paddingVertical: 13, marginTop: 12 },
+  paceStatCell:  { flex: 1, alignItems: 'center', gap: 3 },
+  paceStatBorder:{ borderLeftWidth: 1, borderLeftColor: C.border },
+  paceStatVal:   { fontSize: 15.5, fontWeight: '700', color: C.text, letterSpacing: -0.4, fontVariant: ['tabular-nums'] },
+  paceStatLbl:   { fontSize: 10.5, color: C.faint, letterSpacing: -0.1 },
   sectionTitle: { fontSize: 15, fontWeight: '700', letterSpacing: -0.4, color: C.text, marginTop: S.xl },
 
   // Notes

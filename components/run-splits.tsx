@@ -71,9 +71,15 @@ export function SplitsTable({ splits, units }: { splits: RunSplit[]; units: Unit
 
 // ─── 페이스 chart — SVG port of FrPaceChart (elevation curve parked) ──────────
 
-const W = 320, H = 150, PAD_L = 6, PAD_R = 6, PAD_T = 12, PAD_B = 22;
+// PAD_T carries the value-label headroom (기록/분석 upgrade 2026-07-23:
+// "graphs without numbers are useless" — owner ruling, Strava reference).
+const W = 320, H = 150, PAD_L = 6, PAD_R = 6, PAD_T = 26, PAD_B = 22;
+// Per-bar labels up to this count; beyond it labels collide at 320-viewBox
+// widths, so only the informative extremes (first/last/fastest/slowest) keep
+// numbers — the table below carries the full list either way.
+const LABEL_EVERY_BAR_MAX = 8;
 
-export function PaceChart({ splits }: { splits: RunSplit[] }) {
+export function PaceChart({ splits, units }: { splits: RunSplit[]; units: Units }) {
   const C = useTokens();
   const st = useStyles(makeSt);
   if (splits.length < 2) return null;
@@ -85,6 +91,13 @@ export function PaceChart({ splits }: { splits: RunSplit[] }) {
   const pRange = Math.max(1, pMax - pMin);
   // Bar height: faster (lower sec) → taller. Normalize 0.4..1 (canvas math)
   const barH = (p: number) => innerH * (0.4 + (1 - (p - pMin) / pRange) * 0.6);
+  // Per-bar value labels (the table's own numbers — fmtPaceIn, unit-aware,
+  // consistent to the second). Dense charts label the extremes only.
+  const labeled = new Set<number>(
+    n <= LABEL_EVERY_BAR_MAX
+      ? paces.map((_, i) => i)
+      : [0, n - 1, paces.indexOf(pMin), paces.indexOf(pMax)],
+  );
 
   return (
     <View style={[st.card, shadows.sm]}>
@@ -105,6 +118,15 @@ export function PaceChart({ splits }: { splits: RunSplit[] }) {
             />
           );
         })}
+        {paces.map((p, i) => labeled.has(i) ? (
+          <SvgText
+            key={`v${i}`}
+            x={PAD_L + bw * (i + 0.5)} y={PAD_T + innerH - barH(p) - 5}
+            textAnchor="middle" fontSize={9.5} fontWeight="700" fill={C.sub}
+          >
+            {fmtPaceIn(p, units)}
+          </SvgText>
+        ) : null)}
         {splits.map((s, i) => (
           <SvgText
             key={i}
