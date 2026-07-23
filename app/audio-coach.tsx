@@ -2,8 +2,9 @@
  * 오디오 코치 설정 — canvas FrAudioCoach (profile-screen.jsx), v1 subset.
  * Master = the server-persisted settings.run.voice_cue (the 음성 안내 toggle
  * both 러닝 동작 surfaces already bind — one source, finally live). Detail
- * settings (안내 간격 · 말하기 속도 · 항목) are device-local (use-audio-coach;
- * her settings schema has no audio_coach group — 지연 ask ledgered).
+ * settings (안내 간격 · 말하기 속도 · 항목) are SERVER-persisted on
+ * settings.audio_coach (지연's group landed — migration slice 2026-07-23;
+ * the device-local store retired, lived values migrated up on first sync).
  *
  * STATED DIVERGENCES from canvas: 코치 음성 조이/데이빗 personas OMITTED
  * (expo-speech offers system voices, not personas); the 칼로리 항목 is IN
@@ -22,7 +23,6 @@ import { Toggle } from '@/components/toggle';
 import { composeIntervalSample, composeRateSample, speakCue } from '@/lib/audio-coach';
 import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
-import { useAudioCoach } from '@/store/use-audio-coach';
 import { useSettings } from '@/store/use-settings';
 
 function SliderRow({ label, value, min, max, step, fmt, onChange }: {
@@ -52,8 +52,9 @@ export default function AudioCoachScreen() {
   const insets = useSafeAreaInsets();
   const voiceCue = useSettings(s => s.settings.run.voice_cue);
   const setRunSetting = useSettings(s => s.setRunSetting);
-  const coach = useAudioCoach();
-  useEffect(() => { useAudioCoach.getState().hydrate(); }, []);
+  const coach = useSettings(s => s.settings.audio_coach);
+  const setAudioCoach = useSettings(s => s.setAudioCoach);
+  useEffect(() => { void useSettings.getState().hydrate(); }, []);
 
   return (
     <View style={[st.root, { paddingTop: insets.top }]}>
@@ -85,17 +86,17 @@ export default function AudioCoachScreen() {
               fmt={v => `${v.toFixed(1)}x`}
               onChange={v => {
                 const rate = Math.round(v * 10) / 10;
-                coach.set({ rate });
+                void setAudioCoach({ rate });
                 speakCue(composeRateSample(), rate);
               }}
             />
             <View style={st.divider} />
             <SliderRow
-              label="안내 간격" value={coach.intervalKm} min={0.5} max={3} step={0.5}
+              label="안내 간격" value={coach.cue_interval_km} min={0.5} max={3} step={0.5}
               fmt={v => `${v} km`}
               onChange={v => {
-                coach.set({ intervalKm: v });
-                speakCue(composeIntervalSample(v), useAudioCoach.getState().rate);
+                void setAudioCoach({ cue_interval_km: v });
+                speakCue(composeIntervalSample(v), useSettings.getState().settings.audio_coach.rate);
               }}
             />
           </View>
@@ -103,10 +104,10 @@ export default function AudioCoachScreen() {
           <Text style={st.groupTitle}>안내 항목</Text>
           <View style={[st.card, shadows.sm]}>
             {([
-              ['dist', '거리 안내', '구간 지점과 경과 시간'],
-              ['pace', '페이스 안내', '현재 킬로미터당 페이스'],
-              ['kcal', '칼로리 안내', '체중 정보가 있을 때만 안내돼요'],
-            ] as [keyof typeof coach.items, string, string][]).map(([k, label, sub], i) => (
+              ['announce_distance', '거리 안내', '구간 지점과 경과 시간'],
+              ['announce_pace', '페이스 안내', '현재 킬로미터당 페이스'],
+              ['announce_calories', '칼로리 안내', '체중 정보가 있을 때만 안내돼요'],
+            ] as ['announce_distance' | 'announce_pace' | 'announce_calories', string, string][]).map(([k, label, sub], i) => (
               <React.Fragment key={k}>
                 {i > 0 && <View style={st.divider} />}
                 <View style={st.toggleRow}>
@@ -114,7 +115,7 @@ export default function AudioCoachScreen() {
                     <Text style={st.rowLabel}>{label}</Text>
                     <Text style={st.rowSub}>{sub}</Text>
                   </View>
-                  <Toggle on={coach.items[k]} onChange={v => coach.setItem(k, v)} />
+                  <Toggle on={coach[k]} onChange={v => { void setAudioCoach({ [k]: v }); }} />
                 </View>
               </React.Fragment>
             ))}

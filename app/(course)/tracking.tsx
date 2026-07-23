@@ -42,7 +42,6 @@ import { Icon } from '@/components/ui';
 import { SEOUL_FALLBACK, useCurrentLocation } from '@/hooks/use-current-location';
 import { useRunTracker } from '@/hooks/use-run-tracker';
 import { composeFinishCue, composeSplitCue, composeStartCue, speakCue, stopSpeech } from '@/lib/audio-coach';
-import { useAudioCoach } from '@/store/use-audio-coach';
 import { useQuota } from '@/store/use-quota';
 import { addLiveActivityActionListener } from '@/modules/live-activity';
 import { clearActiveCourse, getActiveCourse } from '@/store/active-course';
@@ -286,9 +285,11 @@ export default function TrackingScreen() {
   // class by construction (the start-cue's intervalKm reset already used
   // this idiom — now everything does).
   const [coachMuted, setCoachMuted] = useState(false);
-  useEffect(() => { useQuota.getState().hydrate(); useAudioCoach.getState().hydrate(); }, []);
+  useEffect(() => { useQuota.getState().hydrate(); }, []);
   const coachActive = isPremium && voiceCue && !coachMuted;
-  const nextCueKmRef = useRef<number>(useAudioCoach.getState().intervalKm);
+  // coach detail settings live on settings.audio_coach now (server-migration
+  // slice 2026-07-23) — same fire-time snapshot idiom, one store fewer
+  const nextCueKmRef = useRef<number>(useSettings.getState().settings.audio_coach.cue_interval_km);
   const prevStateRef = useRef(state);
 
   // run lifecycle → start cue + threshold reset; stop speech on leave/pause
@@ -296,13 +297,13 @@ export default function TrackingScreen() {
     const prev = prevStateRef.current;
     prevStateRef.current = state;
     if (prev === 'countdown' && state === 'running') {
-      const coach = useAudioCoach.getState(); // fire-time snapshot
-      nextCueKmRef.current = coach.intervalKm; // fresh run
+      const coach = useSettings.getState().settings.audio_coach; // fire-time snapshot
+      nextCueKmRef.current = coach.cue_interval_km; // fresh run
       // countdown-go (haptics enumeration 2026-07-23): Light impact at 출발 —
       // fire-time gate, same idiom as every cue-time read on this screen
       if (useSettings.getState().settings.run.haptics) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       // self-verifying start cue — names the armed interval (M1 episode fix)
-      if (coachActive) speakCue(composeStartCue(coach.intervalKm), coach.rate);
+      if (coachActive) speakCue(composeStartCue(coach.cue_interval_km), coach.rate);
     }
     if (state === 'paused' || state === 'idle') stopSpeech();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -321,9 +322,9 @@ export default function TrackingScreen() {
     if (distanceKm < nextCueKmRef.current) return;
     const buzzOn = useSettings.getState().settings.run.haptics;
     if (!coachActive && !buzzOn) return;
-    const coach = useAudioCoach.getState(); // fire-time snapshot (지연 fix)
+    const coach = useSettings.getState().settings.audio_coach; // fire-time snapshot (지연 fix)
     const spokenAt = nextCueKmRef.current;
-    while (distanceKm >= nextCueKmRef.current) nextCueKmRef.current += coach.intervalKm;
+    while (distanceKm >= nextCueKmRef.current) nextCueKmRef.current += coach.cue_interval_km;
     // Medium — distinct from the tab bars' Light and hold-stop's Success
     if (buzzOn) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     if (coachActive) {
@@ -332,7 +333,7 @@ export default function TrackingScreen() {
         elapsedSec,
         paceSecPerKm,
         kcal, // estimateKcal-driven — null without confirmed weight (honest rule)
-        items: coach.items,
+        items: { dist: coach.announce_distance, pace: coach.announce_pace, kcal: coach.announce_calories },
       });
       if (text) speakCue(text, coach.rate);
     }
@@ -519,7 +520,7 @@ export default function TrackingScreen() {
     exitingRef.current = true;
     if (!snapshot) { router.back(); return; }
     // 종료 cue — fire-and-forget before the screen swap
-    if (coachActive) speakCue(composeFinishCue(snapshot.distanceKm, snapshot.elapsedSec), useAudioCoach.getState().rate);
+    if (coachActive) speakCue(composeFinishCue(snapshot.distanceKm, snapshot.elapsedSec), useSettings.getState().settings.audio_coach.rate);
     // setPendingRun also persists to disk — crash-safe from this moment
     setPendingRun(course
       ? {

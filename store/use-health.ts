@@ -1,6 +1,7 @@
 /**
- * Apple 건강 연동 opt-in (③ Slice C) — DEVICE-LOCAL (AsyncStorage persist),
- * the use-audio-coach pattern. Deliberately NOT on PATCH /me/settings: the
+ * Apple 건강 연동 opt-in (③ Slice C) — DEVICE-LOCAL (AsyncStorage persist).
+ * (The old use-audio-coach store that pioneered this pattern migrated to the
+ * server 2026-07-23; health stays local BY DESIGN.) NOT on PATCH /me/settings: the
  * server has no health field (지연-confirmed greenfield) and HealthKit
  * authorization is per-device by nature — a server flag would lie on the
  * user's other devices. `enabled` means "the user opted in AND the auth

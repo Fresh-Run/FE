@@ -9,7 +9,9 @@
  */
 import * as Speech from 'expo-speech';
 
-import type { AudioCoachSettings } from '@/store/use-audio-coach';
+// 안내 항목 shape — callers map settings.audio_coach.announce_* into this
+// (the composer keeps its own vocabulary; server names stay at the edge)
+type CueItems = { dist: boolean; pace: boolean; kcal: boolean };
 
 function fmtKm(km: number): string {
   return Number.isInteger(km) ? `${km}` : km.toFixed(1);
@@ -32,7 +34,7 @@ export function composeSplitCue(args: {
   elapsedSec: number;
   paceSecPerKm: number | null;      // tracker's current pace; null → omit
   kcal: number | null;              // estimateKcal output; null → omit (honest rule)
-  items: AudioCoachSettings['items'];
+  items: CueItems;
 }): string | null {
   const parts: string[] = [];
   if (args.items.dist) {

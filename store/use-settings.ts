@@ -11,6 +11,7 @@ import {
   getSettings,
   patchSettings,
   type AiCourseSettings,
+  type AudioCoachSettings,
   type FeedSettings,
   type NotifSettings,
   type RunSettings,
@@ -55,6 +56,9 @@ type SettingsStore = {
       failure. Consumed server-side by POST /routes/generate when the request
       body omits a field (guide: body > 내 설정 > 서버 기본값). */
   setAiCourse: (patch: Partial<AiCourseSettings>) => Promise<boolean>;
+  /** Optimistic audio_coach partial write (server-migration slice
+      2026-07-23) — same contract as setAiCourse. */
+  setAudioCoach: (patch: Partial<AudioCoachSettings>) => Promise<boolean>;
 };
 
 let hydrating = false;
@@ -95,6 +99,30 @@ export const useSettings = create<SettingsStore>((set, get) => ({
             AsyncStorage.removeItem('@fr_feed_prefs').catch(() => {});
           }
         } catch { /* unreadable legacy — server stands */ }
+        // ONE-SHOT audio-coach migration (server group landed; probed live
+        // 2026-07-23). SEED DIRECTION, owner-ruled: the DEVICE's lived
+        // values migrate UP on first sync — they were explicit choices
+        // (the owner's 0.5 / 지연's 1.5, the twin detents); the server's
+        // inert seeds never stomp them. Only differing fields ride the
+        // PATCH; the key is deleted only after success (failure → the
+        // whole block retries next hydrate, the feed-prefs precedent).
+        try {
+          const legacyRaw = await AsyncStorage.getItem('@fr_audio_coach');
+          if (legacyRaw != null) {
+            const c = JSON.parse(legacyRaw) as {
+              intervalKm?: number; rate?: number;
+              items?: { dist?: boolean; pace?: boolean; kcal?: boolean };
+            };
+            const up: Partial<AudioCoachSettings> = {};
+            if (typeof c.intervalKm === 'number' && c.intervalKm !== merged.audio_coach.cue_interval_km) up.cue_interval_km = c.intervalKm;
+            if (typeof c.rate === 'number' && c.rate !== merged.audio_coach.rate) up.rate = c.rate;
+            if (typeof c.items?.dist === 'boolean' && c.items.dist !== merged.audio_coach.announce_distance) up.announce_distance = c.items.dist;
+            if (typeof c.items?.pace === 'boolean' && c.items.pace !== merged.audio_coach.announce_pace) up.announce_pace = c.items.pace;
+            if (typeof c.items?.kcal === 'boolean' && c.items.kcal !== merged.audio_coach.announce_calories) up.announce_calories = c.items.kcal;
+            if (Object.keys(up).length > 0) merged = await patchSettings({ audio_coach: up });
+            AsyncStorage.removeItem('@fr_audio_coach').catch(() => {});
+          }
+        } catch { /* unreadable legacy or PATCH failure — retry next hydrate */ }
         set({ settings: merged, synced: true });
         cache(merged);
       } catch (e) {
@@ -222,6 +250,23 @@ export const useSettings = create<SettingsStore>((set, get) => ({
     cache(next);
     try {
       const server = await patchSettings({ ai_course: patch });
+      set({ settings: server, synced: true });
+      cache(server);
+      return true;
+    } catch {
+      set({ settings: prev }); // rollback
+      cache(prev);
+      return false;
+    }
+  },
+
+  setAudioCoach: async (patch) => {
+    const prev = get().settings;
+    const next = { ...prev, audio_coach: { ...prev.audio_coach, ...patch } };
+    set({ settings: next }); // optimistic
+    cache(next);
+    try {
+      const server = await patchSettings({ audio_coach: patch });
       set({ settings: server, synced: true });
       cache(server);
       return true;

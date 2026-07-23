@@ -49,6 +49,22 @@ export type FeedSettings = {
   allow_comments: boolean;
 };
 
+// 오디오 코치 detail 설정 (지연's audio_coach group — guide §설정, staging-
+// probed live 2026-07-23). Server names differ from the RETIRED device-local
+// store (cue_interval_km ↔ intervalKm, announce_* ↔ items.*) — consumers use
+// the server names now. `enabled`/`voice` are persist-only passengers
+// client-side: the master stays settings.run.voice_cue (unchanged), and
+// expo-speech has no personas (canvas divergence, stated on the screen).
+export type AudioCoachSettings = {
+  enabled: boolean;
+  voice: 'joy' | 'david';
+  rate: number;             // 0.6–1.6
+  cue_interval_km: number;  // 0.5–3.0
+  announce_distance: boolean;
+  announce_pace: boolean;
+  announce_calories: boolean;
+};
+
 export type WeatherSettings = {
   avoid_dust: boolean;
   dust_level_pm10: number;
@@ -64,6 +80,7 @@ export type UserSettings = {
   lang: 'ko' | 'en';
   ai_course: AiCourseSettings;
   weather: WeatherSettings;
+  audio_coach: AudioCoachSettings;
   feed: FeedSettings;
   notif: NotifSettings;
 };
@@ -75,6 +92,7 @@ export type SettingsPatch = {
   lang?: UserSettings['lang'];
   ai_course?: Partial<AiCourseSettings>;
   weather?: Partial<WeatherSettings>;
+  audio_coach?: Partial<AudioCoachSettings>;
   feed?: Partial<FeedSettings>;
   notif?: Partial<NotifSettings>;
 };
@@ -99,6 +117,15 @@ export const DEFAULT_SETTINGS: UserSettings = {
     avoid_heat: true,
     heat_temp_c: 28,
     avoid_rain: false,
+  },
+  audio_coach: {
+    enabled: true,
+    voice: 'joy',
+    rate: 1.0,
+    cue_interval_km: 1.0,
+    announce_distance: true,
+    announce_pace: true,
+    announce_calories: false,
   },
   feed: { auto_publish: true, allow_likes: true, allow_comments: true },
   notif: {
