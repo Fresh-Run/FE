@@ -42,6 +42,7 @@ import { Icon } from '@/components/ui';
 import { SEOUL_FALLBACK, useCurrentLocation } from '@/hooks/use-current-location';
 import { useRunTracker } from '@/hooks/use-run-tracker';
 import { composeFinishCue, composeSplitCue, composeStartCue, speakCue, stopSpeech } from '@/lib/audio-coach';
+import { activateRunAudioSession, deactivateRunAudioSession } from '@/lib/audio-session';
 import { useQuota } from '@/store/use-quota';
 import { addLiveActivityActionListener } from '@/modules/live-activity';
 import { clearActiveCourse, getActiveCourse } from '@/store/active-course';
@@ -296,6 +297,9 @@ export default function TrackingScreen() {
   useEffect(() => {
     const prev = prevStateRef.current;
     prevStateRef.current = state;
+    // #12 session rider: arm the audio session when the run arms — the
+    // countdown's ~3s means ducking is in force before the start cue speaks
+    if (prev === 'idle' && state === 'countdown') activateRunAudioSession();
     if (prev === 'countdown' && state === 'running') {
       const coach = useSettings.getState().settings.audio_coach; // fire-time snapshot
       nextCueKmRef.current = coach.cue_interval_km; // fresh run
@@ -324,7 +328,7 @@ export default function TrackingScreen() {
     if (state === 'paused' || state === 'idle') stopSpeech();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state]);
-  useEffect(() => () => stopSpeech(), []); // unmount safety
+  useEffect(() => () => { stopSpeech(); deactivateRunAudioSession(); }, []); // unmount safety
 
   // interval-split watcher — catch-up-safe (advances past every crossed
   // threshold). ONE EVENT, TWO CHANNELS (haptics ruling 2026-07-23): the

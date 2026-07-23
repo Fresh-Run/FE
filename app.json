@@ -2,7 +2,7 @@
   "expo": {
     "name": "FreshRun",
     "slug": "freshrun",
-    "version": "1.0.3",
+    "version": "1.0.4",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "freshrun",
@@ -18,7 +18,9 @@
       "appleTeamId": "ZSM9CJXQ8C",
       "infoPlist": {
         "NSSupportsLiveActivities": true,
-        "UIBackgroundModes": ["audio"]
+        "UIBackgroundModes": [
+          "audio"
+        ]
       },
       "config": {
         "usesNonExemptEncryption": false
@@ -77,7 +79,8 @@
           "NSHealthUpdateUsageDescription": "완료한 러닝을 Apple 건강에 운동으로 기록해요.",
           "background": false
         }
-      ]
+      ],
+      "expo-audio"
     ],
     "experiments": {
       "typedRoutes": true,
