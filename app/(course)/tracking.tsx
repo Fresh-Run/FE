@@ -305,6 +305,22 @@ export default function TrackingScreen() {
       // self-verifying start cue — names the armed interval (M1 episode fix)
       if (coachActive) speakCue(composeStartCue(coach.cue_interval_km), coach.rate);
     }
+    // Pause/resume confirmation buzzes (vocabulary expansion 2026-07-23):
+    // a pocketed fumble gets ANSWERED without looking. Riding the state
+    // TRANSITION (not the button) catches every entry point — UI button,
+    // Live-Activity action, and the future 자동 일시정지 inherits free
+    // (its build must still own the ledgered buzz constraint). Patterns:
+    // pause = ONE FIRM (Heavy); resume = LIGHT DOUBLE — both distinct from
+    // split's Medium single and countdown-go's Light single.
+    if (prev === 'running' && state === 'paused') {
+      if (useSettings.getState().settings.run.haptics) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    }
+    if (prev === 'paused' && state === 'running') {
+      if (useSettings.getState().settings.run.haptics) {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        setTimeout(() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }, 140);
+      }
+    }
     if (state === 'paused' || state === 'idle') stopSpeech();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state]);
@@ -436,6 +452,21 @@ export default function TrackingScreen() {
   // (walk-verifiable): distanceInterval suppresses fixes at rest, so a long
   // mid-run standstill can also light it — quiet copy on purpose.
   const gpsLost = state === 'running' && lastFixAgeSec != null && lastFixAgeSec > 15;
+  // GPS-weak warning buzz (vocabulary expansion 2026-07-23): the chip's
+  // honesty delivered to the pocket. RE-FIRE POLICY: rising-edge only (the
+  // effect fires when gpsLost flips true) + a 60s cooldown floor — a
+  // sustained loss buzzes ONCE; a flapping signal buzzes at most once a
+  // minute, never machine-gunning the pocket. Warning notification pattern
+  // (system triple) — unmistakably not a split/pause.
+  const gpsBuzzAtRef = useRef(0);
+  useEffect(() => {
+    if (!gpsLost) return;
+    if (!useSettings.getState().settings.run.haptics) return;
+    const now = Date.now();
+    if (now - gpsBuzzAtRef.current < 60_000) return;
+    gpsBuzzAtRef.current = now;
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+  }, [gpsLost]);
 
   // ── T-B sheet — @gorhom/bottom-sheet (owner escalation after three
   // hand-rolled iterations shipped broken feel; the 미니플레이어 behavior —
