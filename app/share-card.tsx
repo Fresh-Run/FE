@@ -433,7 +433,7 @@ export default function ShareCardScreen() {
           ))}
         </ScrollView>
 
-        {/* ── format + wordmark + metric toggles ── */}
+        {/* ── format + metric toggles (wordmark is permanent — no control) ── */}
         <View style={st.controls}>
           <View style={st.chipRow}>
             {(['1:1', '9:16'] as const).map(f => (
