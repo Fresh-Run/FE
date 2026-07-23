@@ -27,6 +27,7 @@
  *    story-editor grammar; placement persists as canvas FRACTIONS so
  *    format flips keep relative positions. Fully free, no snap (v2 call).
  */
+import Slider from '@react-native-community/slider';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -58,6 +59,14 @@ type SharePrefs = {
   wordmark: boolean;
   /** v2 free-placement — absent keys fall to the default stack (merge-safe) */
   placements?: Partial<Record<ShareMetricKey, MetricPlacement>>;
+  /** v2.1 — route stroke styling (global taste, like metric selection) */
+  strokeColor?: string;
+  strokeWeight?: number;
+  /** v2.1 — PER-RUN background adjust (x/y = canvas fractions of the pan
+      offset, s = zoom ≥1, dim = overlay 0..0.6). Keyed by runId, pruned to
+      the newest BG_ADJUST_CAP entries (insertion order) so the blob never
+      grows unbounded. */
+  bgAdjust?: Record<string, { x: number; y: number; s: number; dim: number }>;
 };
 const PREFS_KEY = '@fr_share_prefs';
 const DEFAULT_PREFS: SharePrefs = {
@@ -71,6 +80,11 @@ const DEFAULT_PREFS: SharePrefs = {
 const METRIC_LABELS: Record<ShareMetricKey, string> = {
   dist: '거리', pace: '평균 페이스', time: '시간',
 };
+const BG_ADJUST_CAP = 20;
+// v2.1 stroke presets — the house lime leads; fixture companions chosen for
+// dark-canvas/photo legibility (the composer's canvas family)
+const STROKE_COLORS = ['#74E827', '#FFFFFF', '#FFC24B', '#5AC8FA', '#FF6B81'];
+const STROKE_WEIGHTS: [number, string][] = [[3, '얇게'], [4.5, '보통'], [6, '굵게']];
 // default stack ≈ the old bottom-left block (canvas fractions)
 const DEFAULT_PLACEMENT: Record<ShareMetricKey, MetricPlacement> = {
   dist: { x: 0.06, y: 0.60, s: 1 },
@@ -117,6 +131,7 @@ function useMetricLayer(
   canvasH: number,
   stored: MetricPlacement | undefined,
   persist: (key: ShareMetricKey, p: MetricPlacement) => void,
+  enabled = true,
 ) {
   const base = stored ?? DEFAULT_PLACEMENT[key];
   const tx = useSharedValue(base.x * canvasW);
@@ -135,10 +150,55 @@ function useMetricLayer(
       runOnJS(persist)(key, { x: tx.value / canvasW, y: ty.value / canvasH, s: sc.value });
     };
     return Gesture.Simultaneous(
-      Gesture.Pan().onChange(e => { tx.value += e.changeX; ty.value += e.changeY; }).onEnd(end),
-      Gesture.Pinch().onChange(e => { sc.value *= e.scaleChange; }).onEnd(end),
+      Gesture.Pan().enabled(enabled).onChange(e => { tx.value += e.changeX; ty.value += e.changeY; }).onEnd(end),
+      Gesture.Pinch().enabled(enabled).onChange(e => { sc.value *= e.scaleChange; }).onEnd(end),
     );
-  }, [key, canvasW, canvasH, persist, tx, ty, sc]);
+  }, [key, canvasW, canvasH, persist, tx, ty, sc, enabled]);
+  const style = useAnimatedStyle(() => ({
+    transform: [{ translateX: tx.value }, { translateY: ty.value }, { scale: sc.value }],
+  }));
+  return { gesture, style };
+}
+
+// ─── Background adjust layer (v2.1) — pan+pinch, CLAMPED to cover-fit ────────
+// Unlike the route's free drag, a background with gaps reads broken: zoom
+// floors at 1 (cover-fit), pan clamps to the overflow the zoom creates.
+// Fractions persist per-run; format flips re-derive px then RE-CLAMP.
+
+function useBgLayer(
+  canvasW: number,
+  canvasH: number,
+  stored: { x: number; y: number; s: number } | undefined,
+  enabled: boolean,
+  persist: (p: { x: number; y: number; s: number }) => void,
+) {
+  const tx = useSharedValue(0);
+  const ty = useSharedValue(0);
+  const sc = useSharedValue(1);
+  useEffect(() => {
+    const s0 = Math.max(1, stored?.s ?? 1);
+    const mx = ((s0 - 1) * canvasW) / 2, my = ((s0 - 1) * canvasH) / 2;
+    sc.value = s0;
+    tx.value = Math.min(mx, Math.max(-mx, (stored?.x ?? 0) * canvasW));
+    ty.value = Math.min(my, Math.max(-my, (stored?.y ?? 0) * canvasH));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canvasW, canvasH, stored]);
+  const gesture = useMemo(() => {
+    const clamp = () => {
+      'worklet';
+      const mx = ((sc.value - 1) * canvasW) / 2, my = ((sc.value - 1) * canvasH) / 2;
+      tx.value = Math.min(mx, Math.max(-mx, tx.value));
+      ty.value = Math.min(my, Math.max(-my, ty.value));
+    };
+    const end = () => {
+      'worklet';
+      runOnJS(persist)({ x: tx.value / canvasW, y: ty.value / canvasH, s: sc.value });
+    };
+    return Gesture.Simultaneous(
+      Gesture.Pan().enabled(enabled).onChange(e => { tx.value += e.changeX; ty.value += e.changeY; clamp(); }).onEnd(end),
+      Gesture.Pinch().enabled(enabled).onChange(e => { sc.value = Math.min(4, Math.max(1, sc.value * e.scaleChange)); clamp(); }).onEnd(end),
+    );
+  }, [canvasW, canvasH, enabled, persist, tx, ty, sc]);
   const style = useAnimatedStyle(() => ({
     transform: [{ translateX: tx.value }, { translateY: ty.value }, { scale: sc.value }],
   }));
@@ -211,16 +271,23 @@ export default function ShareCardScreen() {
     () => (routeLine ? routePath(routeLine, layerSize, 10) : null),
     [routeLine, layerSize],
   );
-  const stroke = routeStroke('dark'); // the house lime — legible on the dark-fixture canvas AND photos
+  const stroke = prefs.strokeColor ?? routeStroke('dark'); // preset-able (v2.1); lime default
+  const strokeW = prefs.strokeWeight ?? 4.5;
+  // 배경 조정 MODE (v2.1 arbitration): RNGH makes every detector whose view
+  // contains the touch a CANDIDATE regardless of z-order — cross-wiring
+  // relations across 5 detectors is fragile. The deterministic grammar: an
+  // explicit mode. Mode ON → upper layers' gestures .enabled(false), the
+  // bg detector alone is live; OFF → exactly the pre-v2.1 world.
+  const [bgAdjustMode, setBgAdjustMode] = useState(false);
   const tx = useSharedValue(0);
   const ty = useSharedValue(0);
   const sc = useSharedValue(1);
   const rot = useSharedValue(0);
   const gesture = useMemo(() => Gesture.Simultaneous(
-    Gesture.Pan().onChange(e => { tx.value += e.changeX; ty.value += e.changeY; }),
-    Gesture.Pinch().onChange(e => { sc.value *= e.scaleChange; }),
-    Gesture.Rotation().onChange(e => { rot.value += e.rotationChange; }),
-  ), [tx, ty, sc, rot]);
+    Gesture.Pan().enabled(!bgAdjustMode).onChange(e => { tx.value += e.changeX; ty.value += e.changeY; }),
+    Gesture.Pinch().enabled(!bgAdjustMode).onChange(e => { sc.value *= e.scaleChange; }),
+    Gesture.Rotation().enabled(!bgAdjustMode).onChange(e => { rot.value += e.rotationChange; }),
+  ), [tx, ty, sc, rot, bgAdjustMode]);
   const layerStyle = useAnimatedStyle(() => ({
     transform: [
       { translateX: tx.value },
@@ -239,10 +306,30 @@ export default function ShareCardScreen() {
       return next;
     });
   }, []);
-  const distLayer = useMetricLayer('dist', canvasW, canvasH, prefs.placements?.dist, persistPlacement);
-  const paceLayer = useMetricLayer('pace', canvasW, canvasH, prefs.placements?.pace, persistPlacement);
-  const timeLayer = useMetricLayer('time', canvasW, canvasH, prefs.placements?.time, persistPlacement);
+  const distLayer = useMetricLayer('dist', canvasW, canvasH, prefs.placements?.dist, persistPlacement, !bgAdjustMode);
+  const paceLayer = useMetricLayer('pace', canvasW, canvasH, prefs.placements?.pace, persistPlacement, !bgAdjustMode);
+  const timeLayer = useMetricLayer('time', canvasW, canvasH, prefs.placements?.time, persistPlacement, !bgAdjustMode);
   const layerFor = { dist: distLayer, pace: paceLayer, time: timeLayer } as const;
+
+  // ── v2.1 per-run background adjust (photos only) ────────────────────────────
+  const bgStored = runId ? prefs.bgAdjust?.[runId] : undefined;
+  const persistBg = useMemo(() => (patch: Partial<{ x: number; y: number; s: number; dim: number }>) => {
+    if (!runId) return;
+    setPrefs(prev => {
+      const cur = prev.bgAdjust?.[runId] ?? { x: 0, y: 0, s: 1, dim: 0 };
+      const map = { ...(prev.bgAdjust ?? {}) };
+      delete map[runId]; // re-insert last = newest (insertion-order prune)
+      map[runId] = { ...cur, ...patch };
+      const keys = Object.keys(map);
+      while (keys.length > BG_ADJUST_CAP) { delete map[keys[0]]; keys.shift(); }
+      const next = { ...prev, bgAdjust: map };
+      AsyncStorage.setItem(PREFS_KEY, JSON.stringify(next)).catch(() => {});
+      return next;
+    });
+  }, [runId]);
+  const bgIsPhoto = bg?.kind === 'photo';
+  const bgLayer = useBgLayer(canvasW, canvasH, bgStored, bgAdjustMode && bgIsPhoto, persistBg);
+  const bgDim = bgStored?.dim ?? 0;
 
   if (!run) return <View style={st.root} />;
 
@@ -282,16 +369,31 @@ export default function ShareCardScreen() {
         {/* ── THE CARD ── */}
         <View style={st.canvasWrap}>
           <View style={[st.canvas, { width: canvasW, height: canvasH }]}>
-            {bg.kind === 'photo' && <Image source={{ uri: bg.url }} style={StyleSheet.absoluteFillObject} resizeMode="cover" />}
+            {bg.kind === 'photo' && (
+              <GestureDetector gesture={bgLayer.gesture}>
+                <Reanimated.View style={[StyleSheet.absoluteFillObject, bgLayer.style]}>
+                  <Image source={{ uri: bg.url }} style={StyleSheet.absoluteFillObject} resizeMode="cover" />
+                </Reanimated.View>
+              </GestureDetector>
+            )}
             {bg.kind === 'gradient' && <LinearGradient colors={bg.colors} style={StyleSheet.absoluteFillObject} />}
             {bg.kind === 'solid' && <View style={[StyleSheet.absoluteFillObject, { backgroundColor: bg.color }]} />}
+            {/* dim overlay (photos only) — legibility rescue; pairs with zoom */}
+            {bg.kind === 'photo' && bgDim > 0 && (
+              <View pointerEvents="none" style={[StyleSheet.absoluteFillObject, { backgroundColor: '#000', opacity: bgDim }]} />
+            )}
+            {bgAdjustMode && bgIsPhoto && (
+              <View pointerEvents="none" style={st.bgModeBadge}>
+                <Text style={st.bgModeTxt}>배경 조정 중 — 드래그·핀치</Text>
+              </View>
+            )}
 
             {/* draggable route layer — Instagram-story grammar */}
             {route && (
               <GestureDetector gesture={gesture}>
                 <Reanimated.View style={[st.routeLayer, { width: layerSize, height: layerSize, left: (canvasW - layerSize) / 2, top: (canvasH - layerSize) / 2 }, layerStyle]}>
                   <Svg viewBox={`0 0 ${layerSize} ${layerSize}`} width="100%" height="100%">
-                    <Path d={route.d} stroke={stroke} strokeWidth={4.5} strokeLinecap="round" strokeLinejoin="round" fill="none" opacity={0.95} />
+                    <Path d={route.d} stroke={stroke} strokeWidth={strokeW} strokeLinecap="round" strokeLinejoin="round" fill="none" opacity={0.95} />
                     <Circle cx={route.start[0]} cy={route.start[1]} r={5} fill="#fff" stroke={stroke} strokeWidth={3} />
                     <Circle cx={route.end[0]} cy={route.end[1]} r={5.5} fill={stroke} stroke="#fff" strokeWidth={2} />
                   </Svg>
@@ -341,6 +443,36 @@ export default function ShareCardScreen() {
               <Text style={[st.chipTxt, prefs.wordmark && st.chipTxtOn]}>워드마크</Text>
             </Pressable>
           </View>
+          <Text style={st.groupLbl}>루트 스타일</Text>
+          <View style={st.chipRow}>
+            {STROKE_COLORS.map(c => (
+              <Pressable key={c} onPress={() => save({ ...prefs, strokeColor: c })} style={[st.colorDot, { backgroundColor: c }, (prefs.strokeColor ?? STROKE_COLORS[0]) === c && st.colorDotOn]} />
+            ))}
+            {STROKE_WEIGHTS.map(([w, label]) => (
+              <Pressable key={w} onPress={() => save({ ...prefs, strokeWeight: w })} style={[st.chip, (prefs.strokeWeight ?? 4.5) === w && st.chipOn]}>
+                <Text style={[st.chipTxt, (prefs.strokeWeight ?? 4.5) === w && st.chipTxtOn]}>{label}</Text>
+              </Pressable>
+            ))}
+          </View>
+          {bgIsPhoto && (
+            <>
+              <Text style={st.groupLbl}>배경 (사진)</Text>
+              <View style={st.chipRow}>
+                <Pressable onPress={() => setBgAdjustMode(m => !m)} style={[st.chip, bgAdjustMode && st.chipOn]}>
+                  <Text style={[st.chipTxt, bgAdjustMode && st.chipTxtOn]}>{bgAdjustMode ? '조정 완료' : '배경 조정'}</Text>
+                </Pressable>
+                <View style={st.dimSlider}>
+                  <Text style={st.dimLbl}>딤 {Math.round(bgDim * 100)}%</Text>
+                  <Slider
+                    style={{ flex: 1 }}
+                    minimumValue={0} maximumValue={0.6} step={0.05} value={bgDim}
+                    onSlidingComplete={v => persistBg({ dim: Math.round(v * 20) / 20 })}
+                    minimumTrackTintColor={C.accent} maximumTrackTintColor={C.border} thumbTintColor="#fff"
+                  />
+                </View>
+              </View>
+            </>
+          )}
           <Text style={st.groupLbl}>표시할 항목</Text>
           <View style={st.chipRow}>
             {(Object.keys(METRIC_LABELS) as ShareMetricKey[]).map(k => (
@@ -403,6 +535,12 @@ const makeSt = (C: Tokens) => StyleSheet.create({
   chipOn:   { borderColor: C.accent, backgroundColor: C.accent + '1A' },
   chipTxt:  { fontSize: 12.5, fontWeight: '600', color: C.sub, letterSpacing: -0.2 },
   chipTxtOn:{ color: C.text },
+  colorDot:   { width: 30, height: 30, borderRadius: 15, borderWidth: 2, borderColor: 'transparent' },
+  dimSlider:  { flex: 1, minWidth: 170, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  dimLbl:     { fontSize: 12, fontWeight: '600', color: C.sub, letterSpacing: -0.2, width: 58 },
+  colorDotOn: { borderColor: C.text },
+  bgModeBadge: { position: 'absolute', top: 10, alignSelf: 'center', backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: 999, paddingHorizontal: 12, paddingVertical: 5 },
+  bgModeTxt:   { fontSize: 11, fontWeight: '700', color: '#fff', letterSpacing: -0.2 },
 
   actions:      { paddingHorizontal: S.gutter, paddingTop: 18, gap: 9 },
   textShareBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 14, paddingVertical: 14 },
