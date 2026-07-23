@@ -401,7 +401,7 @@ export default function ProfileScreen() {
             route through togglePause). */}
         <SettingGroup title="러닝 동작">
           <ToggleRow label="음성 안내"      on={runSettings.voice_cue}      onChange={v => toggleRun('voice_cue',      v)} />
-          <ToggleRow label="햅틱 피드백"    on={runSettings.haptics}        onChange={v => toggleRun('haptics',        v)} caption="기기의 시스템 햅틱 설정도 켜져 있어야 해요 · 휠 선택기는 시스템 자체 햅틱을 써요" />
+          <ToggleRow label="햅틱 피드백"    on={runSettings.haptics}        onChange={v => toggleRun('haptics',        v)} caption="기기 햅틱 설정이 꺼져 있으면 진동이 울리지 않아요" />
           <ToggleRow label="화면 항상 켜기" on={runSettings.keep_screen_on} onChange={v => toggleRun('keep_screen_on', v)} />
         </SettingGroup>
 
