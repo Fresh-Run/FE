@@ -1203,7 +1203,7 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 
 **cce2ae03 + 17abc510 + 9f1fe484 + a91cfad5 — owner TF:** free-placed metrics survive flips/restarts · camera-roll backgrounds live · three-metric card, single 총 시간 · share doors on every run-opening screen · long-press retired · others' posts inert · export honestly held (build 8). **ROLLBACK FLOOR ADVANCES TO a91cfad5.** v2.1 fires next per its accepted checkpoint.
 
-## 🦆 DUCK-RELEASE FIX — BUILT (2026-07-24, XS; publish HELD per pin; field test rides the completion walk)
+## 🦆 DUCK-RELEASE FIX — PUBLISHED (group 30250091-7cde-487b-bfff-c3050a1c0db6; hash-tie proof, standing markers 5/5; rollback floor bcf82fcd; field test rides the completion walk)
 
 **speakCue now passes onDone/onStopped/onError → `setIsAudioActiveAsync(false)`** (via the existing deactivateRunAudioSession — ONE release body, shared with unmount). Behavior: dim during speech · RESTORE between cues (notifyOthersOnDeactivation, already native in build 7) · re-duck each cue (speech re-activates itself). onStopped inherits the release for preemption AND stopSpeech (pause/leave get music back). **Preemption race benign BY CONSTRUCTION (stated):** a stale release landing after the next utterance started throws inside iOS (I/O running) and the guard swallows it — the live cue keeps its session; its own onDone releases. Double-release at run-end (finish-cue onDone + unmount) = idempotent-class, swallowed. **THE COMPLETION WALK = one outing, three closures:** remaining legs (② backgrounded 0.5km · ③ LOCKED POCKET 1.0km scenario C · split buzz · standstill quartet) + the new check (music RESTORES after each cue) → closes the walk, the fix, and the build-8 gate together.
 
