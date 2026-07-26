@@ -1218,7 +1218,8 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 ## 🛤️ CHANNEL RULED: B ADOPTED — STAGING-GATED PIPELINE (2026-07-27; sequence FIRED)
 - Ruling: (B) internal staging channel; (C) rollout retained as post-verification layer for high-risk slices; (A) declined (fidelity flaw). CORE: the owner stamp = the promotion gate — the verified-ledger flow formalized. Doctrine amended in CLAUDE.md with the verbatim line: "the floor recalls bad bytes; it cannot recall a stranger's first impression."
 - Executed: eas.json `staging` build profile (extends production, channel staging) + submit.staging · channel+branch `staging` created · build 10 FIRED (production profile otherwise, buildNumber 10 via autoIncrement).
-- Sequence remaining: ⑧ artifact gate → phantom-twin → TF submit → 내부 테스팅 ONLY (never-외부테스팅1 guardrail standing) → both phones install → ONE REHEARSAL (staging publish → owner dance+[HH:MM] on staging binary → republish to production → promotion hash-tie) → pipeline PROVEN before invites.
+- BUILD 10 GATED + SUBMITTED (01:07): build 3df9734d from aae0028 exact · 8-field gate green (channel STAGING baked in Expo.plist, store class, runtime 1.0.5, buildNumber 10) · ⑦ ZERO · ⑧ 5/5 · **UUID 0FAC5BB6 = IDENTICAL to build 9 — native bytes byte-same, only the channel plist differs (verification fidelity is definitionally perfect)** · phantom-twin pre-checked clean → submit exit 0, Apple processing. 내부 테스팅 receives it automatically (hasAccessToAllBuilds); 외부테스팅1 readback = build 9 ONLY (guardrail proven, standing).
+- Sequence remaining: both phones install build 10 → ONE REHEARSAL (staging publish → owner dance+[HH:MM] on staging binary → republish to production → promotion hash-tie) → pipeline PROVEN before invites.
 - Until rehearsal passes: the pre-B flow stands (stated in the doctrine).
 
 ## 📄 Channel decision memo (superseded by the ruling above)
