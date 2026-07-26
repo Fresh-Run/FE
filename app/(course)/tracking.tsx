@@ -30,7 +30,7 @@ import {
 } from 'react-native';
 import BottomSheet, { BottomSheetView } from '@gorhom/bottom-sheet';
 import { Gesture, GestureDetector, GestureHandlerRootView, type GestureType } from 'react-native-gesture-handler';
-import MapView, { Marker, Polyline } from 'react-native-maps';
+import MapView, { Polyline } from 'react-native-maps';
 import Reanimated, {
   useAnimatedStyle,
   useSharedValue,
@@ -40,7 +40,7 @@ import Svg, { Circle } from 'react-native-svg';
 
 import { Icon } from '@/components/ui';
 import { SEOUL_FALLBACK, useCurrentLocation } from '@/hooks/use-current-location';
-import { courseChevrons, courseLengthM, nearestOnCourse, OFF_COURSE_ENTER_M, OFF_COURSE_EXIT_M, pointAhead } from '@/lib/course-nav';
+import { courseLengthM, nearestOnCourse, OFF_COURSE_ENTER_M, OFF_COURSE_EXIT_M, pointAhead } from '@/lib/course-nav';
 import { runSession } from '@/store/run-session';
 import { useRunTracker } from '@/hooks/use-run-tracker';
 import { composeFinishCue, composeSplitCue, composeStartCue, speakCue, stopSpeech } from '@/lib/audio-coach';
@@ -415,15 +415,6 @@ export default function TrackingScreen() {
     () => (course?.polyline && course.polyline.length > 1 ? courseLengthM(course.polyline) : 0),
     [course],
   );
-  // T1.8 chevrons: computed ONCE per course (static positions+bearings —
-  // never re-sliced with ahead/behind); spacing 100m, widened on long
-  // courses so count stays ≤40 (the jank budget). Render filter = cumM >
-  // alongM (only the road AHEAD wears arrows; history is unmarked).
-  const chevrons = useMemo(() => {
-    if (!course?.polyline || course.polyline.length < 2 || courseLenM === 0) return [];
-    const spacing = Math.max(100, courseLenM / 40);
-    return courseChevrons(course.polyline, spacing);
-  }, [course, courseLenM]);
   // Off-course haptic: Warning-class, the GPS-weak pattern's sibling —
   // rising-edge + 60s cooldown (the sibling's exact value: vocabulary
   // consistency beats a bespoke number) — run.haptics-gated, fire-time.
@@ -749,24 +740,6 @@ export default function TrackingScreen() {
             <>
               <Polyline coordinates={courseAhead} strokeColor="rgba(12,18,6,0.85)" strokeWidth={14} lineCap="round" lineJoin="round" />
               <Polyline coordinates={courseAhead} strokeColor={routeStroke('dark')} strokeWidth={10} lineCap="round" lineJoin="round" />
-              {/* T1.8 chevrons — Marker flat+rotation (NATIVE map-plane
-                  rotation: no per-frame JS, rides camera heading/pitch for
-                  free); content static (default tracksViewChanges — the
-                  proven config; ={false} is the convicted empty-bitmap
-                  class); casing-toned for contrast ON the lime ribbon.
-                  Ahead-only by cumM filter; history stays unmarked. */}
-              {chevrons.filter(c => c.cumM > alongM).map(c => (
-                <Marker
-                  key={`ch-${c.cumM}`}
-                  coordinate={{ latitude: c.lat, longitude: c.lng }}
-                  anchor={{ x: 0.5, y: 0.5 }}
-                  flat
-                  rotation={c.bearingDeg}
-                  pointerEvents="none"
-                >
-                  <View style={st.chevron} />
-                </Marker>
-              ))}
             </>
           )}
           {drawnPath.length > 1 && (
@@ -988,9 +961,6 @@ const makeSt = (C: Tokens) => StyleSheet.create({
   recenterWrap: { position: 'absolute', right: 14 },
   recenterBtn:  { width: 40, height: 40, borderRadius: R.pill, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, alignItems: 'center', justifyContent: 'center', ...shadows.sm },
   gpsChip:    { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(0,0,0,0.45)', borderRadius: R.pill, paddingHorizontal: 10, paddingVertical: 5 },
-  // T1.8: CSS-triangle chevron — points "up" (north) at rotation 0; the
-  // Marker's flat rotation aims it along the course bearing. Casing tone.
-  chevron: { width: 0, height: 0, borderLeftWidth: 5, borderRightWidth: 5, borderBottomWidth: 9, borderLeftColor: 'transparent', borderRightColor: 'transparent', borderBottomColor: 'rgba(12,18,6,0.85)' },
   gpsChipTxt: { fontSize: 11, fontWeight: '700', color: '#fff', letterSpacing: -0.2 },
 
   // Course title pill (course mode)

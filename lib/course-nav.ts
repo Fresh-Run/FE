@@ -61,33 +61,3 @@ export function pointAhead(c: Coordinate, headingDeg: number, dM: number): Coord
   };
 }
 
-/** T1.8 ribbon chevrons: direction arrows along the course — placed every
-    spacingM by along-line walk, bearing = segment direction (deg from N).
-    Count-capped upstream (spacing widens on long courses, never >CAP). */
-export function courseChevrons(
-  course: readonly Coordinate[],
-  spacingM: number,
-): { lat: number; lng: number; bearingDeg: number; cumM: number }[] {
-  if (course.length < 2 || spacingM <= 0) return [];
-  const out: { lat: number; lng: number; bearingDeg: number; cumM: number }[] = [];
-  let cum = 0, next = spacingM;
-  for (let i = 1; i < course.length; i++) {
-    const a = course[i - 1], b = course[i];
-    const kx = Math.cos((a.lat * Math.PI) / 180) * M_PER_DEG_LAT;
-    const ex = (b.lng - a.lng) * kx, ny = (b.lat - a.lat) * M_PER_DEG_LAT;
-    const seg = Math.hypot(ex, ny);
-    const bearing = ((Math.atan2(ex, ny) * 180) / Math.PI + 360) % 360;
-    while (seg > 0 && cum + seg >= next) {
-      const t = (next - cum) / seg;
-      out.push({
-        lat: a.lat + (b.lat - a.lat) * t,
-        lng: a.lng + (b.lng - a.lng) * t,
-        bearingDeg: bearing,
-        cumM: next,
-      });
-      next += spacingM;
-    }
-    cum += seg;
-  }
-  return out;
-}
