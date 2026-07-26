@@ -30,6 +30,8 @@ import { RealMap } from '@/components/real-map';
 import { Icon } from '@/components/ui';
 import { Toggle } from '@/components/toggle';
 import { useCurrentLocation } from '@/hooks/use-current-location';
+import { useWaypointNames } from '@/hooks/use-waypoint-names';
+import { waypointCacheKey } from '@/lib/waypoint-names';
 import { distUnit, fmtDist, KM_PER_MI } from '@/lib/run-format';
 import { haversineKm } from '@/lib/run-metrics';
 import { setActiveCourse } from '@/store/active-course';
@@ -140,7 +142,7 @@ function StatTile({ label, value }: { label: string; value: string }) {
   );
 }
 
-function WaypointRow({ wp, index }: { wp: Waypoint; index: number }) {
+function WaypointRow({ wp, index, displayName }: { wp: Waypoint; index: number; displayName?: string }) {
   const st = useStyles(makeSt);
   return (
     <View style={st.wpRow}>
@@ -149,7 +151,7 @@ function WaypointRow({ wp, index }: { wp: Waypoint; index: number }) {
       </View>
       <View style={{ flex: 1, minWidth: 0 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-          <Text style={st.wpName} numberOfLines={1}>{wp.name}</Text>
+          <Text style={st.wpName} numberOfLines={1}>{displayName ?? wp.name}</Text>
           {wp.is_pitstop && (
             <View style={st.pitstopBadge}>
               <Text style={st.pitstopTxt}>피스톱</Text>
@@ -255,6 +257,9 @@ export default function CreateScreen() {
   const [autoMode] = useState(autoParam === '1');
   const [viewState, setViewState] = useState<ViewState>(autoParam === '1' ? 'generating' : 'form');
   const [route, setRoute]         = useState<GeneratedRoute | null>(null);
+  // 지점 N fill — placeholder waypoints get real names (label-shape slice);
+  // top-level call (hooks rule), no-ops until a route exists
+  const wpNames = useWaypointNames(route?.waypoints);
   const [genError, setGenError]   = useState<string | null>(null);
   // Target captured at request time — the miss banner's delta must compare
   // against what was actually asked, not the (resettable) slider state.
@@ -459,7 +464,7 @@ export default function CreateScreen() {
               {route.waypoints.map((wp, i) => (
                 <View key={i}>
                   {i > 0 && <View style={st.wpDivider} />}
-                  <WaypointRow wp={wp} index={i} />
+                  <WaypointRow wp={wp} index={i} displayName={wpNames[waypointCacheKey(wp.coordinate)]} />
                 </View>
               ))}
             </View>
