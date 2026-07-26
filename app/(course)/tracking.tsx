@@ -40,7 +40,7 @@ import Svg, { Circle } from 'react-native-svg';
 
 import { Icon } from '@/components/ui';
 import { SEOUL_FALLBACK, useCurrentLocation } from '@/hooks/use-current-location';
-import { nearestOnCourse, OFF_COURSE_ENTER_M, OFF_COURSE_EXIT_M, pointAhead } from '@/lib/course-nav';
+import { courseLengthM, nearestOnCourse, OFF_COURSE_ENTER_M, OFF_COURSE_EXIT_M, pointAhead } from '@/lib/course-nav';
 import { runSession } from '@/store/run-session';
 import { useRunTracker } from '@/hooks/use-run-tracker';
 import { composeFinishCue, composeSplitCue, composeStartCue, speakCue, stopSpeech } from '@/lib/audio-coach';
@@ -52,7 +52,7 @@ import { setPendingRun } from '@/store/pending-run';
 import { useLocalProfile } from '@/store/use-local-profile';
 import { useSettings } from '@/store/use-settings';
 import { distUnit, fmtDist, fmtPaceIn, paceUnit } from '@/lib/run-format';
-import { accentShadow, courseStroke, radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
+import { accentShadow, radius as R, routeStroke, shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useScheme } from '@/store/use-scheme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 
@@ -405,6 +405,12 @@ export default function TrackingScreen() {
   const [nearestSeg, setNearestSeg] = useState(0);
   const [offCourse, setOffCourse] = useState(false);
   const [rejoinM, setRejoinM] = useState(0);
+  // T1.6 nav strip: along-line progress → 남은 거리 · 도착 예상
+  const [alongM, setAlongM] = useState(0);
+  const courseLenM = useMemo(
+    () => (course?.polyline && course.polyline.length > 1 ? courseLengthM(course.polyline) : 0),
+    [course],
+  );
   // Off-course haptic: Warning-class, the GPS-weak pattern's sibling —
   // rising-edge + 60s cooldown (the sibling's exact value: vocabulary
   // consistency beats a bespoke number) — run.haptics-gated, fire-time.
@@ -414,9 +420,10 @@ export default function TrackingScreen() {
     if (state !== 'running' || !poly || poly.length < 2) return;
     const here = livePath[livePath.length - 1];
     if (!here) return;
-    const { segIndex, distM } = nearestOnCourse(poly, here);
+    const { segIndex, distM, alongM: am } = nearestOnCourse(poly, here);
     setNearestSeg(segIndex);
     setRejoinM(Math.round(distM));
+    setAlongM(am);
     setOffCourse(prev => {
       const next = prev ? distM > OFF_COURSE_EXIT_M : distM > OFF_COURSE_ENTER_M;
       if (next && !prev) {
@@ -704,6 +711,10 @@ export default function TrackingScreen() {
           // misses two-finger gestures); recenter resumes follow instantly
           onRegionChangeComplete={(_r, d) => { if (d?.isGesture && state === 'running') onUserPan(); }}
           showsUserLocation
+          // T1.6 POI MUTE: course tracking quiets to roads + ribbon; free
+          // runs keep today's map (the prop is per-render — not mode-awkward)
+          showsPointsOfInterest={!hasCoursePath}
+          showsTraffic={false}
           showsMyLocationButton={false}
           showsCompass={false}
           toolbarEnabled={false}
@@ -712,15 +723,19 @@ export default function TrackingScreen() {
               been") — scheme-keyed courseStroke, deep green vs the vivid
               accent, width 4 vs 5. The old rgba(110,120,132,0.75) read
               2.0–2.7:1 on map tiles (sub-perceptual — leg-1 conviction). */}
-          {/* T1: ahead/behind emphasis — the run-part dims, the road ahead
-              keeps the full course stroke (split at the nearest segment) */}
+          {/* T1.6 ROUTE RIBBON — road-width, unmissable. rn-maps has NO
+              casing/outline prop: the Apple two-tone ribbon is FAKED cleanly
+              with a double polyline (dark casing 14 UNDER lime fill 10 —
+              render order = z-order). Behind stays a single dimmed lime
+              (receded on purpose — no casing); alpha channel per T1's lesson. */}
           {courseBehind.length > 1 && (
-            // dim via stroke ALPHA ('59' = 35%) — a style.opacity on a native
-            // map overlay is unreliable; the color channel is the honest lane
-            <Polyline coordinates={courseBehind} strokeColor={courseStroke(resolved) + '59'} strokeWidth={4} lineCap="round" />
+            <Polyline coordinates={courseBehind} strokeColor={routeStroke('dark') + '59'} strokeWidth={10} lineCap="round" lineJoin="round" />
           )}
           {courseAhead.length > 1 && (
-            <Polyline coordinates={courseAhead} strokeColor={courseStroke(resolved)} strokeWidth={4} lineCap="round" />
+            <>
+              <Polyline coordinates={courseAhead} strokeColor="rgba(12,18,6,0.85)" strokeWidth={14} lineCap="round" lineJoin="round" />
+              <Polyline coordinates={courseAhead} strokeColor={routeStroke('dark')} strokeWidth={10} lineCap="round" lineJoin="round" />
+            </>
           )}
           {drawnPath.length > 1 && (
             <Polyline coordinates={drawnPath} strokeColor={C.accent} strokeWidth={5} />
@@ -839,6 +854,31 @@ export default function TrackingScreen() {
             <Text style={st.timeValue}>{fmtElapsed(elapsedSec)}</Text>
           </View>
 
+          {/* T1.6 NAV STRIP (course mode): the navigator's trio — 남은 거리
+              (course length − along-line progress) · 도착 예상 (remaining ÷
+              avg pace so far, honestly labeled 예상). Free runs keep today's
+              face untouched. */}
+          {hasCoursePath && (
+            <View style={[st.metricsRow, { marginBottom: 10 }]}>
+              {(() => {
+                const remainM = Math.max(0, courseLenM - alongM);
+                const avgPace = distanceKm > 0.05 ? elapsedSec / distanceKm : null;
+                const etaMin = avgPace != null ? Math.round(((remainM / 1000) * avgPace) / 60) : null;
+                return ([
+                  [fmtDist(remainM / 1000, units, 2), distUnit(units), '남은 거리'],
+                  [etaMin != null ? `약 ${etaMin}분` : '—', '', '도착 예상'],
+                ] as [string, string, string][]).map(([val, unit, label], i) => (
+                  <View key={label} style={[st.metricCol, i > 0 && st.metricColDivider]}>
+                    <View style={st.metricValRow}>
+                      <Text style={st.metricVal}>{val}</Text>
+                      {unit ? <Text style={st.metricUnit}>{unit}</Text> : null}
+                    </View>
+                    <Text style={st.metricLbl}>{label}</Text>
+                  </View>
+                ));
+              })()}
+            </View>
+          )}
           <View style={st.metricsRow}>
             {([
               [fmtDist(distanceKm, units, 2), distUnit(units), '거리'],
