@@ -136,6 +136,11 @@ function Waveform({ active }: { active: boolean }) {
 
 const HOLD_MS = 1100;
 const HOLD_DRIFT_MAX = 34; // finger drift allowance while HOLDING (owner: 20px must survive)
+// Hold-begin Light fires only once the press outlives a tap — feedback for
+// the real gesture, never for a bare tap (ring-honesty ruling 2026-07-26)
+const HOLD_LIGHT_AT_MS = 180;
+// Early release: fast reverse — the ring visibly "lets go" (owner lean)
+const HOLD_SNAPBACK_MS = 150;
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 // size prop (T-B): 72 = expanded controls row, 44 = compact strip — the ring
@@ -160,19 +165,28 @@ function HoldStop({ onComplete, size = 72, showLabel = true, gestureRef }: {
   // run.haptics setting gates all haptic feedback here (persisted via profile)
   const hapticsOn = useSettings(s => s.settings.run.haptics);
 
+  const lightTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const clearLight = () => {
+    if (lightTimer.current) { clearTimeout(lightTimer.current); lightTimer.current = null; }
+  };
+  useEffect(() => clearLight, []);
+
   const begin = () => {
     setHolding(true);
-    if (hapticsOn) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    // Light waits out the tap window — a bare tap gets NO buzz
+    if (hapticsOn) lightTimer.current = setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light), HOLD_LIGHT_AT_MS);
     Animated.timing(progress, { toValue: 1, duration: HOLD_MS, easing: Easing.linear, useNativeDriver: false }).start();
   };
   const complete = () => {
+    clearLight();
     setHolding(false);
     if (hapticsOn) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     onComplete();
   };
   const cancel = () => {
+    clearLight();
     setHolding(false);
-    Animated.timing(progress, { toValue: 0, duration: 250, easing: Easing.out(Easing.ease), useNativeDriver: false }).start();
+    Animated.timing(progress, { toValue: 0, duration: HOLD_SNAPBACK_MS, easing: Easing.out(Easing.quad), useNativeDriver: false }).start();
   };
 
   let hold = Gesture.LongPress()
