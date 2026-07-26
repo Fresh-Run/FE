@@ -40,6 +40,8 @@ import Svg, { Circle } from 'react-native-svg';
 
 import { Icon } from '@/components/ui';
 import { SEOUL_FALLBACK, useCurrentLocation } from '@/hooks/use-current-location';
+import { nearestOnCourse, OFF_COURSE_ENTER_M, OFF_COURSE_EXIT_M } from '@/lib/course-nav';
+import { runSession } from '@/store/run-session';
 import { useRunTracker } from '@/hooks/use-run-tracker';
 import { composeFinishCue, composeSplitCue, composeStartCue, speakCue, stopSpeech } from '@/lib/audio-coach';
 import { activateRunAudioSession, deactivateRunAudioSession } from '@/lib/audio-session';
@@ -380,12 +382,64 @@ export default function TrackingScreen() {
     [course],
   );
 
+  // ── T1 NAVIGATION (course runs ONLY — free runs keep zero delta) ──────────
+  // nearest-segment index drives the ahead/behind emphasis; point-to-segment
+  // distance drives off-course with hysteresis (enter 40m / exit 25m).
+  const [nearestSeg, setNearestSeg] = useState(0);
+  const [offCourse, setOffCourse] = useState(false);
+  const [rejoinM, setRejoinM] = useState(0);
+  // Off-course haptic: Warning-class, the GPS-weak pattern's sibling —
+  // rising-edge + 60s cooldown (the sibling's exact value: vocabulary
+  // consistency beats a bespoke number) — run.haptics-gated, fire-time.
+  const offBuzzAtRef = useRef(0);
+  useEffect(() => {
+    const poly = course?.polyline;
+    if (state !== 'running' || !poly || poly.length < 2) return;
+    const here = livePath[livePath.length - 1];
+    if (!here) return;
+    const { segIndex, distM } = nearestOnCourse(poly, here);
+    setNearestSeg(segIndex);
+    setRejoinM(Math.round(distM));
+    setOffCourse(prev => {
+      const next = prev ? distM > OFF_COURSE_EXIT_M : distM > OFF_COURSE_ENTER_M;
+      if (next && !prev) {
+        const now = Date.now();
+        if (now - offBuzzAtRef.current >= 60_000 && useSettings.getState().settings.run.haptics) {
+          offBuzzAtRef.current = now;
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+        }
+      }
+      return next;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [livePath.length, state, course]);
+
+  // ahead/behind split — behind dims, ahead keeps the full course stroke
+  const courseBehind = useMemo(
+    () => (courseCoords.length > 1 ? courseCoords.slice(0, nearestSeg + 1) : []),
+    [courseCoords, nearestSeg],
+  );
+  const courseAhead = useMemo(
+    () => (courseCoords.length > 1 ? courseCoords.slice(nearestSeg) : []),
+    [courseCoords, nearestSeg],
+  );
+
   // Camera follow on path growth (running only, not while user-panned)
   useEffect(() => {
     if (state !== 'running' || drawnPath.length === 0) return;
     if (Date.now() - lastUserPanRef.current < 8000) return;
-    mapRef.current?.animateCamera({ center: drawnPath[drawnPath.length - 1] }, { duration: 500 });
-  }, [drawnPath.length, state, drawnPath]);
+    // T1: heading-up follow on COURSE runs (the plumbed heading — last valid
+    // course-over-ground; null pre-fix → centered north-up as before).
+    // Free runs keep the north-up center-follow verbatim (zero delta).
+    const hasCourse = courseCoords.length > 1;
+    const h = hasCourse ? runSession.getLastHeading() : null;
+    mapRef.current?.animateCamera(
+      h != null
+        ? { center: drawnPath[drawnPath.length - 1], heading: h }
+        : { center: drawnPath[drawnPath.length - 1] },
+      { duration: 500 },
+    );
+  }, [drawnPath.length, state, drawnPath, courseCoords.length]);
 
   // Center on the USER's RESOLVED location (T-B correction ②): the hook's
   // coordinate is Seoul-fallback-initialized (never null), so truthiness
@@ -627,8 +681,13 @@ export default function TrackingScreen() {
               been") — scheme-keyed courseStroke, deep green vs the vivid
               accent, width 4 vs 5. The old rgba(110,120,132,0.75) read
               2.0–2.7:1 on map tiles (sub-perceptual — leg-1 conviction). */}
-          {courseCoords.length > 1 && (
-            <Polyline coordinates={courseCoords} strokeColor={courseStroke(resolved)} strokeWidth={4} />
+          {/* T1: ahead/behind emphasis — the run-part dims, the road ahead
+              keeps the full course stroke (split at the nearest segment) */}
+          {courseBehind.length > 1 && (
+            <Polyline coordinates={courseBehind} strokeColor={courseStroke(resolved)} strokeWidth={4} lineCap="round" style={{ opacity: 0.35 }} />
+          )}
+          {courseAhead.length > 1 && (
+            <Polyline coordinates={courseAhead} strokeColor={courseStroke(resolved)} strokeWidth={4} lineCap="round" />
           )}
           {drawnPath.length > 1 && (
             <Polyline coordinates={drawnPath} strokeColor={C.accent} strokeWidth={5} />
@@ -672,6 +731,13 @@ export default function TrackingScreen() {
               <View style={st.gpsChip}>
                 <Icon name="cellular-outline" size={11} color={C.sun} />
                 <Text style={st.gpsChipTxt}>GPS 신호 약함</Text>
+              </View>
+            )}
+            {/* T1: 경로 이탈 banner + re-join hint (course runs only) */}
+            {offCourse && (
+              <View style={[st.gpsChip, { backgroundColor: 'rgba(180,40,40,0.72)' }]}>
+                <Icon name="navigate-outline" size={11} color="#fff" />
+                <Text style={st.gpsChipTxt}>경로 이탈 — 경로까지 약 {rejoinM}m</Text>
               </View>
             )}
           </View>

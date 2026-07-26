@@ -103,6 +103,7 @@ let state: TrackerState = 'idle';
 let accumulatedMs = 0;
 let segmentStart: number | null = null;
 let wallStartedAt = 0; // true wall-clock start (beginRunning) — ③'s HK anchor
+let lastHeading: number | null = null; // T1 nav — last valid course-over-ground
 let anchor: { lat: number; lng: number; t: number } | null = null;
 let distanceM = 0;
 let path: Coordinate[] = [];      // filtered on-screen track (save + polyline)
@@ -126,7 +127,11 @@ function setState(next: TrackerState): void {
 //    became module vars — every gate, constant and branch is unchanged, so
 //    foreground and background behavior are identical by construction) ──────
 function processFix(loc: Location.LocationObject): void {
-  const { latitude: lat, longitude: lng, accuracy, speed, altitude } = loc.coords;
+  const { latitude: lat, longitude: lng, accuracy, speed, altitude, heading } = loc.coords;
+  // T1 nav (2026-07-26): the heading field, dropped since day one, finally
+  // consumed — course-over-ground degrees; iOS sends -1 when invalid (rest/
+  // poor fix) → keep the last good value (heading-up camera stays stable).
+  if (typeof heading === 'number' && heading >= 0) lastHeading = heading;
   const t = loc.timestamp;
   const cur = { lat, lng };
   lastFixTs = t; // T-A mirror — before any gate
@@ -363,6 +368,7 @@ function resetAccumulators(): void {
   accumulatedMs = 0;
   segmentStart = null;
   wallStartedAt = 0;
+  lastHeading = null;
   anchor = null;
   distanceM = 0;
   path = [];
@@ -463,6 +469,8 @@ export const runSession = {
   getPath: () => path as readonly Coordinate[],
   getPaceWindow: () => paceWindow as readonly { t: number; cumM: number }[],
   getLastFixTs: () => lastFixTs,
+  /** T1 nav: last valid heading (deg, course-over-ground) — null pre-fix. */
+  getLastHeading: () => lastHeading,
   /** Single-source rolling pace — the hook renders it, the widget receives it. */
   currentPaceSecPerKm,
 };
