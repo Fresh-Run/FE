@@ -30,7 +30,7 @@ import {
 } from 'react-native';
 import BottomSheet, { BottomSheetView } from '@gorhom/bottom-sheet';
 import { Gesture, GestureDetector, GestureHandlerRootView, type GestureType } from 'react-native-gesture-handler';
-import MapView, { Polyline } from 'react-native-maps';
+import MapView, { Marker, Polyline } from 'react-native-maps';
 import Reanimated, {
   useAnimatedStyle,
   useSharedValue,
@@ -40,7 +40,7 @@ import Svg, { Circle } from 'react-native-svg';
 
 import { Icon } from '@/components/ui';
 import { SEOUL_FALLBACK, useCurrentLocation } from '@/hooks/use-current-location';
-import { courseLengthM, nearestOnCourse, OFF_COURSE_ENTER_M, OFF_COURSE_EXIT_M, pointAhead } from '@/lib/course-nav';
+import { courseChevrons, courseLengthM, nearestOnCourse, OFF_COURSE_ENTER_M, OFF_COURSE_EXIT_M, pointAhead } from '@/lib/course-nav';
 import { runSession } from '@/store/run-session';
 import { useRunTracker } from '@/hooks/use-run-tracker';
 import { composeFinishCue, composeSplitCue, composeStartCue, speakCue, stopSpeech } from '@/lib/audio-coach';
@@ -65,10 +65,9 @@ const NAV_ALTITUDE_M = 320;   // ↑ from 280 — more forward range at the stee
 const NAV_PITCH_DEG = 57;     // ↑ from 45 — the T-map-class perspective
 const NAV_LOOKAHEAD_M = 180;  // ↑ from 120 — pushes the puck toward the ~22% band
 const NAV_ENTER_MS = 1800;    // overview → follow flight, flown DURING the countdown ("drive pressed")
-// T1.7 TUNING PANEL — SANCTIONED TEMP SCAFFOLDING (the temp-probe doctrine:
-// ships ON for the owner's outdoor tuning session; the session's final
-// numbers become the constants and THIS FLAG FLIPS OFF in the same commit).
-const NAV_TUNE_PANEL = true;
+// T1.7 CLOSE (owner verdict from the field look, 2026-07-26): 320/57/180
+// READS RIGHT — the baseline landed; the tuning panel stripped per the
+// temp-probe doctrine without needing its session.
 const SHEET_TOP = MAP_H - 22;         // sheet's expanded top edge (canvas -22 overlap)
 const COMPACT_VISIBLE = 100;          // compact detent: handle + strip
 
@@ -319,7 +318,7 @@ export default function TrackingScreen() {
       // DURING the countdown (the overlay lifts onto an already-set camera)
       if (courseCoords.length > 1 && hereCoord) {
         mapRef.current?.animateCamera(
-          { center: { latitude: hereCoord.lat, longitude: hereCoord.lng }, altitude: navAlt, pitch: navPitch },
+          { center: { latitude: hereCoord.lat, longitude: hereCoord.lng }, altitude: NAV_ALTITUDE_M, pitch: NAV_PITCH_DEG },
           { duration: NAV_ENTER_MS },
         );
       }
@@ -412,14 +411,19 @@ export default function TrackingScreen() {
   const [rejoinM, setRejoinM] = useState(0);
   // T1.6 nav strip: along-line progress → 남은 거리 · 도착 예상
   const [alongM, setAlongM] = useState(0);
-  // T1.7 live tunables (panel-driven; constants are the initials)
-  const [navAlt, setNavAlt] = useState(NAV_ALTITUDE_M);
-  const [navPitch, setNavPitch] = useState(NAV_PITCH_DEG);
-  const [navLook, setNavLook] = useState(NAV_LOOKAHEAD_M);
   const courseLenM = useMemo(
     () => (course?.polyline && course.polyline.length > 1 ? courseLengthM(course.polyline) : 0),
     [course],
   );
+  // T1.8 chevrons: computed ONCE per course (static positions+bearings —
+  // never re-sliced with ahead/behind); spacing 100m, widened on long
+  // courses so count stays ≤40 (the jank budget). Render filter = cumM >
+  // alongM (only the road AHEAD wears arrows; history is unmarked).
+  const chevrons = useMemo(() => {
+    if (!course?.polyline || course.polyline.length < 2 || courseLenM === 0) return [];
+    const spacing = Math.max(100, courseLenM / 40);
+    return courseChevrons(course.polyline, spacing);
+  }, [course, courseLenM]);
   // Off-course haptic: Warning-class, the GPS-weak pattern's sibling —
   // rising-edge + 60s cooldown (the sibling's exact value: vocabulary
   // consistency beats a bespoke number) — run.haptics-gated, fire-time.
@@ -473,18 +477,18 @@ export default function TrackingScreen() {
     }
     const h = runSession.getLastHeading();
     const hereC = { lat: last.latitude, lng: last.longitude };
-    const center = h != null ? pointAhead(hereC, h, navLook) : hereC;
+    const center = h != null ? pointAhead(hereC, h, NAV_LOOKAHEAD_M) : hereC;
     mapRef.current?.animateCamera(
       {
         center: { latitude: center.lat, longitude: center.lng },
-        altitude: navAlt,
-        pitch: navPitch,
+        altitude: NAV_ALTITUDE_M,
+        pitch: NAV_PITCH_DEG,
         ...(h != null ? { heading: h } : {}),
       },
       { duration: 500 },
     );
      
-  }, [drawnPath.length, state, drawnPath, courseCoords.length, navAlt, navPitch, navLook]);
+  }, [drawnPath.length, state, drawnPath, courseCoords.length]);
 
   // Center on the USER's RESOLVED location (T-B correction ②): the hook's
   // coordinate is Seoul-fallback-initialized (never null), so truthiness
@@ -745,6 +749,24 @@ export default function TrackingScreen() {
             <>
               <Polyline coordinates={courseAhead} strokeColor="rgba(12,18,6,0.85)" strokeWidth={14} lineCap="round" lineJoin="round" />
               <Polyline coordinates={courseAhead} strokeColor={routeStroke('dark')} strokeWidth={10} lineCap="round" lineJoin="round" />
+              {/* T1.8 chevrons — Marker flat+rotation (NATIVE map-plane
+                  rotation: no per-frame JS, rides camera heading/pitch for
+                  free); content static (default tracksViewChanges — the
+                  proven config; ={false} is the convicted empty-bitmap
+                  class); casing-toned for contrast ON the lime ribbon.
+                  Ahead-only by cumM filter; history stays unmarked. */}
+              {chevrons.filter(c => c.cumM > alongM).map(c => (
+                <Marker
+                  key={`ch-${c.cumM}`}
+                  coordinate={{ latitude: c.lat, longitude: c.lng }}
+                  anchor={{ x: 0.5, y: 0.5 }}
+                  flat
+                  rotation={c.bearingDeg}
+                  pointerEvents="none"
+                >
+                  <View style={st.chevron} />
+                </Marker>
+              ))}
             </>
           )}
           {drawnPath.length > 1 && (
@@ -789,24 +811,6 @@ export default function TrackingScreen() {
               <View style={st.gpsChip}>
                 <Icon name="cellular-outline" size={11} color={C.sun} />
                 <Text style={st.gpsChipTxt}>GPS 신호 약함</Text>
-              </View>
-            )}
-            {/* T1.7 TUNING PANEL (temp scaffolding — strips with the final
-                numbers). Steppers per constant; tune by eye, read the values. */}
-            {NAV_TUNE_PANEL && hasCoursePath && (state === 'running' || state === 'paused') && (
-              <View style={st.tunePanel}>
-                {([
-                  ['고도', navAlt, 20, setNavAlt, 120, 800],
-                  ['피치', navPitch, 5, setNavPitch, 0, 70],
-                  ['앞봄', navLook, 20, setNavLook, 0, 400],
-                ] as [string, number, number, (v: number) => void, number, number][]).map(([lbl, val, step, set, lo, hi]) => (
-                  <View key={lbl} style={st.tuneRow}>
-                    <Text style={st.tuneLbl}>{lbl}</Text>
-                    <Pressable hitSlop={6} onPress={() => set(Math.max(lo, val - step))} style={st.tuneBtn}><Text style={st.tuneBtnTxt}>−</Text></Pressable>
-                    <Text style={st.tuneVal}>{val}</Text>
-                    <Pressable hitSlop={6} onPress={() => set(Math.min(hi, val + step))} style={st.tuneBtn}><Text style={st.tuneBtnTxt}>＋</Text></Pressable>
-                  </View>
-                ))}
               </View>
             )}
             {/* T1: 경로 이탈 banner + re-join hint (course runs only) */}
@@ -984,12 +988,9 @@ const makeSt = (C: Tokens) => StyleSheet.create({
   recenterWrap: { position: 'absolute', right: 14 },
   recenterBtn:  { width: 40, height: 40, borderRadius: R.pill, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, alignItems: 'center', justifyContent: 'center', ...shadows.sm },
   gpsChip:    { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(0,0,0,0.45)', borderRadius: R.pill, paddingHorizontal: 10, paddingVertical: 5 },
-  tunePanel:  { backgroundColor: 'rgba(0,0,0,0.62)', borderRadius: 12, padding: 8, gap: 4, alignSelf: 'flex-start' },
-  tuneRow:    { flexDirection: 'row', alignItems: 'center', gap: 7 },
-  tuneLbl:    { fontSize: 11, fontWeight: '700', color: 'rgba(255,255,255,0.75)', width: 30 },
-  tuneVal:    { fontSize: 13, fontWeight: '800', color: '#74E827', width: 36, textAlign: 'center', fontVariant: ['tabular-nums'] },
-  tuneBtn:    { width: 26, height: 26, borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.16)', alignItems: 'center', justifyContent: 'center' },
-  tuneBtnTxt: { fontSize: 15, fontWeight: '800', color: '#fff' },
+  // T1.8: CSS-triangle chevron — points "up" (north) at rotation 0; the
+  // Marker's flat rotation aims it along the course bearing. Casing tone.
+  chevron: { width: 0, height: 0, borderLeftWidth: 5, borderRightWidth: 5, borderBottomWidth: 9, borderLeftColor: 'transparent', borderRightColor: 'transparent', borderBottomColor: 'rgba(12,18,6,0.85)' },
   gpsChipTxt: { fontSize: 11, fontWeight: '700', color: '#fff', letterSpacing: -0.2 },
 
   // Course title pill (course mode)
