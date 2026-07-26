@@ -36,3 +36,14 @@ export function nearestOnCourse(
     25m — a boundary-hugging runner never flaps the banner. */
 export const OFF_COURSE_ENTER_M = 40;
 export const OFF_COURSE_EXIT_M = 25;
+
+/** T1.5: the point d meters ahead of c along headingDeg (0=N, clockwise) —
+    centering the camera HERE puts the runner low on screen, road-ahead
+    filling the view (the nav convention: look forward, not at your feet). */
+export function pointAhead(c: Coordinate, headingDeg: number, dM: number): Coordinate {
+  const th = (headingDeg * Math.PI) / 180;
+  return {
+    lat: c.lat + (dM * Math.cos(th)) / M_PER_DEG_LAT,
+    lng: c.lng + (dM * Math.sin(th)) / (M_PER_DEG_LAT * Math.cos((c.lat * Math.PI) / 180)),
+  };
+}

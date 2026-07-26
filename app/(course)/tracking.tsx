@@ -40,7 +40,7 @@ import Svg, { Circle } from 'react-native-svg';
 
 import { Icon } from '@/components/ui';
 import { SEOUL_FALLBACK, useCurrentLocation } from '@/hooks/use-current-location';
-import { nearestOnCourse, OFF_COURSE_ENTER_M, OFF_COURSE_EXIT_M } from '@/lib/course-nav';
+import { nearestOnCourse, OFF_COURSE_ENTER_M, OFF_COURSE_EXIT_M, pointAhead } from '@/lib/course-nav';
 import { runSession } from '@/store/run-session';
 import { useRunTracker } from '@/hooks/use-run-tracker';
 import { composeFinishCue, composeSplitCue, composeStartCue, speakCue, stopSpeech } from '@/lib/audio-coach';
@@ -57,6 +57,13 @@ import { useScheme } from '@/store/use-scheme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 
 const MAP_H = 330;                    // expanded-detent map viewport (canvas)
+
+// ── T1.5 nav camera posture (course mode) — TUNABLE: the walk's verdict is
+// subjective ("does it FEEL like navigation"), so feel lives in constants ──
+const NAV_ALTITUDE_M = 280;   // street level (~zoom 17.5 class) — next ~200m fills the view
+const NAV_PITCH_DEG = 45;     // Apple Maps MKMapCamera pitch; clamps gracefully where 3D unavailable
+const NAV_LOOKAHEAD_M = 120;  // camera centers this far ahead → runner rides low on screen
+const NAV_ENTER_MS = 1800;    // overview → follow flight, flown DURING the countdown ("drive pressed")
 const SHEET_TOP = MAP_H - 22;         // sheet's expanded top edge (canvas -22 overlap)
 const COMPACT_VISIBLE = 100;          // compact detent: handle + strip
 
@@ -301,7 +308,17 @@ export default function TrackingScreen() {
     prevStateRef.current = state;
     // #12 session rider: arm the audio session when the run arms — the
     // countdown's ~3s means ducking is in force before the start cue speaks
-    if (prev === 'idle' && state === 'countdown') activateRunAudioSession();
+    if (prev === 'idle' && state === 'countdown') {
+      activateRunAudioSession();
+      // T1.5 "drive pressed": in course mode, fly overview → follow posture
+      // DURING the countdown (the overlay lifts onto an already-set camera)
+      if (courseCoords.length > 1 && hereCoord) {
+        mapRef.current?.animateCamera(
+          { center: { latitude: hereCoord.lat, longitude: hereCoord.lng }, altitude: NAV_ALTITUDE_M, pitch: NAV_PITCH_DEG },
+          { duration: NAV_ENTER_MS },
+        );
+      }
+    }
     if (prev === 'countdown' && state === 'running') {
       const coach = useSettings.getState().settings.audio_coach; // fire-time snapshot
       nextCueKmRef.current = coach.cue_interval_km; // fresh run
@@ -428,15 +445,26 @@ export default function TrackingScreen() {
   useEffect(() => {
     if (state !== 'running' || drawnPath.length === 0) return;
     if (Date.now() - lastUserPanRef.current < 8000) return;
-    // T1: heading-up follow on COURSE runs (the plumbed heading — last valid
-    // course-over-ground; null pre-fix → centered north-up as before).
+    // T1.5: full NAV POSTURE on COURSE runs — street altitude + pitch +
+    // heading-up + forward-offset center (runner low, road ahead majority).
+    // Heading null (pre-fix/at rest) → posture without rotation/lookahead.
     // Free runs keep the north-up center-follow verbatim (zero delta).
     const hasCourse = courseCoords.length > 1;
-    const h = hasCourse ? runSession.getLastHeading() : null;
+    const last = drawnPath[drawnPath.length - 1];
+    if (!hasCourse) {
+      mapRef.current?.animateCamera({ center: last }, { duration: 500 });
+      return;
+    }
+    const h = runSession.getLastHeading();
+    const hereC = { lat: last.latitude, lng: last.longitude };
+    const center = h != null ? pointAhead(hereC, h, NAV_LOOKAHEAD_M) : hereC;
     mapRef.current?.animateCamera(
-      h != null
-        ? { center: drawnPath[drawnPath.length - 1], heading: h }
-        : { center: drawnPath[drawnPath.length - 1] },
+      {
+        center: { latitude: center.lat, longitude: center.lng },
+        altitude: NAV_ALTITUDE_M,
+        pitch: NAV_PITCH_DEG,
+        ...(h != null ? { heading: h } : {}),
+      },
       { duration: 500 },
     );
   }, [drawnPath.length, state, drawnPath, courseCoords.length]);
@@ -672,6 +700,9 @@ export default function TrackingScreen() {
           onMapReady={fitCourse}
           onLayout={fitCourse}
           onPanDrag={onUserPan}
+          // T1.5 zoom agency: pinch-zoom joins the 8s suspension (onPanDrag
+          // misses two-finger gestures); recenter resumes follow instantly
+          onRegionChangeComplete={(_r, d) => { if (d?.isGesture && state === 'running') onUserPan(); }}
           showsUserLocation
           showsMyLocationButton={false}
           showsCompass={false}
