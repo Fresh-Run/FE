@@ -15,7 +15,7 @@
  */
 import * as Haptics from 'expo-haptics';
 import { useKeepAwake } from 'expo-keep-awake';
-import { router, useNavigation } from 'expo-router';
+import { router, useFocusEffect, useNavigation } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
@@ -182,6 +182,25 @@ function HoldStop({ onComplete, size = 72, showLabel = true, gestureRef }: {
     if (lightTimer.current) { clearTimeout(lightTimer.current); lightTimer.current = null; }
   };
   useEffect(() => clearLight, []);
+
+  // Re-entry reset (ring × back-button seam, 2026-07-27): a COMPLETED fill
+  // held on a screen being left forever (v2's completedRef) became a stale
+  // claim once back-from-save made the screen returnable. Focus regain is the
+  // reset hook — the session offers no transition (paused before back, paused
+  // after), and focus cannot fire mid-gesture (gestures require an already-
+  // focused screen; an in-flight press at focus-fire is skipped via
+  // holdingRef, whose pressDown already zeroed the ring). This is the ONE
+  // sanctioned writer besides the touch stream. Initial mount = zero → no-op;
+  // the 종료→save exit animates untouched (reset rides return-focus only).
+  useFocusEffect(useCallback(() => {
+    if (holdingRef.current) return;
+    completedRef.current = false;
+    clearLight();
+    setHolding(false);
+    progress.stopAnimation();
+    progress.setValue(0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []));
 
   const pressDown = () => {
     if (holdingRef.current) return; // second finger — the first press owns the ring
