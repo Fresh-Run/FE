@@ -189,8 +189,12 @@ private struct StatCol: View {
     VStack(alignment: .leading, spacing: 3) {
       Text(label).font(.system(size: 10.5, weight: .semibold)).foregroundStyle(textLo)
       HStack(alignment: .firstTextBaseline, spacing: 2) {
+        // Expanded-LA crunch fix (build 9, ruled 2026-07-26): the trailing
+        // stat pair absorbed all the row's squeeze and TRUNCATED ("0… km").
+        // Scale-down beats truncation; priority keeps the value whole.
         Text(value).font(.system(size: 19, weight: .semibold)).monospacedDigit()
           .foregroundStyle(textHi)
+          .lineLimit(1).minimumScaleFactor(0.6).layoutPriority(1)
         if let unit { Text(unit).font(.system(size: 12, weight: .semibold)).foregroundStyle(unitLo) }
       }
     }
@@ -271,7 +275,7 @@ struct RunLiveActivity: Widget {
             HStack(alignment: .center, spacing: 12) {
               if !context.state.route.isEmpty { // same no-geometry rule as the lock card
                 MiniRoute(route: context.state.route)
-                  .frame(width: 64, height: 44)
+                  .frame(width: 56, height: 44) // 8pt headroom to the stat pair (crunch-fix margin — the class's history argues for it)
                   .clipShape(RoundedRectangle(cornerRadius: 10))
               }
               VStack(alignment: .leading, spacing: 1) {
