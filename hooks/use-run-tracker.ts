@@ -128,6 +128,8 @@ export function useRunTracker() {
 
   /** Ends the run and returns its final snapshot (null if nothing was running). */
   const stop = useCallback(() => runSession.stop(), []);
+  /** Non-destructive preview — the 저장 checkpoint's read (session survives). */
+  const snapshot = useCallback(() => runSession.snapshot(), []);
 
   return {
     state,
@@ -140,6 +142,7 @@ export function useRunTracker() {
     start,
     togglePause,
     stop,
+    snapshot,
     // ── T-A read-only map surface (owner-approved boundary: the map is a
     // CONSUMER — these two exports are the ENTIRE tracker surface for it) ──
     /** Immutable snapshot of the filtered track — a NEW reference whenever

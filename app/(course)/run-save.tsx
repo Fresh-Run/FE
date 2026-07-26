@@ -42,6 +42,7 @@ import { Icon } from '@/components/ui';
 import { distUnit, fmtDist, fmtDuration, fmtPaceIn, fmtWhen, paceUnit, timeTitle } from '@/lib/run-format';
 import { MAX_RUN_PHOTOS, reencodeForUpload } from '@/lib/run-photos';
 import { maybeWriteRunToHealth } from '@/lib/health';
+import { runSession } from '@/store/run-session';
 import { saveRun, type RunVisibility } from '@/lib/runs-api';
 import { radius as R, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
@@ -173,7 +174,14 @@ export default function RunSaveScreen() {
   // No pending run (cold navigation) → home
   useEffect(() => { if (!run) router.replace('/(tabs)' as any); }, [run]);
 
-  // Back means nothing here — 저장 or 삭제하기 are the exits
+  // Back-button ruling (2026-07-27): this screen is a revisitable CHECKPOINT.
+  // 종료 no longer kills the session — it pauses it and pushes here, so ‹
+  // returns to the run (paused, resumable); 종료 again refreshes the numbers
+  // and keeps the typed draft. The session dies only at 저장/삭제 (we own
+  // stop()). Exception: the crash-recovery lane composes with NO live session
+  // beneath — there ‹ keeps the old discard-confirm meaning (there is no run
+  // to return to).
+  const sessionLive = runSession.getRunState() === 'running' || runSession.getRunState() === 'paused';
   const exitingRef = useRef(false);
   useEffect(() => {
     navigation.setOptions({ gestureEnabled: false });
@@ -212,6 +220,7 @@ export default function RunSaveScreen() {
       });
       savedOnceRef.current = true;
       markSaved(saved); // disk copy dropped — server has it now
+      runSession.stop(); // the checkpoint's deferred teardown — GPS/LA die HERE (idempotent)
       // ③: mirror the run into Apple 건강 (opt-in gated, fire-and-forget —
       // the server save above is the source of truth; HK never blocks it)
       maybeWriteRunToHealth(run);
@@ -238,16 +247,26 @@ export default function RunSaveScreen() {
 
   function confirmDiscard() {
     setDiscardOpen(false);
+    runSession.stop(); // discard also owns the deferred teardown (idempotent)
     clearPendingRun();
     exitingRef.current = true;
     router.replace('/(tabs)' as any);
   }
 
+  // ‹ = back to the paused run (checkpoint) — or the discard confirm when no
+  // session lives beneath (crash-recovery compose).
+  function handleBack() {
+    if (!sessionLive) { handleDelete(); return; }
+    exitingRef.current = true;
+    router.back();
+  }
+
   return (
     <KeyboardAvoidingView style={[st.root, { paddingTop: insets.top }]} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      {/* App bar: ‹ (→ discard confirm — no silent loss) · title · 저장 pill */}
+      {/* App bar: ‹ (→ back to the paused run; recovery lane → discard
+          confirm) · title · 저장 pill */}
       <View style={st.appBar}>
-        <Pressable onPress={handleDelete} hitSlop={12} style={st.backBtn}>
+        <Pressable onPress={handleBack} hitSlop={12} style={st.backBtn}>
           <Icon name="chevron-back" size={22} color={C.text} />
         </Pressable>
         <Text style={st.appBarTitle}>러닝 저장</Text>

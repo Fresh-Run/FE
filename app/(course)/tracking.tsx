@@ -48,7 +48,7 @@ import { activateRunAudioSession, deactivateRunAudioSession } from '@/lib/audio-
 import { useQuota } from '@/store/use-quota';
 import { addLiveActivityActionListener } from '@/modules/live-activity';
 import { clearActiveCourse, getActiveCourse } from '@/store/active-course';
-import { setPendingRun } from '@/store/pending-run';
+import { getPendingRun, refreshPendingRun, setPendingRun } from '@/store/pending-run';
 import { useLocalProfile } from '@/store/use-local-profile';
 import { useSettings } from '@/store/use-settings';
 import { distUnit, fmtDist, fmtPaceIn, paceUnit } from '@/lib/run-format';
@@ -316,7 +316,7 @@ export default function TrackingScreen() {
   useEffect(() => { useLocalProfile.getState().hydrate(); }, []);
   const {
     state, countdownValue, elapsedSec, distanceKm, paceSecPerKm, moving, kcal,
-    start, togglePause, stop, livePath, lastFixAgeSec,
+    start, togglePause, snapshot, livePath, lastFixAgeSec,
   } = useRunTracker();
 
   // ── 오디오 코치 v1 (premium, LOCAL cues — owner scope 2026-07-14) ─────────
@@ -683,21 +683,28 @@ export default function TrackingScreen() {
   }, []);
 
   const endRun = () => {
-    const snapshot = stop();
-    exitingRef.current = true;
-    if (!snapshot) { router.back(); return; }
+    // DEFERRED TEARDOWN (back-button ruling 2026-07-27): 종료 freezes the
+    // session (pause — clock stops, LA shows paused, fixes accumulate
+    // nothing) and PUSHES the save screen as a revisitable checkpoint. Back
+    // from 저장 pops here, paused; resume works; 종료 again refreshes the
+    // numbers. The session dies only at save/discard (run-save owns stop()).
+    if (state === 'running') togglePause();
+    const preview = snapshot();
+    if (!preview) { exitingRef.current = true; router.back(); return; } // dead session — old exit
     // 종료 cue — fire-and-forget before the screen swap
-    if (coachActive) speakCue(composeFinishCue(snapshot.distanceKm, snapshot.elapsedSec), useSettings.getState().settings.audio_coach.rate);
-    // setPendingRun also persists to disk — crash-safe from this moment
-    setPendingRun(course
+    if (coachActive) speakCue(composeFinishCue(preview.distanceKm, preview.elapsedSec), useSettings.getState().settings.audio_coach.rate);
+    const payload = course
       ? {
-          ...snapshot,
+          ...preview,
           course: { id: course.id, title: course.title },
           ...(course.crewSession ? { crewSession: course.crewSession } : {}), // L1 정기런 tag
         }
-      : snapshot);
-    // replace: back must never land on a dead tracking screen
-    router.replace('/(course)/run-save' as any);
+      : preview;
+    // Same run re-entering the checkpoint keeps its typed draft; a new run
+    // resets it. Both persist to disk — crash-safe from this moment.
+    if (getPendingRun()?.startedAtMs === preview.startedAtMs) refreshPendingRun(payload);
+    else setPendingRun(payload);
+    router.push('/(course)/run-save' as any); // push: the paused run stays alive beneath
   };
 
   const handleStart = async () => {

@@ -426,6 +426,30 @@ export const runSession = {
     }
   },
 
+  /** Non-destructive preview of the live run — same math as stop(), zero
+      state change. The 러닝-저장 checkpoint reads this so 종료 no longer has
+      to kill the session (back-button ruling 2026-07-27). */
+  snapshot(): RunSnapshot | null {
+    if (state !== 'running' && state !== 'paused') return null;
+    const ms = accumulatedMs + (state === 'running' && segmentStart != null ? Date.now() - segmentStart : 0);
+    const finalSec = Math.floor(ms / 1000);
+    const finalKm  = distanceM / 1000;
+    return {
+      distanceKm: finalKm,
+      elapsedSec: finalSec,
+      avgPaceSecPerKm: finalKm >= 0.05 && finalSec > 0 ? Math.round(finalSec / finalKm) : null,
+      kcal: estimateKcal(finalKm),
+      path: [...path],
+      gpsTrack: [...rawTrack],
+      startedAtMs: wallStartedAt,
+      endedAt: Date.now(),
+    };
+  },
+
+  /** 'running' | 'paused' | ... — lets non-tracker screens (run-save) know
+      whether a live session sits beneath them. */
+  getRunState: () => state,
+
   /** Ends the run and returns its final snapshot (null if nothing was live). */
   stop(): RunSnapshot | null {
     if (state !== 'running' && state !== 'paused') return null;

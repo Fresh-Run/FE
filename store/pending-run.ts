@@ -66,6 +66,15 @@ export function setPendingRun(run: PendingRun): void {
   writeDisk();
 }
 
+/** Same run re-entering the 저장 checkpoint (back → resume → 종료 again):
+    numbers refresh, the typed draft SURVIVES. setPendingRun stays the
+    new-run door (it resets the draft). */
+export function refreshPendingRun(run: PendingRun): void {
+  pending = run;
+  savedResult = null;
+  writeDisk();
+}
+
 export function getPendingRun(): PendingRun | null {
   return pending;
 }
