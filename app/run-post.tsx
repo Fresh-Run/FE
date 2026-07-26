@@ -48,6 +48,7 @@ import { MediaCarousel } from '@/components/media-carousel';
 import { PhotoViewer } from '@/components/photo-viewer';
 import { setRouteMap } from '@/store/route-map';
 import { Icon } from '@/components/ui';
+import { ScreenshotShareOffer } from '@/components/screenshot-share-offer';
 import { ApiError } from '@/lib/api';
 import { openProfile } from '@/lib/profile-nav';
 import { deleteRun } from '@/lib/runs-api';
@@ -570,6 +571,10 @@ export default function RunPostScreen() {
           </View>
         </View>
       </Modal>
+      {/* slice 3: screenshot offer — same own-guard as the header share */}
+      {(isOwn || (run?.user_id != null && run.user_id === myUid)) && params.runId && (
+        <ScreenshotShareOffer runId={params.runId} />
+      )}
     </KeyboardAvoidingView>
   );
 }

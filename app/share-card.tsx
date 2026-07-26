@@ -35,12 +35,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Image, Pressable, ScrollView, Share, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Reanimated, { runOnJS, useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Path } from 'react-native-svg';
+import { captureRef } from 'react-native-view-shot';
 
 import { Icon } from '@/components/ui';
 import { useRunDetail } from '@/hooks/use-runs';
@@ -280,6 +281,9 @@ export default function ShareCardScreen() {
   // explicit mode. Mode ON → upper layers' gestures .enabled(false), the
   // bg detector alone is live; OFF → exactly the pre-v2.1 world.
   const [bgAdjustMode, setBgAdjustMode] = useState(false);
+  // Slice 2 (build 8 alive): the canvas ref view-shot captures
+  const canvasRef = useRef<View>(null);
+  const [exporting, setExporting] = useState(false);
   const tx = useSharedValue(0);
   const ty = useSharedValue(0);
   const sc = useSharedValue(1);
@@ -347,6 +351,28 @@ export default function ShareCardScreen() {
   if (prefs.metrics.pace && avgPace != null) rows.push(['pace', `${fmtPaceIn(avgPace, units)}${paceUnit(units)}`, '평균 페이스']);
   if (prefs.metrics.time) rows.push(['time', fmtDuration(run.duration_sec), '시간']);
 
+  // Slice 2 — IMAGE EXPORT WAKES (the honest caption's promise fulfilled):
+  // view-shot captures the composed canvas (route layer, metrics, wordmark,
+  // photo bg with dim — the view tree as seen) at 3x for story quality →
+  // OS share sheet (whose Save Image row works via the plist key shipped in
+  // build 8). Adjust-mode badge is excluded by exiting the mode first.
+  const exportCard = async () => {
+    if (exporting) return;
+    setExporting(true);
+    try {
+      if (bgAdjustMode) {
+        setBgAdjustMode(false);
+        await new Promise(r => setTimeout(r, 120)); // let the badge unmount
+      }
+      const uri = await captureRef(canvasRef, {
+        format: 'png', quality: 1, result: 'tmpfile',
+        width: 1080, height: Math.round(1080 * (canvasH / canvasW)),
+      });
+      await Share.share({ url: uri });
+    } catch { /* dismissed or capture failure — nothing to clean */ }
+    setExporting(false);
+  };
+
   const shareText = () => {
     const parts = [
       `${title} — FreshRun`,
@@ -369,7 +395,7 @@ export default function ShareCardScreen() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}>
         {/* ── THE CARD ── */}
         <View style={st.canvasWrap}>
-          <View style={[st.canvas, { width: canvasW, height: canvasH }]}>
+          <View ref={canvasRef} collapsable={false} style={[st.canvas, { width: canvasW, height: canvasH }]}>
             {bg.kind === 'photo' && (
               <GestureDetector gesture={bgLayer.gesture}>
                 <Reanimated.View style={[StyleSheet.absoluteFillObject, bgLayer.style]}>
@@ -486,20 +512,17 @@ export default function ShareCardScreen() {
           </View>
         </View>
 
-        {/* ── actions — honest no-export interim (stated adaptation):
-               text share WORKS today; image export names its arrival ── */}
+        {/* ── actions — the export AWAKE (slice 2, build 8): image is the
+               primary; text share survives as the secondary lane ── */}
         <View style={st.actions}>
-          <Pressable onPress={shareText} style={({ pressed }) => [st.textShareBtn, shadows.sm, pressed && { opacity: 0.85 }]}>
-            <Icon name="share-outline" size={17} color={C.text} />
-            <Text style={st.textShareTxt}>텍스트로 공유</Text>
+          <Pressable onPress={exportCard} disabled={exporting} style={({ pressed }) => [st.exportLive, shadows.sm, (pressed || exporting) && { opacity: 0.85 }]}>
+            <Icon name="image-outline" size={17} color="#0C1206" />
+            <Text style={st.exportLiveTxt}>{exporting ? '내보내는 중…' : '이미지 저장·공유'}</Text>
           </Pressable>
-          <View style={st.exportBtn}>
-            <Icon name="image-outline" size={17} color={C.faint} />
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={st.exportTxt}>이미지 저장</Text>
-              <Text style={st.exportSub}>이미지 내보내기는 다음 업데이트에서 열려요</Text>
-            </View>
-          </View>
+          <Pressable onPress={shareText} style={({ pressed }) => [st.textShareBtn, pressed && { opacity: 0.7 }]}>
+            <Icon name="share-outline" size={15} color={C.sub} />
+            <Text style={st.textShareSubTxt}>텍스트로 공유</Text>
+          </Pressable>
         </View>
       </ScrollView>
     </GestureHandlerRootView>
@@ -544,7 +567,7 @@ const makeSt = (C: Tokens) => StyleSheet.create({
   actions:      { paddingHorizontal: S.gutter, paddingTop: 18, gap: 9 },
   textShareBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 14, paddingVertical: 14 },
   textShareTxt: { fontSize: 14.5, fontWeight: '700', color: C.text, letterSpacing: -0.3 },
-  exportBtn:    { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 14, paddingVertical: 11, paddingHorizontal: 14, opacity: 0.65 },
-  exportTxt:    { fontSize: 14, fontWeight: '700', color: C.faint, letterSpacing: -0.3 },
-  exportSub:    { fontSize: 11, color: C.faint, letterSpacing: -0.2, marginTop: 1 },
+  exportLive:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#74E827', borderRadius: 14, paddingVertical: 15 },
+  exportLiveTxt: { fontSize: 15, fontWeight: '800', color: '#0C1206', letterSpacing: -0.3 },
+  textShareSubTxt: { fontSize: 13, fontWeight: '600', color: C.sub, letterSpacing: -0.2 },
 });

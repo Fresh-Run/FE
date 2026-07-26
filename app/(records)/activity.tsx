@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { MediaCarousel } from '@/components/media-carousel';
 import { PhotoViewer } from '@/components/photo-viewer';
+import { ScreenshotShareOffer } from '@/components/screenshot-share-offer';
 import { setRouteMap } from '@/store/route-map';
 import { PaceChart, SplitsTable } from '@/components/run-splits';
 import { Icon } from '@/components/ui';
@@ -323,6 +324,9 @@ export default function ActivityScreen() {
       {/* 삭제 confirm — the crew-해체 modal's grammar (icon circle · honest
           cascade body · destructive red · 취소). No recovery: this IS the
           last gate (지연's instruction). */}
+      {/* slice 3: screenshot → composer offer (own-run screen by contract) */}
+      <ScreenshotShareOffer runId={run.id} />
+
       {photoViewIdx !== null && (
         <PhotoViewer
           visible
