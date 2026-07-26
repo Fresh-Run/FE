@@ -684,7 +684,9 @@ export default function TrackingScreen() {
           {/* T1: ahead/behind emphasis — the run-part dims, the road ahead
               keeps the full course stroke (split at the nearest segment) */}
           {courseBehind.length > 1 && (
-            <Polyline coordinates={courseBehind} strokeColor={courseStroke(resolved)} strokeWidth={4} lineCap="round" style={{ opacity: 0.35 }} />
+            // dim via stroke ALPHA ('59' = 35%) — a style.opacity on a native
+            // map overlay is unreliable; the color channel is the honest lane
+            <Polyline coordinates={courseBehind} strokeColor={courseStroke(resolved) + '59'} strokeWidth={4} lineCap="round" />
           )}
           {courseAhead.length > 1 && (
             <Polyline coordinates={courseAhead} strokeColor={courseStroke(resolved)} strokeWidth={4} lineCap="round" />
