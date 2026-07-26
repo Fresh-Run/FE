@@ -31,4 +31,21 @@ export function activateRunAudioSession(): void {
 
 export function deactivateRunAudioSession(): void {
   setIsAudioActiveAsync(false).catch(() => {});
+  setIdleAudioPosture(); // back to the mixable idle posture after every run
+}
+
+/** Mixable-idle preventive (build-8 rider, ruled 2026-07-24): an explicitly
+    MIXABLE idle category (.ambient — playsInSilentMode:false + mixWithOthers)
+    at app start, so no implicit activation can ever hard-pause others' music
+    (the OBSERVED-VANISHED first-launch class — deterministic for every new
+    tester's first open if the reading holds). Called at root mount and after
+    every run's deactivation. HONEST LIMIT: JS runs after native init — a
+    pre-JS implicit activation is outside this guard's reach; this narrows
+    the window and hardens everything after boot. */
+export function setIdleAudioPosture(): void {
+  setAudioModeAsync({
+    playsInSilentMode: false,
+    shouldPlayInBackground: false,
+    interruptionMode: 'mixWithOthers',
+  }).catch(() => {});
 }

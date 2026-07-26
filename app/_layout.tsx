@@ -6,6 +6,7 @@ import { ActivityIndicator, View } from 'react-native';
 import 'react-native-reanimated';
 
 import { useTokens } from '@/hooks/use-tokens';
+import { setIdleAudioPosture } from '@/lib/audio-session';
 import { useScheme } from '@/store/use-scheme';
 import { usePushSync } from '@/lib/push';
 import { endLiveActivity } from '@/modules/live-activity';
@@ -30,6 +31,9 @@ function AuthGuard() {
 
   // Run once on mount — checks AsyncStorage + Supabase for an existing session.
   useEffect(() => { hydrate(); }, []);
+  // Mixable-idle audio posture at boot (build-8 preventive, ruled 2026-07-24):
+  // .ambient category — app presence can never hard-pause others' music
+  useEffect(() => { setIdleAudioPosture(); }, []);
 
   useEffect(() => {
     if (sessionLoading) return;
