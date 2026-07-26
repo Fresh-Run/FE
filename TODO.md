@@ -1215,7 +1215,11 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 
 **핵심 판정: 스퍼 메커니즘은 그녀의 3부검(§8.13-8.15)이 이미 실험적으로 종결한 클래스** — 좌표 발명(Gemini 무지도) × T-map 전점방문 계약의 구조적 산물. **오늘의 신규 발견 = 인밴드 레인의 스퍼 무게이트 비대칭**: 데스크 실증 — 300m 골목 스퍼 = longest_retrace_m 609 → 그녀 자신의 §8.16 합격선(≤600) 위반이면서 유일한 라이브 게이트(오버캡 ≤800)는 통과, **인밴드 단독 후보는 게이트 자체가 없어 무조건 서빙**. 픽스 랭킹: ① 인밴드 스퍼 게이트 확장(if절 수준, 최고 레버리지) ② 스퍼 절제 후처리(가용성 보존 페어) ③ 앵커 dead_end 프로브 활성화(라이브 경로가 probe_dead_end=False로 호출 중) ④ 스냅-사이드 웨이포인트 드롭(M) ⑤ 프롬프트 = 사망 레인(§8.15 반증 3종, 재론 금지). 부수: _within_band 독스트링 −0.1 vs 상수 0.3 드리프트 · ANCHOR_EPIC 헤더 "미배선" vs 혼합 풀 라이브 코드 스테일. 풀 리포트 오너 메시지로 납품. STOP — 그녀 레인, 그녀 콜.
 
-## 🔼 T1.8 REVERSED — CHEVRONS REMOVED, PUBLISHED (2026-07-26; group b79fbdd8-c99a-4dea-be7d-ef0cf6aae75c; hash-tie ✓ · courseChevrons wire-count 0 — provably gone; owner field verdict: horrendous — shipped, judged, removed) — closing outing stamps T1→T1.8-as-reversed
+## ✅ NAVIGATION TIER ENTIRE — OWNER-VERIFIED [22:05] 2026-07-26 (the closing outing)
+- One stamp closes T1→T1.8: T1 78a4588e (mechanics: alongM banner·hysteresis 40/25·buzz) · T1.5 8b01230b (posture gap) · T1.6 f1974ad1 (nav strip·POI mute·casing ribbon·strip) · T1.7 b519695f→efe6c761 (trio 320/57/180 tuned in field, panel shipped→stripped) · T1.8 efe6c761→b79fbdd8 (chevrons shipped, judged horrendous, removed — direction = stateful dim, (a) adopted; T2 depart owns the start line post-gate).
+- Field readout: tuned posture · clean two-tone ribbon · dim carries direction · honest countdown · off-course clean · agency respected · free runs untouched.
+- ROLLBACK FLOOR ADVANCES: b79fbdd8-c99a-4dea-be7d-ef0cf6aae75c (last owner-verified — supersedes ff20d78d).
+- THE PRE-GATE BUILDABLE BOARD IS EMPTY.
 - Removal total (panel-strip standard): markers JSX · once-per-course memo · courseChevrons() from lib/course-nav · Marker import · st.chevron style. Targeted residue grep (tracking/course-nav/run-session) exit 1. Net −62 lines.
 - Direction-cue design call at checkpoint: (a) NOTHING adopted per owner lean — ahead/behind dim carries mid-course direction; wrong-way-from-start self-announces via the dim split within ~100m; T2 depart maneuver (icon 200) answers the start line definitively post-gate. (b) lone start arrow = ornament, declined; field has not bitten.
 - T1.7 close (trio 320/57/180 + panel strip) UNAFFECTED — rides in the same published lineage (57b37f4).
