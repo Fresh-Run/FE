@@ -58,12 +58,17 @@ import { useStyles, useTokens } from '@/hooks/use-tokens';
 
 const MAP_H = 330;                    // expanded-detent map viewport (canvas)
 
-// ── T1.5 nav camera posture (course mode) — TUNABLE: the walk's verdict is
-// subjective ("does it FEEL like navigation"), so feel lives in constants ──
-const NAV_ALTITUDE_M = 280;   // street level (~zoom 17.5 class) — next ~200m fills the view
-const NAV_PITCH_DEG = 45;     // Apple Maps MKMapCamera pitch; clamps gracefully where 3D unavailable
-const NAV_LOOKAHEAD_M = 120;  // camera centers this far ahead → runner rides low on screen
+// ── T1.5/1.7 nav camera posture (course mode) — TUNABLE. T1.7 retune from
+// the T-map comparison (owner-measured deltas): puck 40-45%→target 20-25%
+// screen height · forward range ~200m→300-400m · pitch reads 45→~57.
+const NAV_ALTITUDE_M = 320;   // ↑ from 280 — more forward range at the steeper pitch
+const NAV_PITCH_DEG = 57;     // ↑ from 45 — the T-map-class perspective
+const NAV_LOOKAHEAD_M = 180;  // ↑ from 120 — pushes the puck toward the ~22% band
 const NAV_ENTER_MS = 1800;    // overview → follow flight, flown DURING the countdown ("drive pressed")
+// T1.7 TUNING PANEL — SANCTIONED TEMP SCAFFOLDING (the temp-probe doctrine:
+// ships ON for the owner's outdoor tuning session; the session's final
+// numbers become the constants and THIS FLAG FLIPS OFF in the same commit).
+const NAV_TUNE_PANEL = true;
 const SHEET_TOP = MAP_H - 22;         // sheet's expanded top edge (canvas -22 overlap)
 const COMPACT_VISIBLE = 100;          // compact detent: handle + strip
 
@@ -314,7 +319,7 @@ export default function TrackingScreen() {
       // DURING the countdown (the overlay lifts onto an already-set camera)
       if (courseCoords.length > 1 && hereCoord) {
         mapRef.current?.animateCamera(
-          { center: { latitude: hereCoord.lat, longitude: hereCoord.lng }, altitude: NAV_ALTITUDE_M, pitch: NAV_PITCH_DEG },
+          { center: { latitude: hereCoord.lat, longitude: hereCoord.lng }, altitude: navAlt, pitch: navPitch },
           { duration: NAV_ENTER_MS },
         );
       }
@@ -407,6 +412,10 @@ export default function TrackingScreen() {
   const [rejoinM, setRejoinM] = useState(0);
   // T1.6 nav strip: along-line progress → 남은 거리 · 도착 예상
   const [alongM, setAlongM] = useState(0);
+  // T1.7 live tunables (panel-driven; constants are the initials)
+  const [navAlt, setNavAlt] = useState(NAV_ALTITUDE_M);
+  const [navPitch, setNavPitch] = useState(NAV_PITCH_DEG);
+  const [navLook, setNavLook] = useState(NAV_LOOKAHEAD_M);
   const courseLenM = useMemo(
     () => (course?.polyline && course.polyline.length > 1 ? courseLengthM(course.polyline) : 0),
     [course],
@@ -464,17 +473,18 @@ export default function TrackingScreen() {
     }
     const h = runSession.getLastHeading();
     const hereC = { lat: last.latitude, lng: last.longitude };
-    const center = h != null ? pointAhead(hereC, h, NAV_LOOKAHEAD_M) : hereC;
+    const center = h != null ? pointAhead(hereC, h, navLook) : hereC;
     mapRef.current?.animateCamera(
       {
         center: { latitude: center.lat, longitude: center.lng },
-        altitude: NAV_ALTITUDE_M,
-        pitch: NAV_PITCH_DEG,
+        altitude: navAlt,
+        pitch: navPitch,
         ...(h != null ? { heading: h } : {}),
       },
       { duration: 500 },
     );
-  }, [drawnPath.length, state, drawnPath, courseCoords.length]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [drawnPath.length, state, drawnPath, courseCoords.length, navAlt, navPitch, navLook]);
 
   // Center on the USER's RESOLVED location (T-B correction ②): the hook's
   // coordinate is Seoul-fallback-initialized (never null), so truthiness
@@ -781,6 +791,24 @@ export default function TrackingScreen() {
                 <Text style={st.gpsChipTxt}>GPS 신호 약함</Text>
               </View>
             )}
+            {/* T1.7 TUNING PANEL (temp scaffolding — strips with the final
+                numbers). Steppers per constant; tune by eye, read the values. */}
+            {NAV_TUNE_PANEL && hasCoursePath && (state === 'running' || state === 'paused') && (
+              <View style={st.tunePanel}>
+                {([
+                  ['고도', navAlt, 20, setNavAlt, 120, 800],
+                  ['피치', navPitch, 5, setNavPitch, 0, 70],
+                  ['앞봄', navLook, 20, setNavLook, 0, 400],
+                ] as [string, number, number, (v: number) => void, number, number][]).map(([lbl, val, step, set, lo, hi]) => (
+                  <View key={lbl} style={st.tuneRow}>
+                    <Text style={st.tuneLbl}>{lbl}</Text>
+                    <Pressable hitSlop={6} onPress={() => set(Math.max(lo, val - step))} style={st.tuneBtn}><Text style={st.tuneBtnTxt}>−</Text></Pressable>
+                    <Text style={st.tuneVal}>{val}</Text>
+                    <Pressable hitSlop={6} onPress={() => set(Math.min(hi, val + step))} style={st.tuneBtn}><Text style={st.tuneBtnTxt}>＋</Text></Pressable>
+                  </View>
+                ))}
+              </View>
+            )}
             {/* T1: 경로 이탈 banner + re-join hint (course runs only) */}
             {offCourse && (
               <View style={[st.gpsChip, { backgroundColor: 'rgba(180,40,40,0.72)' }]}>
@@ -956,6 +984,12 @@ const makeSt = (C: Tokens) => StyleSheet.create({
   recenterWrap: { position: 'absolute', right: 14 },
   recenterBtn:  { width: 40, height: 40, borderRadius: R.pill, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, alignItems: 'center', justifyContent: 'center', ...shadows.sm },
   gpsChip:    { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(0,0,0,0.45)', borderRadius: R.pill, paddingHorizontal: 10, paddingVertical: 5 },
+  tunePanel:  { backgroundColor: 'rgba(0,0,0,0.62)', borderRadius: 12, padding: 8, gap: 4, alignSelf: 'flex-start' },
+  tuneRow:    { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  tuneLbl:    { fontSize: 11, fontWeight: '700', color: 'rgba(255,255,255,0.75)', width: 30 },
+  tuneVal:    { fontSize: 13, fontWeight: '800', color: '#74E827', width: 36, textAlign: 'center', fontVariant: ['tabular-nums'] },
+  tuneBtn:    { width: 26, height: 26, borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.16)', alignItems: 'center', justifyContent: 'center' },
+  tuneBtnTxt: { fontSize: 15, fontWeight: '800', color: '#fff' },
   gpsChipTxt: { fontSize: 11, fontWeight: '700', color: '#fff', letterSpacing: -0.2 },
 
   // Course title pill (course mode)
