@@ -483,7 +483,7 @@ export default function TrackingScreen() {
       },
       { duration: 500 },
     );
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [drawnPath.length, state, drawnPath, courseCoords.length, navAlt, navPitch, navLook]);
 
   // Center on the USER's RESOLVED location (T-B correction ②): the hook's
