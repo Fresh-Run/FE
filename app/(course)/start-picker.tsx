@@ -25,6 +25,7 @@ import {
 import MapView, { Marker } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { CurrentLocationButton } from '@/components/current-location-button';
 import { Icon } from '@/components/ui';
 import { SEOUL_FALLBACK } from '@/hooks/use-current-location';
 import { searchPlaces, type Place } from '@/lib/places-api';
@@ -56,6 +57,9 @@ export default function StartPickerScreen() {
 
   const [picked, setPicked] = useState<{ lat: number; lng: number } | null>(null);
   const [label, setLabel]   = useState<string | null>(null);
+  // Measured so the 현재 위치 button floats just above the bottom card at
+  // either of its heights (hint row vs picked row)
+  const [cardH, setCardH]   = useState(140);
   // Monotonic id so a slow reverse-geocode can't overwrite a newer tap's label
   const geocodeSeq = useRef(0);
 
@@ -217,8 +221,22 @@ export default function StartPickerScreen() {
         </View>
       )}
 
+      {/* 현재 위치 — recenters the VIEW only; the picked pin does not move
+          (tap-to-place stays the only way to choose; the button is not a
+          map tap, so onPress never fires from it) */}
+      <CurrentLocationButton
+        style={{ position: 'absolute', right: 14, bottom: cardH + 12 }}
+        onFix={c => mapRef.current?.animateToRegion({
+          latitude: c.lat, longitude: c.lng,
+          latitudeDelta: 0.01, longitudeDelta: 0.01,
+        }, 350)}
+      />
+
       {/* Bottom card */}
-      <View style={[st.bottomCard, shadows.md, { paddingBottom: Math.max(insets.bottom, S.md) + S.sm }]}>
+      <View
+        style={[st.bottomCard, shadows.md, { paddingBottom: Math.max(insets.bottom, S.md) + S.sm }]}
+        onLayout={e => setCardH(e.nativeEvent.layout.height)}
+      >
         {picked === null ? (
           <View style={st.hintRow}>
             <Icon name="locate" size={16} color={C.accentGrn} />

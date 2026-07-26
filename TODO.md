@@ -1215,6 +1215,13 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 
 **핵심 판정: 스퍼 메커니즘은 그녀의 3부검(§8.13-8.15)이 이미 실험적으로 종결한 클래스** — 좌표 발명(Gemini 무지도) × T-map 전점방문 계약의 구조적 산물. **오늘의 신규 발견 = 인밴드 레인의 스퍼 무게이트 비대칭**: 데스크 실증 — 300m 골목 스퍼 = longest_retrace_m 609 → 그녀 자신의 §8.16 합격선(≤600) 위반이면서 유일한 라이브 게이트(오버캡 ≤800)는 통과, **인밴드 단독 후보는 게이트 자체가 없어 무조건 서빙**. 픽스 랭킹: ① 인밴드 스퍼 게이트 확장(if절 수준, 최고 레버리지) ② 스퍼 절제 후처리(가용성 보존 페어) ③ 앵커 dead_end 프로브 활성화(라이브 경로가 probe_dead_end=False로 호출 중) ④ 스냅-사이드 웨이포인트 드롭(M) ⑤ 프롬프트 = 사망 레인(§8.15 반증 3종, 재론 금지). 부수: _within_band 독스트링 −0.1 vs 상수 0.3 드리프트 · ANCHOR_EPIC 헤더 "미배선" vs 혼합 풀 라이브 코드 스테일. 풀 리포트 오너 메시지로 납품. STOP — 그녀 레인, 그녀 콜.
 
+## 🔼 CURRENT-LOCATION BUTTON — PICKER SURFACES (2026-07-26; BUILT, publish HELD per pin)
+- Enumeration from source: pannable pickers = start-picker.tsx (출발지 AND target=end 도착지 — one file, both modes; LACKED the button) + PlacePickSheet (집결 장소: announcement-compose·crew-edit·meet-map edit; HAD an inline one). Non-pickers excluded: meet-map view + route-map are viewers (RealMap interactive, choose happens elsewhere); crew 활동지역 = region-picker list drill, no map; feed/card RealMaps non-interactive.
+- Shared component minted: components/current-location-button.tsx (Toggle-unification precedent) — tracking's ⌖ pill verbatim (40×40 surface/border/locate/busy-swap). Tracking's own recenter stays separate BY DESIGN: follow machinery (ride anim, suspension-gated), different behavior class.
+- Honest affordance: button always visible (doubles as the permission door); denied/GPS-miss → transient 3.2s caption beside the button (never silent, never hidden).
+- Pin semantics stated: start-picker = tap-to-place → recenter moves VIEW only, pin stays; PlacePickSheet = center-pin → pick follows the recenter by that idiom's design.
+- Seoul-fall rider: NOT NEEDED — both start-picker entries pass effective coords (startCoord=manual??gps / endCoord??startCoord); PlacePickSheet resolves user fix pre-render. No default-Seoul open exists.
+
 ## ✅ NAVIGATION TIER ENTIRE — OWNER-VERIFIED [22:05] 2026-07-26 (the closing outing)
 - One stamp closes T1→T1.8: T1 78a4588e (mechanics: alongM banner·hysteresis 40/25·buzz) · T1.5 8b01230b (posture gap) · T1.6 f1974ad1 (nav strip·POI mute·casing ribbon·strip) · T1.7 b519695f→efe6c761 (trio 320/57/180 tuned in field, panel shipped→stripped) · T1.8 efe6c761→b79fbdd8 (chevrons shipped, judged horrendous, removed — direction = stateful dim, (a) adopted; T2 depart owns the start line post-gate).
 - Field readout: tuned posture · clean two-tone ribbon · dim carries direction · honest countdown · off-course clean · agency respected · free runs untouched.

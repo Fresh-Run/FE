@@ -18,6 +18,7 @@ import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, Text
 import MapView, { type Region } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { CurrentLocationButton } from '@/components/current-location-button';
 import { Icon } from '@/components/ui';
 import { SEOUL_FALLBACK } from '@/hooks/use-current-location';
 import { searchPlaces, type Place } from '@/lib/places-api';
@@ -49,7 +50,6 @@ export function PlacePickSheet({ visible, initial, onClose, onPick }: {
   // start region resolves BEFORE the map renders — no Seoul-then-jump
   const [startRegion, setStartRegion] = useState<{ lat: number; lng: number } | null>(null);
   const [center, setCenter] = useState<{ lat: number; lng: number }>(SEOUL_FALLBACK);
-  const [locating, setLocating] = useState(false);
   // 주소 autocomplete — the start-picker transplant (S1 mechanics verbatim:
   // /api/places Kakao proxy, 400ms debounce, 2-char floor, monotonic
   // stale-guard; null = dropdown hidden, [] = quiet empty state)
@@ -117,23 +117,6 @@ export function PlacePickSheet({ visible, initial, onClose, onPick }: {
     setCenter({ lat: r.latitude, lng: r.longitude });
   }
 
-  async function useCurrent() {
-    setLocating(true);
-    try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') return;
-      const pos = await Location.getCurrentPositionAsync({});
-      mapRef.current?.animateToRegion({
-        latitude: pos.coords.latitude,
-        longitude: pos.coords.longitude,
-        latitudeDelta: 0.01,
-        longitudeDelta: 0.01,
-      }, 350);
-    } catch { /* GPS miss — the map stays where it is */ } finally {
-      setLocating(false);
-    }
-  }
-
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <View style={st.root}>
@@ -171,9 +154,15 @@ export function PlacePickSheet({ visible, initial, onClose, onPick }: {
             <Icon name="close" size={20} color={C.text} />
           </Pressable>
           <View style={st.titlePill}><Text style={st.titleTxt}>집결 장소 선택</Text></View>
-          <Pressable onPress={useCurrent} hitSlop={8} style={st.roundBtn}>
-            <Icon name={locating ? 'ellipsis-horizontal' : 'locate'} size={18} color={C.accentGrn} />
-          </Pressable>
+          {/* shared 현재 위치 affordance (moves the view; the center pin is
+              the map center, so the pick follows the recenter here by design
+              — the center-pin idiom's semantics, unlike tap-to-place) */}
+          <CurrentLocationButton
+            onFix={c => mapRef.current?.animateToRegion({
+              latitude: c.lat, longitude: c.lng,
+              latitudeDelta: 0.01, longitudeDelta: 0.01,
+            }, 350)}
+          />
         </View>
 
         {/* 주소 autocomplete (start-picker idiom) */}
