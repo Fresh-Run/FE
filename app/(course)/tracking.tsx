@@ -165,28 +165,50 @@ function HoldStop({ onComplete, size = 72, showLabel = true, gestureRef }: {
   // run.haptics setting gates all haptic feedback here (persisted via profile)
   const hapticsOn = useSettings(s => s.settings.run.haptics);
 
+  // ── Ring lifecycle rides RAW TOUCH events, not gesture verdicts ────────────
+  // Field conviction (2026-07-26 re-test, group 22f92d5f): onFinalize does NOT
+  // fire on-device for sub-minDuration taps — the ring ran a full orbit, stayed
+  // full, and the next hold inherited it. The touch lane, by contrast, provably
+  // fires: activation works, and activation IS the touch stream timed against
+  // minDuration. So the visual + the Light timer bind to onTouchesDown/Up/
+  // Cancelled (delivered from the touch stream regardless of the state
+  // machine's verdict); the LongPress state machine keeps ONE job — activation.
+  // onFinalize stays only as an idempotent belt (drift-fail path), guarded by
+  // holdingRef so a ghost or a double-fire is a no-op.
   const lightTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const holdingRef = useRef(false);   // multi-touch guard + idempotence
+  const completedRef = useRef(false); // release-after-completion must not snap back
   const clearLight = () => {
     if (lightTimer.current) { clearTimeout(lightTimer.current); lightTimer.current = null; }
   };
   useEffect(() => clearLight, []);
 
-  const begin = () => {
+  const pressDown = () => {
+    if (holdingRef.current) return; // second finger — the first press owns the ring
+    holdingRef.current = true;
+    completedRef.current = false;
     setHolding(true);
+    // defect-② fix: every gesture starts from zero — no inherited fill
+    progress.stopAnimation();
+    progress.setValue(0);
     // Light waits out the tap window — a bare tap gets NO buzz
     if (hapticsOn) lightTimer.current = setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light), HOLD_LIGHT_AT_MS);
     Animated.timing(progress, { toValue: 1, duration: HOLD_MS, easing: Easing.linear, useNativeDriver: false }).start();
   };
+  const pressUp = () => {
+    if (!holdingRef.current || completedRef.current) return;
+    holdingRef.current = false;
+    clearLight();
+    setHolding(false);
+    Animated.timing(progress, { toValue: 0, duration: HOLD_SNAPBACK_MS, easing: Easing.out(Easing.quad), useNativeDriver: false }).start();
+  };
   const complete = () => {
+    completedRef.current = true;
+    holdingRef.current = false;
     clearLight();
     setHolding(false);
     if (hapticsOn) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     onComplete();
-  };
-  const cancel = () => {
-    clearLight();
-    setHolding(false);
-    Animated.timing(progress, { toValue: 0, duration: HOLD_SNAPBACK_MS, easing: Easing.out(Easing.quad), useNativeDriver: false }).start();
   };
 
   let hold = Gesture.LongPress()
@@ -194,9 +216,11 @@ function HoldStop({ onComplete, size = 72, showLabel = true, gestureRef }: {
     .maxDistance(HOLD_DRIFT_MAX)   // beyond this the hold FAILS → sheet pan freed
     .shouldCancelWhenOutside(false) // drift may leave the small ring — maxDistance governs
     .runOnJS(true)
-    .onBegin(begin)
+    .onTouchesDown(pressDown)
+    .onTouchesUp(pressUp)
+    .onTouchesCancelled(pressUp)
     .onStart(complete)
-    .onFinalize((_e, success) => { if (!success) cancel(); });
+    .onFinalize((_e, success) => { if (!success) pressUp(); }); // belt — idempotent
   if (gestureRef) hold = hold.withRef(gestureRef);
 
   const dashOffset = progress.interpolate({ inputRange: [0, 1], outputRange: [HOLD_CIRC, 0] });
