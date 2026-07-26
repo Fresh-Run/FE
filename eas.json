@@ -26,6 +26,10 @@
         "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpsbW1xbnBkZGtva3lpbnRsYXdkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE3NTkxMTgsImV4cCI6MjA5NzMzNTExOH0.l2yL07n7V84FyGvS9SZiO7La6x7aAcIV2D02R3pONSo"
       }
     },
+    "staging": {
+      "extends": "production",
+      "channel": "staging"
+    },
     "production": {
       "distribution": "store",
       "channel": "production",
@@ -38,6 +42,14 @@
     }
   },
   "submit": {
+    "staging": {
+      "ios": {
+        "ascAppId": "6789668009",
+        "ascApiKeyPath": "/Users/ivanchung/.freshrun-eas/AuthKey_SND9MTC84D.p8",
+        "ascApiKeyId": "SND9MTC84D",
+        "ascApiKeyIssuerId": "55ed01ad-d164-4678-8bd0-621f0234f792"
+      }
+    },
     "production": {
       "ios": {
         "ascAppId": "6789668009",
