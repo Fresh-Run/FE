@@ -1,5 +1,6 @@
 import { router } from 'expo-router';
 import React, { useRef, useState } from 'react';
+import { t, useT } from '@/lib/i18n';
 import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -8,6 +9,7 @@ import { useTokens } from '@/hooks/use-tokens';
 import { useStore } from '@/store/use-store';
 
 export default function SignInScreen() {
+  const T = useT();
   const C = useTokens();
   const signIn = useStore((s) => s.signIn);
 
@@ -21,7 +23,7 @@ export default function SignInScreen() {
   async function handleSignIn() {
     setError(null);
     if (!email.trim() || !password) {
-      setError('이메일과 비밀번호를 입력해 주세요.');
+      setError(t('auth.enterBoth'));
       return;
     }
     setLoading(true);
@@ -46,16 +48,16 @@ export default function SignInScreen() {
       <View style={styles.content}>
         {/* Heading */}
         <View style={styles.heading}>
-          <Text variant="headlineLg" weight="700">로그인</Text>
+          <Text variant="headlineLg" weight="700">{T('auth.login')}</Text>
           <Text variant="bodyMd" color="sub">
-            이메일로 계속하기
+            {T('auth.continueEmail')}
           </Text>
         </View>
 
         {/* Form */}
         <View style={styles.form}>
           <Input
-            label="이메일"
+            label={T('auth.email')}
             value={email}
             onChangeText={setEmail}
             placeholder="email@example.com"
@@ -64,10 +66,10 @@ export default function SignInScreen() {
             onSubmitEditing={() => passwordRef.current?.focus()}
           />
           <Input
-            label="비밀번호"
+            label={T('auth.password')}
             value={password}
             onChangeText={setPassword}
-            placeholder="비밀번호를 입력하세요"
+            placeholder={T('auth.pwPlaceholder')}
             secureTextEntry
             returnKeyType="done"
             onSubmitEditing={handleSignIn}
@@ -77,14 +79,14 @@ export default function SignInScreen() {
         </View>
 
         {/* Submit */}
-        <Button label="로그인" onPress={handleSignIn} loading={loading} large />
+        <Button label={T('auth.login')} onPress={handleSignIn} loading={loading} large />
 
         {/* Switch to sign up */}
         <Pressable onPress={() => router.replace('/(auth)/sign-up')} style={styles.switchLink}>
           <Text variant="bodyMd" color="sub">
-            계정이 없으신가요?{'  '}
+            {T('auth.noAccount')}{'  '}
             <Text variant="bodyMd" color="accentGrn" weight="600">
-              회원가입
+              {T('auth.signup')}
             </Text>
           </Text>
         </Pressable>
@@ -95,9 +97,9 @@ export default function SignInScreen() {
 }
 
 function translateError(msg: string): string {
-  if (msg.includes('Invalid login credentials')) return '이메일 또는 비밀번호가 올바르지 않습니다.';
-  if (msg.includes('Email not confirmed'))        return '이메일 인증이 필요합니다.';
-  if (msg.includes('too many requests'))          return '잠시 후 다시 시도해 주세요.';
+  if (msg.includes('Invalid login credentials')) return t('auth.badCreds');
+  if (msg.includes('Email not confirmed'))        return t('auth.emailUnverified');
+  if (msg.includes('too many requests'))          return t('auth.tryLater');
   return msg;
 }
 

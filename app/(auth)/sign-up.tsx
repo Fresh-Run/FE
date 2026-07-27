@@ -1,5 +1,6 @@
 import { router } from 'expo-router';
 import React, { useRef, useState } from 'react';
+import { t, useT } from '@/lib/i18n';
 import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -8,6 +9,7 @@ import { useTokens } from '@/hooks/use-tokens';
 import { useStore } from '@/store/use-store';
 
 export default function SignUpScreen() {
+  const T = useT();
   const C = useTokens();
   const signUp = useStore((s) => s.signUp);
 
@@ -22,9 +24,9 @@ export default function SignUpScreen() {
 
   async function handleSignUp() {
     setError(null);
-    if (!email.trim()) { setError('이메일을 입력해 주세요.'); return; }
-    if (password.length < 8) { setError('비밀번호는 8자 이상이어야 합니다.'); return; }
-    if (password !== confirm)  { setError('비밀번호가 일치하지 않습니다.'); return; }
+    if (!email.trim()) { setError(t('auth.enterEmail')); return; }
+    if (password.length < 8) { setError(t('auth.pwMin')); return; }
+    if (password !== confirm)  { setError(t('auth.pwMismatch')); return; }
 
     setLoading(true);
     const err = await signUp(email.trim().toLowerCase(), password);
@@ -50,16 +52,16 @@ export default function SignUpScreen() {
       <View style={styles.content}>
         {/* Heading */}
         <View style={styles.heading}>
-          <Text variant="headlineLg" weight="700">회원가입</Text>
+          <Text variant="headlineLg" weight="700">{T('auth.signup')}</Text>
           <Text variant="bodyMd" color="sub">
-            이메일로 계정 만들기
+            {T('auth.createEmail')}
           </Text>
         </View>
 
         {/* Form */}
         <View style={styles.form}>
           <Input
-            label="이메일"
+            label={T('auth.email')}
             value={email}
             onChangeText={setEmail}
             placeholder="email@example.com"
@@ -68,20 +70,20 @@ export default function SignUpScreen() {
             onSubmitEditing={() => passwordRef.current?.focus()}
           />
           <Input
-            label="비밀번호"
+            label={T('auth.password')}
             value={password}
             onChangeText={setPassword}
-            placeholder="8자 이상"
+            placeholder={T('auth.pwHint')}
             secureTextEntry
             returnKeyType="next"
             onSubmitEditing={() => confirmRef.current?.focus()}
             inputRef={passwordRef}
           />
           <Input
-            label="비밀번호 확인"
+            label={T('auth.pwConfirm')}
             value={confirm}
             onChangeText={setConfirm}
-            placeholder="비밀번호를 다시 입력하세요"
+            placeholder={T('auth.pwConfirmPlaceholder')}
             secureTextEntry
             returnKeyType="done"
             onSubmitEditing={handleSignUp}
@@ -91,14 +93,14 @@ export default function SignUpScreen() {
         </View>
 
         {/* Submit */}
-        <Button label="회원가입" onPress={handleSignUp} loading={loading} large />
+        <Button label={T('auth.signup')} onPress={handleSignUp} loading={loading} large />
 
         {/* Switch to sign in */}
         <Pressable onPress={() => router.replace('/(auth)/sign-in')} style={styles.switchLink}>
           <Text variant="bodyMd" color="sub">
-            이미 계정이 있으신가요?{'  '}
+            {T('auth.hasAccount')}{'  '}
             <Text variant="bodyMd" color="accentGrn" weight="600">
-              로그인
+              {T('auth.login')}
             </Text>
           </Text>
         </Pressable>
@@ -109,9 +111,9 @@ export default function SignUpScreen() {
 }
 
 function translateError(msg: string): string {
-  if (msg.includes('already registered') || msg.includes('already been registered')) return '이미 사용 중인 이메일입니다.';
-  if (msg.includes('password'))           return '비밀번호가 너무 약합니다. 더 복잡하게 설정해 주세요.';
-  if (msg.includes('invalid email'))      return '올바른 이메일 형식이 아닙니다.';
+  if (msg.includes('already registered') || msg.includes('already been registered')) return t('auth.emailTaken');
+  if (msg.includes('password'))           return t('auth.pwWeak');
+  if (msg.includes('invalid email'))      return t('auth.emailInvalid');
   return msg;
 }
 

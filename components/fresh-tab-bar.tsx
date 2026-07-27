@@ -1,4 +1,5 @@
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
+import { useT } from '@/lib/i18n';
 import * as Haptics from 'expo-haptics';
 import React from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -13,7 +14,7 @@ type TabDef = {
   route: string;
   iconOutline: string;
   iconFilled: string;
-  label: string;
+  label: import('@/lib/i18n').StringKey; // key, resolved at render (static-capture rule)
   center?: boolean;
 };
 
@@ -33,14 +34,15 @@ export function useTabBarInset(): number {
 }
 
 const TABS: TabDef[] = [
-  { route: 'index',     iconOutline: 'home-outline',   iconFilled: 'home',   label: '홈' },
-  { route: 'community', iconOutline: 'people-outline', iconFilled: 'people', label: '커뮤니티' },
-  { route: 'create',    iconOutline: 'add',            iconFilled: 'add',    label: '뛰러 가기', center: true },
-  { route: 'records',   iconOutline: 'list-outline',   iconFilled: 'list',   label: '기록' },
-  { route: 'profile',   iconOutline: 'person-outline', iconFilled: 'person', label: '프로필' },
+  { route: 'index',     iconOutline: 'home-outline',   iconFilled: 'home',   label: 'tab.home' },
+  { route: 'community', iconOutline: 'people-outline', iconFilled: 'people', label: 'tab.community' },
+  { route: 'create',    iconOutline: 'add',            iconFilled: 'add',    label: 'tab.run', center: true },
+  { route: 'records',   iconOutline: 'list-outline',   iconFilled: 'list',   label: 'tab.records' },
+  { route: 'profile',   iconOutline: 'person-outline', iconFilled: 'person', label: 'tab.profile' },
 ];
 
 export function FreshTabBar({ state, navigation }: BottomTabBarProps) {
+  const T = useT();
   const C = useTokens();
   const styles = useStyles(makeStyles);
   const insets = useSafeAreaInsets();
@@ -90,7 +92,7 @@ export function FreshTabBar({ state, navigation }: BottomTabBarProps) {
                   <Icon name="add" size={26} color={C.accentText} />
                 </View>
                 <Text style={[styles.lbl, { color: C.accentGrn, fontWeight: '700' }]}>
-                  {tab.label}
+                  {T(tab.label)}
                 </Text>
               </Pressable>
             );
@@ -108,7 +110,7 @@ export function FreshTabBar({ state, navigation }: BottomTabBarProps) {
                 color={iconColor}
               />
               <Text style={[styles.lbl, { color: iconColor, fontWeight: isFocused ? '700' : '500' }]}>
-                {tab.label}
+                {T(tab.label)}
               </Text>
             </Pressable>
           );

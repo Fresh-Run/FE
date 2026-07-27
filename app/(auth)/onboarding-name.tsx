@@ -17,6 +17,7 @@
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
+import { t as tx, tf, useT } from '@/lib/i18n';
 import {
   ActivityIndicator,
   Alert,
@@ -41,6 +42,7 @@ import { useStore } from '@/store/use-store';
 type Step = 1 | 2 | 3;
 
 export default function OnboardingScreen() {
+  const T = useT();
   const C = useTokens();
   const setDisplayName    = useStore((s) => s.setDisplayName);
   const setPhotoUrl       = useStore((s) => s.setPhotoUrl);
@@ -65,9 +67,9 @@ export default function OnboardingScreen() {
 
   function validateName(): string | null {
     const t = name.trim();
-    if (!t) return '닉네임을 입력해 주세요.';
-    if (t.length < 2) return '닉네임은 2자 이상이어야 합니다.';
-    if (t.length > 20) return '닉네임은 20자 이하로 설정해 주세요.';
+    if (!t) return tx('onb.nickRequired');
+    if (t.length < 2) return tx('onb.nickMin');
+    if (t.length > 20) return tx('onb.nickMax');
     return null;
   }
 
@@ -97,7 +99,7 @@ export default function OnboardingScreen() {
         setCropSrc({ uri: a.uri, width: a.width, height: a.height });
       }
     } catch {
-      Alert.alert('사진 선택 실패', '사진 선택 화면을 열지 못했어요. 다시 시도해 주세요.');
+      Alert.alert(tx('onb.photoFailTitle'), tx('onb.photoFailBody'));
     }
   }
 
@@ -139,9 +141,9 @@ export default function OnboardingScreen() {
     } catch (e: unknown) {
       if (e instanceof ApiError && e.status === 409) {
         setStep(1);
-        setNameError('이미 사용 중인 닉네임이에요.');
+        setNameError(tx('onb.nickTaken'));
       } else {
-        setNameError(e instanceof Error ? e.message : '저장에 실패했어요. 다시 시도해 주세요.');
+        setNameError(e instanceof Error ? e.message : tx('onb.saveFail'));
         setStep(1);
       }
     } finally {
@@ -173,16 +175,16 @@ export default function OnboardingScreen() {
               <Icon name="person" size={36} color={C.accentGrn} />
             </View>
             <View style={styles.heading}>
-              <Text variant="headlineLg" weight="700" center>환영합니다! 👋</Text>
+              <Text variant="headlineLg" weight="700" center>{T('onb.welcome')}</Text>
               <Text variant="bodyMd" color="sub" center>
-                앱에서 사용할 닉네임을 설정해 주세요.{'\n'}나중에 언제든지 변경할 수 있습니다.
+                {T('onb.nickSub')}
               </Text>
             </View>
             <Input
-              label="닉네임"
+              label={T('onb.nickname')}
               value={name}
               onChangeText={(v) => { setName(v); setNameError(null); }}
-              placeholder="예: 달리는 춘식이"
+              placeholder={T('onb.nickPlaceholder')}
               autoCapitalize="words"
               autoCorrect={false}
               returnKeyType="done"
@@ -190,7 +192,7 @@ export default function OnboardingScreen() {
               error={nameError}
             />
             <Text variant="labelSm" color="sub" style={styles.hint}>
-              {name.trim().length} / 20자
+              {tf('onb.counter20', { n: name.trim().length })}
             </Text>
           </View>
         )}
@@ -198,9 +200,9 @@ export default function OnboardingScreen() {
         {step === 2 && (
           <View style={styles.content}>
             <View style={styles.heading}>
-              <Text variant="headlineLg" weight="700" center>프로필 사진</Text>
+              <Text variant="headlineLg" weight="700" center>{T('onb.photoTitle')}</Text>
               <Text variant="bodyMd" color="sub" center>
-                다른 러너에게 보여질 사진이에요. (선택)
+                {T('onb.photoSub')}
               </Text>
             </View>
             <Pressable onPress={pickPhoto} style={styles.photoWrap}>
@@ -212,7 +214,7 @@ export default function OnboardingScreen() {
                 </View>
               )}
               <Text variant="labelSm" color="accentGrn" style={{ textAlign: 'center', marginTop: 12 }}>
-                {photoUri ? '다시 선택' : '사진 선택'}
+                {photoUri ? T('onb.photoRepick') : T('onb.photoPick')}
               </Text>
             </Pressable>
           </View>
@@ -221,38 +223,38 @@ export default function OnboardingScreen() {
         {step === 3 && (
           <View style={styles.content}>
             <View style={styles.heading}>
-              <Text variant="headlineLg" weight="700" center>키 · 체중</Text>
+              <Text variant="headlineLg" weight="700" center>{T('onb.body')}</Text>
               <Text variant="bodyMd" color="sub" center>
-                키·체중을 입력하면 칼로리 추정과 러닝 분석이{'\n'}더 정확해져요 · 프로필에 공개되지 않아요
+                {T('onb.bodySub')}
               </Text>
             </View>
             <Input
-              label="키 (cm)"
+              label={T('onb.height')}
               value={heightCm}
               onChangeText={(v) => setHeightCm(v.replace(/[^0-9.]/g, ''))}
               placeholder="168"
               keyboardType="decimal-pad"
-              error={heightValid ? null : '100~250cm 범위로 입력해 주세요'}
+              error={heightValid ? null : T('onb.heightRange')}
             />
             <Input
-              label="체중 (kg)"
+              label={T('onb.weight')}
               value={weightKg}
               onChangeText={(v) => setWeightKg(v.replace(/[^0-9.]/g, ''))}
               placeholder="62"
               keyboardType="decimal-pad"
-              error={weightValid ? null : '20~300kg 범위로 입력해 주세요'}
+              error={weightValid ? null : T('onb.weightRange')}
             />
           </View>
         )}
 
         <View style={styles.footer}>
-          {step === 1 && <Button label="다음" onPress={nextFromName} large />}
+          {step === 1 && <Button label={T('onb.next')} onPress={nextFromName} large />}
           {step === 2 && (
             <>
-              <Button label="다음" onPress={() => setStep(3)} large />
+              <Button label={T('onb.next')} onPress={() => setStep(3)} large />
               {!photoUri && (
                 <Pressable onPress={() => setStep(3)} hitSlop={8} style={styles.skipBtn}>
-                  <Text variant="labelSm" color="sub">다음에 하기</Text>
+                  <Text variant="labelSm" color="sub">{T('onb.later')}</Text>
                 </Pressable>
               )}
             </>
@@ -263,7 +265,7 @@ export default function OnboardingScreen() {
                 <View style={styles.submittingWrap}><ActivityIndicator color={C.accent} /></View>
               ) : (
                 <Button
-                  label="FreshRun 시작하기"
+                  label={T('onb.start')}
                   onPress={submit}
                   large
                   disabled={!heightValid || !weightValid}
@@ -271,7 +273,7 @@ export default function OnboardingScreen() {
               )}
               {heightCm.trim() === '' && weightKg.trim() === '' && !submitting && (
                 <Pressable onPress={submit} hitSlop={8} style={styles.skipBtn}>
-                  <Text variant="labelSm" color="sub">다음에 하기</Text>
+                  <Text variant="labelSm" color="sub">{T('onb.later')}</Text>
                 </Pressable>
               )}
             </>

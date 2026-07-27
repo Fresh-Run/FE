@@ -7,6 +7,7 @@
  * canvas home-cards.jsx 친구 feed is run cards).
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getLang, t, tf } from '@/lib/i18n';
 import { useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
@@ -58,10 +59,14 @@ function verdictColor(C: Tokens, tone: WeatherTone): string {
   return C.danger;
 }
 
+const DAY_KEYS = ['day.sun', 'day.mon', 'day.tue', 'day.wed', 'day.thu', 'day.fri', 'day.sat'] as const;
+const MONTHS_EN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 function formatDate(): string {
   const d = new Date();
-  const days = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'];
-  return `${days[d.getDay()]}, ${d.getMonth() + 1}월 ${d.getDate()}일`;
+  const day = t(DAY_KEYS[d.getDay()]);
+  return getLang() === 'en'
+    ? `${day}, ${MONTHS_EN[d.getMonth()]} ${d.getDate()}`
+    : `${day}, ${d.getMonth() + 1}월 ${d.getDate()}일`;
 }
 
 // ─── Greeting header ──────────────────────────────────────────────────────────
@@ -73,7 +78,7 @@ function Greeting({ name, photoUrl, showBellDot, onBell }: { name: string; photo
     <View style={gst.row}>
       <View style={{ minWidth: 0, flex: 1 }}>
         <RNText style={gst.date}>{formatDate()}</RNText>
-        <RNText style={gst.heading} numberOfLines={1}>안녕하세요, {name}님</RNText>
+        <RNText style={gst.heading} numberOfLines={1}>{tf('home.greeting', { name })}</RNText>
       </View>
       <View style={gst.actions}>
         <Pressable onPress={onBell} style={[gst.bellBtn, shadows.sm]}>
@@ -225,7 +230,7 @@ const makeFtt = (C: Tokens) => StyleSheet.create({
 // 코스' deviation put 코스 inside a label the template also appends —
 // "코스 코스를". Canonical labels carry no 코스; the template's own 코스
 // composes clean with all three: 평지 우선/균형/언덕 훈련 + 코스를.)
-const TERRAIN_BANNER_LABEL = { flat: '평지 우선', mixed: '균형', hill: '언덕 훈련' } as const;
+const TERRAIN_BANNER_KEY = { flat: 'terrain.flat', mixed: 'terrain.mixed', hill: 'terrain.hill' } as const; // keys — resolved at render (static-capture rule)
 
 // Banner distance = a VARIED BAND around the declared pref (owner amendment,
 // 2026-07-22 — raw pref = repetitive wallpaper; history = second-guessing;
@@ -298,8 +303,8 @@ function AIBanner({ onStart, onUpsell }: { onStart: (km: number) => void; onUpse
   // reset weekday from server truth; the quota copy's own promise ("월요일에
   // 초기화") is the fallback when reset_at is absent
   const resetDay = quota.reset_at
-    ? ['일', '월', '화', '수', '목', '금', '토'][new Date(quota.reset_at).getDay()] + '요일'
-    : '월요일';
+    ? t(DAY_KEYS[new Date(quota.reset_at).getDay()])
+    : t('day.mon');
   return (
     <Pressable onPress={exhausted ? onUpsell : () => onStart(km)} style={abt.banner}>
       <LinearGradient
@@ -313,18 +318,18 @@ function AIBanner({ onStart, onUpsell }: { onStart: (km: number) => void; onUpse
       <View style={{ position: 'relative' }}>
         <View style={abt.badge}>
           <Icon name={exhausted ? 'lock-closed-outline' : 'sparkles'} size={13} color="#fff" />
-          <RNText style={abt.badgeTxt}>AI 추천 코스</RNText>
+          <RNText style={abt.badgeTxt}>{t('home.aiBadge')}</RNText>
         </View>
         <RNText style={abt.title}>
           {exhausted
-            ? '이번 주 무료 생성을\n다 썼어요'
-            : `주변 ${fmtBannerKm(km)}km ${TERRAIN_BANNER_LABEL[aiPrefs.terrain]} 코스를\n달려보세요!`}
+            ? t('home.aiQuotaOut')
+            : tf('home.aiPromo', { km: fmtBannerKm(km), terrain: t(TERRAIN_BANNER_KEY[aiPrefs.terrain]) })}
         </RNText>
         <View style={abt.sub}>
           <RNText style={abt.subTxt}>
             {exhausted
-              ? `다음 초기화 ${resetDay} · 프리미엄은 무제한`
-              : `약 ${estMin}분${!quota.unlimited ? ` · 이번 주 ${quota.remaining ?? 0}회 남았어요` : ''}`}
+              ? tf('home.aiResetSub', { day: resetDay })
+              : tf('home.aiEstMin', { min: estMin }) + (!quota.unlimited ? tf('home.aiRemaining', { n: quota.remaining ?? 0 }) : '')}
           </RNText>
           <View style={{ transform: [{ rotate: '-45deg' }] }}>
             <Icon name="arrow-forward-outline" size={15} color="#fff" />
@@ -466,7 +471,7 @@ export default function HomeScreen() {
     },
   ).current;
 
-  const name = displayName ?? '러너';
+  const name = displayName ?? t('home.runner');
   const list: FeedRun[] = tab === '전체' ? nearby.items : feed.items;
   // No-swap pre-warm (ruling ③, 2026-07-23): fire track fetches at
   // data-arrival so cards are usually track-ready before the eye lands.
