@@ -32,6 +32,7 @@
  */
 import Slider from '@react-native-community/slider';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -39,7 +40,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { t, tf } from '@/lib/i18n';
 import { Image, Pressable, ScrollView, Share, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
-import Reanimated, { runOnJS, useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
+import Reanimated, { runOnJS, useAnimatedStyle, useSharedValue, type SharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { captureRef } from 'react-native-view-shot';
@@ -123,6 +124,35 @@ function routePath(polyline: Coordinate[], size: number, pad: number): { d: stri
   return { d, start: [px(first), py(first)], end: [px(last), py(last)] };
 }
 
+// ─── Smart alignment guides (owner spec 2026-07-27) — the PPT/IG grammar ─────
+// Snap targets, priority: canvas centerlines → safe-margin lines → sibling
+// centers/edges. Route layer + wordmark are NOT targets (v1 ruling: organic
+// shape / fixed furniture). Equal-spacing: NOT v1 (3-body solve — declared
+// honestly, not silently dropped). Snap ASSISTS, never constrains: raw finger
+// position stays the truth; display snaps within threshold and releases the
+// moment raw pulls past it — no sticky trap.
+const SNAP_THRESHOLD_PX = 10; // tunable — the 8-12px class, middle picked
+const SAFE_MARGIN_PX = 20;    // consistent inset for the margin guide lines
+
+type LayerGeom = {
+  tx: SharedValue<number>; ty: SharedValue<number>; sc: SharedValue<number>;
+  w: SharedValue<number>; h: SharedValue<number>;
+};
+type GuideCtx = {
+  geoms: Partial<Record<ShareMetricKey, LayerGeom>>; // registered at hook mount
+  guideX: SharedValue<number>; // px of the vertical guide line; -1 = hidden
+  guideY: SharedValue<number>; // px of the horizontal guide line; -1 = hidden
+};
+
+// Snap tick — Light, gated under run.haptics per the vocabulary table's own
+// scope (tabs/toggles are non-run surfaces and ride the same gate: it is the
+// app's ONE haptic switch, gate-not-generator). Fire-time snapshot idiom.
+function snapTick() {
+  if (useSettings.getState().settings.run.haptics) {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+  }
+}
+
 // ─── Free-placed metric layer (v2) — drag + pinch, NO rotation ───────────────
 // One hook instance per metric (fixed count of 3 — hooks stay unconditional).
 // Position lives in shared values (px), persists as canvas FRACTIONS on
@@ -134,33 +164,118 @@ function useMetricLayer(
   canvasH: number,
   stored: MetricPlacement | undefined,
   persist: (key: ShareMetricKey, p: MetricPlacement) => void,
+  guides: GuideCtx,
   enabled = true,
 ) {
   const base = stored ?? DEFAULT_PLACEMENT[key];
   const tx = useSharedValue(base.x * canvasW);
   const ty = useSharedValue(base.y * canvasH);
   const sc = useSharedValue(base.s);
+  // raw = the finger's truth; tx/ty = the (possibly snapped) display
+  const rawX = useSharedValue(base.x * canvasW);
+  const rawY = useSharedValue(base.y * canvasH);
+  const w = useSharedValue(0); // measured (unscaled) row size — onLayout below
+  const h = useSharedValue(0);
+  const snappedX = useSharedValue(0); // 0/1 — tick fires on the rising edge only
+  const snappedY = useSharedValue(0);
+  guides.geoms[key] = { tx, ty, sc, w, h }; // idempotent per-render registration
   // reposition on hydrate/format-flip (fractions are the truth)
   useEffect(() => {
     tx.value = base.x * canvasW;
     ty.value = base.y * canvasH;
+    rawX.value = base.x * canvasW;
+    rawY.value = base.y * canvasH;
     sc.value = base.s;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canvasW, canvasH, stored]);
   const gesture = useMemo(() => {
     const end = () => {
       'worklet';
+      guides.guideX.value = -1; // guides vanish on release — never outlive a drag
+      guides.guideY.value = -1;
+      snappedX.value = 0;
+      snappedY.value = 0;
+      rawX.value = tx.value; // next drag starts from the settled (snapped) spot
+      rawY.value = ty.value;
       runOnJS(persist)(key, { x: tx.value / canvasW, y: ty.value / canvasH, s: sc.value });
     };
+    const siblings = (['dist', 'pace', 'time'] as ShareMetricKey[]).filter(k2 => k2 !== key);
     return Gesture.Simultaneous(
-      Gesture.Pan().enabled(enabled).onChange(e => { tx.value += e.changeX; ty.value += e.changeY; }).onEnd(end),
+      Gesture.Pan().enabled(enabled)
+        .onStart(() => {
+          'worklet';
+          rawX.value = tx.value;
+          rawY.value = ty.value;
+        })
+        .onChange(e => {
+          'worklet';
+          rawX.value += e.changeX;
+          rawY.value += e.changeY;
+          const halfW = (w.value * sc.value) / 2;
+          const halfH = (h.value * sc.value) / 2;
+          // scale is about the view center → center = raw + unscaled half
+          const cx = rawX.value + w.value / 2;
+          const cy = rawY.value + h.value / 2;
+          // candidate = [snap-to center position, guide-line px]
+          const xc: [number, number][] = [
+            [canvasW / 2, canvasW / 2],                              // ① V centerline
+            [SAFE_MARGIN_PX + halfW, SAFE_MARGIN_PX],                // ② left margin (edge)
+            [canvasW - SAFE_MARGIN_PX - halfW, canvasW - SAFE_MARGIN_PX], // ② right margin (edge)
+          ];
+          const yc: [number, number][] = [
+            [canvasH / 2, canvasH / 2],                              // ① H centerline
+            [SAFE_MARGIN_PX + halfH, SAFE_MARGIN_PX],                // ② top margin
+            [canvasH - SAFE_MARGIN_PX - halfH, canvasH - SAFE_MARGIN_PX], // ② bottom margin
+          ];
+          // ③ siblings — centers + edges (skip unrendered: w === 0)
+          for (const k2 of siblings) {
+            const g = guides.geoms[k2];
+            if (!g || g.w.value === 0) continue;
+            const sHalfW = (g.w.value * g.sc.value) / 2;
+            const sHalfH = (g.h.value * g.sc.value) / 2;
+            const scx = g.tx.value + g.w.value / 2;
+            const scy = g.ty.value + g.h.value / 2;
+            xc.push([scx, scx]);                                     // H-center align
+            xc.push([scx - sHalfW + halfW, scx - sHalfW]);           // left-align
+            xc.push([scx + sHalfW - halfW, scx + sHalfW]);           // right-align
+            yc.push([scy, scy]);                                     // V-center align
+            yc.push([scy - sHalfH + halfH, scy - sHalfH]);           // top-align
+            yc.push([scy + sHalfH - halfH, scy + sHalfH]);           // bottom-align
+          }
+          let bestX = -1, bestXd = SNAP_THRESHOLD_PX + 1, bestXg = -1;
+          for (const [pos, g2] of xc) {
+            const d = Math.abs(cx - pos);
+            if (d < bestXd) { bestXd = d; bestX = pos; bestXg = g2; }
+          }
+          let bestY = -1, bestYd = SNAP_THRESHOLD_PX + 1, bestYg = -1;
+          for (const [pos, g2] of yc) {
+            const d = Math.abs(cy - pos);
+            if (d < bestYd) { bestYd = d; bestY = pos; bestYg = g2; }
+          }
+          const xSnap = bestXd <= SNAP_THRESHOLD_PX;
+          const ySnap = bestYd <= SNAP_THRESHOLD_PX;
+          tx.value = xSnap ? bestX - w.value / 2 : rawX.value; // magnetic pull ↔ clean release
+          ty.value = ySnap ? bestY - h.value / 2 : rawY.value;
+          guides.guideX.value = xSnap ? bestXg : -1; // lines exist ONLY while snapped
+          guides.guideY.value = ySnap ? bestYg : -1;
+          if ((xSnap && snappedX.value === 0) || (ySnap && snappedY.value === 0)) {
+            runOnJS(snapTick)(); // rising edge only — engage tick, no machine-gun
+          }
+          snappedX.value = xSnap ? 1 : 0;
+          snappedY.value = ySnap ? 1 : 0;
+        })
+        .onEnd(end),
       Gesture.Pinch().enabled(enabled).onChange(e => { sc.value *= e.scaleChange; }).onEnd(end),
     );
-  }, [key, canvasW, canvasH, persist, tx, ty, sc, enabled]);
+  }, [key, canvasW, canvasH, persist, tx, ty, sc, rawX, rawY, w, h, snappedX, snappedY, guides, enabled]);
   const style = useAnimatedStyle(() => ({
     transform: [{ translateX: tx.value }, { translateY: ty.value }, { scale: sc.value }],
   }));
-  return { gesture, style };
+  const onLayout = (e: { nativeEvent: { layout: { width: number; height: number } } }) => {
+    w.value = e.nativeEvent.layout.width;
+    h.value = e.nativeEvent.layout.height;
+  };
+  return { gesture, style, onLayout };
 }
 
 // ─── Background adjust layer (v2.1) — pan+pinch, CLAMPED to cover-fit ────────
@@ -312,9 +427,15 @@ export default function ShareCardScreen() {
       return next;
     });
   }, []);
-  const distLayer = useMetricLayer('dist', canvasW, canvasH, prefs.placements?.dist, persistPlacement, !bgAdjustMode);
-  const paceLayer = useMetricLayer('pace', canvasW, canvasH, prefs.placements?.pace, persistPlacement, !bgAdjustMode);
-  const timeLayer = useMetricLayer('time', canvasW, canvasH, prefs.placements?.time, persistPlacement, !bgAdjustMode);
+  // smart-guide context — one per canvas; geoms registered by the layer hooks
+  const guideX = useSharedValue(-1);
+  const guideY = useSharedValue(-1);
+  const guideCtx = useRef<GuideCtx>({ geoms: {}, guideX, guideY }).current;
+  const guideVStyle = useAnimatedStyle(() => ({ opacity: guideX.value >= 0 ? 1 : 0, transform: [{ translateX: guideX.value }] }));
+  const guideHStyle = useAnimatedStyle(() => ({ opacity: guideY.value >= 0 ? 1 : 0, transform: [{ translateY: guideY.value }] }));
+  const distLayer = useMetricLayer('dist', canvasW, canvasH, prefs.placements?.dist, persistPlacement, guideCtx, !bgAdjustMode);
+  const paceLayer = useMetricLayer('pace', canvasW, canvasH, prefs.placements?.pace, persistPlacement, guideCtx, !bgAdjustMode);
+  const timeLayer = useMetricLayer('time', canvasW, canvasH, prefs.placements?.time, persistPlacement, guideCtx, !bgAdjustMode);
   const layerFor = { dist: distLayer, pace: paceLayer, time: timeLayer } as const;
 
   // ── v2.1 per-run background adjust (photos only) ────────────────────────────
@@ -433,7 +554,7 @@ export default function ShareCardScreen() {
                 dark-canvas family by design). Drag to place, pinch to size. */}
             {rows.map(([k, v, l]) => (
               <GestureDetector key={k} gesture={layerFor[k].gesture}>
-                <Reanimated.View style={[st.metricLayer, layerFor[k].style]}>
+                <Reanimated.View onLayout={layerFor[k].onLayout} style={[st.metricLayer, layerFor[k].style]}>
                   <Text style={st.statVal}>{v}</Text>
                   <Text style={st.statLbl}>{l}</Text>
                 </Reanimated.View>
@@ -442,6 +563,13 @@ export default function ShareCardScreen() {
 
             {/* permanent wordmark (re-ruling) — subtle corner, both formats */}
             <Text style={st.wordmark} pointerEvents="none">FreshRun</Text>
+          </View>
+          {/* smart-guide lines — OUTSIDE the captured ref (structural export
+              exclusion: capture cannot see them, ever) + gesture-end clearing
+              (belt). Render only while a drag is snapped. */}
+          <View pointerEvents="none" style={[StyleSheet.absoluteFillObject, { width: canvasW, height: canvasH, alignSelf: 'center' }]}>
+            <Reanimated.View style={[st.guideV, { height: canvasH }, guideVStyle]} />
+            <Reanimated.View style={[st.guideH, { width: canvasW }, guideHStyle]} />
           </View>
         </View>
 
@@ -541,6 +669,9 @@ const makeSt = (C: Tokens) => StyleSheet.create({
   routeLayer: { position: 'absolute' },
 
   metricLayer: { position: 'absolute', left: 0, top: 0, flexDirection: 'row', alignItems: 'baseline', gap: 7 },
+  // smart guides — thin lime full-bleed (the PPT look); 74E827 = the house lime
+  guideV: { position: 'absolute', left: 0, top: 0, width: 1.5, backgroundColor: '#74E827', opacity: 0 },
+  guideH: { position: 'absolute', left: 0, top: 0, height: 1.5, backgroundColor: '#74E827', opacity: 0 },
   statVal:    { fontSize: 21, fontWeight: '800', color: '#fff', letterSpacing: -0.6, fontVariant: ['tabular-nums'], textShadowColor: 'rgba(0,0,0,0.55)', textShadowRadius: 5 },
   statLbl:    { fontSize: 11, fontWeight: '600', color: 'rgba(255,255,255,0.75)', letterSpacing: -0.2, textShadowColor: 'rgba(0,0,0,0.55)', textShadowRadius: 4 },
   wordmark:   { position: 'absolute', right: 14, bottom: 12, fontSize: 12, fontWeight: '800', letterSpacing: -0.3, color: 'rgba(255,255,255,0.82)', textShadowColor: 'rgba(0,0,0,0.5)', textShadowRadius: 4 },
