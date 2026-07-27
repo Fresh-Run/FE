@@ -48,6 +48,7 @@ import { activateRunAudioSession, deactivateRunAudioSession } from '@/lib/audio-
 import { useQuota } from '@/store/use-quota';
 import { addLiveActivityActionListener } from '@/modules/live-activity';
 import { clearActiveCourse, getActiveCourse } from '@/store/active-course';
+import { t, tf } from '@/lib/i18n';
 import { getPendingRun, refreshPendingRun, setPendingRun } from '@/store/pending-run';
 import { useLocalProfile } from '@/store/use-local-profile';
 import { useSettings } from '@/store/use-settings';
@@ -91,7 +92,7 @@ function StatusBadge({ paused }: { paused: boolean }) {
   return (
     <View style={st.badge}>
       <Animated.View style={[st.badgeDot, { backgroundColor: paused ? C.sun : C.accent, opacity }]} />
-      <Text style={st.badgeTxt}>{paused ? '일시정지' : '러닝 중'}</Text>
+      <Text style={st.badgeTxt}>{paused ? t('trk.paused') : t('trk.running')}</Text>
     </View>
   );
 }
@@ -270,7 +271,7 @@ function HoldStop({ onComplete, size = 72, showLabel = true, gestureRef }: {
       </View>
       {showLabel && (
         <Text style={[st.holdLabel, { color: holding ? C.danger : C.faint }]}>
-          {holding ? '계속 누르세요…' : '길게 눌러 종료'}
+          {holding ? t('trk.holdKeep') : t('trk.holdHint')}
         </Text>
       )}
     </View>
@@ -304,7 +305,7 @@ function CountdownOverlay({ value }: { value: number }) {
       <Animated.Text style={[st.countdownNum, { opacity, transform: [{ scale }] }]}>
         {value}
       </Animated.Text>
-      <Text style={st.countdownSub}>곧 시작해요</Text>
+      <Text style={st.countdownSub}>{t('trk.countdownSub')}</Text>
     </View>
   );
 }
@@ -739,11 +740,11 @@ export default function TrackingScreen() {
     if (!granted) {
       // Repeat requests after denial never re-prompt — Settings is the only path.
       Alert.alert(
-        '위치 권한이 필요해요',
-        '러닝 기록에는 위치 권한이 필요해요. 설정에서 위치 접근을 허용해 주세요.',
+        t('trk.locPermTitle'),
+        t('trk.locPermBody'),
         [
-          { text: '취소', style: 'cancel' },
-          { text: '설정 열기', onPress: () => Linking.openSettings() },
+          { text: t('common.cancel'), style: 'cancel' },
+          { text: t('common.openSettings'), onPress: () => Linking.openSettings() },
         ],
       );
     }
@@ -752,7 +753,7 @@ export default function TrackingScreen() {
   const running = state === 'running';
   const idle    = state === 'idle';
   const units   = useSettings(s => s.settings.units);
-  const coachMsg = !moving ? '출발 준비 완료! 가볍게 시작해볼까요?' : '좋아요! 목표 페이스 유지 중이에요';
+  const coachMsg = !moving ? t('trk.coachReady') : t('trk.coachPace');
   const paceDisplay = moving ? fmtPaceIn(paceSecPerKm, units) : "--'--\"";
 
   return (
@@ -839,7 +840,7 @@ export default function TrackingScreen() {
                 onPress={() => { setCoachMuted(m => { if (!m) stopSpeech(); return !m; }); }}
                 hitSlop={8}
                 style={st.coachMuteBtn}
-                accessibilityLabel={coachMuted ? '음성 안내 켜기' : '음성 안내 끄기'}
+                accessibilityLabel={coachMuted ? t('trk.voiceOn') : t('trk.voiceOff')}
               >
                 <Icon name={coachMuted ? 'volume-mute-outline' : 'volume-high-outline'} size={16} color={coachMuted ? 'rgba(255,255,255,0.55)' : '#7CF03D'} />
               </Pressable>
@@ -847,14 +848,14 @@ export default function TrackingScreen() {
             {gpsLost && (
               <View style={st.gpsChip}>
                 <Icon name="cellular-outline" size={11} color={C.sun} />
-                <Text style={st.gpsChipTxt}>GPS 신호 약함</Text>
+                <Text style={st.gpsChipTxt}>{t('trk.gpsWeak')}</Text>
               </View>
             )}
             {/* T1: 경로 이탈 banner + re-join hint (course runs only) */}
             {offCourse && (
               <View style={[st.gpsChip, { backgroundColor: 'rgba(180,40,40,0.72)' }]}>
                 <Icon name="navigate-outline" size={11} color="#fff" />
-                <Text style={st.gpsChipTxt}>경로 이탈 — 경로까지 약 {rejoinM}m</Text>
+                <Text style={st.gpsChipTxt}>{tf('trk.offCourse', { m: rejoinM })}</Text>
               </View>
             )}
           </View>
@@ -919,7 +920,7 @@ export default function TrackingScreen() {
           style={[st.expandedWrap, !idle ? expandedFade : null]}
         >
           <View style={{ alignItems: 'center', marginTop: 8 }}>
-            <Text style={st.timeLabel}>경과 시간</Text>
+            <Text style={st.timeLabel}>{t('trk.elapsed')}</Text>
             <Text style={st.timeValue}>{fmtElapsed(elapsedSec)}</Text>
           </View>
 
@@ -934,8 +935,8 @@ export default function TrackingScreen() {
                 const avgPace = distanceKm > 0.05 ? elapsedSec / distanceKm : null;
                 const etaMin = avgPace != null ? Math.round(((remainM / 1000) * avgPace) / 60) : null;
                 return ([
-                  [fmtDist(remainM / 1000, units, 2), distUnit(units), '남은 거리'],
-                  [etaMin != null ? `약 ${etaMin}분` : '—', '', '도착 예상'],
+                  [fmtDist(remainM / 1000, units, 2), distUnit(units), t('trk.remaining')],
+                  [etaMin != null ? tf('trk.etaMin', { n: etaMin }) : '—', '', t('trk.eta')],
                 ] as [string, string, string][]).map(([val, unit, label], i) => (
                   <View key={label} style={[st.metricCol, i > 0 && st.metricColDivider]}>
                     <View style={st.metricValRow}>
@@ -950,9 +951,9 @@ export default function TrackingScreen() {
           )}
           <View style={st.metricsRow}>
             {([
-              [fmtDist(distanceKm, units, 2), distUnit(units), '거리'],
-              [paceDisplay,                   paceUnit(units), '현재 페이스'],
-              [kcal != null ? String(kcal) : '—', 'kcal',      '칼로리'],
+              [fmtDist(distanceKm, units, 2), distUnit(units), t('trk.dist')],
+              [paceDisplay,                   paceUnit(units), t('trk.pace')],
+              [kcal != null ? String(kcal) : '—', 'kcal',      t('trk.kcal')],
             ] as [string, string, string][]).map(([val, unit, label], i) => (
               <View key={i} style={[st.metricCol, i > 0 && st.metricColDivider]}>
                 <View style={st.metricValRow}>
@@ -970,7 +971,7 @@ export default function TrackingScreen() {
               <Icon name="sparkles" size={18} color={C.accentGrn} />
             </View>
             <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={st.coachLabel}>AI 오디오 코치</Text>
+              <Text style={st.coachLabel}>{t('trk.coachTitle')}</Text>
               <Text style={st.coachMsg} numberOfLines={1}>{`"${coachMsg}"`}</Text>
             </View>
             <Waveform active={running} />
@@ -984,7 +985,7 @@ export default function TrackingScreen() {
                 style={({ pressed }) => [st.startBtn, accentShadow(C.accent), { opacity: pressed ? 0.9 : 1 }]}
               >
                 <Icon name="play" size={22} color={C.accentText} />
-                <Text style={st.startTxt}>러닝 시작</Text>
+                <Text style={st.startTxt}>{t('trk.start')}</Text>
               </Pressable>
             </View>
           ) : (
