@@ -1217,7 +1217,8 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 
 ## 🍎🚪 APPLE APPROVED — THE GATE OPENS (2026-07-27; probe-confirmed)
 - build 9 externalBuildState = **BETA_APPROVED** · betaReviewState APPROVED (submitted 07-26 08:16Z — inside Apple's ~day). 외부테스팅1 assigned = build 9 only (guardrail holds).
-- LIVE CATCH at the probe: 외부테스팅1 publicLink read ENABLED (was off at audit) → PATCHed OFF per the email-mode ruling, readback confirmed. Email invites are the only door.
+- RULING UPDATE (owner, supersedes email-mode-only — that ruling RETIRED): the public link is INTENTIONAL owner state for wider round-one reach, cap 100. Timeline reconciled honestly: the "live catch" was the owner's own deliberate enable; my PATCH-off was correct under the then-standing ruling but undid his act → RE-ENABLED via API with publicLinkLimit 100, readback confirmed (enabled=true, limitEnabled=true, limit=100, URL https://testflight.apple.com/join/128w26YD). Email invites continue in parallel for the named roster. LESSON (state-ownership class): before "correcting" ASC state to match a ruling, check whether the drift IS the owner acting — flag first, PATCH second, when the actor could be him.
+- [Owner housekeeping note arrived truncated — "note in the ledger that…" cut mid-sentence; completion pending.]
 - INVITE SEQUENCE: ① 지연 letter-final 카톡 drafted (blanks: TF invite flow + 빌드 9) ② owner ASC browser steps staged (아래) ③ invites ride the promoted world (currently batch-1 크루-바이링구얼 + 덕 + 가이드) — constraint ④ delivered as designed.
 - RELAY-LAG CLASS ledgered (owner reconciliation): partner-ASSISTANT messages can carry pre-event state (her "still partial" was drafted pre-walk, stale-in-flight); owner-relayed field results take precedence on timestamp conflicts. b9cb917 stands unamended; letter-final status stands (audio line OUT, insurance line never added).
 
