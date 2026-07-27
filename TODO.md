@@ -1215,6 +1215,12 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 
 **핵심 판정: 스퍼 메커니즘은 그녀의 3부검(§8.13-8.15)이 이미 실험적으로 종결한 클래스** — 좌표 발명(Gemini 무지도) × T-map 전점방문 계약의 구조적 산물. **오늘의 신규 발견 = 인밴드 레인의 스퍼 무게이트 비대칭**: 데스크 실증 — 300m 골목 스퍼 = longest_retrace_m 609 → 그녀 자신의 §8.16 합격선(≤600) 위반이면서 유일한 라이브 게이트(오버캡 ≤800)는 통과, **인밴드 단독 후보는 게이트 자체가 없어 무조건 서빙**. 픽스 랭킹: ① 인밴드 스퍼 게이트 확장(if절 수준, 최고 레버리지) ② 스퍼 절제 후처리(가용성 보존 페어) ③ 앵커 dead_end 프로브 활성화(라이브 경로가 probe_dead_end=False로 호출 중) ④ 스냅-사이드 웨이포인트 드롭(M) ⑤ 프롬프트 = 사망 레인(§8.15 반증 3종, 재론 금지). 부수: _within_band 독스트링 −0.1 vs 상수 0.3 드리프트 · ANCHOR_EPIC 헤더 "미배선" vs 혼합 풀 라이브 코드 스테일. 풀 리포트 오너 메시지로 납품. STOP — 그녀 레인, 그녀 콜.
 
+## 🔍 LA NO-SHOW INCIDENT (지연, ASC 데모 계정 워크) — BRANCH ③ CLOSED BY SOURCE (2026-07-27; awaiting her suspect-① check)
+- Field: no lock-screen banner / no Dynamic Island on the demo-account walk. Suspects: ① per-app LA toggle (설정→FreshRun→실시간 현황 — her check dispatched) ② binary version (asked) ③ account-state-dependent start failure.
+- ③ CLOSED — account-blind by exhaustive enumeration: beginRunning→startLiveActivity is UNCONDITIONAL (no settings/premium/onboarding/server reads); JS gate = module presence only; native gates = iOS≥16.2 + areActivitiesEnabled + Activity.request try/catch. A fresh demo account and a seasoned account take a byte-identical path. Demo-account review hazard structurally impossible.
+- Review posture: LA absence = cosmetic degradation BY DESIGN (silent-fail contract — run/cues/save untouched). LEDGERED post-gate polish: "LA off in Settings" nudge (permission-off users get no hint the feature exists).
+- If toggle-ON + binary-current: visible-probe class fires on Activity.request. Her answer closes the incident either way.
+
 ## 🌐 I18N CORE-LOOP CUT — SLICES 1-4 ALL BUILT (2026-07-27; commits fe470f5→b716384→23fa49f→e8c7ab2→b7ce9b6; ALL publishes queued behind the duck promotion per constraint ①)
 - Slice 2 (b716384): tab labels + auth trio (sign-in/up/onboarding) + home greeting/AI banner subset. Static-capture sweep: TABS labels + TERRAIN_BANNER_LABEL → keys.
 - Slice 3 (23fa49f + e8c7ab2): tracking 18 labels/banners (spoken cues ko per ruling; NOTE: 남은 거리/경로 이탈 byte-scan markers now live in the DICTIONARY, still 1 each) + course create 52 (TERRAIN/SURFACE/PITSTOP label consts → keys; pitstop VALUES stay ko — server Kakao keywords = data; notes-append payload stays ko = data).
