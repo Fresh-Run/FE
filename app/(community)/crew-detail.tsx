@@ -6,6 +6,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import React, { useCallback, useRef, useState } from 'react';
+import { t, tf, type StringKey } from '@/lib/i18n';
 import {
   ActivityIndicator,
   Alert,
@@ -43,6 +44,9 @@ import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { setActiveCourse } from '@/store/active-course';
 import { useSettings } from '@/store/use-settings';
 
+// server day chars → display keys (server-value enum class)
+const DAY_LABEL_KEY: Record<string, StringKey> = { '월': 'dayS.mon', '화': 'dayS.tue', '수': 'dayS.wed', '목': 'dayS.thu', '금': 'dayS.fri', '토': 'dayS.sat', '일': 'dayS.sun' };
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function isFull(crew: Crew): boolean {
@@ -79,7 +83,7 @@ function CtaButton({
           : (
             <>
               <Icon name="hourglass-outline" size={18} color={C.accentGrn} />
-              <Text style={[st.ctaTxt, { color: C.accentGrn }]}>신청됨 · 취소</Text>
+              <Text style={[st.ctaTxt, { color: C.accentGrn }]}>{t('crw.applied')}</Text>
             </>
           )
         }
@@ -91,7 +95,7 @@ function CtaButton({
     return (
       <View style={[st.ctaBtn, st.ctaDisabled]} pointerEvents="none">
         <Icon name="people-outline" size={18} color={C.faint} />
-        <Text style={[st.ctaTxt, { color: C.faint }]}>정원 마감</Text>
+        <Text style={[st.ctaTxt, { color: C.faint }]}>{t('crw.full')}</Text>
       </View>
     );
   }
@@ -108,7 +112,7 @@ function CtaButton({
         : (
           <>
             <Icon name="people-outline" size={18} color={C.accentText} />
-            <Text style={st.ctaTxt}>{crew.join_policy === 'approval' ? '가입 신청하기' : '가입하기'}</Text>
+            <Text style={st.ctaTxt}>{crew.join_policy === 'approval' ? t('crw.joinApply') : t('crw.join')}</Text>
           </>
         )
       }
@@ -187,7 +191,7 @@ export default function CrewDetailScreen() {
     try {
       res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: 'images', quality: 1 });
     } catch {
-      Alert.alert('사진 선택 실패', '사진 선택 화면을 열지 못했어요. 다시 시도해 주세요.');
+      Alert.alert(t('onb.photoFailTitle'), t('onb.photoFailBody'));
       return;
     }
     if (res.canceled || !res.assets[0]) return;
@@ -204,7 +208,7 @@ export default function CrewDetailScreen() {
       await uploadCrewImage(crew!.id, kind, croppedUri); // crop output = re-encoded, EXIF-free
       refetch();
     } catch (e: unknown) {
-      Alert.alert(kind === 'cover' ? '커버 업로드 실패' : '아이콘 업로드 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요.');
+      Alert.alert(kind === 'cover' ? t('crw.coverFail') : t('crw.iconFail'), e instanceof Error ? e.message : t('auth.tryLater'));
     } finally {
       setImgBusy(null);
     }
@@ -239,7 +243,7 @@ export default function CrewDetailScreen() {
   function beginCrewRun(announcementId: string | null, announcementTitle: string | null) {
     if (!crew) return;
     setActiveCourse({
-      id: null, title: `${crew.name} 크루런`, distanceKm: 0, polyline: null,
+      id: null, title: tf('crw.crewRunOf', { name: crew.name }), distanceKm: 0, polyline: null,
       crewSession: { crewId: crew.id, crewName: crew.name, announcementId, announcementTitle },
     });
     router.push('/(course)/tracking' as never);
@@ -258,12 +262,12 @@ export default function CrewDetailScreen() {
         Math.abs(new Date(a.run_at!).getTime() - Date.now()) - Math.abs(new Date(b.run_at!).getTime() - Date.now()))[0];
     if (near) {
       Alert.alert(
-        '크루 러닝 시작',
-        `'${near.title}' 정기런에 참여하나요?`,
+        t('crw.startTitle'),
+        tf('crw.startAsk', { title: near.title }),
         [
-          { text: '취소', style: 'cancel' },
-          { text: '그냥 크루런', onPress: () => beginCrewRun(null, null) },
-          { text: '이 모임으로 시작', onPress: () => beginCrewRun(near.id, near.title) },
+          { text: t('common.cancel'), style: 'cancel' },
+          { text: t('crw.plainRun'), onPress: () => beginCrewRun(null, null) },
+          { text: t('crw.withMeet'), onPress: () => beginCrewRun(near.id, near.title) },
         ],
       );
     } else {
@@ -278,7 +282,7 @@ export default function CrewDetailScreen() {
       pathname: '/run-post' as never,
       params: {
         runId: run.run_id,
-        nickname: run.nickname ?? '러너',
+        nickname: run.nickname ?? t('home.runner'),
         avatarUrl: run.avatar_url ?? '',
         allowLikes: run.allow_likes === true ? '1' : '0',
         allowComments: run.allow_comments === true ? '1' : '0',
@@ -293,13 +297,13 @@ export default function CrewDetailScreen() {
     try {
       const result = await joinCrew(crew.id);
       if (result === 'pending') {
-        Alert.alert('가입 신청 완료', '크루장이 승인하면 알려드릴게요.');
+        Alert.alert(t('crw.appliedDone'), t('crw.appliedDoneSub'));
       } else if (result === 'already_member') {
-        setMutErr('이미 가입한 크루예요');
+        setMutErr(t('crw.alreadyJoined'));
       }
       refetch();
     } catch (e: unknown) {
-      setMutErr(e instanceof Error ? e.message : '가입에 실패했어요');
+      setMutErr(e instanceof Error ? e.message : t('crw.joinFail'));
     } finally {
       setBusy(false);
     }
@@ -307,10 +311,10 @@ export default function CrewDetailScreen() {
 
   function handleCancelRequest() {
     if (!crew) return;
-    Alert.alert('가입 신청 취소', '이 크루 가입 신청을 취소할까요?', [
-      { text: '아니요', style: 'cancel' },
+    Alert.alert(t('crw.cancelApplyTitle'), t('crw.cancelApplyAsk'), [
+      { text: t('crw.no'), style: 'cancel' },
       {
-        text: '신청 취소',
+        text: t('crw.cancelApply'),
         style: 'destructive',
         onPress: async () => {
           setBusy(true);
@@ -319,7 +323,7 @@ export default function CrewDetailScreen() {
             await cancelJoinRequest(crew.id);
             refetch();
           } catch (e: unknown) {
-            setMutErr(e instanceof Error ? e.message : '취소에 실패했어요');
+            setMutErr(e instanceof Error ? e.message : t('crw.cancelFail'));
           } finally {
             setBusy(false);
           }
@@ -334,12 +338,12 @@ export default function CrewDetailScreen() {
   function handleLeave() {
     if (!crew) return;
     Alert.alert(
-      '크루 나가기',
-      `'${crew.name}'에서 나가시겠어요?`,
+      t('crw.leaveTitle'),
+      tf('crw.leaveAsk', { name: crew.name }),
       [
-        { text: '취소', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: '나가기',
+          text: t('crw.leave'),
           style: 'destructive',
           onPress: async () => {
             setBusy(true);
@@ -348,7 +352,7 @@ export default function CrewDetailScreen() {
               await leaveCrew(crew.id);
               router.back();
             } catch (e: unknown) {
-              setMutErr(e instanceof Error ? e.message : '나가기에 실패했어요');
+              setMutErr(e instanceof Error ? e.message : t('crw.leaveFail'));
               setBusy(false);
             }
           },
@@ -375,9 +379,9 @@ export default function CrewDetailScreen() {
         </Pressable>
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 }}>
           <Icon name="warning-outline" size={36} color={C.faint} />
-          <Text style={st.errTxt}>{error ?? '크루를 찾을 수 없어요'}</Text>
+          <Text style={st.errTxt}>{error ?? t('crw.notFound')}</Text>
           <Pressable onPress={refetch} style={st.retryBtn}>
-            <Text style={st.retryTxt}>다시 시도</Text>
+            <Text style={st.retryTxt}>{t('common.retry')}</Text>
           </Pressable>
         </View>
       </View>
@@ -428,7 +432,7 @@ export default function CrewDetailScreen() {
                   style={st.managePill}
                 >
                   <Icon name="settings-outline" size={14} color="#fff" />
-                  <Text style={st.managePillTxt}>크루 관리</Text>
+                  <Text style={st.managePillTxt}>{t('crw.manage')}</Text>
                   {crew.myRole === 'owner' && pendingReqCount > 0 && <View style={st.managePillDot} />}
                 </Pressable>
               ) : isMember ? (
@@ -474,7 +478,7 @@ export default function CrewDetailScreen() {
                     {imgBusy === 'cover'
                       ? <ActivityIndicator size="small" color="#fff" />
                       : <Icon name="camera-outline" size={13} color="#fff" />}
-                    <Text style={st.coverChipTxt}>커버 변경</Text>
+                    <Text style={st.coverChipTxt}>{t('crw.coverChange')}</Text>
                   </Pressable>
                 )}
               </View>
@@ -483,12 +487,12 @@ export default function CrewDetailScreen() {
                 {/* Role badge (canvas: 크루장 amber / 운영진 accent) */}
                 {crew.myRole === 'owner' && (
                   <View style={[st.roleBadge, { backgroundColor: C.crown }]}>
-                    <Text style={st.roleBadgeTxt}>크루장</Text>
+                    <Text style={st.roleBadgeTxt}>{t('crw.roleOwner')}</Text>
                   </View>
                 )}
                 {crew.myRole === 'admin' && (
                   <View style={[st.roleBadge, { backgroundColor: C.accent }]}>
-                    <Text style={st.roleBadgeTxt}>운영진</Text>
+                    <Text style={st.roleBadgeTxt}>{t('crw.roleAdmin')}</Text>
                   </View>
                 )}
                 <View style={st.levelBadge}>
@@ -496,7 +500,7 @@ export default function CrewDetailScreen() {
                 </View>
                 <Icon name="people-outline" size={13} color="rgba(255,255,255,0.72)" />
                 <Text style={st.heroMetaTxt}>
-                  {crew.member_count}명{crew.max_members !== null ? ` · 최대 ${crew.max_members}명` : ''}
+                  {tf('crw.nMembers', { n: crew.member_count })}{crew.max_members !== null ? tf('crw.maxN', { n: crew.max_members }) : ''}
                 </Text>
                 {crew.area ? <Text style={st.heroMetaTxt}>· {crew.area}</Text> : null}
               </View>
@@ -521,7 +525,7 @@ export default function CrewDetailScreen() {
                 style={({ pressed }) => [st.quickTile, shadows.sm, pressed && { opacity: 0.8 }]}
               >
                 <Icon name="megaphone-outline" size={19} color={C.accentGrn} />
-                <Text style={st.quickTxt}>공지 올리기</Text>
+                <Text style={st.quickTxt}>{t('crw.qAnnounce')}</Text>
               </Pressable>
             )}
             {can('manage_admins') && (
@@ -533,7 +537,7 @@ export default function CrewDetailScreen() {
                 style={({ pressed }) => [st.quickTile, shadows.sm, pressed && { opacity: 0.8 }]}
               >
                 <Icon name="shield-outline" size={19} color={C.accentGrn} />
-                <Text style={st.quickTxt}>운영진 관리</Text>
+                <Text style={st.quickTxt}>{t('crw.qAdmins')}</Text>
               </Pressable>
             )}
             {can('challenges') && (
@@ -545,7 +549,7 @@ export default function CrewDetailScreen() {
                 style={({ pressed }) => [st.quickTile, shadows.sm, pressed && { opacity: 0.8 }]}
               >
                 <Icon name="trophy-outline" size={19} color={C.accentGrn} />
-                <Text style={st.quickTxt}>챌린지 생성</Text>
+                <Text style={st.quickTxt}>{t('crw.qChallenge')}</Text>
               </Pressable>
             )}
           </View>
@@ -557,7 +561,7 @@ export default function CrewDetailScreen() {
         {isMember && (
           <View style={{ paddingHorizontal: S.gutter, paddingTop: S.xl }}>
             <View style={st.sectionHead}>
-              <Text style={st.sectionTitle}>공지</Text>
+              <Text style={st.sectionTitle}>{t('crw.sAnn')}</Text>
               <Pressable
                 onPress={() => router.push({
                   pathname: '/(community)/announcements' as never,
@@ -565,7 +569,7 @@ export default function CrewDetailScreen() {
                 })}
                 hitSlop={8}
               >
-                <Text style={st.annMoreTxt}>전체 보기</Text>
+                <Text style={st.annMoreTxt}>{t('crw.viewAll')}</Text>
               </Pressable>
             </View>
 
@@ -580,7 +584,7 @@ export default function CrewDetailScreen() {
                 style={st.emptyBox}
               >
                 <Text style={st.emptyTxt}>
-                  {can('announcements') ? '공지를 올려 크루원에게 소식을 전해보세요 →' : '아직 공지가 없어요'}
+                  {can('announcements') ? t('crw.annEmptyCan') : t('crw.annEmpty')}
                 </Text>
               </Pressable>
             ) : (
@@ -598,7 +602,7 @@ export default function CrewDetailScreen() {
                       <Icon name="megaphone-outline" size={16} color={C.accentGrn} />
                       <View style={{ flex: 1, minWidth: 0 }}>
                         <Text style={st.annTitle} numberOfLines={1}>{a.title}</Text>
-                        {a.run_at ? <Text style={st.annSub}>참석 {a.rsvp.going} · 러닝 일정 있음</Text> : null}
+                        {a.run_at ? <Text style={st.annSub}>{tf('crw.annSub', { n: a.rsvp.going })}</Text> : null}
                       </View>
                       <Icon name="chevron-forward" size={15} color={C.faint} />
                     </Pressable>
@@ -618,7 +622,7 @@ export default function CrewDetailScreen() {
         {isMember && (crew.meet_place_name != null || hasSchedule) && (
           <View style={{ paddingHorizontal: S.gutter, paddingTop: S.xl }}>
             <View style={st.sectionHead}>
-              <Text style={st.sectionTitle}>집결 장소</Text>
+              <Text style={st.sectionTitle}>{t('crw.sMeet')}</Text>
             </View>
             <View style={[st.meetCard, shadows.sm]}>
               {crew.meet_lat != null && crew.meet_lng != null && (
@@ -652,7 +656,7 @@ export default function CrewDetailScreen() {
                     <Text style={[st.meetSchedule, crew.meet_place_name == null && { marginTop: 0 }]} numberOfLines={1}>
                       {crew.sigungu ? `${crew.sigungu}` : ''}
                       {crew.sigungu && hasSchedule ? ' · ' : ''}
-                      {activeDays.length > 0 ? `매주 ${activeDays.join('·')}` : ''}
+                      {activeDays.length > 0 ? tf('crw.weekly', { days: activeDays.map(d => t(DAY_LABEL_KEY[d] ?? 'dayS.mon')).join('·') }) : ''}
                       {activeDays.length > 0 && crew.active_time ? ' ' : ''}
                       {crew.active_time ?? ''}
                     </Text>
@@ -672,7 +676,7 @@ export default function CrewDetailScreen() {
         {isMember && challenge !== undefined && (
           <View style={{ paddingHorizontal: S.gutter, paddingTop: S.xl }}>
             <View style={st.sectionHead}>
-              <Text style={st.sectionTitle}>챌린지</Text>
+              <Text style={st.sectionTitle}>{t('crw.sChallenge')}</Text>
             </View>
             {challenge === null ? (
               can('challenges') ? (
@@ -683,7 +687,7 @@ export default function CrewDetailScreen() {
                   })}
                   style={({ pressed }) => [st.emptyBox, pressed && { opacity: 0.8 }]}
                 >
-                  <Text style={st.emptyTxt}>챌린지를 만들어 크루의 목표를 세워보세요 →</Text>
+                  <Text style={st.emptyTxt}>{t('crw.chEmpty')}</Text>
                 </Pressable>
               ) : null
             ) : (
@@ -692,7 +696,7 @@ export default function CrewDetailScreen() {
                   <Text style={st.chTitle} numberOfLines={1}>{challenge.title}</Text>
                   <View style={[st.chPct, challenge.is_completed && { backgroundColor: C.crown }]}>
                     <Text style={st.chPctTxt}>
-                      {challenge.is_completed ? '달성!' : `${Math.round(challenge.progress_pct)}%`}
+                      {challenge.is_completed ? t('crw.chDone') : `${Math.round(challenge.progress_pct)}%`}
                     </Text>
                   </View>
                 </View>
@@ -705,11 +709,11 @@ export default function CrewDetailScreen() {
                   </Text>
                   <Text style={st.chMeta}>
                     {challenge.is_active
-                      ? `${Math.max(0, Math.ceil((new Date(challenge.ends_at).getTime() - Date.now()) / 86400000))}일 남음`
-                      : new Date(challenge.starts_at).getTime() > Date.now() ? '시작 예정' : '종료'}
+                      ? tf('crw.chDaysLeft', { n: Math.max(0, Math.ceil((new Date(challenge.ends_at).getTime() - Date.now()) / 86400000)) })
+                      : new Date(challenge.starts_at).getTime() > Date.now() ? t('crw.chUpcoming') : t('crw.chEnded')}
                   </Text>
                 </View>
-                <Text style={st.chCaption}>GPS 기록만 집계돼요</Text>
+                <Text style={st.chCaption}>{t('crw.chGps')}</Text>
               </View>
             )}
           </View>
@@ -724,7 +728,7 @@ export default function CrewDetailScreen() {
               style={({ pressed }) => [st.crewRunBtn, accentShadow(C.accent), pressed && { opacity: 0.9 }]}
             >
               <Icon name="walk-outline" size={20} color={C.accentText} />
-              <Text style={st.crewRunTxt}>크루 러닝 시작</Text>
+              <Text style={st.crewRunTxt}>{t('crw.startTitle')}</Text>
             </Pressable>
           </View>
         )}
@@ -754,9 +758,9 @@ export default function CrewDetailScreen() {
                 )}
               </View>
               <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={st.chatTitle}>크루 채팅</Text>
+                <Text style={st.chatTitle}>{t('crw.chatTitle')}</Text>
                 <Text style={st.chatSub} numberOfLines={1}>
-                  {chatUnread > 0 ? `새 메시지 ${chatUnread}개` : '공지·참석 투표도 여기에 모여요'}
+                  {chatUnread > 0 ? tf('crw.chatNew', { n: chatUnread }) : t('crw.chatSub')}
                 </Text>
               </View>
               <Icon name="chevron-forward" size={16} color={C.faint} />
@@ -775,8 +779,8 @@ export default function CrewDetailScreen() {
                 honest weekly-reset semantics (KST 월요일, verified-GPS only). */}
             {ranking !== null && (
               <View style={st.sectionHead}>
-                <Text style={st.sectionTitle}>크루 랭킹</Text>
-                <Text style={st.memberCount}>이번 주 · GPS 기준</Text>
+                <Text style={st.sectionTitle}>{t('crw.sRank')}</Text>
+                <Text style={st.memberCount}>{t('crw.rankCaption')}</Text>
               </View>
             )}
             {ranking !== null && ranking.length === 0 && (
@@ -784,8 +788,8 @@ export default function CrewDetailScreen() {
                 <View style={st.rankEmptyIcon}>
                   <Icon name="trophy-outline" size={22} color={C.faint} />
                 </View>
-                <Text style={st.rankEmptyTitle}>이번 주 기록이 아직 없어요</Text>
-                <Text style={st.rankEmptySub}>첫 러닝의 주인공이 되어보세요 · 랭킹은 매주 월요일 새로 시작돼요</Text>
+                <Text style={st.rankEmptyTitle}>{t('crw.rankEmpty')}</Text>
+                <Text style={st.rankEmptySub}>{t('crw.rankEmptySub')}</Text>
               </View>
             )}
             {ranking !== null && ranking.length > 0 && (
@@ -803,11 +807,11 @@ export default function CrewDetailScreen() {
                           <Avatar name={r.nickname} size={30} photoUrl={r.avatar_url} letterSpacing={-0.3} />
                           <View style={{ flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                             <Text style={[st.rankName, r.me && { fontWeight: '700' }]} numberOfLines={1}>
-                              {r.nickname ?? '러너'}
+                              {r.nickname ?? t('home.runner')}
                             </Text>
-                            {r.me && <View style={st.meBadge}><Text style={st.meBadgeTxt}>나</Text></View>}
-                            {role === 'owner' && <View style={st.ownerBadge}><Text style={st.ownerTxt}>크루장</Text></View>}
-                            {role === 'admin' && <View style={st.adminBadge}><Text style={st.adminTxt}>운영진</Text></View>}
+                            {r.me && <View style={st.meBadge}><Text style={st.meBadgeTxt}>{t('crw.me')}</Text></View>}
+                            {role === 'owner' && <View style={st.ownerBadge}><Text style={st.ownerTxt}>{t('crw.roleOwner')}</Text></View>}
+                            {role === 'admin' && <View style={st.adminBadge}><Text style={st.adminTxt}>{t('crw.roleAdmin')}</Text></View>}
                           </View>
                           <Text style={st.rankKm}>{r.distance_km.toFixed(1)} km</Text>
                         </View>
@@ -827,8 +831,8 @@ export default function CrewDetailScreen() {
               style={({ pressed }) => [st.rosterBtn, shadows.sm, pressed && { opacity: 0.8 }]}
             >
               <View style={st.rosterIcon}><Icon name="people-outline" size={18} color={C.accentGrn} /></View>
-              <Text style={st.rosterTxt}>크루원 전체 보기</Text>
-              <Text style={st.rosterCount}>{crew.member_count}명</Text>
+              <Text style={st.rosterTxt}>{t('crw.rosterAll')}</Text>
+              <Text style={st.rosterCount}>{tf('crw.nMembers', { n: crew.member_count })}</Text>
               <Icon name="chevron-forward" size={16} color={C.faint} />
             </Pressable>
           </View>
@@ -840,13 +844,13 @@ export default function CrewDetailScreen() {
         {isMember && feedPreview !== null && (
           <View style={{ paddingHorizontal: S.gutter, paddingTop: S.xl }}>
             <View style={st.sectionHead}>
-              <Text style={st.sectionTitle}>크루 러닝 피드</Text>
+              <Text style={st.sectionTitle}>{t('crw.sFeed')}</Text>
               {feedPreview.length > 0 && (
                 <Pressable
                   onPress={() => router.push({ pathname: '/(community)/crew-runs' as never, params: { crewId: crew.id } })}
                   hitSlop={8}
                 >
-                  <Text style={st.annMoreTxt}>전체 보기</Text>
+                  <Text style={st.annMoreTxt}>{t('crw.viewAll')}</Text>
                 </Pressable>
               )}
             </View>
@@ -854,8 +858,8 @@ export default function CrewDetailScreen() {
               // Session-only feed's normal early state. No CTA button here —
               // the 크루 러닝 시작 primary button is on this same screen, above.
               <View style={st.emptyBox}>
-                <Text style={st.emptyTxt}>아직 함께한 러닝이 없어요</Text>
-                <Text style={st.emptyBoxSub}>크루 러닝 시작으로 첫 정기런을 기록해 보세요</Text>
+                <Text style={st.emptyTxt}>{t('crw.feedEmpty')}</Text>
+                <Text style={st.emptyBoxSub}>{t('crw.feedEmptySub')}</Text>
               </View>
             ) : (
               <View style={[st.feedList, shadows.sm]}>
@@ -871,12 +875,12 @@ export default function CrewDetailScreen() {
                       <View style={{ flex: 1, minWidth: 0 }}>
                         <View style={st.feedHeadRow}>
                           <Avatar name={run.nickname} size={18} initialsRatio={0.5} />
-                          <Text style={st.feedName} numberOfLines={1}>{run.nickname ?? '러너'}</Text>
+                          <Text style={st.feedName} numberOfLines={1}>{run.nickname ?? t('home.runner')}</Text>
                           {/* Every card is a 정기런 now (session_only) — the word
                               is redundant; the 참여 count is the informative part. */}
                           {run.session_participant_count != null && (
                             <View style={st.feedSessionChip}>
-                              <Text style={st.feedSessionTxt}>{run.session_participant_count}명 참여</Text>
+                              <Text style={st.feedSessionTxt}>{tf('crw.nJoined', { n: run.session_participant_count })}</Text>
                             </View>
                           )}
                           <Text style={st.feedWhen}>{fmtAgo(run.ran_at)}</Text>
