@@ -15,6 +15,7 @@ import Slider from '@react-native-community/slider';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { t, tf } from '@/lib/i18n';
 import {
   ActivityIndicator,
   Pressable,
@@ -58,8 +59,10 @@ import { useStyles, useTokens } from '@/hooks/use-tokens';
 const PITSTOP_OPTIONS = ['편의점', '화장실', '카페', '공원'] as const;
 
 // 고급 설정 footer — labels for the invisible generation defaults
-const TERRAIN_LABEL = { flat: '평지 우선', mixed: '균형', hill: '언덕 훈련' } as const;
-const SURFACE_LABEL = { any: '노면 무관', paved: '포장도로', trail: '트레일' } as const;
+const TERRAIN_KEY = { flat: 'terrain.flat', mixed: 'terrain.mixed', hill: 'terrain.hill' } as const; // keys — render-time (static-capture rule)
+const SURFACE_KEY = { any: 'surface.any', paved: 'surface.paved', trail: 'surface.trail' } as const;
+// PITSTOP display labels — the VALUES stay Korean (server Kakao keywords, data not UI)
+const PITSTOP_LABEL_KEY = { '편의점': 'pit.convenience', '화장실': 'pit.restroom', '카페': 'pit.cafe', '공원': 'pit.park' } as const;
 
 type ViewState     = 'form' | 'generating' | 'result';
 
@@ -82,10 +85,10 @@ function fmtShortfall(km: number, units: 'km' | 'mi'): string {
 }
 
 function fmtMin(min: number): string {
-  if (min < 60) return `${min}분`;
+  if (min < 60) return tf('crt.min', { n: min });
   const h = Math.floor(min / 60);
   const m = min % 60;
-  return m === 0 ? `${h}시간` : `${h}시간 ${m}분`;
+  return m === 0 ? tf('crt.hour', { h }) : tf('crt.hourMin', { h, m });
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -154,7 +157,7 @@ function WaypointRow({ wp, index, displayName }: { wp: Waypoint; index: number; 
           <Text style={st.wpName} numberOfLines={1}>{displayName ?? wp.name}</Text>
           {wp.is_pitstop && (
             <View style={st.pitstopBadge}>
-              <Text style={st.pitstopTxt}>피스톱</Text>
+              <Text style={st.pitstopTxt}>{t('pit.badge')}</Text>
             </View>
           )}
         </View>
@@ -315,14 +318,14 @@ export default function CreateScreen() {
       if (e instanceof OneWayTooFarError) {
         // Server min is authoritative (guide: feed it into the slider
         // suggestion) — the inline warn row's 설정 chip carries the fix.
-        setGenError(`이 거리로는 도착지가 너무 멀어요 — 최소 ${fmtDist(e.minTargetKm, units, 1)}${distUnit(units)}가 필요해요.`);
+        setGenError(tf('crt.oneWayTooFar', { d: `${fmtDist(e.minTargetKm, units, 1)}${distUnit(units)}` }));
       } else if (e instanceof LoopTooShortError) {
         // Loop floor — the slider floor already mirrors the server gate, so
         // this fires only on drift (server raised its floor). Copy composed
         // here, unit-aware, from the server's authoritative min.
-        setGenError(`순환 코스는 최소 ${fmtDist(e.minTargetKm, units, 1)}${distUnit(units)}부터 만들 수 있어요 — 목표를 올려 다시 시도해 주세요.`);
+        setGenError(tf('crt.loopTooShort', { d: `${fmtDist(e.minTargetKm, units, 1)}${distUnit(units)}` }));
       } else {
-        setGenError(e instanceof Error ? e.message : '코스 생성에 실패했어요');
+        setGenError(e instanceof Error ? e.message : t('crt.genFail'));
       }
       setViewState('form');
     } finally {
@@ -356,11 +359,11 @@ export default function CreateScreen() {
             <Icon name="leaf-outline" size={32} color={C.accentGrn} />
           </View>
           <ActivityIndicator size="large" color={C.accent} style={{ marginTop: S.lg }} />
-          <Text style={st.genTitle}>AI가 최적의 코스를{'\n'}설계하고 있어요</Text>
-          <Text style={st.genSub}>잠시만 기다려 주세요</Text>
+          <Text style={st.genTitle}>{t('crt.genTitle')}</Text>
+          <Text style={st.genSub}>{t('crt.genSub')}</Text>
           {/* tap-direct: the derived params, visible (M build spec) */}
           {autoMode && (
-            <Text style={st.genSub}>약 {fmtDist(distanceKm, units, 1)}{distUnit(units)} · 내 위치에서 시작</Text>
+            <Text style={st.genSub}>{tf('crt.genAuto', { d: `${fmtDist(distanceKm, units, 1)}${distUnit(units)}` })}</Text>
           )}
         </View>
       </View>
@@ -409,7 +412,7 @@ export default function CreateScreen() {
               <View style={{ flex: 1, justifyContent: 'flex-end', paddingBottom: S.lg }}>
                 <View style={st.aiLabel}>
                   <Icon name="sparkles-outline" size={12} color={C.accentGrn} />
-                  <Text style={st.aiLabelTxt}>AI 생성</Text>
+                  <Text style={st.aiLabelTxt}>{t('crt.aiGen')}</Text>
                 </View>
                 <Text style={st.heroTitle} numberOfLines={2}>{route.summary}</Text>
               </View>
@@ -418,11 +421,11 @@ export default function CreateScreen() {
 
           {/* ── Stats row ──────────────────────────────────────────────────── */}
           <View style={[st.statsRow, shadows.sm]}>
-            <StatTile label="거리" value={`${route.total_distance_km.toFixed(1)} km`} />
+            <StatTile label={t('runSave.statDist')} value={`${route.total_distance_km.toFixed(1)} km`} />
             <View style={st.statsDivider} />
-            <StatTile label="예상 시간" value={fmtMin(estMin)} />
+            <StatTile label={t('crt.estTime')} value={fmtMin(estMin)} />
             <View style={st.statsDivider} />
-            <StatTile label="경유지" value={`${pitstopCount}곳`} />
+            <StatTile label={t('crt.pitstops')} value={tf('crt.nPlaces', { n: pitstopCount })} />
           </View>
 
           {/* ── 거리 보장 안내 — ±0.5km 계약(BE)의 "정직한 표시" 절반: 전패
@@ -432,18 +435,18 @@ export default function CreateScreen() {
               <View style={st.missCard}>
                 <Icon name="alert-circle-outline" size={16} color={C.sun} />
                 <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text style={st.missTitle}>요청 거리와 조금 달라요</Text>
+                  <Text style={st.missTitle}>{t('crt.missTitle')}</Text>
                   {/* Undershoot = action-framed (지연 copy upgrade 2026-07-23):
                       the shortfall becomes an invitation, friendly-rounded
                       (fmtShortfall). Overshoot keeps the factual delta line. */}
                   <Text style={st.missSub}>
                     {deltaKm < 0
-                      ? `목표까지 약 ${fmtShortfall(-deltaKm, units)} 부족해요 — 마지막에 한 블록만 더!`
-                      : `${fmtDist(genTargetKm, units, 1)}${distUnit(units)} 요청 → ${fmtDist(route.total_distance_km, units, 1)}${distUnit(units)} (+${fmtDist(deltaKm, units, 1)}${distUnit(units)})`}
+                      ? tf('crt.missShort', { d: fmtShortfall(-deltaKm, units) })
+                      : tf('crt.missOver', { req: `${fmtDist(genTargetKm, units, 1)}${distUnit(units)}`, got: `${fmtDist(route.total_distance_km, units, 1)}${distUnit(units)}`, delta: `${fmtDist(deltaKm, units, 1)}${distUnit(units)}` })}
                   </Text>
                 </View>
                 <Pressable onPress={handleGenerate} hitSlop={6} style={({ pressed }) => [st.missRetryBtn, pressed && { opacity: 0.7 }]}>
-                  <Text style={st.missRetryTxt}>다시 생성</Text>
+                  <Text style={st.missRetryTxt}>{t('crt.regen')}</Text>
                 </Pressable>
               </View>
             </View>
@@ -452,14 +455,14 @@ export default function CreateScreen() {
             <View style={{ paddingHorizontal: S.gutter, paddingTop: S.md }}>
               <View style={st.noticeCard}>
                 <Icon name="information-circle-outline" size={15} color={C.accentGrn} />
-                <Text style={st.noticeTxt}>반경을 넓혀 찾았어요 — 출발지에서 조금 더 넓게 탐색한 코스예요.</Text>
+                <Text style={st.noticeTxt}>{t('crt.radiusExpanded')}</Text>
               </View>
             </View>
           )}
 
           {/* ── Waypoints ──────────────────────────────────────────────────── */}
           <View style={{ paddingHorizontal: S.gutter, paddingTop: S.xl }}>
-            <Text style={st.resultSectionTitle}>경로</Text>
+            <Text style={st.resultSectionTitle}>{t('crt.route')}</Text>
             <View style={[st.waypointCard, shadows.sm]}>
               {route.waypoints.map((wp, i) => (
                 <View key={i}>
@@ -477,7 +480,7 @@ export default function CreateScreen() {
             <View style={st.noticeCard}>
               <Icon name="information-circle-outline" size={15} color={C.accentGrn} />
               <Text style={st.noticeTxt}>
-                생성된 코스는 자동 저장돼요 — 뛰러 가기의 저장된 코스 › 내 코스에서 다시 볼 수 있어요.
+                {t('crt.autoSaved')}
               </Text>
             </View>
           </View>
@@ -486,7 +489,7 @@ export default function CreateScreen() {
         {/* ── Footer CTAs ────────────────────────────────────────────────── */}
         <View style={[st.resultFooter, { paddingBottom: Math.max(insets.bottom, S.lg) + S.sm }]}>
           <Pressable onPress={handleBackToForm} style={st.secondaryBtn}>
-            <Text style={st.secondaryBtnTxt}>다시 설정</Text>
+            <Text style={st.secondaryBtnTxt}>{t('crt.adjust')}</Text>
           </Pressable>
           <Pressable
             // Debt batch 2: the stale 준비-중 stub died — tracking SHIPPED.
@@ -505,7 +508,7 @@ export default function CreateScreen() {
             style={[st.primaryBtn, { flex: 1 }]}
           >
             <Icon name="play" size={18} color={C.accentText} />
-            <Text style={st.primaryBtnTxt}>시작하기</Text>
+            <Text style={st.primaryBtnTxt}>{t('crt.start')}</Text>
           </Pressable>
         </View>
       </View>
@@ -524,7 +527,7 @@ export default function CreateScreen() {
         <Pressable onPress={() => router.back()} hitSlop={12} style={st.closeBtn}>
           <Icon name="close" size={20} color={C.text} />
         </Pressable>
-        <Text style={st.headerTitle}>코스 설정</Text>
+        <Text style={st.headerTitle}>{t('crt.header')}</Text>
         <Pressable
           onPress={() => {
             setDistanceKm(seedKm);
@@ -536,7 +539,7 @@ export default function CreateScreen() {
           hitSlop={8}
           style={st.resetBtn}
         >
-          <Text style={st.resetTxt}>초기화</Text>
+          <Text style={st.resetTxt}>{t('crt.reset')}</Text>
         </Pressable>
       </View>
 
@@ -558,13 +561,13 @@ export default function CreateScreen() {
       >
         {/* ── Section: 목표 거리 ─────────────────────────────────────── */}
         <View style={st.section}>
-          <SectionLabel text="목표 거리" />
+          <SectionLabel text={t('crt.targetDist')} />
           <View style={st.distanceDisplay}>
             <Text style={st.distanceValue}>
               {distDisplay.toFixed(1)}
               <Text style={st.distanceUnit}> {isMi ? 'mi' : 'km'}</Text>
             </Text>
-            <Text style={st.distanceEst}>약 {fmtMin(estMinForm)} 예상</Text>
+            <Text style={st.distanceEst}>{tf('crt.estAbout', { t: fmtMin(estMinForm) })}</Text>
           </View>
           {/* Route-type-scoped floor (checkpoint resolution 2026-07-23):
               loop mode mirrors the server's loop gate (LOOP_MIN_TARGET_KM —
@@ -594,7 +597,7 @@ export default function CreateScreen() {
 
         {/* ── Section: 출발지 (C1) ──────────────────────────────────── */}
         <View style={st.section}>
-          <SectionLabel text="출발지" />
+          <SectionLabel text={t('crt.startSection')} />
           <View style={st.startRow}>
             <View style={st.startIcon}>
               <Icon name="locate" size={16} color={C.accentGrn} />
@@ -602,11 +605,11 @@ export default function CreateScreen() {
             <View style={{ flex: 1, minWidth: 0 }}>
               <Text style={st.startLabel} numberOfLines={1}>
                 {manualStart ? manualStart.label
-                  : locationStatus === 'fetching' ? '위치 확인 중...'
-                  : locationStatus === 'denied'   ? '서울 중심 (위치 권한 없음)'
+                  : locationStatus === 'fetching' ? t('crt.locating')
+                  : locationStatus === 'denied'   ? t('crt.seoulDenied')
                   : placeName}
               </Text>
-              <Text style={st.startSub}>{manualStart ? '직접 선택한 위치' : '현재 위치'}</Text>
+              <Text style={st.startSub}>{manualStart ? t('crt.startManual') : t('crt.startCurrent')}</Text>
             </View>
             <Pressable
               onPress={() => router.push({
@@ -615,13 +618,13 @@ export default function CreateScreen() {
               })}
               hitSlop={8}
             >
-              <Text style={st.startChangeTxt}>변경</Text>
+              <Text style={st.startChangeTxt}>{t('crt.change')}</Text>
             </Pressable>
           </View>
           {manualStart && (
             <Pressable onPress={() => useStartPoint.getState().clear()} style={st.gpsRestoreBtn} hitSlop={6}>
               <Icon name="navigate-outline" size={13} color={C.accentGrn} />
-              <Text style={st.gpsRestoreTxt}>현재 위치로 재설정</Text>
+              <Text style={st.gpsRestoreTxt}>{t('crt.gpsRestore')}</Text>
             </Pressable>
           )}
         </View>
@@ -631,7 +634,7 @@ export default function CreateScreen() {
         {/* ── Section: 경로 유형 (일방통행 LIVE — v2.3 unlock; the 준비 중
                pill died here) ────────────────────────────────────────────── */}
         <View style={st.section}>
-          <SectionLabel text="경로 유형" />
+          <SectionLabel text={t('crt.routeType')} />
           <View style={st.routeTypeRow}>
             <Pressable
               onPress={() => {
@@ -644,11 +647,11 @@ export default function CreateScreen() {
               style={[st.routeTypeBtn, !oneWay && st.routeTypeBtnActive]}
             >
               <Icon name="refresh-outline" size={16} color={!oneWay ? C.accentGrn : C.faint} />
-              <Text style={[st.routeTypeTxt, { color: !oneWay ? C.accentGrn : C.faint }]}>원점 복귀</Text>
+              <Text style={[st.routeTypeTxt, { color: !oneWay ? C.accentGrn : C.faint }]}>{t('crt.loop')}</Text>
             </Pressable>
             <Pressable onPress={() => setOneWay(true)} style={[st.routeTypeBtn, oneWay && st.routeTypeBtnActive]}>
               <Icon name="arrow-forward-outline" size={16} color={oneWay ? C.accentGrn : C.faint} />
-              <Text style={[st.routeTypeTxt, { color: oneWay ? C.accentGrn : C.faint }]}>일방통행</Text>
+              <Text style={[st.routeTypeTxt, { color: oneWay ? C.accentGrn : C.faint }]}>{t('crt.oneWay')}</Text>
             </Pressable>
           </View>
 
@@ -662,9 +665,9 @@ export default function CreateScreen() {
                 </View>
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <Text style={st.startLabel} numberOfLines={1}>
-                    {manualEnd ? manualEnd.label : '도착지를 선택해 주세요'}
+                    {manualEnd ? manualEnd.label : t('crt.pickEnd')}
                   </Text>
-                  <Text style={st.startSub}>도착지</Text>
+                  <Text style={st.startSub}>{t('crt.endLabel')}</Text>
                 </View>
                 <Pressable
                   onPress={() => router.push({
@@ -677,18 +680,18 @@ export default function CreateScreen() {
                   })}
                   hitSlop={8}
                 >
-                  <Text style={st.startChangeTxt}>{manualEnd ? '변경' : '선택'}</Text>
+                  <Text style={st.startChangeTxt}>{manualEnd ? t('crt.change') : t('crt.select')}</Text>
                 </Pressable>
               </View>
               {endTooFar && minTargetKm != null && (
                 <View style={st.feasWarn}>
                   <Icon name="alert-circle-outline" size={14} color={C.sun} />
                   <Text style={st.feasWarnTxt} numberOfLines={2}>
-                    {`이 도착지까지는 최소 ${fmtDist(minTargetKm, units, 1)}${distUnit(units)} 코스가 필요해요`}
+                    {tf('crt.feasWarn', { d: `${fmtDist(minTargetKm, units, 1)}${distUnit(units)}` })}
                   </Text>
                   {minTargetKm <= sliderMaxKm && (
                     <Pressable onPress={() => setDistanceKm(minTargetKm)} hitSlop={6} style={({ pressed }) => [st.feasFixBtn, pressed && { opacity: 0.7 }]}>
-                      <Text style={st.feasFixTxt}>{`${fmtDist(minTargetKm, units, 1)}${distUnit(units)}로 설정`}</Text>
+                      <Text style={st.feasFixTxt}>{tf('crt.feasFix', { d: `${fmtDist(minTargetKm, units, 1)}${distUnit(units)}` })}</Text>
                     </Pressable>
                   )}
                 </View>
@@ -703,25 +706,25 @@ export default function CreateScreen() {
         <View style={st.section}>
           <Pressable onPress={() => setAdvOpen(o => !o)} style={st.advHeader} hitSlop={4}>
             <Icon name="options-outline" size={17} color={C.sub} />
-            <Text style={st.advHeaderTxt}>고급 설정</Text>
-            {!advOpen && <Text style={st.advHeaderHint}>경유지 · 회피</Text>}
+            <Text style={st.advHeaderTxt}>{t('crt.advanced')}</Text>
+            {!advOpen && <Text style={st.advHeaderHint}>{t('crt.advHint')}</Text>}
             <View style={{ flex: 1 }} />
             <Icon name={advOpen ? 'chevron-up' : 'chevron-down'} size={17} color={C.faint} />
           </Pressable>
           {advOpen && (
             <View style={st.advBody}>
               {/* 경유지 키워드 — single-select → pitstop_keyword */}
-              <Text style={st.advSubLabel}>경유지 키워드</Text>
+              <Text style={st.advSubLabel}>{t('crt.pitKeyword')}</Text>
               <View style={st.chipRow}>
                 <Chip
-                  label="없음"
+                  label={t('pit.none')}
                   active={pitstop === null}
                   onPress={() => setPitstop(null)}
                 />
                 {PITSTOP_OPTIONS.map(opt => (
                   <Chip
                     key={opt}
-                    label={opt}
+                    label={t(PITSTOP_LABEL_KEY[opt])}
                     active={pitstop === opt}
                     onPress={() => setPitstop(prev => prev === opt ? null : opt)}
                   />
@@ -730,14 +733,14 @@ export default function CreateScreen() {
 
               {/* 회피 — per-request avoid_hills override + notes-append hint */}
               <AdvToggleRow
-                label="언덕 피하기"
-                sub={`내 설정 기본값: ${seedAvoidHills ? '켬' : '끔'}`}
+                label={t('crt.avoidHills')}
+                sub={tf('crt.myDefault', { v: seedAvoidHills ? t('common.on') : t('common.off') })}
                 on={avoidHills}
                 onChange={setAvoidHills}
               />
               <AdvToggleRow
-                label="번잡한 길 피하기"
-                sub="사람 많은 길을 되도록 피해요"
+                label={t('crt.avoidBusy')}
+                sub={t('crt.avoidBusySub')}
                 on={avoidBusy}
                 onChange={setAvoidBusy}
               />
@@ -745,14 +748,14 @@ export default function CreateScreen() {
               {/* Read-only prefs visibility (owner scope addition 2026-07-10) */}
               <View style={st.advFooter}>
                 <Text style={st.advFooterTxt}>
-                  내 기본 설정: {[
-                    TERRAIN_LABEL[aiPrefs.terrain],
-                    SURFACE_LABEL[aiPrefs.surface],
-                    aiPrefs.scenic ? '경치 우선' : null,
-                    aiPrefs.prefer_loop ? '순환 선호' : null,
+                  {t('crt.myDefaults')}{[
+                    t(TERRAIN_KEY[aiPrefs.terrain]),
+                    t(SURFACE_KEY[aiPrefs.surface]),
+                    aiPrefs.scenic ? t('crt.scenic') : null,
+                    aiPrefs.prefer_loop ? t('crt.preferLoop') : null,
                   ].filter(Boolean).join(' · ')}
                 </Text>
-                <Text style={st.advFooterSub}>프로필 › AI 코스 선호도에서 변경할 수 있어요</Text>
+                <Text style={st.advFooterSub}>{t('crt.defaultsFooter')}</Text>
               </View>
             </View>
           )}
@@ -768,7 +771,7 @@ export default function CreateScreen() {
         >
           <Icon name="sparkles-outline" size={18} color={oneWay && !endCoord ? C.faint : C.accentText} />
           <Text style={[st.primaryBtnTxt, oneWay && !endCoord && { color: C.faint }]}>
-            {oneWay && !endCoord ? '도착지를 선택해 주세요' : '코스 생성하기'}
+            {oneWay && !endCoord ? t('crt.pickEnd') : t('crt.generate')}
           </Text>
         </Pressable>
       </View>
