@@ -1,7 +1,8 @@
 /**
- * 언어 — language picker (canvas: FrLangScreen). Persist-only: the selection
- * PATCHes /me/settings {lang} (optimistic, rollback) but runtime i18n is a
- * later item — the notice below states this honestly (T1-theme pattern).
+ * 언어 — language picker (canvas: FrLangScreen). LIVE since the i18n
+ * core-loop cut (2026-07-27): the selection PATCHes /me/settings {lang}
+ * (optimistic, rollback) and the core loop re-renders in the picked
+ * language; the notice below states the partial-support boundary honestly.
  *
  * DARK-MODE PILOT (epic Phase 1, 2026-07-20): first screen on the
  * useTokens/useStyles pattern — the reference conversion for every phase-3
@@ -12,6 +13,7 @@
  */
 import { router } from 'expo-router';
 import React from 'react';
+import { useT } from '@/lib/i18n';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -27,6 +29,7 @@ const OPTIONS: { value: UserSettings['lang']; label: string; sub: string }[] = [
 ];
 
 export default function LangScreen() {
+  const T = useT();
   const insets = useSafeAreaInsets();
   const lang = useSettings(s => s.settings.lang);
   const setLang = useSettings(s => s.setLang);
@@ -68,10 +71,10 @@ export default function LangScreen() {
           ))}
         </View>
 
-        {/* Honest persist-only notice — runtime i18n is a later item */}
+        {/* Honest partial-support caption — core loop first, rest post-gate */}
         <View style={st.noticeCard}>
           <Icon name="information-circle-outline" size={15} color={C.accentGrn} />
-          <Text style={st.noticeTxt}>언어 변경은 준비 중이에요 — 설정은 저장돼요</Text>
+          <Text style={st.noticeTxt}>{T('lang.partialNote')}</Text>
         </View>
       </View>
     </View>

@@ -36,6 +36,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { t, tf } from '@/lib/i18n';
 import { Image, Pressable, ScrollView, Share, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Reanimated, { runOnJS, useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
@@ -79,14 +80,14 @@ const DEFAULT_PREFS: SharePrefs = {
   metrics: { dist: true, pace: true, time: true },
   format: '9:16',
 };
-const METRIC_LABELS: Record<ShareMetricKey, string> = {
-  dist: '거리', pace: '평균 페이스', time: '시간',
-};
+const METRIC_LABELS = {
+  dist: 'shr.metricDist', pace: 'shr.metricPace', time: 'shr.metricTime',
+} as const; // keys — render-time (static-capture rule)
 const BG_ADJUST_CAP = 20;
 // v2.1 stroke presets — the house lime leads; fixture companions chosen for
 // dark-canvas/photo legibility (the composer's canvas family)
 const STROKE_COLORS = ['#74E827', '#FFFFFF', '#FFC24B', '#5AC8FA', '#FF6B81'];
-const STROKE_WEIGHTS: [number, string][] = [[3, '얇게'], [4.5, '보통'], [6, '굵게']];
+const STROKE_WEIGHTS = [[3, 'shr.thin'], [4.5, 'shr.normal'], [6, 'shr.thick']] as const; // keys — render-time
 // default stack ≈ the old bottom-left block (canvas fractions)
 const DEFAULT_PLACEMENT: Record<ShareMetricKey, MetricPlacement> = {
   dist: { x: 0.06, y: 0.60, s: 1 },
@@ -101,10 +102,10 @@ type Bg =
   | { kind: 'solid'; color: string; label: string }
   | { kind: 'photo'; url: string };
 const HOUSE_BGS: Bg[] = [
-  { kind: 'gradient', colors: ['#0C1206', '#1E3A0F'], label: '심야 러닝' },
-  { kind: 'gradient', colors: ['#0C0F14', '#1B2430'], label: '나이트 시티' },
-  { kind: 'solid', color: '#0C0F14', label: '블랙' },
-  { kind: 'solid', color: '#15171C', label: '차콜' },
+  { kind: 'gradient', colors: ['#0C1206', '#1E3A0F'], label: 'shr.bgMidnight' },
+  { kind: 'gradient', colors: ['#0C0F14', '#1B2430'], label: 'shr.bgNightCity' },
+  { kind: 'solid', color: '#0C0F14', label: 'shr.bgBlack' },
+  { kind: 'solid', color: '#15171C', label: 'shr.bgCharcoal' },
 ];
 
 // ─── Route → SVG path (MiniMap's normalize math, verbatim shape) ─────────────
@@ -347,9 +348,9 @@ export default function ShareCardScreen() {
     : run.avg_pace_sec_per_km;
   const title = run.title ?? timeTitle(run.ran_at);
   const rows: [ShareMetricKey, string, string][] = [];
-  if (prefs.metrics.dist) rows.push(['dist', `${fmtDist(run.distance_km, units, 2)}${distUnit(units)}`, '거리']);
-  if (prefs.metrics.pace && avgPace != null) rows.push(['pace', `${fmtPaceIn(avgPace, units)}${paceUnit(units)}`, '평균 페이스']);
-  if (prefs.metrics.time) rows.push(['time', fmtDuration(run.duration_sec), '시간']);
+  if (prefs.metrics.dist) rows.push(['dist', `${fmtDist(run.distance_km, units, 2)}${distUnit(units)}`, t('shr.metricDist')]);
+  if (prefs.metrics.pace && avgPace != null) rows.push(['pace', `${fmtPaceIn(avgPace, units)}${paceUnit(units)}`, t('shr.metricPace')]);
+  if (prefs.metrics.time) rows.push(['time', fmtDuration(run.duration_sec), t('shr.metricTime')]);
 
   // Slice 2 — IMAGE EXPORT WAKES (the honest caption's promise fulfilled):
   // view-shot captures the composed canvas (route layer, metrics, wordmark,
@@ -388,7 +389,7 @@ export default function ShareCardScreen() {
         <Pressable onPress={() => router.back()} hitSlop={12} style={st.hBtn}>
           <Icon name="close" size={20} color={C.text} />
         </Pressable>
-        <Text style={st.hTitle}>공유 카드</Text>
+        <Text style={st.hTitle}>{t('shr.title')}</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -411,7 +412,7 @@ export default function ShareCardScreen() {
             )}
             {bgAdjustMode && bgIsPhoto && (
               <View pointerEvents="none" style={st.bgModeBadge}>
-                <Text style={st.bgModeTxt}>배경 조정 중 — 드래그·핀치</Text>
+                <Text style={st.bgModeTxt}>{t('shr.bgAdjusting')}</Text>
               </View>
             )}
 
@@ -464,30 +465,30 @@ export default function ShareCardScreen() {
           <View style={st.chipRow}>
             {(['1:1', '9:16'] as const).map(f => (
               <Pressable key={f} onPress={() => save({ ...prefs, format: f })} style={[st.chip, prefs.format === f && st.chipOn]}>
-                <Text style={[st.chipTxt, prefs.format === f && st.chipTxtOn]}>{f === '1:1' ? '정방형 1:1' : '스토리 9:16'}</Text>
+                <Text style={[st.chipTxt, prefs.format === f && st.chipTxtOn]}>{f === '1:1' ? t('shr.fmtSquare') : t('shr.fmtStory')}</Text>
               </Pressable>
             ))}
           </View>
-          <Text style={st.groupLbl}>루트 스타일</Text>
+          <Text style={st.groupLbl}>{t('shr.routeStyle')}</Text>
           <View style={st.chipRow}>
             {STROKE_COLORS.map(c => (
               <Pressable key={c} onPress={() => save({ ...prefs, strokeColor: c })} style={[st.colorDot, { backgroundColor: c }, (prefs.strokeColor ?? STROKE_COLORS[0]) === c && st.colorDotOn]} />
             ))}
             {STROKE_WEIGHTS.map(([w, label]) => (
               <Pressable key={w} onPress={() => save({ ...prefs, strokeWeight: w })} style={[st.chip, (prefs.strokeWeight ?? 4.5) === w && st.chipOn]}>
-                <Text style={[st.chipTxt, (prefs.strokeWeight ?? 4.5) === w && st.chipTxtOn]}>{label}</Text>
+                <Text style={[st.chipTxt, (prefs.strokeWeight ?? 4.5) === w && st.chipTxtOn]}>{t(label)}</Text>
               </Pressable>
             ))}
           </View>
           {bgIsPhoto && (
             <>
-              <Text style={st.groupLbl}>배경 (사진)</Text>
+              <Text style={st.groupLbl}>{t('shr.bgPhoto')}</Text>
               <View style={st.chipRow}>
                 <Pressable onPress={() => setBgAdjustMode(m => !m)} style={[st.chip, bgAdjustMode && st.chipOn]}>
-                  <Text style={[st.chipTxt, bgAdjustMode && st.chipTxtOn]}>{bgAdjustMode ? '조정 완료' : '배경 조정'}</Text>
+                  <Text style={[st.chipTxt, bgAdjustMode && st.chipTxtOn]}>{bgAdjustMode ? t('shr.adjustDone') : t('shr.adjustBg')}</Text>
                 </Pressable>
                 <View style={st.dimSlider}>
-                  <Text style={st.dimLbl}>딤 {Math.round(bgDim * 100)}%</Text>
+                  <Text style={st.dimLbl}>{tf('shr.dim', { p: Math.round(bgDim * 100) })}</Text>
                   <Slider
                     style={{ flex: 1 }}
                     minimumValue={0} maximumValue={0.6} step={0.05} value={bgDim}
@@ -498,7 +499,7 @@ export default function ShareCardScreen() {
               </View>
             </>
           )}
-          <Text style={st.groupLbl}>표시할 항목</Text>
+          <Text style={st.groupLbl}>{t('shr.metrics')}</Text>
           <View style={st.chipRow}>
             {(Object.keys(METRIC_LABELS) as ShareMetricKey[]).map(k => (
               <Pressable
@@ -506,7 +507,7 @@ export default function ShareCardScreen() {
                 onPress={() => save({ ...prefs, metrics: { ...prefs.metrics, [k]: !prefs.metrics[k] } })}
                 style={[st.chip, prefs.metrics[k] && st.chipOn]}
               >
-                <Text style={[st.chipTxt, prefs.metrics[k] && st.chipTxtOn]}>{METRIC_LABELS[k]}</Text>
+                <Text style={[st.chipTxt, prefs.metrics[k] && st.chipTxtOn]}>{t(METRIC_LABELS[k])}</Text>
               </Pressable>
             ))}
           </View>
@@ -517,11 +518,11 @@ export default function ShareCardScreen() {
         <View style={st.actions}>
           <Pressable onPress={exportCard} disabled={exporting} style={({ pressed }) => [st.exportLive, shadows.sm, (pressed || exporting) && { opacity: 0.85 }]}>
             <Icon name="image-outline" size={17} color="#0C1206" />
-            <Text style={st.exportLiveTxt}>{exporting ? '내보내는 중…' : '이미지 저장·공유'}</Text>
+            <Text style={st.exportLiveTxt}>{exporting ? t('shr.exporting') : t('shr.export')}</Text>
           </Pressable>
           <Pressable onPress={shareText} style={({ pressed }) => [st.textShareBtn, pressed && { opacity: 0.7 }]}>
             <Icon name="share-outline" size={15} color={C.sub} />
-            <Text style={st.textShareSubTxt}>텍스트로 공유</Text>
+            <Text style={st.textShareSubTxt}>{t('shr.textShare')}</Text>
           </Pressable>
         </View>
       </ScrollView>

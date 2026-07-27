@@ -22,6 +22,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useNavigation } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { t, tf } from '@/lib/i18n';
 import {
   ActivityIndicator,
   Alert,
@@ -81,7 +82,7 @@ function SplitsChart({ splits, avg }: { splits: number[]; avg: number }) {
             />
             {isFast && (
               <SvgText x={x + w / 2} y={y - 5} textAnchor="middle" fontSize="9.5" fontWeight="800" fill={C.accentGrn}>
-                ⚡ 최고 구간
+                {t('res.best')}
               </SvgText>
             )}
           </React.Fragment>
@@ -103,7 +104,7 @@ export default function RunResultScreen() {
   const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
-  const displayName = useStore(s => s.displayName) ?? '러너';
+  const displayName = useStore(s => s.displayName) ?? t('home.runner');
 
   const [run] = useState(() => getPendingRun());
   // 러닝 저장 (compose) owns the POST — normal flow arrives pre-saved.
@@ -147,7 +148,7 @@ export default function RunResultScreen() {
       maybeWriteRunToHealth(run);
       if (saved.new_records && saved.new_records.length > 0) setPbRecords(saved.new_records);
     } catch (e: unknown) {
-      setSaveError(e instanceof Error ? e.message : '저장에 실패했어요');
+      setSaveError(e instanceof Error ? e.message : t('res.saveFail'));
       setSaveState('error');
     } finally {
       inFlightRef.current = false;
@@ -214,9 +215,9 @@ export default function RunResultScreen() {
   const monthLongest = stats?.month.longest_run_km != null && run != null && run.distanceKm >= 1
     && run.distanceKm >= stats.month.longest_run_km; // post-save month includes this run
   const chips = ([
-    monthLongest && ['🔥', '이번 달 최장 거리'],
-    negSplit && ['⚡', '네거티브 스플릿'],
-    nightRun && ['🌙', '야간 러닝'],
+    monthLongest && ['🔥', t('res.monthLongest')],
+    negSplit && ['⚡', t('res.negSplit')],
+    nightRun && ['🌙', t('res.nightRun')],
   ].filter(Boolean) as [string, string][]).slice(0, 2);
 
   // ── No pending run → nothing to show ───────────────────────────────────────
@@ -240,9 +241,9 @@ export default function RunResultScreen() {
       router.replace('/(tabs)/records' as any); // canvas: 완료 → Records tab
     };
     if (saveState === 'error') {
-      Alert.alert('저장되지 않았어요', '이 러닝은 아직 저장되지 않았어요. 저장 없이 나갈까요?', [
-        { text: '취소', style: 'cancel' },
-        { text: '나가기', style: 'destructive', onPress: leave },
+      Alert.alert(t('res.unsavedTitle'), t('res.unsavedBody'), [
+        { text: t('common.cancel'), style: 'cancel' },
+        { text: t('res.leave'), style: 'destructive', onPress: leave },
       ]);
       return;
     }
@@ -259,11 +260,11 @@ export default function RunResultScreen() {
       router.push({ pathname: '/share-card' as never, params: { runId: savedId } });
       return;
     }
-    const title = savedRunRef.current?.title ?? run.course?.title ?? '러닝';
+    const title = savedRunRef.current?.title ?? run.course?.title ?? t('res.runner');
     const pace = avgPace > 0 ? fmtPaceIn(avgPace, units) + paceUnit(units) : null;
     const msg = [
       `${title} — FreshRun`,
-      `거리 ${fmtDist(run.distanceKm, units, 2)}${distUnit(units)} · 시간 ${fmtDuration(run.elapsedSec)}${pace ? ` · 페이스 ${pace}` : ''}`,
+      tf('res.shareMsg', { d: `${fmtDist(run.distanceKm, units, 2)}${distUnit(units)}`, t: fmtDuration(run.elapsedSec) }) + (pace ? tf('res.sharePace', { p: pace }) : ''),
     ].join('\n');
     try { await Share.share({ message: msg }); } catch { /* user dismissed */ }
   };
@@ -275,9 +276,9 @@ export default function RunResultScreen() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 16 }}>
         {/* ── Header — canvas: 수고했어요 🎉 + nth run ── */}
         <View style={{ alignItems: 'center', paddingTop: insets.top + 26, paddingHorizontal: 24 }}>
-          <Text style={st.title}>수고했어요! 🎉</Text>
+          <Text style={st.title}>{t('res.title')}</Text>
           {stats != null && stats.all_time.run_count > 0 && (
-            <Text style={st.nth}>{stats.all_time.run_count}번째 러닝이에요</Text>
+            <Text style={st.nth}>{tf('res.nth', { n: stats.all_time.run_count })}</Text>
           )}
         </View>
 
@@ -294,7 +295,7 @@ export default function RunResultScreen() {
               pointerEvents="none"
             />
             <View style={st.cardTop} pointerEvents="none">
-              <Text style={st.cardDistLbl}>총 거리</Text>
+              <Text style={st.cardDistLbl}>{t('res.totalDist')}</Text>
               <Text style={st.cardDist}>
                 {fmtDist(run.distanceKm, units, 2)}
                 <Text style={st.cardDistUnit}> {distUnit(units)}</Text>
@@ -313,8 +314,8 @@ export default function RunResultScreen() {
         {/* ── Stat row — 시간 / 페이스 / kcal (honest-kcal: '—' without weight) ── */}
         <View style={st.statRow}>
           {([
-            [fmtDuration(run.elapsedSec), '시간'],
-            [run.avgPaceSecPerKm != null ? fmtPaceIn(run.avgPaceSecPerKm, units) : "--'--\"", '페이스'],
+            [fmtDuration(run.elapsedSec), t('res.time')],
+            [run.avgPaceSecPerKm != null ? fmtPaceIn(run.avgPaceSecPerKm, units) : "--'--\"", t('res.pace')],
             [run.kcal != null ? String(run.kcal) : '—', 'kcal'],
           ] as [string, string][]).map(([val, label], i) => (
             <View key={label} style={[st.statCell, i > 0 && st.statCellBorder]}>
@@ -327,39 +328,39 @@ export default function RunResultScreen() {
         <View style={{ paddingHorizontal: 24 }}>
           {/* ── Save + photo status strips (infra carryover, honest states) ── */}
           {saveState === 'saving' && (
-            <View style={st.saveRow}><ActivityIndicator size="small" color={C.faint} /><Text style={st.saveRowTxt}>기록 저장 중…</Text></View>
+            <View style={st.saveRow}><ActivityIndicator size="small" color={C.faint} /><Text style={st.saveRowTxt}>{t('res.saving')}</Text></View>
           )}
           {saveState === 'saved' && (
-            <View style={st.saveRow}><Icon name="checkmark-circle" size={15} color={C.accentGrn} /><Text style={[st.saveRowTxt, { color: C.accentGrn }]}>기록에 저장됨</Text></View>
+            <View style={st.saveRow}><Icon name="checkmark-circle" size={15} color={C.accentGrn} /><Text style={[st.saveRowTxt, { color: C.accentGrn }]}>{t('res.saved')}</Text></View>
           )}
           {saveState === 'error' && (
             <View style={st.errCard}>
               <Icon name="alert-circle-outline" size={15} color={C.danger} />
               <Text style={st.errTxt} numberOfLines={2}>{saveError}</Text>
-              <Pressable onPress={doSave} style={st.retryBtn} hitSlop={6}><Text style={st.retryTxt}>다시 시도</Text></Pressable>
+              <Pressable onPress={doSave} style={st.retryBtn} hitSlop={6}><Text style={st.retryTxt}>{t('common.retry')}</Text></Pressable>
             </View>
           )}
           {saveState === 'skipped' && (
-            <View style={st.saveRow}><Icon name="information-circle-outline" size={15} color={C.faint} /><Text style={st.saveRowTxt}>너무 짧은 러닝은 저장되지 않아요</Text></View>
+            <View style={st.saveRow}><Icon name="information-circle-outline" size={15} color={C.faint} /><Text style={st.saveRowTxt}>{t('res.tooShort')}</Text></View>
           )}
           {photoState === 'uploading' && (
-            <View style={st.saveRow}><ActivityIndicator size="small" color={C.faint} /><Text style={st.saveRowTxt}>사진 업로드 중 ({Math.min(photoDone + 1, photoUris.length)}/{photoUris.length})</Text></View>
+            <View style={st.saveRow}><ActivityIndicator size="small" color={C.faint} /><Text style={st.saveRowTxt}>{tf('res.photoUploading', { a: Math.min(photoDone + 1, photoUris.length), b: photoUris.length })}</Text></View>
           )}
           {photoState === 'done' && (
-            <View style={st.saveRow}><Icon name="checkmark-circle" size={15} color={C.accentGrn} /><Text style={[st.saveRowTxt, { color: C.accentGrn }]}>사진 {photoUris.length}장 첨부됨</Text></View>
+            <View style={st.saveRow}><Icon name="checkmark-circle" size={15} color={C.accentGrn} /><Text style={[st.saveRowTxt, { color: C.accentGrn }]}>{tf('res.photoDone', { n: photoUris.length })}</Text></View>
           )}
           {photoState === 'error' && (
             <View style={st.errCard}>
               <Icon name="alert-circle-outline" size={15} color={C.danger} />
-              <Text style={st.errTxt} numberOfLines={2}>사진 업로드에 실패했어요 — 기록은 저장됐어요</Text>
-              <Pressable onPress={doAttachPhotos} style={st.retryBtn} hitSlop={6}><Text style={st.retryTxt}>다시 시도</Text></Pressable>
+              <Text style={st.errTxt} numberOfLines={2}>{t('res.photoFail')}</Text>
+              <Pressable onPress={doAttachPhotos} style={st.retryBtn} hitSlop={6}><Text style={st.retryTxt}>{t('common.retry')}</Text></Pressable>
             </View>
           )}
 
           {/* ── 구간 페이스 — bars + 평균 baseline + ⚡최고 구간 ── */}
           {splits.length >= 2 && (
             <View style={{ marginTop: 20 }}>
-              <Text style={st.sectionLbl}>구간 페이스</Text>
+              <Text style={st.sectionLbl}>{t('res.splits')}</Text>
               <View style={[st.splitsCard, shadows.sm]} pointerEvents="none">
                 <SplitsChart splits={splits} avg={avgPace} />
               </View>
@@ -372,24 +373,24 @@ export default function RunResultScreen() {
               {paceDiff != null && (
                 <View style={[st.vsRow, { borderBottomWidth: 1, borderBottomColor: C.border }]}>
                   <Icon name="speedometer-outline" size={15} color={C.sub} />
-                  <Text style={st.vsLbl}>평균 페이스</Text>
+                  <Text style={st.vsLbl}>{t('res.avgPace')}</Text>
                   <Text style={[st.vsVal, paceDiff > 5 && { color: C.accentGrn }]}>
-                    {paceDiff > 5 ? `평소보다 ${paceDiff}초 빨라요 ↑`
-                      : paceDiff < -5 ? '평소보다 여유 있게 달렸어요'
-                      : '평소 페이스와 비슷해요'}
+                    {paceDiff > 5 ? tf('res.paceFaster', { s: paceDiff })
+                      : paceDiff < -5 ? t('res.paceRelaxed')
+                      : t('res.paceSimilar')}
                   </Text>
                 </View>
               )}
               <View style={[st.vsRow, pbGap != null && { borderBottomWidth: 1, borderBottomColor: C.border }]}>
                 <Icon name="calendar-outline" size={15} color={C.sub} />
-                <Text style={st.vsLbl}>이번 주</Text>
-                <Text style={st.vsVal}>{`이번 주 ${stats.week.total_distance_km}km · ${stats.week.run_count}회`}</Text>
+                <Text style={st.vsLbl}>{t('res.thisWeek')}</Text>
+                <Text style={st.vsVal}>{tf('res.weekLine', { km: stats.week.total_distance_km, n: stats.week.run_count })}</Text>
               </View>
               {pbGap != null && (
                 <View style={st.vsRow}>
                   <Icon name="medal-outline" size={15} color={C.accentGrn} />
-                  <Text style={st.vsLbl}>개인 기록</Text>
-                  <Text style={[st.vsVal, { color: C.accentGrn }]}>{`5km 최고 기록까지 −${pbGap}초!`}</Text>
+                  <Text style={st.vsLbl}>{t('res.pb')}</Text>
+                  <Text style={[st.vsVal, { color: C.accentGrn }]}>{tf('res.pbLine', { s: pbGap })}</Text>
                 </View>
               )}
             </View>
@@ -408,7 +409,7 @@ export default function RunResultScreen() {
           {elevGain != null && elevGain >= 5 && (
             <View style={[st.elevRow, shadows.sm]}>
               <Icon name="trending-up-outline" size={16} color={C.sub} />
-              <Text style={st.elevLbl}>누적 상승 고도</Text>
+              <Text style={st.elevLbl}>{t('res.elev')}</Text>
               <Text style={st.elevVal}>↗ {elevGain}m</Text>
             </View>
           )}
@@ -420,11 +421,11 @@ export default function RunResultScreen() {
         {!tooShort && (
           <Pressable onPress={shareRun} style={({ pressed }) => [st.shareBtn, shadows.sm, pressed && { opacity: 0.85 }]}>
             <Icon name="share-outline" size={17} color={C.text} />
-            <Text style={st.shareTxt}>공유하기</Text>
+            <Text style={st.shareTxt}>{t('res.share')}</Text>
           </Pressable>
         )}
         <Pressable onPress={finish} style={({ pressed }) => [st.doneBtn, accentShadow(C.accent), pressed && { opacity: 0.9 }]}>
-          <Text style={st.doneTxt}>완료</Text>
+          <Text style={st.doneTxt}>{t('res.done')}</Text>
         </Pressable>
       </View>
 
