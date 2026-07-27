@@ -18,6 +18,7 @@
  */
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
+import { t, tf } from '@/lib/i18n';
 import {
   ActivityIndicator,
   Alert,
@@ -79,7 +80,7 @@ export default function CrewMembersScreen() {
       await setMemberRole(crewId!, m.user_id, role);
       load();
     } catch (e: unknown) {
-      Alert.alert('변경 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요.');
+      Alert.alert(t('crw.changeFail'), e instanceof Error ? e.message : t('auth.tryLater'));
     } finally {
       setBusyUid(null);
     }
@@ -88,15 +89,15 @@ export default function CrewMembersScreen() {
   function confirmRole(m: CrewMember) {
     const promoting = m.role === 'member';
     Alert.alert(
-      promoting ? '운영진으로 지정할까요?' : '운영진을 해제할까요?',
+      promoting ? t('crw.promoteAsk') : t('crw.demoteAsk'),
       promoting
         // v2 defaults (server-side: 공지·챌린지 ON, 나머지 OFF) — the promote
         // flow needs no FE change; 세부 조정은 권한 설정에서
-        ? `${m.nickname}님이 공지와 챌린지 관리를 할 수 있게 돼요. 세부 권한은 '권한 설정'에서 조정할 수 있어요.`
-        : `${m.nickname}님의 운영진 권한을 해제해요.`,
+        ? tf('crw.promoteSub', { name: m.nickname })
+        : tf('crw.demoteSub', { name: m.nickname }),
       [
-        { text: '취소', style: 'cancel' },
-        { text: promoting ? '지정' : '해제', onPress: () => changeRole(m, promoting ? 'admin' : 'member') },
+        { text: t('common.cancel'), style: 'cancel' },
+        { text: promoting ? t('crw.promote') : t('crw.demote'), onPress: () => changeRole(m, promoting ? 'admin' : 'member') },
       ],
     );
   }
@@ -105,19 +106,19 @@ export default function CrewMembersScreen() {
   // being owner (leave_after=false: you stay as a regular member).
   function confirmTransfer(m: CrewMember) {
     Alert.alert(
-      '크루장을 양도할까요?',
-      `${m.nickname}님이 새 크루장이 되고, 나는 일반 멤버가 돼요. 되돌리려면 새 크루장이 다시 양도해야 해요.`,
+      t('crw.transferAsk'),
+      tf('crw.transferSub', { name: m.nickname }),
       [
-        { text: '취소', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: '양도', style: 'destructive',
+          text: t('crw.transfer'), style: 'destructive',
           onPress: async () => {
             setBusyUid(m.user_id);
             try {
               await transferCrew(crewId!, m.user_id);
               load(); // roles re-render from server truth; my actions vanish
             } catch (e: unknown) {
-              Alert.alert('양도 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요.');
+              Alert.alert(t('crw.transferFail'), e instanceof Error ? e.message : t('auth.tryLater'));
             } finally {
               setBusyUid(null);
             }
@@ -128,17 +129,17 @@ export default function CrewMembersScreen() {
   }
 
   function confirmKick(m: CrewMember) {
-    Alert.alert('크루에서 내보낼까요?', `${m.nickname}님을 크루에서 내보내요. 다시 가입할 수는 있어요.`, [
-      { text: '취소', style: 'cancel' },
+    Alert.alert(t('crw.kickAsk'), tf('crw.kickSub', { name: m.nickname }), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: '내보내기', style: 'destructive',
+        text: t('crw.kick'), style: 'destructive',
         onPress: async () => {
           setBusyUid(m.user_id);
           try {
             await kickMember(crewId!, m.user_id);
             load();
           } catch (e: unknown) {
-            Alert.alert('내보내기 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요.');
+            Alert.alert(t('crw.kickFail'), e instanceof Error ? e.message : t('auth.tryLater'));
           } finally {
             setBusyUid(null);
           }
@@ -167,7 +168,7 @@ export default function CrewMembersScreen() {
         <Pressable onPress={() => router.back()} hitSlop={12} style={st.backBtn}>
           <Icon name="arrow-back" size={20} color={C.text} />
         </Pressable>
-        <Text style={st.appBarTitle}>크루원</Text>
+        <Text style={st.appBarTitle}>{t('crw.membersTitle')}</Text>
         {/* 초대하기 — any member can invite (probed; not a permission key) */}
         <Pressable
           onPress={() => router.push({ pathname: '/(community)/user-search' as never, params: { crewId: crewId! } })}
@@ -198,11 +199,11 @@ export default function CrewMembersScreen() {
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                       <Text style={st.name} numberOfLines={1}>{m.nickname}</Text>
-                      {isMe && <View style={st.meBadge}><Text style={st.meBadgeTxt}>나</Text></View>}
-                      {m.role === 'owner' && <View style={st.ownerBadge}><Text style={st.ownerTxt}>크루장</Text></View>}
-                      {m.role === 'admin' && <View style={st.adminBadge}><Text style={st.adminTxt}>운영진</Text></View>}
+                      {isMe && <View style={st.meBadge}><Text style={st.meBadgeTxt}>{t('crw.me')}</Text></View>}
+                      {m.role === 'owner' && <View style={st.ownerBadge}><Text style={st.ownerTxt}>{t('crw.roleOwner')}</Text></View>}
+                      {m.role === 'admin' && <View style={st.adminBadge}><Text style={st.adminTxt}>{t('crw.roleAdmin')}</Text></View>}
                     </View>
-                    <Text style={st.kmSub}>이번 챌린지 {(m.challenge_km ?? 0).toFixed(1)}km</Text>
+                    <Text style={st.kmSub}>{tf('crw.thisChKm', { km: (m.challenge_km ?? 0).toFixed(1) })}</Text>
                   </View>
                 </Pressable>
 
@@ -221,7 +222,7 @@ export default function CrewMembersScreen() {
                           pressed && acts.kick === 'enabled' && { opacity: 0.7 },
                         ]}
                       >
-                        <Text style={st.kickTxt}>내보내기</Text>
+                        <Text style={st.kickTxt}>{t('crw.kick')}</Text>
                       </Pressable>
                     )}
                     {acts.more && (
@@ -238,7 +239,7 @@ export default function CrewMembersScreen() {
           contentContainerStyle={{ padding: S.gutter, paddingBottom: 40 }}
           ListFooterComponent={
             myRow?.role === 'admin' ? (
-              <Text style={st.footNote}>내 권한에 없는 동작은 비활성화돼요 · 주의 권한은 크루장만 부여해요</Text>
+              <Text style={st.footNote}>{t('crw.membersFoot')}</Text>
             ) : null
           }
           showsVerticalScrollIndicator={false}
@@ -257,7 +258,7 @@ export default function CrewMembersScreen() {
               style={({ pressed }) => [st.sheetRow, pressed && { opacity: 0.7 }]}
             >
               <Icon name="shield-outline" size={19} color={C.text} />
-              <Text style={st.sheetRowTxt}>{sheetFor?.role === 'admin' ? '운영진 해제' : '운영진 지정'}</Text>
+              <Text style={st.sheetRowTxt}>{sheetFor?.role === 'admin' ? t('crw.demoteRow') : t('crw.promoteRow')}</Text>
             </Pressable>
             {sheetFor?.role === 'admin' && (
               <>
@@ -273,7 +274,7 @@ export default function CrewMembersScreen() {
                   style={({ pressed }) => [st.sheetRow, pressed && { opacity: 0.7 }]}
                 >
                   <Icon name="options-outline" size={19} color={C.text} />
-                  <Text style={st.sheetRowTxt}>권한 설정</Text>
+                  <Text style={st.sheetRowTxt}>{t('crw.permsRow')}</Text>
                 </Pressable>
               </>
             )}
@@ -285,7 +286,7 @@ export default function CrewMembersScreen() {
                   style={({ pressed }) => [st.sheetRow, pressed && { opacity: 0.7 }]}
                 >
                   <Icon name="swap-horizontal-outline" size={19} color={C.danger} />
-                  <Text style={[st.sheetRowTxt, { color: C.danger }]}>크루장 양도</Text>
+                  <Text style={[st.sheetRowTxt, { color: C.danger }]}>{t('crw.transferRow')}</Text>
                 </Pressable>
               </>
             )}

@@ -16,6 +16,7 @@
  */
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
+import { t, tf } from '@/lib/i18n';
 import {
   ActivityIndicator,
   Pressable,
@@ -80,7 +81,7 @@ export default function CrewInviteScreen() {
         <Pressable onPress={() => router.back()} hitSlop={12} style={st.backBtn}>
           <Icon name="close" size={22} color={C.text} />
         </Pressable>
-        <Text style={st.appBarTitle}>크루 초대</Text>
+        <Text style={st.appBarTitle}>{t('crw.invTitle')}</Text>
         <View style={{ width: 36 }} />
       </View>
 
@@ -89,12 +90,12 @@ export default function CrewInviteScreen() {
       ) : state === 'expired' || state === 'error' ? (
         <View style={st.centered}>
           <View style={st.emptyIcon}><Icon name={state === 'expired' ? 'time-outline' : 'warning-outline'} size={28} color={C.faint} /></View>
-          <Text style={st.emptyTxt}>{state === 'expired' ? '만료된 초대예요' : '초대를 불러오지 못했어요'}</Text>
+          <Text style={st.emptyTxt}>{state === 'expired' ? t('crw.invExpired') : t('crw.invLoadFail')}</Text>
           <Text style={st.emptySub}>
-            {state === 'expired' ? '초대 링크가 새로 발급되었을 수 있어요.\n크루장에게 새 초대를 부탁해 주세요.' : '잠시 후 다시 시도해 주세요.'}
+            {state === 'expired' ? t('crw.invExpiredSub') : t('auth.tryLater')}
           </Text>
           {state === 'error' && (
-            <Pressable onPress={load} style={st.retryBtn}><Text style={st.retryTxt}>다시 시도</Text></Pressable>
+            <Pressable onPress={load} style={st.retryBtn}><Text style={st.retryTxt}>{t('common.retry')}</Text></Pressable>
           )}
         </View>
       ) : preview ? (
@@ -105,11 +106,11 @@ export default function CrewInviteScreen() {
                 <Icon name="people" size={34} color={C.accentText} />
               </View>
             } />
-            <Text style={st.crewName} numberOfLines={2}>{preview.name || crewName || '크루'}</Text>
+            <Text style={st.crewName} numberOfLines={2}>{preview.name || crewName || t('crw.crewFallback')}</Text>
             <View style={st.metaRow}>
               <Icon name="people-outline" size={13} color={C.faint} />
               <Text style={st.metaTxt}>
-                {preview.member_count}명{preview.max_members != null ? ` · 최대 ${preview.max_members}명` : ''}
+                {tf('crw.nMembers', { n: preview.member_count })}{preview.max_members != null ? tf('crw.maxN', { n: preview.max_members }) : ''}
               </Text>
               {preview.area ? (
                 <>
@@ -118,20 +119,20 @@ export default function CrewInviteScreen() {
                 </>
               ) : null}
             </View>
-            {preview.owner_nickname ? <Text style={st.ownerTxt}>크루장 · {preview.owner_nickname}</Text> : null}
+            {preview.owner_nickname ? <Text style={st.ownerTxt}>{tf('crw.ownerIs', { name: preview.owner_nickname })}</Text> : null}
             {preview.description ? <Text style={st.descTxt} numberOfLines={3}>{preview.description}</Text> : null}
           </View>
-          <Text style={st.hint}>초대를 수락하면 바로 크루에 가입해요.</Text>
+          <Text style={st.hint}>{t('crw.invHint')}</Text>
         </View>
       ) : null}
 
       {state === 'ready' && (
         <View style={[st.footer, { paddingBottom: Math.max(insets.bottom, 12) + 10 }]}>
           <Pressable onPress={accept} disabled={joining} style={[st.acceptBtn, accentShadow(C.accent), joining && { opacity: 0.6 }]}>
-            {joining ? <ActivityIndicator size="small" color={C.accentText} /> : <Text style={st.acceptTxt}>수락하고 가입</Text>}
+            {joining ? <ActivityIndicator size="small" color={C.accentText} /> : <Text style={st.acceptTxt}>{t('crw.invAccept')}</Text>}
           </Pressable>
           <Pressable onPress={() => router.back()} disabled={joining} hitSlop={8} style={st.laterBtn}>
-            <Text style={st.laterTxt}>나중에</Text>
+            <Text style={st.laterTxt}>{t('common.later')}</Text>
           </Pressable>
         </View>
       )}

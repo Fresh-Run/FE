@@ -11,6 +11,7 @@
  */
 import { router } from 'expo-router';
 import React, { useState } from 'react';
+import { t, tf } from '@/lib/i18n';
 import { ActivityIndicator, Alert, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Icon } from '@/components/ui';
@@ -40,7 +41,7 @@ export function CrewDeleteModal({ visible, crewId, crewName, memberCount, onClos
       router.replace('/(tabs)/community' as never);
     } catch (e: unknown) {
       setDeleting(false);
-      Alert.alert('삭제 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요');
+      Alert.alert(t('crw.deleteFail'), e instanceof Error ? e.message : t('runSave.saveFailBody'));
     }
   }
 
@@ -58,24 +59,24 @@ export function CrewDeleteModal({ visible, crewId, crewName, memberCount, onClos
           <View style={st.iconWrap}>
             <Icon name="trash-outline" size={26} color={C.danger} />
           </View>
-          <Text style={st.title}>크루를 해체할까요?</Text>
+          <Text style={st.title}>{t('crw.disbandAsk')}</Text>
           <Text style={st.body}>
             <Text style={{ fontWeight: '700', color: C.text }}>{crewName}</Text>
-            {' 크루가 크루원 '}{memberCount}{'명과 함께 즉시 삭제되고, 공지·챌린지·참석 기록도 사라져요. 크루원들의 러닝 기록은 남아요. 되돌릴 수 없어요.'}
+            {tf('crw.disbandBody', { n: memberCount })}
           </Text>
 
           {/* 양도 alternative — for an owner who wants out but not to destroy it */}
           <Pressable onPress={goTransfer} disabled={deleting} style={({ pressed }) => [st.transferRow, pressed && { opacity: 0.7 }]}>
             <Icon name="swap-horizontal-outline" size={16} color={C.accentGrn} />
-            <Text style={st.transferTxt}>크루를 넘기고 싶다면 크루원 관리에서 양도할 수 있어요</Text>
+            <Text style={st.transferTxt}>{t('crw.transferHint')}</Text>
             <Icon name="chevron-forward" size={14} color={C.faint} />
           </Pressable>
 
           <Pressable onPress={doDelete} disabled={deleting} style={st.deleteBtn}>
-            {deleting ? <ActivityIndicator size="small" color="#fff" /> : <Text style={st.deleteTxt}>해체하기</Text>}
+            {deleting ? <ActivityIndicator size="small" color="#fff" /> : <Text style={st.deleteTxt}>{t('crw.disbandGo')}</Text>}
           </Pressable>
           <Pressable onPress={() => !deleting && onClose()} style={st.cancelBtn}>
-            <Text style={st.cancelTxt}>취소</Text>
+            <Text style={st.cancelTxt}>{t('common.cancel')}</Text>
           </Pressable>
         </View>
       </View>

@@ -198,7 +198,7 @@ export default function CrewEditScreen() {
       });
       router.back(); // crew-detail refetches on focus
     } catch (e: unknown) {
-      Alert.alert('저장 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요');
+      Alert.alert(t('runSave.saveFailTitle'), e instanceof Error ? e.message : t('runSave.saveFailBody'));
     } finally {
       setBusy(false);
     }
@@ -209,7 +209,7 @@ export default function CrewEditScreen() {
       <View style={[est.rootPlain, { paddingTop: insets.top }]}>
         <View style={est.centered}>
           <Icon name="warning-outline" size={34} color={C.faint} />
-          <Text style={est.stateTxt}>크루를 불러올 수 없어요</Text>
+          <Text style={est.stateTxt}>{t('crw.loadFail')}</Text>
         </View>
       </View>
     );
@@ -228,7 +228,7 @@ export default function CrewEditScreen() {
         <Pressable onPress={() => router.back()} hitSlop={12} style={st.backBtn}>
           <Icon name="arrow-back" size={20} color={C.text} />
         </Pressable>
-        <Text style={st.appBarTitle}>크루 편집</Text>
+        <Text style={st.appBarTitle}>{t('crw.editTitle')}</Text>
         <View style={{ width: 36 }} />
       </View>
 
@@ -239,18 +239,18 @@ export default function CrewEditScreen() {
             <Icon name="people" size={34} color={C.accentText} />
           </View>
           <Text style={[st.previewName, { color: name.trim() ? C.text : C.faint }]}>
-            {name.trim() || '크루 이름'}
+            {name.trim() || t('crw.nameFallback')}
           </Text>
         </View>
 
-        <Group title="기본 정보">
-          <FieldRow label="크루 이름" value={name} onChange={setName} placeholder="예: 성수 새벽 크루" maxLength={20} />
+        <Group title={t('crw.gBasic')}>
+          <FieldRow label={t('crw.name')} value={name} onChange={setName} placeholder={t('crw.namePh')} maxLength={20} />
           <View style={st.divider} />
-          <FieldRow label="한 줄 소개" value={desc} onChange={setDesc} placeholder="크루를 한 문장으로 소개해요" maxLength={40} />
+          <FieldRow label={t('crw.desc')} value={desc} onChange={setDesc} placeholder={t('crw.descPh')} maxLength={40} />
         </Group>
 
         <View style={{ paddingHorizontal: S.gutter }}>
-          <Text style={st.groupTitle}>크루 컬러</Text>
+          <Text style={st.groupTitle}>{t('crw.color')}</Text>
           <View style={[st.groupCard, shadows.sm, st.colorRow]}>
             {CREW_COLORS.map(col => (
               <Pressable
@@ -262,7 +262,7 @@ export default function CrewEditScreen() {
           </View>
         </View>
 
-        <Group title="활동 지역" hint="지역을 정하면 둘러보기에서 그 지역 러너에게 크루가 보여요.">
+        <Group title={t('crw.gArea')} hint={t('crw.gAreaHint')}>
           {/* 시/도·구/군 — backfill for location-less crews (the decay fix);
               × unsets it (지역 해제 — clears all 4 region fields on save) */}
           <RegionRow
@@ -276,11 +276,11 @@ export default function CrewEditScreen() {
           <View style={st.fieldRow}>
             <View style={st.areaIcon}><Icon name="flag-outline" size={18} color={C.accentGrn} /></View>
             <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={st.areaLabel}>집결 장소</Text>
+              <Text style={st.areaLabel}>{t('crw.meetPlace')}</Text>
               <TextInput
                 value={meetName}
                 onChangeText={setMeetName}
-                placeholder="예: 서울숲 공원 정문"
+                placeholder={t('crw.meetPlacePh')}
                 placeholderTextColor={C.faint}
                 style={[st.fieldInput, { paddingVertical: 4 }]}
               />
@@ -289,7 +289,7 @@ export default function CrewEditScreen() {
               <Pressable
                 onPress={() => { setMeetName(''); setMeetCoords(null); }}
                 hitSlop={10}
-                accessibilityLabel="집결 장소 해제"
+                accessibilityLabel={t('crw.meetClear')}
                 style={{ width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: C.surfaceAlt }}
               >
                 <Icon name="close" size={15} color={C.faint} />
@@ -306,7 +306,7 @@ export default function CrewEditScreen() {
           >
             <Icon name={meetCoords ? 'location' : 'map-outline'} size={17} color={meetCoords ? C.danger : C.accentGrn} />
             <Text style={[est.meetPickTxt, meetCoords != null && { color: C.text }]}>
-              {meetCoords ? '핀 지정됨 — 지도에서 수정' : '지도에서 위치 선택'}
+              {meetCoords ? t('crw.pinSet') : t('crw.pinPick')}
             </Text>
             <Icon name="chevron-forward" size={15} color={C.faint} />
           </Pressable>
@@ -321,11 +321,11 @@ export default function CrewEditScreen() {
           <View style={st.fieldRow}>
             <View style={st.areaIcon}><Icon name="location" size={18} color={C.accentGrn} /></View>
             <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={st.areaLabel}>대표 출발지</Text>
+              <Text style={st.areaLabel}>{t('crw.homeBase')}</Text>
               <TextInput
                 value={area}
                 onChangeText={setArea}
-                placeholder="예: 성수동 서울숲"
+                placeholder={t('crw.homeBasePh')}
                 placeholderTextColor={C.faint}
                 style={[st.fieldInput, { paddingVertical: 4 }]}
               />
@@ -334,7 +334,7 @@ export default function CrewEditScreen() {
           <View style={st.divider} />
           <View style={st.sliderBlock}>
             <View style={st.sliderHead}>
-              <Text style={st.fieldLabel}>활동 반경</Text>
+              <Text style={st.fieldLabel}>{t('crw.radius')}</Text>
               <Text style={st.sliderValue}>{radiusKm} km</Text>
             </View>
             <Slider
@@ -354,22 +354,22 @@ export default function CrewEditScreen() {
         <TagPicker selected={tags} onToggle={toggleTag} />
 
         <View style={{ paddingHorizontal: S.gutter }}>
-          <Text style={st.groupTitle}>주 종목</Text>
+          <Text style={st.groupTitle}>{t('crw.sport')}</Text>
           <View style={st.chipRow}>
             {SPORTS.map(s => <Chip key={s} label={s} on={sport === s} onPress={() => setSport(s)} />)}
           </View>
-          <Text style={st.groupTitle}>페이스 레벨</Text>
+          <Text style={st.groupTitle}>{t('crw.level')}</Text>
           <View style={st.chipRow}>
             {LEVELS.map(l => <Chip key={l} label={l} on={level === l} onPress={() => setLevel(l)} />)}
           </View>
         </View>
 
-        <Group title="모집">
-          <NumberWheelRow label="최대 인원" value={maxMembers} min={5} max={100} step={1} suffix="명" onChange={setMaxMembers} />
+        <Group title={t('crw.gRecruit')}>
+          <NumberWheelRow label={t('crw.maxMembers')} value={maxMembers} min={5} max={100} step={1} suffix={t('unit.people')} onChange={setMaxMembers} />
         </Group>
 
         <View style={{ paddingHorizontal: S.gutter }}>
-          <Text style={st.groupTitle}>공개 범위</Text>
+          <Text style={st.groupTitle}>{t('runSave.visibility')}</Text>
           <View style={[st.groupCard, shadows.sm]}>
             {PRIVACY_OPTIONS.map(([lbl, lk, sk], i) => (
               <React.Fragment key={lbl}>
@@ -380,7 +380,7 @@ export default function CrewEditScreen() {
           </View>
         </View>
 
-        <Group title="정기 러닝">
+        <Group title={t('crw.gRegularE')}>
           <View style={st.daysRow}>
             {DAYS.map(d => {
               const on = days.includes(d);
@@ -392,21 +392,21 @@ export default function CrewEditScreen() {
             })}
           </View>
           <View style={st.divider} />
-          <FieldRow label="시간" value={time} onChange={setTime} placeholder="예: 오전 6:30" maxLength={20} />
+          <FieldRow label={t('res.time')} value={time} onChange={setTime} placeholder={t('crw.timePh')} maxLength={20} />
         </Group>
 
         {/* ── 위험 구역 (canvas danger zone) — owner-only under v2 (edit_crew
                admins edit but never delete; server enforces deep) ── */}
         {isOwner && (
           <View style={{ paddingHorizontal: S.gutter, paddingTop: 24 }}>
-            <Text style={est.dangerTitle}>위험 구역</Text>
+            <Text style={est.dangerTitle}>{t('crw.danger')}</Text>
             <Pressable onPress={() => setDeleteOpen(true)} style={({ pressed }) => [est.dangerCard, pressed && { opacity: 0.8 }]}>
               <View style={est.dangerIcon}>
                 <Icon name="trash-outline" size={18} color={C.danger} />
               </View>
               <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={est.dangerLbl}>크루 해체</Text>
-                <Text style={est.dangerSub}>크루원들과 함께 크루가 사라져요</Text>
+                <Text style={est.dangerLbl}>{t('crw.disband')}</Text>
+                <Text style={est.dangerSub}>{t('crw.disbandSub')}</Text>
               </View>
             </Pressable>
           </View>
@@ -422,7 +422,7 @@ export default function CrewEditScreen() {
         >
           {busy
             ? <ActivityIndicator size="small" color={C.accentText} />
-            : <Text style={[st.createTxt, !valid && { color: C.faint }]}>변경사항 저장</Text>}
+            : <Text style={[st.createTxt, !valid && { color: C.faint }]}>{t('crw.saveChanges')}</Text>}
         </Pressable>
       </View>
 

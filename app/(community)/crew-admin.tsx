@@ -23,6 +23,7 @@
 import { useFocusEffect } from '@react-navigation/native';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useState } from 'react';
+import { t, tf } from '@/lib/i18n';
 import {
   ActivityIndicator,
   Alert,
@@ -109,10 +110,10 @@ export default function CrewAdminScreen() {
       const code = inviteCode ?? await issueInviteCode(crewId);
       setInviteCode(code);
       await Share.share({
-        message: `FreshRun 크루 '${crew.name}'에 초대해요!\n초대 코드: ${code}\n앱 커뮤니티 탭의 '코드로 가입'에서 입력해 주세요.`,
+        message: tf('crw.inviteMsg', { name: crew.name, code }),
       });
     } catch (e: unknown) {
-      Alert.alert('초대 코드 오류', e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요');
+      Alert.alert(t('crw.inviteCodeErr'), e instanceof Error ? e.message : t('runSave.saveFailBody'));
     } finally {
       setInviteBusy(false);
     }
@@ -121,18 +122,18 @@ export default function CrewAdminScreen() {
   function confirmRegenInvite() {
     if (!crewId) return;
     Alert.alert(
-      '초대 코드를 재생성할까요?',
-      '기존 초대 링크가 무효화됩니다 — 이미 공유한 코드로는 더 이상 가입할 수 없어요.',
+      t('crw.regenAsk'),
+      t('crw.regenWarn'),
       [
-        { text: '취소', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: '재생성', style: 'destructive',
+          text: t('crw.regen'), style: 'destructive',
           onPress: async () => {
             setInviteBusy(true);
             try {
               setInviteCode(await issueInviteCode(crewId));
             } catch (e: unknown) {
-              Alert.alert('재생성 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요');
+              Alert.alert(t('crw.regenFail'), e instanceof Error ? e.message : t('runSave.saveFailBody'));
             } finally {
               setInviteBusy(false);
             }
@@ -154,19 +155,19 @@ export default function CrewAdminScreen() {
   function confirmLeaveAdmin() {
     if (!crew || leaving) return;
     Alert.alert(
-      '크루 나가기',
-      `'${crew.name}'에서 나가시겠어요? 운영진 권한도 함께 사라져요.`,
+      t('crw.leaveTitle'),
+      tf('crw.leaveAdminAsk', { name: crew.name }),
       [
-        { text: '취소', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: '나가기', style: 'destructive',
+          text: t('crw.leave'), style: 'destructive',
           onPress: async () => {
             setLeaving(true);
             try {
               await leaveCrew(crewId!);
               router.dismissAll?.(); // pop hub + crew-detail → 커뮤니티 (focus-refetch drops the crew; crew-edit delete precedent)
             } catch (e: unknown) {
-              Alert.alert('나가기 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요.');
+              Alert.alert(t('crw.leaveFailT'), e instanceof Error ? e.message : t('auth.tryLater'));
               setLeaving(false);
             }
           },
@@ -180,27 +181,27 @@ export default function CrewAdminScreen() {
   type Row = { icon: string; label: string; sub: string; onPress: () => void; badge?: number };
   const rows: Row[] = [
     ...(can('announcements') ? [{
-      icon: 'megaphone-outline', label: '공지 관리', sub: '공지 목록·작성',
+      icon: 'megaphone-outline', label: t('crw.hAnn'), sub: t('crw.hAnnSub'),
       onPress: () => router.push({ pathname: '/(community)/announcements' as never, params: { crewId: crewId!, canManage: '1' } }),
     }] : []),
     {
-      icon: 'people-outline', label: '크루원·운영진 관리',
-      sub: memberCount != null ? `크루원 ${memberCount}명 · 운영진 ${adminCount ?? 0}명` : '크루원·역할·내보내기',
+      icon: 'people-outline', label: t('crw.hMembers'),
+      sub: memberCount != null ? tf('crw.hMembersSub', { n: memberCount, m: adminCount ?? 0 }) : t('crw.hMembersSub2'),
       onPress: () => go('/(community)/crew-members'),
     },
     ...(isOwner ? [{
-      icon: 'person-add-outline', label: '가입 요청',
-      sub: pending != null ? (pending > 0 ? `${pending}건 대기 중` : '대기 없음') : '승인·거절',
+      icon: 'person-add-outline', label: t('crw.hRequests'),
+      sub: pending != null ? (pending > 0 ? tf('crw.hPending', { n: pending }) : t('crw.hNoPending')) : t('crw.hApprove'),
       onPress: () => go('/(community)/crew-requests'),
       badge: pending ?? 0,
     }] : []),
     ...(can('challenges') ? [{
-      icon: 'trophy-outline', label: '챌린지 관리',
-      sub: challenge === undefined ? '챌린지' : challenge === null ? '챌린지 없음' : challenge.title,
+      icon: 'trophy-outline', label: t('crw.hChallenge'),
+      sub: challenge === undefined ? t('crw.sChallenge') : challenge === null ? t('crw.hChNone') : challenge.title,
       onPress: () => go('/(community)/challenge-create'),
     }] : []),
     ...(can('edit_crew') ? [{
-      icon: 'create-outline', label: '크루 정보 편집', sub: '이름·지역·공개 범위',
+      icon: 'create-outline', label: t('crw.hEdit'), sub: t('crw.hEditSub'),
       // owner param gates the 위험 구역 (크루 삭제 stays owner-only under v2)
       onPress: () => router.push({ pathname: '/(community)/crew-edit' as never, params: { crewId: crewId!, owner: isOwner ? '1' : '0' } }),
     }] : []),
@@ -212,7 +213,7 @@ export default function CrewAdminScreen() {
         <Pressable onPress={() => router.back()} hitSlop={12} style={st.backBtn}>
           <Icon name="arrow-back" size={20} color={C.text} />
         </Pressable>
-        <Text style={st.appBarTitle}>크루 관리</Text>
+        <Text style={st.appBarTitle}>{t('crw.manage')}</Text>
         <View style={{ width: 36 }} />
       </View>
 
@@ -232,7 +233,7 @@ export default function CrewAdminScreen() {
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                   <Text style={st.idName} numberOfLines={1}>{crew.name}</Text>
                   <View style={[st.roleBadge, { backgroundColor: isOwner ? C.crown : C.accent }]}>
-                    <Text style={st.roleBadgeTxt}>{isOwner ? '크루장' : '운영진'}</Text>
+                    <Text style={st.roleBadgeTxt}>{isOwner ? t('crw.roleOwner') : t('crw.roleAdmin')}</Text>
                   </View>
                 </View>
                 {crew.area ? <Text style={st.idArea} numberOfLines={1}>{crew.area}</Text> : null}
@@ -240,11 +241,11 @@ export default function CrewAdminScreen() {
             </View>
             <View style={st.statsRow}>
               {([
-                [memberCount != null ? String(memberCount) : '–', '크루원'],
-                [adminCount != null ? String(adminCount) : '–', '운영진'],
+                [memberCount != null ? String(memberCount) : '–', t('crw.statMembers')],
+                [adminCount != null ? String(adminCount) : '–', t('crw.statAdmins')],
                 isOwner
-                  ? [pending != null ? String(pending) : '–', '가입 요청']
-                  : [crew.max_members != null ? `${crew.member_count}/${crew.max_members}` : String(crew.member_count), '정원'],
+                  ? [pending != null ? String(pending) : '–', t('crw.hRequests')]
+                  : [crew.max_members != null ? `${crew.member_count}/${crew.max_members}` : String(crew.member_count), t('crw.statCapacity')],
               ] as [string, string][]).map(([v, l], i) => (
                 <View key={l} style={[st.statCol, i > 0 && st.statColDivider]}>
                   <Text style={st.statVal}>{v}</Text>
@@ -277,15 +278,15 @@ export default function CrewAdminScreen() {
           {/* 초대 코드 (owner-only — owner-spec addition to the canvas hub) */}
           {isOwner && (
             <>
-              <Text style={st.sectionTitle}>초대</Text>
+              <Text style={st.sectionTitle}>{t('crw.sInvite')}</Text>
               <View style={[st.inviteCard, shadows.sm]}>
                 <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text style={st.inviteLbl}>초대 코드</Text>
-                  <Text style={st.inviteCode}>{inviteCode ?? '미발급'}</Text>
+                  <Text style={st.inviteLbl}>{t('crw.inviteCode')}</Text>
+                  <Text style={st.inviteCode}>{inviteCode ?? t('crw.notIssued')}</Text>
                 </View>
                 <Pressable onPress={shareInvite} disabled={inviteBusy} style={[st.inviteShareBtn, accentShadow(C.accent), inviteBusy && { opacity: 0.5 }]}>
                   <Icon name="share-outline" size={15} color={C.accentText} />
-                  <Text style={st.inviteShareTxt}>{inviteCode ? '공유' : '발급·공유'}</Text>
+                  <Text style={st.inviteShareTxt}>{inviteCode ? t('crw.share') : t('crw.issueShare')}</Text>
                 </Pressable>
                 {inviteCode && (
                   <Pressable onPress={confirmRegenInvite} disabled={inviteBusy} hitSlop={8} style={st.inviteRegenBtn}>
@@ -300,7 +301,7 @@ export default function CrewAdminScreen() {
                 style={({ pressed }) => [st.inviteSearchRow, shadows.sm, pressed && { opacity: 0.7 }]}
               >
                 <Icon name="person-add-outline" size={17} color={C.accentGrn} />
-                <Text style={st.inviteSearchTxt}>이름으로 검색해 초대</Text>
+                <Text style={st.inviteSearchTxt}>{t('crw.inviteByName')}</Text>
                 <View style={{ flex: 1 }} />
                 <Icon name="chevron-forward" size={16} color={C.faint} />
               </Pressable>
@@ -320,7 +321,7 @@ export default function CrewAdminScreen() {
               : (
                 <>
                   <Icon name={isOwner ? 'trash-outline' : 'exit-outline'} size={17} color={C.danger} />
-                  <Text style={st.leaveTxt}>{isOwner ? '크루 해체하기' : '크루 나가기'}</Text>
+                  <Text style={st.leaveTxt}>{isOwner ? t('crw.disbandAction') : t('crw.leaveTitle')}</Text>
                 </>
               )}
           </Pressable>

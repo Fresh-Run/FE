@@ -19,6 +19,7 @@
  */
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { t, tf, type StringKey } from '@/lib/i18n';
 import {
   ActivityIndicator,
   Alert,
@@ -47,11 +48,11 @@ import { useStyles, useTokens } from '@/hooks/use-tokens';
 // where the canvas has them; edit_crew desc trimmed of 공개 범위 — that is
 // owner-only 크루 정보 편집 territory the server key does cover, keep full).
 const PERM_DEFS: { key: keyof CrewPermissions; label: string; desc: string; danger: boolean }[] = [
-  { key: 'announcements', label: '공지 올리기',      desc: '크루 공지를 작성하고 관리해요',        danger: false },
-  { key: 'challenges',    label: '챌린지 생성·수정', desc: '크루 챌린지를 만들고 교체해요',        danger: false },
-  { key: 'edit_crew',     label: '크루 정보 수정',   desc: '이름·지역·소개와 커버·아이콘을 변경해요', danger: false },
-  { key: 'kick_members',  label: '멤버 추방',        desc: '크루원을 내보낼 수 있어요',            danger: true },
-  { key: 'manage_admins', label: '다른 운영진 임명', desc: '크루원을 운영진으로 지정·해제해요',    danger: true },
+  { key: 'announcements', label: 'crw.pAnn',   desc: 'crw.pAnnD',   danger: false },
+  { key: 'challenges',    label: 'crw.pCh',    desc: 'crw.pChD',    danger: false },
+  { key: 'edit_crew',     label: 'crw.pEdit',  desc: 'crw.pEditD',  danger: false },
+  { key: 'kick_members',  label: 'crw.pKick',  desc: 'crw.pKickD',            danger: true },
+  { key: 'manage_admins', label: 'crw.pAdmin', desc: 'crw.pAdminD', danger: true },
 ];
 
 // Toggle — shared house component now (components/toggle.tsx, 2026-07-23):
@@ -93,8 +94,8 @@ export default function CrewPermsScreen() {
   /** Delegation ceiling → why THIS viewer can't flip THIS key (null = can). */
   function lockReason(d: (typeof PERM_DEFS)[number]): string | null {
     if (iAmOwner) return null;
-    if (d.danger) return '크루장만 변경할 수 있어요';
-    if (!me?.permissions?.[d.key]) return '내가 가진 권한만 부여할 수 있어요';
+    if (d.danger) return t('crw.lockOwnerOnly');
+    if (!me?.permissions?.[d.key]) return t('crw.lockDelegation');
     return null;
   }
 
@@ -112,7 +113,7 @@ export default function CrewPermsScreen() {
       setFlash(true);
       setTimeout(() => router.back(), 700);
     } catch (e: unknown) {
-      Alert.alert('저장 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요.');
+      Alert.alert(t('runSave.saveFailTitle'), e instanceof Error ? e.message : t('auth.tryLater'));
       load(); // server truth wins back
     } finally {
       setSaving(false);
@@ -128,10 +129,10 @@ export default function CrewPermsScreen() {
         </View>
         <View style={{ flex: 1, minWidth: 0 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            <Text style={st.permLbl}>{d.label}</Text>
-            {d.danger && <View style={st.cautionChip}><Text style={st.cautionChipTxt}>주의</Text></View>}
+            <Text style={st.permLbl}>{t(d.label as StringKey)}</Text>
+            {d.danger && <View style={st.cautionChip}><Text style={st.cautionChipTxt}>{t('crw.caution')}</Text></View>}
           </View>
-          <Text style={st.permDesc}>{d.desc}</Text>
+          <Text style={st.permDesc}>{t(d.desc as StringKey)}</Text>
           {reason && <Text style={st.permLock}>{reason}</Text>}
         </View>
         <Toggle
@@ -153,7 +154,7 @@ export default function CrewPermsScreen() {
         <Pressable onPress={() => router.back()} hitSlop={12} style={st.backBtn}>
           <Icon name="arrow-back" size={20} color={C.text} />
         </Pressable>
-        <Text style={st.appBarTitle}>운영진 권한 설정</Text>
+        <Text style={st.appBarTitle}>{t('crw.permsTitle')}</Text>
         <View style={{ width: 36 }} />
       </View>
 
@@ -161,7 +162,7 @@ export default function CrewPermsScreen() {
         <View style={st.centered}><ActivityIndicator size="large" color={C.accent} /></View>
       ) : notFound ? (
         // demoted mid-flight / kicked / fetch failed — the canvas empty state
-        <View style={st.centered}><Text style={st.emptyTxt}>운영진을 찾을 수 없어요.</Text></View>
+        <View style={st.centered}><Text style={st.emptyTxt}>{t('crw.adminNotFound')}</Text></View>
       ) : (
         <>
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: S.gutter, paddingBottom: 24 }}>
@@ -171,13 +172,13 @@ export default function CrewPermsScreen() {
               <View style={{ flex: 1, minWidth: 0 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                   <Text style={st.idName} numberOfLines={1}>{target!.nickname}</Text>
-                  <View style={st.adminBadge}><Text style={st.adminBadgeTxt}>운영진</Text></View>
+                  <View style={st.adminBadge}><Text style={st.adminBadgeTxt}>{t('crw.roleAdmin')}</Text></View>
                 </View>
-                <Text style={st.idSub}>이번 챌린지 {(target!.challenge_km ?? 0).toFixed(1)}km</Text>
+                <Text style={st.idSub}>{tf('crw.thisChKm', { km: (target!.challenge_km ?? 0).toFixed(1) })}</Text>
               </View>
             </View>
 
-            <Text style={st.sectionTitle}>일반 권한</Text>
+            <Text style={st.sectionTitle}>{t('crw.permsGeneral')}</Text>
             <View style={st.permCard}>
               {safe.map((d, i) => (
                 <React.Fragment key={d.key}>
@@ -187,7 +188,7 @@ export default function CrewPermsScreen() {
               ))}
             </View>
 
-            <Text style={[st.sectionTitle, { color: C.danger }]}>주의가 필요한 권한</Text>
+            <Text style={[st.sectionTitle, { color: C.danger }]}>{t('crw.permsDanger')}</Text>
             <View style={[st.permCard, { borderWidth: 1.5, borderColor: C.danger + '44' }]}>
               {danger.map((d, i) => (
                 <React.Fragment key={d.key}>
@@ -197,7 +198,7 @@ export default function CrewPermsScreen() {
               ))}
             </View>
             <Text style={st.cautionCopy}>
-              이 권한들은 크루 구성에 큰 영향을 줄 수 있어요. 신뢰하는 운영진에게만 부여하세요.
+              {t('crw.permsDangerNote')}
             </Text>
           </ScrollView>
 
@@ -213,10 +214,10 @@ export default function CrewPermsScreen() {
               ) : flash ? (
                 <>
                   <Icon name="checkmark" size={18} color={C.accentGrn} />
-                  <Text style={[st.saveTxt, { color: C.accentGrn }]}>저장됨</Text>
+                  <Text style={[st.saveTxt, { color: C.accentGrn }]}>{t('crw.saved')}</Text>
                 </>
               ) : (
-                <Text style={st.saveTxt}>저장</Text>
+                <Text style={st.saveTxt}>{t('runSave.save')}</Text>
               )}
             </Pressable>
           </View>

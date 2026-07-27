@@ -15,6 +15,7 @@
 import { useFocusEffect } from '@react-navigation/native';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useState } from 'react';
+import { t, tf } from '@/lib/i18n';
 import {
   ActivityIndicator,
   Alert,
@@ -54,7 +55,7 @@ export default function CrewRequestsScreen() {
     if (!crewId) return;
     listJoinRequests(crewId)
       .then(list => { setRows(list); setError(null); })
-      .catch(e => setError(e instanceof Error ? e.message : '요청을 불러올 수 없어요'));
+      .catch(e => setError(e instanceof Error ? e.message : t('crw.reqLoadFail')));
   }, [crewId]);
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
@@ -66,11 +67,11 @@ export default function CrewRequestsScreen() {
     } catch (e: unknown) {
       if (e instanceof ApiError && e.status === 409) {
         // 정원 초과 — the request stays pending server-side (contract)
-        Alert.alert('정원 초과', '크루 정원이 가득 차 승인할 수 없어요. 요청은 대기 상태로 유지돼요.');
+        Alert.alert(t('crw.fullTitle'), t('crw.fullSub'));
       } else if (e instanceof ApiError && e.status === 404) {
         load(); // already decided elsewhere — stale row, refresh
       } else {
-        Alert.alert('승인 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요');
+        Alert.alert(t('crw.approveFail'), e instanceof Error ? e.message : t('runSave.saveFailBody'));
       }
     } finally {
       setBusyId(null);
@@ -78,11 +79,11 @@ export default function CrewRequestsScreen() {
   }
 
   function confirmReject(r: CrewJoinRequest) {
-    const name = r.nickname ?? '러너';
-    Alert.alert('가입 요청을 거절할까요?', `${name}님에게 알림은 가지 않고, 다시 신청할 수 있어요.`, [
-      { text: '취소', style: 'cancel' },
+    const name = r.nickname ?? t('home.runner');
+    Alert.alert(t('crw.rejectAsk'), tf('crw.rejectSub', { name }), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: '거절', style: 'destructive',
+        text: t('crw.reject'), style: 'destructive',
         onPress: async () => {
           setBusyId(r.id);
           try {
@@ -90,7 +91,7 @@ export default function CrewRequestsScreen() {
             setRows(prev => (prev ?? []).filter(x => x.id !== r.id));
           } catch (e: unknown) {
             if (e instanceof ApiError && e.status === 404) load();
-            else Alert.alert('거절 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요');
+            else Alert.alert(t('crw.rejectFail'), e instanceof Error ? e.message : t('runSave.saveFailBody'));
           } finally {
             setBusyId(null);
           }
@@ -108,7 +109,7 @@ export default function CrewRequestsScreen() {
         <Pressable onPress={() => router.back()} hitSlop={12} style={st.backBtn}>
           <Icon name="arrow-back" size={20} color={C.text} />
         </Pressable>
-        <Text style={st.appBarTitle}>가입 요청</Text>
+        <Text style={st.appBarTitle}>{t('crw.hRequests')}</Text>
         <View style={st.backBtn}>
           {count > 0 && (
             <View style={st.countPill}><Text style={st.countTxt}>{count}</Text></View>
@@ -120,7 +121,7 @@ export default function CrewRequestsScreen() {
         <View style={st.centered}>
           <Icon name="warning-outline" size={34} color={C.faint} />
           <Text style={st.stateTxt}>{error}</Text>
-          <Pressable onPress={load} style={st.retryBtn}><Text style={st.retryTxt}>다시 시도</Text></Pressable>
+          <Pressable onPress={load} style={st.retryBtn}><Text style={st.retryTxt}>{t('common.retry')}</Text></Pressable>
         </View>
       ) : rows === null ? (
         <View style={st.centered}><ActivityIndicator size="large" color={C.accent} /></View>
@@ -134,11 +135,11 @@ export default function CrewRequestsScreen() {
           ListEmptyComponent={
             <View style={st.centered}>
               <View style={st.emptyIcon}><Icon name="checkmark" size={26} color={C.faint} /></View>
-              <Text style={st.stateTxt}>대기 중인 가입 요청이 없어요.</Text>
+              <Text style={st.stateTxt}>{t('crw.noRequests')}</Text>
             </View>
           }
           renderItem={({ item }) => {
-            const name = item.nickname ?? '러너';
+            const name = item.nickname ?? t('home.runner');
             const busy = busyId === item.id;
             return (
               <View style={[st.card, shadows.sm]}>
@@ -159,10 +160,10 @@ export default function CrewRequestsScreen() {
                   <View style={st.btnRow}>
                     <Pressable onPress={() => approve(item)} style={({ pressed }) => [st.acceptBtn, pressed && { opacity: 0.85 }]}>
                       <Icon name="checkmark" size={15} color={C.accentText} />
-                      <Text style={st.acceptTxt}>수락</Text>
+                      <Text style={st.acceptTxt}>{t('crw.accept')}</Text>
                     </Pressable>
                     <Pressable onPress={() => confirmReject(item)} style={({ pressed }) => [st.rejectBtn, pressed && { opacity: 0.7 }]}>
-                      <Text style={st.rejectTxt}>거절</Text>
+                      <Text style={st.rejectTxt}>{t('crw.reject')}</Text>
                     </Pressable>
                   </View>
                 )}
