@@ -3,9 +3,6 @@
  */
 import { useFocusEffect } from '@react-navigation/native';
 import { regionName } from '@/lib/korea-regions';
-import { levelLabel } from '@/lib/crews-api';
-import { t, tf, type StringKey } from '@/lib/i18n';
-const DAY_LABEL_KEY: Record<string, StringKey> = { '월': 'dayS.mon', '화': 'dayS.tue', '수': 'dayS.wed', '목': 'dayS.thu', '금': 'dayS.fri', '토': 'dayS.sat', '일': 'dayS.sun' };
 import { router } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -37,12 +34,15 @@ import {
   type Crew,
 } from '@/hooks/use-crews';
 import { useCurrentLocation } from '@/hooks/use-current-location';
-import { getMyJoinRequests, searchCrews } from '@/lib/crews-api';
+import { levelLabel, getMyJoinRequests, searchCrews } from '@/lib/crews-api';
 import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { getCrewFilter, type CrewLocationFilter } from '@/store/crew-filter';
 import { useJoinRequests } from '@/store/join-requests';
 import { useQuota } from '@/store/use-quota';
+import { t, tf, type StringKey } from '@/lib/i18n';
+
+const DAY_LABEL_KEY: Record<string, StringKey> = { '월': 'dayS.mon', '화': 'dayS.tue', '수': 'dayS.wed', '목': 'dayS.thu', '금': 'dayS.fri', '토': 'dayS.sat', '일': 'dayS.sun' };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
