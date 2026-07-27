@@ -631,4 +631,10 @@ export const en: Record<keyof typeof ko, string> = {
   'chat.shareEmpty': 'No shareable runs — only public/followers runs can be shared',
   'chat.runTitleFallback': 'Run',
   'chat.delMsg': 'Delete message',
+  'fr.title': 'Suggested Runners',
+  'fr.follow': 'Follow',
+  'fr.requested': 'Requested',
+  'fr.following': 'Following',
+  'fr.runsN': '{n} runs',
+  'fr.failTitle': 'Something went wrong',
 };

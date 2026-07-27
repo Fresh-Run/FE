@@ -643,4 +643,10 @@ export const ko = {
   'chat.shareEmpty': '공유할 수 있는 러닝이 없어요 — 공개/팔로워 러닝만 공유돼요',
   'chat.runTitleFallback': '러닝',
   'chat.delMsg': '메시지 삭제',
+  'fr.title': '추천 러너',
+  'fr.follow': '팔로우',
+  'fr.requested': '요청됨',
+  'fr.following': '팔로잉',
+  'fr.runsN': '러닝 {n}회',
+  'fr.failTitle': '실패했어요',
 } as const;

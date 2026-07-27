@@ -95,6 +95,20 @@ export type UserSearchItem = {
 };
 
 /** q must be ≥2 chars (server 422 below); callers floor the debounce at 2. */
+/** 추천 러너 (friends discovery v1, BE v111) — STABLE CONTRACT, ranking
+    behind it is EVOLUTION-EXPECTED (deliberately-minimal public_run_count
+    desc today; activity/region/mutual signals later, zero FE change).
+    Server excludes self/following/blocked; locked accounts appear
+    nickname+avatar-only (search-contract privacy inherited). */
+export type SuggestedUser = {
+  user_id: string; nickname: string; avatar_url: string | null;
+  bio: string | null; is_following: boolean;
+  area: string | null; public_run_count: number;
+};
+export function getSuggestedUsers(limit = 20): Promise<SuggestedUser[]> {
+  return apiFetch<SuggestedUser[]>(`/api/users/suggested?limit=${limit}`);
+}
+
 export function searchUsers(q: string, limit = 20): Promise<UserSearchItem[]> {
   return apiFetch<UserSearchItem[]>(`/api/users/search?q=${encodeURIComponent(q.trim())}&limit=${limit}`);
 }
