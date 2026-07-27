@@ -1215,6 +1215,11 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 
 **핵심 판정: 스퍼 메커니즘은 그녀의 3부검(§8.13-8.15)이 이미 실험적으로 종결한 클래스** — 좌표 발명(Gemini 무지도) × T-map 전점방문 계약의 구조적 산물. **오늘의 신규 발견 = 인밴드 레인의 스퍼 무게이트 비대칭**: 데스크 실증 — 300m 골목 스퍼 = longest_retrace_m 609 → 그녀 자신의 §8.16 합격선(≤600) 위반이면서 유일한 라이브 게이트(오버캡 ≤800)는 통과, **인밴드 단독 후보는 게이트 자체가 없어 무조건 서빙**. 픽스 랭킹: ① 인밴드 스퍼 게이트 확장(if절 수준, 최고 레버리지) ② 스퍼 절제 후처리(가용성 보존 페어) ③ 앵커 dead_end 프로브 활성화(라이브 경로가 probe_dead_end=False로 호출 중) ④ 스냅-사이드 웨이포인트 드롭(M) ⑤ 프롬프트 = 사망 레인(§8.15 반증 3종, 재론 금지). 부수: _within_band 독스트링 −0.1 vs 상수 0.3 드리프트 · ANCHOR_EPIC 헤더 "미배선" vs 혼합 풀 라이브 코드 스테일. 풀 리포트 오너 메시지로 납품. STOP — 그녀 레인, 그녀 콜.
 
+## 🦆✅→🌐 DUCK PROMOTED [21:00] + I18N ENTERS THE LANE (2026-07-27)
+- DUCK-ENGAGE OWNER-VERIFIED [21:00] on staging build 10: cues 1→2→3 EACH dimmed and recovered — the multi-cycle inference is now an OBSERVATION; both duck edges verified explicit. PROMOTED → production group 3fe68091, promotion hash-tie MATCH. ROLLBACK FLOOR ADVANCES: 3fe68091.
+- ① 지연 re-run protocol ARMED (her send): dance first on promoted bytes → ~1km with music → EVERY cue dims-recovers → her green drops the letter line. (Plus her open items: tier grant · build/LA/duck-account answers.)
+- ② I18N STAGED: group b8ac9c0a (5 commits fe470f5→6538274), staging hash-tie ✓, byte-scan: ko markers hold at 1 (dictionary home) + en strings NEW on the wire ('Hold to finish', 'Great work!') + 언어 caption 1. Owner two-sided walk queued: ko regression sweep + the FIRST 언어→English core-loop flip.
+
 ## ✅ LA/MISSING-FEATURES INCIDENT — RESOLVED BY PROBE: DEMO ACCOUNT IS FREE-TIER (2026-07-27)
 - Live probe (recorded creds → /me/quota): **tier "free"**, 3/3 remaining, unlimited false. Her premium seeding was a BACKFILL, not a signup default — the demo account (minted after) missed it. The incident explains itself: her "missing features" walk = the free-tier table (no 오디오 코치 anywhere, 인사이트 locked, no PREMIUM badge) — CORRECT code, unintended tier. The reviewer-facing hazard was REAL and this caught it pre-review.
 - FIXES SEQUENCED (owner): ① 지연 tier=premium on 301990b8 lands FIRST → ② THEN the ASC review-notes PATCH on owner GO, text ruled verbatim: "데모 계정에 프리미엄 기능 활성화 — 오디오 코치는 설정에서 안내 간격 확인 후 러닝 시작 시 동작. 구독 결제는 출시 시 오픈" (appends to the existing GPS-caveat notes). Ruling stands: demo ends premium + notes line.
