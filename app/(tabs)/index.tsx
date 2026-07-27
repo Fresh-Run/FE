@@ -496,7 +496,7 @@ export default function HomeScreen() {
       if ((i + 1) % SUGGEST_EVERY_N === 0) out.push({ __suggest: `suggest-${i}` });
     });
     return out;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [tab, list, sr.available]);
   // No-swap pre-warm (ruling ③, 2026-07-23): fire track fetches at
   // data-arrival so cards are usually track-ready before the eye lands.
