@@ -2,6 +2,7 @@
 // Supabase reads/writes that lived in hooks/use-crews.ts before the migration.
 
 import { ApiError, apiFetch, apiRequest } from '@/lib/api';
+import { t, tf, type StringKey } from '@/lib/i18n';
 
 // ─── Types (Crew shape kept from the pre-migration hook — screens are typed
 //     against it; re-exported from hooks/use-crews.ts) ─────────────────────────
@@ -148,7 +149,7 @@ function mapMember(row: ServerMember): CrewMember {
     user_id:    row.user_id,
     role:       (row.role as 'owner' | 'admin' | 'member') ?? 'member',
     joined_at:  row.joined_at,
-    nickname:   row.nickname ?? '러너',
+    nickname:   row.nickname ?? t('home.runner'),
     challenge_km: row.challenge_km ?? 0,
     avatar_url: row.avatar_url ?? null,
     permissions: row.permissions ?? null,
@@ -160,11 +161,32 @@ function mapMember(row: ServerMember): CrewMember {
 // 둘러보기 필드 (guide §202): tags = 서버 정의 어휘 13종 (자유입력 아님 —
 // 목록 밖 값은 422), 저장 ≤5개·카드엔 2개. sido = 17개 표준명(korea-regions),
 // sigungu = 자유 문자열. lat/lng = 한국 bbox (거리순 정렬용).
-export const CREW_TAG_GROUPS: { label: string; tags: string[] }[] = [
-  { label: '시간대', tags: ['새벽', '아침', '저녁', '야간', '주말'] },
-  { label: '지형',   tags: ['평지', '트레일', '언덕'] },
-  { label: '분위기', tags: ['입문환영', '기록도전', '친목', '여성전용', '페이스그룹'] },
+// Tag VALUES are the server vocabulary (목록 밖 422) — wire stays ko; display
+// localizes via TAG_LABEL_KEY (the server-value enum class). Group labels are
+// keys resolved at render (static-capture rule).
+export const CREW_TAG_GROUPS: { label: StringKey; tags: string[] }[] = [
+  { label: 'tagG.time',    tags: ['새벽', '아침', '저녁', '야간', '주말'] },
+  { label: 'tagG.terrain', tags: ['평지', '트레일', '언덕'] },
+  { label: 'tagG.vibe',    tags: ['입문환영', '기록도전', '친목', '여성전용', '페이스그룹'] },
 ];
+export const TAG_LABEL_KEY: Record<string, StringKey> = {
+  새벽: 'tag.dawn', 아침: 'tag.morning', 저녁: 'tag.evening', 야간: 'tag.night', 주말: 'tag.weekend',
+  평지: 'tag.flat', 트레일: 'tag.trail', 언덕: 'tag.hill',
+  입문환영: 'tag.beginners', 기록도전: 'tag.record', 친목: 'tag.social', 여성전용: 'tag.womenOnly', 페이스그룹: 'tag.paceGroup',
+};
+export const LEVEL_LABEL_KEY: Record<string, StringKey> = {
+  입문: 'crw.lvBeginner', 중급: 'crw.lvMid', 고급: 'crw.lvAdv', 무관: 'crw.lvAny',
+};
+/** Localized level chip label — server level values render through this. */
+export function levelLabel(level: string): string {
+  const k = LEVEL_LABEL_KEY[level];
+  return k ? t(k) : level;
+}
+/** Localized tag chip label — server tag values render through this. */
+export function tagLabel(tag: string): string {
+  const k = TAG_LABEL_KEY[tag];
+  return k ? t(k) : tag;
+}
 export const CREW_TAG_MAX = 5;
 
 /** 둘러보기 discovery fields — sending sido/sigungu makes a crew findable in
@@ -400,7 +422,7 @@ export async function uploadCrewImage(
     headers: { 'Content-Type': 'image/jpeg' },
     body: bytes,
   });
-  if (!put.ok) throw new Error(`업로드 실패 (${put.status})`);
+  if (!put.ok) throw new Error(tf('crw.uploadFail', { s: put.status }));
   const busted = `${public_url}?v=${Date.now()}`;
   await apiFetch<void>(`/api/crews/${crewId}`, {
     method: 'PATCH',

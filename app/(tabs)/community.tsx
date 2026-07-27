@@ -3,6 +3,9 @@
  */
 import { useFocusEffect } from '@react-navigation/native';
 import { regionName } from '@/lib/korea-regions';
+import { levelLabel } from '@/lib/crews-api';
+import { t, tf, type StringKey } from '@/lib/i18n';
+const DAY_LABEL_KEY: Record<string, StringKey> = { '월': 'dayS.mon', '화': 'dayS.tue', '수': 'dayS.wed', '목': 'dayS.thu', '금': 'dayS.fri', '토': 'dayS.sat', '일': 'dayS.sun' };
 import { router } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -55,7 +58,7 @@ function CommTabs({ active, onChange }: { active: string; onChange: (v: string) 
   const st = useStyles(makeSt);
   return (
     <View style={st.tabRow}>
-      {([{ id: 'crew', label: '크루' }, { id: 'discover', label: '둘러보기' }]).map(t => {
+      {([{ id: 'crew', label: t('com.tabCrew') }, { id: 'discover', label: t('com.tabDiscover') }]).map(t => {
         const on = active === t.id;
         return (
           <Pressable key={t.id} onPress={() => onChange(t.id)} style={st.tabBtn}>
@@ -78,7 +81,7 @@ function LocationCard({ filter, placeName, onPress }: {
   const C = useTokens();
   const st = useStyles(makeSt);
   const label = filter.mode === 'current'
-    ? `현재 위치 · ${placeName ?? '위치 확인 중'}`
+    ? tf('com.currentLoc', { name: placeName ?? t('com.locating') })
     : `${regionName(filter.sido)}${filter.sigungu ? ` · ${regionName(filter.sigungu)}` : ''}`;
   return (
     <Pressable onPress={onPress} style={({ pressed }) => [st.locCard, shadows.sm, pressed && { opacity: 0.8 }]}>
@@ -86,7 +89,7 @@ function LocationCard({ filter, placeName, onPress }: {
         <Icon name={filter.mode === 'current' ? 'locate' : 'location'} size={16} color={C.accentGrn} />
       </View>
       <View style={{ flex: 1, minWidth: 0 }}>
-        <Text style={st.locLabel}>검색 위치</Text>
+        <Text style={st.locLabel}>{t('com.searchLoc')}</Text>
         <Text style={st.locValue} numberOfLines={1}>{label}</Text>
       </View>
       <Icon name="chevron-forward" size={16} color={C.faint} />
@@ -112,10 +115,10 @@ function ErrorState({ message, onRetry }: { message: string; onRetry: () => void
   return (
     <View style={st.centered}>
       <Icon name="warning-outline" size={36} color={C.faint} />
-      <Text style={st.stateTitle}>불러올 수 없어요</Text>
+      <Text style={st.stateTitle}>{t('com.loadFail')}</Text>
       <Text style={[st.stateSub, { marginTop: 2 }]}>{message}</Text>
       <Pressable onPress={onRetry} style={st.retryBtn}>
-        <Text style={st.retryTxt}>다시 시도</Text>
+        <Text style={st.retryTxt}>{t('common.retry')}</Text>
       </Pressable>
     </View>
   );
@@ -148,10 +151,10 @@ function BrowseCrewCard({
   const full = isFull(crew);
   const tags = crew.active_days?.slice(0, 4) ?? [];
   // Badge state priority: member > pending (shared store) > full > policy label
-  const badgeLabel = isMember ? '가입됨'
-    : pending ? '신청됨'
-    : full ? '모집 마감'
-    : crew.join_policy === 'approval' ? '가입 신청' : '가입';
+  const badgeLabel = isMember ? t('com.joined')
+    : pending ? t('com.pending')
+    : full ? t('com.closed')
+    : crew.join_policy === 'approval' ? t('com.apply') : t('com.join');
   const badgeDisabled = isMember || pending || full;
 
   return (
@@ -166,7 +169,7 @@ function BrowseCrewCard({
         <View style={st.cardMeta}>
           <Icon name="people-outline" size={12} color={C.faint} />
           <Text style={st.cardMetaTxt} numberOfLines={1}>
-            {crew.member_count}{crew.max_members !== null ? `/${crew.max_members}` : ''}명 · {crew.area ?? ''}
+            {tf('com.nOfMax', { n: `${crew.member_count}${crew.max_members !== null ? `/${crew.max_members}` : ''}` })} · {crew.area ?? ''}
           </Text>
         </View>
         {/* 당근식 location line — distance only in lat/lng mode; location-
@@ -182,8 +185,8 @@ function BrowseCrewCard({
         )}
         {(tags.length > 0 || crew.level !== '무관') && (
           <View style={st.tagsRow}>
-            {crew.level !== '무관' && <View style={st.tag}><Text style={st.tagTxt}>{crew.level}</Text></View>}
-            {tags.map(d => <View key={d} style={st.tag}><Text style={st.tagTxt}>{d}</Text></View>)}
+            {crew.level !== '무관' && <View style={st.tag}><Text style={st.tagTxt}>{levelLabel(crew.level)}</Text></View>}
+            {tags.map(d => <View key={d} style={st.tag}><Text style={st.tagTxt}>{t(DAY_LABEL_KEY[d] ?? 'dayS.mon')}</Text></View>)}
           </View>
         )}
       </View>
@@ -227,18 +230,18 @@ function MyCrewCard({ crew, onPress }: { crew: Crew; onPress: () => void }) {
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
           <Text style={st.cardName} numberOfLines={1}>{crew.name}</Text>
           {crew.myRole === 'owner' && (
-            <View style={st.ownerBadge}><Text style={st.ownerTxt}>크루장</Text></View>
+            <View style={st.ownerBadge}><Text style={st.ownerTxt}>{t('crw.roleOwner')}</Text></View>
           )}
         </View>
         <View style={st.cardMeta}>
           <Icon name="people-outline" size={12} color={C.faint} />
           <Text style={st.cardMetaTxt} numberOfLines={1}>
-            {crew.member_count}명 · {crew.area ?? ''}
+            {tf('crw.nMembers', { n: crew.member_count })} · {crew.area ?? ''}
           </Text>
         </View>
         {(crew.level !== '무관' || crew.sport) && (
           <View style={st.tagsRow}>
-            {crew.level !== '무관' && <View style={st.tag}><Text style={st.tagTxt}>{crew.level}</Text></View>}
+            {crew.level !== '무관' && <View style={st.tag}><Text style={st.tagTxt}>{levelLabel(crew.level)}</Text></View>}
             {crew.sport && <View style={st.tag}><Text style={st.tagTxt}>{crew.sport}</Text></View>}
           </View>
         )}
@@ -338,12 +341,12 @@ function DiscoverTab() {
         router.push({ pathname: '/(community)/crew-detail' as any, params: { crewId: crew.id } });
       } else if (result === 'pending') {
         setPending(crew.id, true);
-        Alert.alert('가입 신청 완료', '크루장이 승인하면 알려드릴게요.');
+        Alert.alert(t('crw.appliedDone'), t('crw.appliedDoneSub'));
       } else {
-        Alert.alert('가입 실패', '이미 가입한 크루예요');
+        Alert.alert(t('com.joinFail'), t('crw.alreadyJoined'));
       }
     } catch (e: unknown) {
-      Alert.alert('가입 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요');
+      Alert.alert(t('com.joinFail'), e instanceof Error ? e.message : t('runSave.saveFailBody'));
     }
   }
 
@@ -369,7 +372,7 @@ function DiscoverTab() {
             <TextInput
               value={query}
               onChangeText={setQuery}
-              placeholder="크루 이름·지역·소개 검색"
+              placeholder={t('com.searchPh')}
               placeholderTextColor={C.faint}
               autoCorrect={false}
               returnKeyType="search"
@@ -384,7 +387,7 @@ function DiscoverTab() {
           {searching ? (
             <View style={st.toggleRow}>
               <Text style={st.toggleCount}>
-                {searchResults === null ? '검색 중…' : `검색 결과 ${visible.length}개`}
+                {searchResults === null ? t('com.searching') : tf('com.nResults', { n: visible.length })}
               </Text>
             </View>
           ) : (
@@ -395,10 +398,10 @@ function DiscoverTab() {
                 onPress={() => router.push('/region-picker' as never)}
               />
               <View style={st.toggleRow}>
-                <Text style={st.toggleCount}>{visible.length}개 크루</Text>
+                <Text style={st.toggleCount}>{tf('com.nCrews', { n: visible.length })}</Text>
                 <Pressable onPress={() => setShowFull(v => !v)} style={st.toggleBtn}>
                   <Text style={[st.toggleLabel, { color: showFull ? C.accentGrn : C.sub }]}>
-                    {showFull ? '가입 가능한 크루만 보기' : '모집 마감 크루도 보기'}
+                    {showFull ? t('com.onlyOpen') : t('com.showFull')}
                   </Text>
                   <View style={[st.switch, { backgroundColor: showFull ? C.accent : C.border }]}>
                     <View style={[st.switchThumb, { left: showFull ? 18 : 2 }]} />
@@ -412,7 +415,7 @@ function DiscoverTab() {
       ListEmptyComponent={
         searching && searchResults === null
           ? <ActivityIndicator size="small" color={C.faint} style={{ paddingTop: 40 }} />
-          : <EmptyState text={searching ? '검색 결과가 없어요' : '조건에 맞는 크루가 없어요'} />
+          : <EmptyState text={searching ? t('region.noResults') : t('com.noMatch')} />
       }
       contentContainerStyle={{ paddingHorizontal: S.gutter, paddingBottom: tabBarInset }}
       ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
@@ -453,7 +456,7 @@ function InviteCodeSheet({
       setPreview({ ...row, join_policy: (row.join_policy as 'open' | 'approval') ?? 'open' } as unknown as Crew);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : '';
-      setError(msg.includes('(404)') || msg.includes('찾을 수') ? '코드를 확인해 주세요' : msg || '코드를 확인해 주세요');
+      setError(msg.includes('(404)') || msg.includes('찾을 수') ? t('com.codeCheck') : msg || t('com.codeCheck'));
     } finally {
       setBusy(false);
     }
@@ -468,7 +471,7 @@ function InviteCodeSheet({
       close();
       onJoined(joined.id);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : '가입에 실패했어요');
+      setError(e instanceof Error ? e.message : t('crw.joinFail'));
       setBusy(false);
     }
   }
@@ -481,15 +484,15 @@ function InviteCodeSheet({
       <Pressable style={ics.overlay} onPress={close}>
         <Pressable style={[ics.sheet, { paddingBottom: Math.max(insets.bottom, 12) + 12 }]} onPress={() => {}}>
           <View style={ics.handleRow}><View style={ics.handle} /></View>
-          <Text style={ics.title}>초대 코드로 가입</Text>
-          <Text style={ics.sub}>크루장에게 받은 8자리 코드를 입력하세요</Text>
+          <Text style={ics.title}>{t('com.codeTitle')}</Text>
+          <Text style={ics.sub}>{t('com.codeSub8')}</Text>
 
           {!preview ? (
             <>
               <TextInput
                 value={code}
                 onChangeText={t => { setCode(t.toUpperCase()); setError(null); }}
-                placeholder="예: AB2CD3EF"
+                placeholder={t('com.codePh')}
                 placeholderTextColor={C.faint}
                 autoCapitalize="characters"
                 autoCorrect={false}
@@ -504,7 +507,7 @@ function InviteCodeSheet({
               >
                 {busy
                   ? <ActivityIndicator size="small" color={C.accentText} />
-                  : <Text style={ics.primaryTxt}>확인</Text>}
+                  : <Text style={ics.primaryTxt}>{t('com.confirm')}</Text>}
               </Pressable>
             </>
           ) : (
@@ -520,7 +523,7 @@ function InviteCodeSheet({
                   <View style={st.cardMeta}>
                     <Icon name="people-outline" size={12} color={C.faint} />
                     <Text style={st.cardMetaTxt} numberOfLines={1}>
-                      {preview.member_count}명 · {preview.area ?? ''}{preview.is_public ? '' : ' · 비공개'}
+                      {tf('crw.nMembers', { n: preview.member_count })} · {preview.area ?? ''}{preview.is_public ? '' : t('com.privateSuffix')}
                     </Text>
                   </View>
                 </View>
@@ -529,10 +532,10 @@ function InviteCodeSheet({
               <Pressable onPress={handleJoin} disabled={busy} style={[ics.primaryBtn, { opacity: busy ? 0.6 : 1 }]}>
                 {busy
                   ? <ActivityIndicator size="small" color={C.accentText} />
-                  : <Text style={ics.primaryTxt}>이 크루에 가입하기</Text>}
+                  : <Text style={ics.primaryTxt}>{t('com.joinThis')}</Text>}
               </Pressable>
               <Pressable onPress={() => { setPreview(null); setError(null); }} style={ics.secondaryBtn}>
-                <Text style={ics.secondaryTxt}>다른 코드 입력</Text>
+                <Text style={ics.secondaryTxt}>{t('com.otherCode')}</Text>
               </Pressable>
             </>
           )}
@@ -582,7 +585,7 @@ function MyCrewsTab() {
   }, [refetch]));
 
   if (loading)   return <LoadingState />;
-  if (signedOut) return <EmptyState text="로그인이 필요해요" />;
+  if (signedOut) return <EmptyState text={t('com.loginNeeded')} />;
   if (error)     return <ErrorState message={error} onRetry={refetch} />;
 
   // Split by ownership (myRole is derived from crews.owner_id — the backend's
@@ -598,7 +601,7 @@ function MyCrewsTab() {
       {/* Owned crews — dashed create-placeholder is the empty state */}
       <View style={{ paddingHorizontal: S.gutter, paddingTop: S.xl }}>
         <View style={st.sectionHead}>
-          <Text style={st.sectionTitle}>내가 만든 크루</Text>
+          <Text style={st.sectionTitle}>{t('com.myCrews')}</Text>
           {(() => {
             // Lock only when free tier already owns a crew (guide: 무료 1개 한도)
             const createLocked = !isPremium && owned.length >= 1;
@@ -606,14 +609,14 @@ function MyCrewsTab() {
               <Pressable
                 onPress={() => createLocked
                   ? Alert.alert(
-                      '프리미엄이 필요해요',
-                      '무료 플랜은 크루를 1개까지 만들 수 있어요. 크루를 삭제하거나 소유권을 위임하면 다시 만들 수 있어요.',
+                      t('com.premiumTitle'),
+                      t('com.premiumBody'),
                     ) // TODO(PR-2): push the premium upsell screen once it exists
                   : router.push('/(community)/crew-create' as any)}
                 style={({ pressed }) => [st.createBtn, { opacity: pressed ? 0.7 : createLocked ? 0.45 : 1 }]}
               >
                 <Icon name={createLocked ? 'lock-closed-outline' : 'add'} size={13} color={C.accentGrn} />
-                <Text style={st.createTxt}>크루 생성</Text>
+                <Text style={st.createTxt}>{t('crw.title')}</Text>
               </Pressable>
             );
           })()}
@@ -630,8 +633,8 @@ function MyCrewsTab() {
               <Icon name="people-outline" size={20} color={C.accentGrn} />
             </View>
             <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={st.emptyDashedTitle}>직접 크루 만들기</Text>
-              <Text style={st.emptyDashedSub}>러너들을 모아 함께 달려보세요</Text>
+              <Text style={st.emptyDashedTitle}>{t('com.makeCrew')}</Text>
+              <Text style={st.emptyDashedSub}>{t('com.makeCrewSub')}</Text>
             </View>
             <Icon name="chevron-forward" size={16} color={C.faint} />
           </Pressable>
@@ -654,8 +657,8 @@ function MyCrewsTab() {
             <Icon name="ticket-outline" size={18} color={C.accentGrn} />
           </View>
           <View style={{ flex: 1, minWidth: 0 }}>
-            <Text style={st.codeTitle}>초대 코드로 가입</Text>
-            <Text style={st.codeSub}>크루장에게 받은 코드를 입력하세요</Text>
+            <Text style={st.codeTitle}>{t('com.codeTitle')}</Text>
+            <Text style={st.codeSub}>{t('com.codeSub')}</Text>
           </View>
           <Icon name="chevron-forward" size={16} color={C.faint} />
         </Pressable>
@@ -672,9 +675,9 @@ function MyCrewsTab() {
 
       {/* Joined crews */}
       <View style={{ paddingHorizontal: S.gutter, paddingTop: S.xl }}>
-        <Text style={[st.sectionTitle, { marginBottom: 13 }]}>참여한 크루</Text>
+        <Text style={[st.sectionTitle, { marginBottom: 13 }]}>{t('com.joinedCrews')}</Text>
         {joined.length === 0 ? (
-          <EmptyState text="참여한 크루가 없어요" />
+          <EmptyState text={t('com.noJoined')} />
         ) : (
           <View style={{ gap: 13 }}>
             {joined.map(c => (
@@ -699,8 +702,8 @@ export default function CommunityScreen() {
     <View style={[st.root, { paddingTop: insets.top }]}>
       <View style={st.header}>
         <View style={{ flex: 1, minWidth: 0 }}>
-          <Text style={st.title}>커뮤니티</Text>
-          <Text style={st.subtitle}>내 크루와 함께 목표를 달려요</Text>
+          <Text style={st.title}>{t('com.title')}</Text>
+          <Text style={st.subtitle}>{t('com.subtitle')}</Text>
         </View>
         {/* 검색 (canvas FrUserSearch entry) — 유저/크루 통합 검색 */}
         <Pressable onPress={() => router.push('/(community)/user-search' as never)} hitSlop={10} style={st.searchIconBtn}>

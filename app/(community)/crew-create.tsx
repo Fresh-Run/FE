@@ -34,7 +34,7 @@ import { Icon } from '@/components/ui';
 import { Toggle } from '@/components/toggle';
 import { NumberWheelRow } from '@/components/wheel-sheet';
 import { createChallenge, dateToKstIsoDay, kstDateStr } from '@/lib/challenges-api';
-import { createCrew, CREW_TAG_GROUPS, CREW_TAG_MAX, type Crew, type CrewLevel } from '@/lib/crews-api';
+import { createCrew, CREW_TAG_GROUPS, CREW_TAG_MAX, tagLabel, type Crew, type CrewLevel } from '@/lib/crews-api';
 import { regionName } from '@/lib/korea-regions';
 import { useCurrentLocation } from '@/hooks/use-current-location';
 import { accentShadow, radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
@@ -164,9 +164,9 @@ export function TagPicker({ selected, onToggle }: { selected: string[]; onToggle
       </View>
       {CREW_TAG_GROUPS.map(g => (
         <View key={g.label} style={{ marginTop: 6 }}>
-          <Text style={st.tagGroupLabel}>{g.label}</Text>
+          <Text style={st.tagGroupLabel}>{t(g.label)}</Text>
           <View style={st.chipRow}>
-            {g.tags.map(t => <Chip key={t} label={t} on={selected.includes(t)} onPress={() => onToggle(t)} />)}
+            {g.tags.map(tag => <Chip key={tag} label={tagLabel(tag)} on={selected.includes(tag)} onPress={() => onToggle(tag)} />)}
           </View>
         </View>
       ))}
