@@ -100,7 +100,7 @@ function RunCard({ run, units, mapLive, onOpen }: {
           {([
             [fmtDist(run.distance_km, units, 1), distUnit(units), t('runSave.statDist')],
             [fmtDuration(run.duration_sec), '', t('res.time')],
-            [run.avg_pace_sec_per_km != null ? fmtPaceIn(run.avg_pace_sec_per_km, units) : '--', paceUnit(units), '페이스'],
+            [run.avg_pace_sec_per_km != null ? fmtPaceIn(run.avg_pace_sec_per_km, units) : '--', paceUnit(units), t('res.pace')],
           ] as [string, string, string][]).map(([val, unit, label], i) => (
             <View key={i} style={{ gap: 2 }}>
               <Text style={st.statVal}>{val}{unit ? <Text style={st.statUnit}> {unit}</Text> : null}</Text>

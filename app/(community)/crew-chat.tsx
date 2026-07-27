@@ -72,6 +72,7 @@ import { supabase } from '@/lib/supabase';
 import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { useSettings } from '@/store/use-settings';
+import { t, tf } from '@/lib/i18n';
 
 const POLL_MS = 20_000; // guide §214: 20~30s while the room is active
 
@@ -214,7 +215,7 @@ export default function CrewChatScreen() {
       setMessages(prev => prev && !prev.some(m => m.id === msg.id) ? [msg, ...prev] : prev);
       setSharePickerOpen(false);
     } catch (e: unknown) {
-      Alert.alert('공유 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요.');
+      Alert.alert(t('chat.shareFail'), e instanceof Error ? e.message : t('auth.tryLater'));
     } finally {
       setSharingId(null);
     }
@@ -245,16 +246,16 @@ export default function CrewChatScreen() {
 
   function confirmDelete(m: ChatMessage) {
     setSheetFor(null);
-    Alert.alert('메시지를 삭제할까요?', '삭제된 메시지는 모두에게 "삭제된 메시지예요"로 보여요.', [
-      { text: '취소', style: 'cancel' },
+    Alert.alert(t('chat.delAsk'), t('chat.delSub'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: '삭제', style: 'destructive',
+        text: t('common.delete'), style: 'destructive',
         onPress: async () => {
           try {
             await deleteMessage(crewId!, m.id);
             setMessages(prev => prev?.map(x => x.id === m.id ? { ...x, deleted: true, content: null } : x) ?? null);
           } catch (e: unknown) {
-            Alert.alert('삭제 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요.');
+            Alert.alert(t('annd.delFailT'), e instanceof Error ? e.message : t('auth.tryLater'));
           }
         },
       },
@@ -267,10 +268,10 @@ export default function CrewChatScreen() {
     setMuted(next);
     try {
       await setMute(crewId, next);
-      showToast(next ? '이 채팅방 알림을 껐어요' : '이 채팅방 알림을 켰어요');
+      showToast(next ? t('chat.mutedOn') : t('chat.mutedOff'));
     } catch {
       setMuted(!next);
-      showToast('변경하지 못했어요');
+      showToast(t('chat.changeFail'));
     }
   }
 
@@ -322,7 +323,7 @@ export default function CrewChatScreen() {
               <Text style={[st.bubbleTxt, { color: C.accentText }]}>{row.content}</Text>
             </View>
             <Text style={[st.pendingTxt, row.failed && { color: C.danger, fontWeight: '700' }]}>
-              {row.failed ? '전송 실패 · 눌러서 다시 시도' : '전송 중…'}
+              {row.failed ? t('chat.sendFailRow') : t('chat.sending')}
             </Text>
           </View>
         </Pressable>
@@ -343,14 +344,14 @@ export default function CrewChatScreen() {
           <Avatar name={null} size={30} initialsRatio={0.4} />
           <View style={st.msgCol}>
             <Text style={st.senderLine}>
-              가려진 사용자 <Text style={st.whenTxt}>· {fmtWhen(m.created_at)}</Text>
+              {t('chat.hiddenUser')} <Text style={st.whenTxt}>· {fmtWhen(m.created_at)}</Text>
             </Text>
             <Pressable
               onLongPress={canModDelete ? () => setSheetFor(m) : undefined}
               delayLongPress={400}
               style={[st.bubble, st.bubbleOther, st.bubbleDeleted]}
             >
-              <Text style={st.deletedTxt}>가려진 메시지</Text>
+              <Text style={st.deletedTxt}>{t('chat.hiddenMsg')}</Text>
             </Pressable>
             <ReactionChips m={m} />
           </View>
@@ -364,8 +365,8 @@ export default function CrewChatScreen() {
       const title = typeof m.payload?.title === 'string' ? m.payload.title : null;
       const annId = typeof m.payload?.announcement_id === 'string' ? m.payload.announcement_id : null;
       const copy = m.content === 'announcement'
-        ? '새 공지가 올라왔어요'
-        : '크루 소식이 있어요'; // unknown render keys degrade gracefully
+        ? t('chat.sysNewAnn')
+        : t('chat.sysNews'); // unknown render keys degrade gracefully
       return (
         <View style={st.sysWrap}>
           <Pressable
@@ -377,18 +378,18 @@ export default function CrewChatScreen() {
           >
             <View style={st.sysHead}>
               <Icon name="megaphone-outline" size={13} color={C.accentGrn} />
-              <Text style={st.sysTag}>공지</Text>
+              <Text style={st.sysTag}>{t('annd.title')}</Text>
               <Text style={st.sysWhen}>{fmtWhen(m.created_at)}</Text>
             </View>
             <Text style={st.sysTitle} numberOfLines={2}>{title ?? copy}</Text>
-            <Text style={st.sysSub}>{m.sender_nickname ?? '운영진'} · {copy}</Text>
+            <Text style={st.sysSub}>{m.sender_nickname ?? t('chat.sysAdminFallback')} · {copy}</Text>
           </Pressable>
           <ReactionChips m={m} />
         </View>
       );
     }
     const mine = m.sender_id != null && m.sender_id === myUid;
-    const name = m.sender_nickname ?? '러너';
+    const name = m.sender_nickname ?? t('home.runner');
     // system is delete-proof by contract; run_share/text follow the v1 rule
     const canDelete = !m.deleted && m.type !== 'system' && (mine || canManage);
 
@@ -435,7 +436,7 @@ export default function CrewChatScreen() {
                 ? <RealMap height={92} borderRadius={0} polyline={line} />
                 : <MiniMap seed={rp.run_id} height={92} borderRadius={0} />}
               <View style={st.runCardBody}>
-                <Text style={st.runCardTitle} numberOfLines={1}>{rp.title ?? '러닝 기록'}</Text>
+                <Text style={st.runCardTitle} numberOfLines={1}>{rp.title ?? t('chat.runFallback')}</Text>
                 <View style={st.runCardStats}>
                   <Text style={st.runCardKm}>{fmtDist(rp.distance_km, units, 2)}{distUnit(units)}</Text>
                   <Text style={st.runCardStat}>{fmtDuration(rp.duration_sec)}</Text>
@@ -464,7 +465,7 @@ export default function CrewChatScreen() {
     // hide quietly — the renderer must not crash on her v2 contract ──
     if (m.type !== 'text' && !m.content && !m.deleted) return null;
     const bubble = m.deleted
-      ? <Text style={st.deletedTxt}>삭제된 메시지예요</Text>
+      ? <Text style={st.deletedTxt}>{t('chat.deletedMsg')}</Text>
       : <Text style={[st.bubbleTxt, mine && { color: C.accentText }]}>{m.content}</Text>;
 
     return (
@@ -514,11 +515,11 @@ export default function CrewChatScreen() {
         <Pressable onPress={() => router.back()} hitSlop={12} style={st.backBtn}>
           <Icon name="arrow-back" size={20} color={C.text} />
         </Pressable>
-        <Text style={st.appBarTitle} numberOfLines={1}>{crewName ?? '크루 채팅'}</Text>
+        <Text style={st.appBarTitle} numberOfLines={1}>{crewName ?? t('chat.title')}</Text>
         <Pressable onPress={toggleMute} hitSlop={8} style={[st.bellBtn, !muted && { backgroundColor: C.accentDim }]}>
           <Icon name={muted ? 'notifications-off-outline' : 'notifications-outline'} size={16} color={muted ? C.faint : C.accentGrn} />
         </Pressable>
-        {memberCount ? <Text style={st.memberCount}>{memberCount}명</Text> : null}
+        {memberCount ? <Text style={st.memberCount}>{tf('crw.nMembers', { n: memberCount })}</Text> : null}
       </View>
 
       {toast && <View style={st.toast}><Text style={st.toastTxt}>{toast}</Text></View>}
@@ -543,7 +544,7 @@ export default function CrewChatScreen() {
           />
           {messages.length === 0 && pending.length === 0 && (
             <View style={st.emptyWrap} pointerEvents="none">
-              <Text style={st.emptyTxt}>첫 메시지를 보내 크루 채팅을 시작해 보세요</Text>
+              <Text style={st.emptyTxt}>{t('chat.empty')}</Text>
             </View>
           )}
         </View>
@@ -557,7 +558,7 @@ export default function CrewChatScreen() {
         <TextInput
           value={draft}
           onChangeText={v => setDraft(v.slice(0, 2000))}
-          placeholder="메시지 보내기..."
+          placeholder={t('chat.inputPh')}
           placeholderTextColor={C.faint}
           style={st.input}
           multiline
@@ -567,7 +568,7 @@ export default function CrewChatScreen() {
           disabled={!draft.trim()}
           style={[st.sendBtn, !draft.trim() && st.sendBtnOff]}
         >
-          <Text style={[st.sendTxt, !draft.trim() && { color: C.faint }]}>전송</Text>
+          <Text style={[st.sendTxt, !draft.trim() && { color: C.faint }]}>{t('chat.send')}</Text>
         </Pressable>
       </View>
 
@@ -576,11 +577,11 @@ export default function CrewChatScreen() {
         <Pressable style={st.sheetOverlay} onPress={() => setSharePickerOpen(false)}>
           <Pressable style={[st.sheet, { maxHeight: '68%', paddingBottom: Math.max(insets.bottom, 12) + 8 }]} onPress={() => {}}>
             <View style={st.sheetHandleRow}><View style={st.sheetHandle} /></View>
-            <Text style={st.shareTitle}>러닝 기록 공유</Text>
+            <Text style={st.shareTitle}>{t('chat.shareRun')}</Text>
             {shareRuns === null ? (
               <ActivityIndicator size="small" color={C.accent} style={{ paddingVertical: 24 }} />
             ) : shareRuns.length === 0 ? (
-              <Text style={st.shareEmpty}>공유할 수 있는 러닝이 없어요 — 공개/팔로워 러닝만 공유돼요</Text>
+              <Text style={st.shareEmpty}>{t('chat.shareEmpty')}</Text>
             ) : (
               <FlatList
                 data={shareRuns}
@@ -592,7 +593,7 @@ export default function CrewChatScreen() {
                     style={({ pressed }) => [st.shareRow, pressed && { opacity: 0.7 }]}
                   >
                     <View style={{ flex: 1, minWidth: 0 }}>
-                      <Text style={st.shareRowTitle} numberOfLines={1}>{item.title ?? '러닝'}</Text>
+                      <Text style={st.shareRowTitle} numberOfLines={1}>{item.title ?? t('chat.runTitleFallback')}</Text>
                       <Text style={st.shareRowSub}>
                         {fmtWhen(item.ran_at)} · {fmtDist(item.distance_km, units, 2)}{distUnit(units)}
                       </Text>
@@ -620,7 +621,7 @@ export default function CrewChatScreen() {
               style={({ pressed }) => [st.sheetRow, pressed && { opacity: 0.7 }]}
             >
               <Icon name="trash-outline" size={19} color={C.danger} />
-              <Text style={[st.sheetRowTxt, { color: C.danger }]}>메시지 삭제</Text>
+              <Text style={[st.sheetRowTxt, { color: C.danger }]}>{t('chat.delMsg')}</Text>
             </Pressable>
           </Pressable>
         </Pressable>
