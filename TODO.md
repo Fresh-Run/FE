@@ -1217,7 +1217,7 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 
 ## ✅ LA/MISSING-FEATURES INCIDENT — RESOLVED BY PROBE: DEMO ACCOUNT IS FREE-TIER (2026-07-27)
 - Live probe (recorded creds → /me/quota): **tier "free"**, 3/3 remaining, unlimited false. Her premium seeding was a BACKFILL, not a signup default — the demo account (minted after) missed it. The incident explains itself: her "missing features" walk = the free-tier table (no 오디오 코치 anywhere, 인사이트 locked, no PREMIUM badge) — CORRECT code, unintended tier. The reviewer-facing hazard was REAL and this caught it pre-review.
-- FIXES ARMED: ① 지연 server-side tier=premium on 301990b8 (a CORRECTION to her own intended default, not an upgrade) — her action, fold into the ping ② honest review-notes line via ASC API — my desk action on GO. Ruling stands: demo ends premium + notes line.
+- FIXES SEQUENCED (owner): ① 지연 tier=premium on 301990b8 lands FIRST → ② THEN the ASC review-notes PATCH on owner GO, text ruled verbatim: "데모 계정에 프리미엄 기능 활성화 — 오디오 코치는 설정에서 안내 간격 확인 후 러닝 시작 시 동작. 구독 결제는 출시 시 오픈" (appends to the existing GPS-caveat notes). Ruling stands: demo ends premium + notes line.
 - Residuals: LA absence within the walk still wants her build/toggle answer (free tier doesn't gate LA — branch ③ stays closed); her banked duck-green still needs WHICH ACCOUNT + WHICH BUILD (free demo account cannot fire cues at all — a duck-green implies her premium account).
 
 ## 🔍 LA NO-SHOW INCIDENT (지연, ASC 데모 계정 워크) — BRANCH ③ CLOSED BY SOURCE (2026-07-27; awaiting her suspect-① check)
