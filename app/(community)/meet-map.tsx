@@ -40,6 +40,7 @@ import { Icon } from '@/components/ui';
 import { updateCrew } from '@/lib/crews-api';
 import { accentShadow, radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
+import { t, tf } from '@/lib/i18n';
 
 export default function MeetMapScreen() {
   const C = useTokens();
@@ -55,7 +56,7 @@ export default function MeetMapScreen() {
 
   // Display state — seeded from params, updated in place after a save
   const [place, setPlace] = useState(() => ({
-    name: params.name?.trim() || '집결 장소',
+    name: params.name?.trim() || t('meet.name'),
     coords: { lat: Number(params.lat), lng: Number(params.lng) },
   }));
   const valid = Number.isFinite(place.coords.lat) && Number.isFinite(place.coords.lng);
@@ -69,7 +70,7 @@ export default function MeetMapScreen() {
   const editing = draftCoords !== null;
 
   function startEdit() {
-    setDraftName(params.name?.trim() ?? (place.name === '집결 장소' ? '' : place.name));
+    setDraftName(params.name?.trim() ?? (place.name === t('meet.name') ? '' : place.name));
     setSheetOpen(true);
   }
 
@@ -85,7 +86,7 @@ export default function MeetMapScreen() {
       setPlace({ name: draftName.trim(), coords: draftCoords });
       setDraftCoords(null); // back to display mode; crew-detail refetches on focus
     } catch (e: unknown) {
-      Alert.alert('저장 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요.');
+      Alert.alert(t('runSave.saveFailTitle'), e instanceof Error ? e.message : t('auth.tryLater'));
     } finally {
       setSaving(false);
     }
@@ -115,7 +116,7 @@ export default function MeetMapScreen() {
         </Pressable>
         <View style={st.titlePill}>
           <Icon name={userMode ? 'locate' : 'location'} size={14} color={userMode ? C.accentGrn : C.danger} />
-          <Text style={st.titleTxt} numberOfLines={1}>{editing ? '집결 장소 수정' : place.name}</Text>
+          <Text style={st.titleTxt} numberOfLines={1}>{editing ? t('meet.editTitle') : place.name}</Text>
         </View>
         <View style={{ width: 40 }} />
       </View>
@@ -133,15 +134,15 @@ export default function MeetMapScreen() {
             <TextInput
               value={draftName}
               onChangeText={setDraftName}
-              placeholder="집결 장소 이름 (예: 서울숲 공원 정문)"
+              placeholder={t('meet.namePh')}
               placeholderTextColor={C.faint}
               style={st.editInput}
               autoFocus
             />
-            {!draftName.trim() && <Text style={st.editHint}>이름을 입력해야 저장할 수 있어요</Text>}
+            {!draftName.trim() && <Text style={st.editHint}>{t('meet.nameHint')}</Text>}
             <View style={st.editBtnRow}>
               <Pressable onPress={() => setDraftCoords(null)} disabled={saving} style={st.cancelBtn}>
-                <Text style={st.cancelTxt}>취소</Text>
+                <Text style={st.cancelTxt}>{t('common.cancel')}</Text>
               </Pressable>
               <Pressable
                 onPress={saveDraft}
@@ -150,7 +151,7 @@ export default function MeetMapScreen() {
               >
                 {saving
                   ? <ActivityIndicator size="small" color={C.accentText} />
-                  : <Text style={[st.saveTxt, !draftName.trim() && { color: C.faint }]}>저장</Text>}
+                  : <Text style={[st.saveTxt, !draftName.trim() && { color: C.faint }]}>{t('runSave.save')}</Text>}
               </Pressable>
             </View>
           </View>
@@ -164,12 +165,12 @@ export default function MeetMapScreen() {
               Linking.openURL(url).catch(() => { /* no maps handler — this view IS the map */ });
             } : undefined} style={({ pressed }) => [st.openBtn, accentShadow(C.accent), pressed && { opacity: 0.88 }]}>
               <Icon name="navigate-outline" size={17} color={C.accentText} />
-              <Text style={st.openTxt}>지도 앱에서 보기</Text>
+              <Text style={st.openTxt}>{t('meet.openMaps')}</Text>
             </Pressable>
             {canEdit && (
               <Pressable onPress={startEdit} style={({ pressed }) => [st.editChip, pressed && { opacity: 0.75 }]}>
                 <Icon name="pencil" size={13} color="#fff" />
-                <Text style={st.editChipTxt}>위치 수정</Text>
+                <Text style={st.editChipTxt}>{t('meet.editChip')}</Text>
               </Pressable>
             )}
           </View>

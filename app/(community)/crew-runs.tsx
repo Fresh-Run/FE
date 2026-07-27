@@ -48,6 +48,7 @@ import { shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { useRunTrack } from '@/lib/track-cache';
 import { useSettings } from '@/store/use-settings';
+import { t, tf } from '@/lib/i18n';
 
 function RunCard({ run, units, mapLive, onOpen }: {
   run: CrewRunItem;
@@ -62,11 +63,11 @@ function RunCard({ run, units, mapLive, onOpen }: {
   return (
     <Pressable onPress={onOpen} style={({ pressed }) => [st.card, shadows.sm, pressed && { opacity: 0.85 }]}>
       <View style={st.cardHead}>
-        <Pressable onPress={() => run.user_id && openProfile(run.user_id, run.nickname ?? '러너')} hitSlop={6}>
+        <Pressable onPress={() => run.user_id && openProfile(run.user_id, run.nickname ?? t('home.runner'))} hitSlop={6}>
           <Avatar name={run.nickname} size={36} photoUrl={run.avatar_url} ring={C.border} initialsRatio={0.38} upper />
         </Pressable>
         <View style={{ flex: 1, minWidth: 0 }}>
-          <Text style={st.cardName} numberOfLines={1}>{run.nickname ?? '러너'}</Text>
+          <Text style={st.cardName} numberOfLines={1}>{run.nickname ?? t('home.runner')}</Text>
           <View style={st.cardSubRow}>
             {/* Every card here is a 정기런 (session_only feed), so the word is
                 noise — the participant count is what's informative. Chip keyed
@@ -74,7 +75,7 @@ function RunCard({ run, units, mapLive, onOpen }: {
             {run.session_participant_count != null && (
               <View style={st.sessionChip}>
                 <Icon name="people" size={10} color={C.accentGrn} />
-                <Text style={st.sessionChipTxt}>{run.session_participant_count}명 참여</Text>
+                <Text style={st.sessionChipTxt}>{tf('crw.nJoined', { n: run.session_participant_count })}</Text>
               </View>
             )}
             <Text style={st.cardDate}>{fmtAgo(run.ran_at)}</Text>
@@ -97,8 +98,8 @@ function RunCard({ run, units, mapLive, onOpen }: {
         <Text style={st.cardTitle}>{run.title ?? timeTitle(run.ran_at)}</Text>
         <View style={st.statsRow}>
           {([
-            [fmtDist(run.distance_km, units, 1), distUnit(units), '거리'],
-            [fmtDuration(run.duration_sec), '', '시간'],
+            [fmtDist(run.distance_km, units, 1), distUnit(units), t('runSave.statDist')],
+            [fmtDuration(run.duration_sec), '', t('res.time')],
             [run.avg_pace_sec_per_km != null ? fmtPaceIn(run.avg_pace_sec_per_km, units) : '--', paceUnit(units), '페이스'],
           ] as [string, string, string][]).map(([val, unit, label], i) => (
             <View key={i} style={{ gap: 2 }}>
@@ -171,7 +172,7 @@ export default function CrewRunsScreen() {
       pathname: '/run-post' as never,
       params: {
         runId: run.run_id,
-        nickname: run.nickname ?? '러너',
+        nickname: run.nickname ?? t('home.runner'),
         avatarUrl: run.avatar_url ?? '',
         allowLikes: run.allow_likes === true ? '1' : '0',
         allowComments: run.allow_comments === true ? '1' : '0',
@@ -185,7 +186,7 @@ export default function CrewRunsScreen() {
         <Pressable onPress={() => router.back()} hitSlop={12} style={st.backBtn}>
           <Icon name="arrow-back" size={20} color={C.text} />
         </Pressable>
-        <Text style={st.appBarTitle}>크루 러닝 피드</Text>
+        <Text style={st.appBarTitle}>{t('crw.sFeed')}</Text>
         <View style={{ width: 36 }} />
       </View>
 
@@ -195,15 +196,15 @@ export default function CrewRunsScreen() {
         <View style={st.centered}>
           <View style={st.emptyIcon}><Icon name={error ? 'footsteps-outline' : 'people-outline'} size={28} color={C.faint} /></View>
           {error ? (
-            <Text style={st.emptyTxt}>피드를 불러오지 못했어요</Text>
+            <Text style={st.emptyTxt}>{t('cruns.loadFail')}</Text>
           ) : (
             <>
               {/* Normal early state for a session-only feed — teaches the feature */}
-              <Text style={st.emptyTxt}>아직 함께한 러닝이 없어요</Text>
-              <Text style={st.emptySub}>크루 러닝 시작으로 첫 정기런을 기록해 보세요</Text>
+              <Text style={st.emptyTxt}>{t('crw.feedEmpty')}</Text>
+              <Text style={st.emptySub}>{t('crw.feedEmptySub')}</Text>
               <Pressable onPress={() => router.back()} style={({ pressed }) => [st.emptyCta, pressed && { opacity: 0.9 }]} hitSlop={6}>
                 <Icon name="people" size={15} color={C.accentText} />
-                <Text style={st.emptyCtaTxt}>크루 러닝 시작</Text>
+                <Text style={st.emptyCtaTxt}>{t('crw.startTitle')}</Text>
               </Pressable>
             </>
           )}

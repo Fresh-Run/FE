@@ -24,6 +24,7 @@ import { listAnnouncements, type Announcement } from '@/lib/announcements-api';
 import { fmtWhen } from '@/lib/run-format';
 import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
+import { t, tf } from '@/lib/i18n';
 
 function fmtRunAt(iso: string): string {
   const d = new Date(iso);
@@ -55,7 +56,7 @@ export default function AnnouncementsScreen() {
         <Pressable onPress={() => router.back()} hitSlop={12} style={st.backBtn}>
           <Icon name="arrow-back" size={20} color={C.text} />
         </Pressable>
-        <Text style={st.appBarTitle}>크루 공지</Text>
+        <Text style={st.appBarTitle}>{t('ann.title')}</Text>
         {manager ? (
           <Pressable
             onPress={() => router.push({ pathname: '/(community)/announcement-compose' as never, params: { crewId: crewId! } })}
@@ -91,10 +92,10 @@ export default function AnnouncementsScreen() {
                       <Text style={st.runAtTxt}>{fmtRunAt(item.run_at)}</Text>
                     </View>
                   ) : null}
-                  <Avatar name={item.author_nickname ?? '크루장'} photoUrl={item.author_avatar_url} size={16} initialsRatio={0.5} />
+                  <Avatar name={item.author_nickname ?? t('ann.leaderFallback')} photoUrl={item.author_avatar_url} size={16} initialsRatio={0.5} />
                   <Text style={st.metaTxt}>
-                    {item.author_nickname ?? '크루장'} · {fmtWhen(item.created_at)}
-                    {item.run_at ? ` · 참석 ${item.rsvp.going}` : ''}
+                    {item.author_nickname ?? t('ann.leaderFallback')} · {fmtWhen(item.created_at)}
+                    {item.run_at ? tf('ann.going', { n: item.rsvp.going }) : ''}
                   </Text>
                 </View>
               </View>
@@ -107,7 +108,7 @@ export default function AnnouncementsScreen() {
             <View style={st.centered}>
               <Icon name="megaphone-outline" size={34} color={C.faint} />
               <Text style={st.emptyTxt}>
-                {error ? '공지를 불러올 수 없어요' : manager ? '공지를 올려 크루원에게 소식을 전해보세요' : '아직 공지가 없어요'}
+                {error ? t('ann.loadFail') : manager ? t('ann.emptyCan') : t('crw.annEmpty')}
               </Text>
             </View>
           }

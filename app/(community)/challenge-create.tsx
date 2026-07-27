@@ -31,6 +31,7 @@ import { ApiError } from '@/lib/api';
 import { createChallenge, dateToKstIsoDay, kstDateStr } from '@/lib/challenges-api';
 import { radius as R, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
+import { t, tf } from '@/lib/i18n';
 
 export default function ChallengeCreateScreen() {
   const C = useTokens();
@@ -62,11 +63,11 @@ export default function ChallengeCreateScreen() {
     } catch (e: unknown) {
       if (e instanceof ApiError && e.status === 409) {
         // Friendly state, not an error — one challenge at a time by contract
-        Alert.alert('이미 진행 중인 챌린지가 있어요', '지금 챌린지가 끝나면 새 챌린지를 만들 수 있어요.', [
-          { text: '확인', onPress: () => router.back() },
+        Alert.alert(t('chc.activeTitle'), t('chc.activeBody'), [
+          { text: t('com.confirm'), onPress: () => router.back() },
         ]);
       } else {
-        Alert.alert('생성 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요.');
+        Alert.alert(t('chc.createFail'), e instanceof Error ? e.message : t('auth.tryLater'));
       }
     } finally {
       setSubmitting(false);
@@ -79,11 +80,11 @@ export default function ChallengeCreateScreen() {
         <Pressable onPress={() => router.back()} hitSlop={12} style={st.backBtn}>
           <Icon name="close" size={20} color={C.text} />
         </Pressable>
-        <Text style={st.appBarTitle}>챌린지 만들기</Text>
+        <Text style={st.appBarTitle}>{t('chc.title')}</Text>
         <Pressable onPress={submit} disabled={!canSubmit} style={[st.submitBtn, !canSubmit && st.submitBtnDisabled]}>
           {submitting
             ? <ActivityIndicator size="small" color={C.accentText} />
-            : <Text style={[st.submitTxt, !canSubmit && { color: C.faint }]}>만들기</Text>}
+            : <Text style={[st.submitTxt, !canSubmit && { color: C.faint }]}>{t('chc.submit')}</Text>}
         </Pressable>
       </View>
 
@@ -91,22 +92,22 @@ export default function ChallengeCreateScreen() {
         <TextInput
           value={title}
           onChangeText={t => setTitle(t.slice(0, 50))}
-          placeholder="챌린지 이름 (예: 주간 50K 릴레이)"
+          placeholder={t('chc.namePh')}
           placeholderTextColor={C.faint}
           style={st.titleInput}
         />
 
         <View style={st.wheelCard}>
-          <NumberWheelRow label="목표 거리" value={goalKm} min={5} max={100} step={1} suffix="km" onChange={setGoalKm} />
+          <NumberWheelRow label={t('crt.targetDist')} value={goalKm} min={5} max={100} step={1} suffix="km" onChange={setGoalKm} />
           <View style={st.divider} />
-          <NumberWheelRow label="기간" value={periodDays} min={3} max={90} step={1} suffix="일" onChange={setPeriodDays} />
+          <NumberWheelRow label={t('crw.chPeriod')} value={periodDays} min={3} max={90} step={1} suffix={t('unit.days')} onChange={setPeriodDays} />
         </View>
-        <Text style={st.periodPreview}>오늘부터 {periodDays}일 · {kstDateStr(periodDays - 1)} 종료</Text>
+        <Text style={st.periodPreview}>{tf('chc.preview', { n: periodDays, date: kstDateStr(periodDays - 1) })}</Text>
 
         <View style={st.noteCard}>
           <Icon name="information-circle-outline" size={14} color={C.accentGrn} />
           <Text style={st.noteTxt}>
-            크루원 모두의 GPS 기록만 자동으로 집계돼요. 챌린지는 한 번에 하나만 진행할 수 있어요.
+            {t('chc.note')}
           </Text>
         </View>
       </ScrollView>
