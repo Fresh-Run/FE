@@ -19,6 +19,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import * as Location from 'expo-location';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
+import { t } from '@/lib/i18n';
 import {
   ActivityIndicator,
   Alert,
@@ -370,10 +371,10 @@ export default function CrewEditScreen() {
         <View style={{ paddingHorizontal: S.gutter }}>
           <Text style={st.groupTitle}>공개 범위</Text>
           <View style={[st.groupCard, shadows.sm]}>
-            {PRIVACY_OPTIONS.map(([lbl, sub], i) => (
+            {PRIVACY_OPTIONS.map(([lbl, lk, sk], i) => (
               <React.Fragment key={lbl}>
                 {i > 0 && <View style={st.divider} />}
-                <SelectRow label={lbl} sub={sub} selected={privacy === lbl} onSelect={() => setPrivacy(lbl)} />
+                <SelectRow label={t(lk)} sub={t(sk)} selected={privacy === lbl} onSelect={() => setPrivacy(lbl)} />
               </React.Fragment>
             ))}
           </View>

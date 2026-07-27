@@ -14,6 +14,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import * as Location from 'expo-location';
 import { router } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { t, tf, type StringKey } from '@/lib/i18n';
 import {
   ActivityIndicator,
   Alert,
@@ -40,15 +41,19 @@ import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { takePendingCrewRegion } from '@/store/pending-crew-region';
 
 export const CREW_COLORS = ['#74E827', '#2F8FE8', '#E8703D', '#A24DE8', '#E8B53D'];
-export const SPORTS = ['러닝', '라이딩', '워킹'] as const;
-export const LEVELS: CrewLevel[] = ['입문', '중급', '고급', '무관'];
-export const DAYS = ['월', '화', '수', '목', '금', '토', '일'] as const;
+export const SPORTS = ['러닝', '라이딩', '워킹'] as const; // SERVER values — display via SPORT_KEY
+const SPORT_KEY = { '러닝': 'crw.sportRun', '라이딩': 'crw.sportRide', '워킹': 'crw.sportWalk' } as const;
+export const LEVELS: CrewLevel[] = ['입문', '중급', '고급', '무관']; // SERVER values
+const LEVEL_KEY = { '입문': 'crw.lvBeginner', '중급': 'crw.lvMid', '고급': 'crw.lvAdv', '무관': 'crw.lvAny' } as const;
+export const DAYS = ['월', '화', '수', '목', '금', '토', '일'] as const; // SERVER values
+const DAY_KEY = { '월': 'dayS.mon', '화': 'dayS.tue', '수': 'dayS.wed', '목': 'dayS.thu', '금': 'dayS.fri', '토': 'dayS.sat', '일': 'dayS.sun' } as const;
 
 export type Privacy = '공개' | '승인제' | '비공개';
-export const PRIVACY_OPTIONS: [Privacy, string][] = [
-  ['공개',   '누구나 바로 가입할 수 있어요'],
-  ['승인제', '크루장이 가입 요청을 확인해요'],
-  ['비공개', '초대 링크로만 가입 가능해요'],
+// internal enum values (mapped to is_public/join_policy at send) — display via keys
+export const PRIVACY_OPTIONS: [Privacy, StringKey, StringKey][] = [
+  ['공개',   'crw.pubOpen',     'crw.pubOpenSub'],
+  ['승인제', 'crw.pubApproval', 'crw.pubApprovalSub'],
+  ['비공개', 'crw.pubPrivate',  'crw.pubPrivateSub'],
 ];
 
 /** 공개 범위 → backend fields (비공개 rejects direct joins server-side;
@@ -128,16 +133,16 @@ export function RegionRow({ sido, sigungu, onPress, onClear }: {
 }) {
   const C = useTokens();
   const st = useStyles(makeSt);
-  const label = sido ? (sigungu ? `${sido} ${sigungu}` : sido) : '지역 선택';
+  const label = sido ? (sigungu ? `${sido} ${sigungu}` : sido) : t('crw.areaPick');
   return (
     <Pressable onPress={onPress} style={st.regionRow}>
       <View style={st.areaIcon}><Icon name="map-outline" size={18} color={C.accentGrn} /></View>
       <View style={{ flex: 1, minWidth: 0 }}>
-        <Text style={st.areaLabel}>지역 (시/도·구/군)</Text>
+        <Text style={st.areaLabel}>{t('crw.areaRegion')}</Text>
         <Text style={[st.regionValue, !sido && { color: C.faint }]} numberOfLines={1}>{label}</Text>
       </View>
       {onClear && sido ? (
-        <Pressable onPress={onClear} hitSlop={10} style={st.regionClear} accessibilityLabel="지역 해제">
+        <Pressable onPress={onClear} hitSlop={10} style={st.regionClear} accessibilityLabel={t('crw.areaClear')}>
           <Icon name="close" size={15} color={C.faint} />
         </Pressable>
       ) : (
@@ -153,7 +158,7 @@ export function TagPicker({ selected, onToggle }: { selected: string[]; onToggle
   return (
     <View style={{ paddingHorizontal: S.gutter }}>
       <View style={st.tagHead}>
-        <Text style={st.groupTitle}>태그</Text>
+        <Text style={st.groupTitle}>{t('crw.tags')}</Text>
         <Text style={st.tagCount}>{selected.length}/{CREW_TAG_MAX}</Text>
       </View>
       {CREW_TAG_GROUPS.map(g => (
@@ -186,15 +191,15 @@ function CreatedModal({ crew, onInvite, onLater, onDismiss }: {
               <Icon name="people" size={34} color={C.accentText} />
             </View>
           </View>
-          <Text style={st.mTitle}>크루가 만들어졌어요!</Text>
+          <Text style={st.mTitle}>{t('crw.created')}</Text>
           <Text style={st.mSub}>
-            <Text style={{ fontWeight: '700', color: C.text }}>{crew.name}</Text> 크루의 크루장이 되었어요. 친구를 초대해 함께 달려보세요.
+            {t('crw.createdSub.before')}<Text style={{ fontWeight: '700', color: C.text }}>{crew.name}</Text>{t('crw.createdSub.after')}
           </Text>
           <Pressable onPress={onInvite} style={({ pressed }) => [st.mPrimary, accentShadow(C.accent), { opacity: pressed ? 0.9 : 1 }]}>
-            <Text style={st.mPrimaryTxt}>크루원 초대하기</Text>
+            <Text style={st.mPrimaryTxt}>{t('crw.invite')}</Text>
           </Pressable>
           <Pressable onPress={onLater} style={({ pressed }) => [st.mSecondary, { opacity: pressed ? 0.7 : 1 }]}>
-            <Text style={st.mSecondaryTxt}>나중에 하기</Text>
+            <Text style={st.mSecondaryTxt}>{t('crw.mLater')}</Text>
           </Pressable>
         </Pressable>
       </Pressable>
@@ -299,13 +304,13 @@ export default function CrewCreateScreen() {
             ends_at: dateToKstIsoDay(kstDateStr(challengePeriod - 1), 'end')!,
           });
         } catch {
-          Alert.alert('크루는 만들어졌어요', '첫 챌린지만 저장되지 않았어요. 크루 페이지에서 다시 만들 수 있어요.');
+          Alert.alert(t('crw.challengeSavedFailTitle'), t('crw.challengeSavedFailBody'));
         }
       }
       setCreated(crew);
     } catch (e: unknown) {
       // 403 premium_required arrives verbatim via ApiError (approved)
-      Alert.alert('크루를 만들 수 없어요', e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요');
+      Alert.alert(t('crw.createFailTitle'), e instanceof Error ? e.message : t('runSave.saveFailBody'));
     } finally {
       setBusy(false);
     }
@@ -334,7 +339,7 @@ export default function CrewCreateScreen() {
         <Pressable onPress={() => router.back()} hitSlop={12} style={st.backBtn}>
           <Icon name="arrow-back" size={20} color={C.text} />
         </Pressable>
-        <Text style={st.appBarTitle}>크루 생성</Text>
+        <Text style={st.appBarTitle}>{t('crw.title')}</Text>
         <View style={{ width: 36 }} />
       </View>
 
@@ -345,20 +350,20 @@ export default function CrewCreateScreen() {
             <Icon name="people" size={34} color={C.accentText} />
           </View>
           <Text style={[st.previewName, { color: name.trim() ? C.text : C.faint }]}>
-            {name.trim() || '크루 이름'}
+            {name.trim() || t('crw.nameFallback')}
           </Text>
         </View>
 
         {/* 기본 정보 */}
-        <Group title="기본 정보">
-          <FieldRow label="크루 이름" value={name} onChange={setName} placeholder="예: 성수 새벽 크루" maxLength={20} />
+        <Group title={t('crw.gBasic')}>
+          <FieldRow label={t('crw.name')} value={name} onChange={setName} placeholder={t('crw.namePh')} maxLength={20} />
           <View style={st.divider} />
-          <FieldRow label="한 줄 소개" value={desc} onChange={setDesc} placeholder="크루를 한 문장으로 소개해요" maxLength={40} />
+          <FieldRow label={t('crw.desc')} value={desc} onChange={setDesc} placeholder={t('crw.descPh')} maxLength={40} />
         </Group>
 
         {/* 크루 컬러 */}
         <View style={{ paddingHorizontal: S.gutter }}>
-          <Text style={st.groupTitle}>크루 컬러</Text>
+          <Text style={st.groupTitle}>{t('crw.color')}</Text>
           <View style={[st.groupCard, shadows.sm, st.colorRow]}>
             {CREW_COLORS.map(col => (
               <Pressable
@@ -371,18 +376,18 @@ export default function CrewCreateScreen() {
         </View>
 
         {/* 활동 지역 */}
-        <Group title="활동 지역" hint="지역을 정하면 둘러보기에서 그 지역 러너에게 크루가 보여요.">
+        <Group title={t('crw.gArea')} hint={t('crw.gAreaHint')}>
           {/* 시/도·구/군 — the region filter's key (the decay fix) */}
           <RegionRow sido={sido} sigungu={sigungu} onPress={() => router.push({ pathname: '/region-picker' as never, params: { target: 'form' } })} />
           <View style={st.divider} />
           <View style={st.fieldRow}>
             <View style={st.areaIcon}><Icon name="location" size={18} color={C.accentGrn} /></View>
             <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={st.areaLabel}>대표 출발지</Text>
+              <Text style={st.areaLabel}>{t('crw.homeBase')}</Text>
               <TextInput
                 value={area}
                 onChangeText={v => { areaTouched.current = true; setArea(v); }}
-                placeholder="예: 성수동 서울숲"
+                placeholder={t('crw.homeBasePh')}
                 placeholderTextColor={C.faint}
                 style={[st.fieldInput, { paddingVertical: 4 }]}
               />
@@ -391,7 +396,7 @@ export default function CrewCreateScreen() {
           <View style={st.divider} />
           <View style={st.sliderBlock}>
             <View style={st.sliderHead}>
-              <Text style={st.fieldLabel}>활동 반경</Text>
+              <Text style={st.fieldLabel}>{t('crw.radius')}</Text>
               <Text style={st.sliderValue}>{radiusKm} km</Text>
             </View>
             <Slider
@@ -412,66 +417,66 @@ export default function CrewCreateScreen() {
 
         {/* 주 종목 / 페이스 레벨 */}
         <View style={{ paddingHorizontal: S.gutter }}>
-          <Text style={st.groupTitle}>주 종목</Text>
+          <Text style={st.groupTitle}>{t('crw.sport')}</Text>
           <View style={st.chipRow}>
-            {SPORTS.map(s => <Chip key={s} label={s} on={sport === s} onPress={() => setSport(s)} />)}
+            {SPORTS.map(s => <Chip key={s} label={t(SPORT_KEY[s])} on={sport === s} onPress={() => setSport(s)} />)}
           </View>
-          <Text style={st.groupTitle}>페이스 레벨</Text>
+          <Text style={st.groupTitle}>{t('crw.level')}</Text>
           <View style={st.chipRow}>
-            {LEVELS.map(l => <Chip key={l} label={l} on={level === l} onPress={() => setLevel(l)} />)}
+            {LEVELS.map(l => <Chip key={l} label={t(LEVEL_KEY[l])} on={level === l} onPress={() => setLevel(l)} />)}
           </View>
         </View>
 
         {/* 모집 */}
-        <Group title="모집">
-          <NumberWheelRow label="최대 인원" value={maxMembers} min={5} max={100} step={1} suffix="명" onChange={setMaxMembers} />
+        <Group title={t('crw.gRecruit')}>
+          <NumberWheelRow label={t('crw.maxMembers')} value={maxMembers} min={5} max={100} step={1} suffix={t('unit.people')} onChange={setMaxMembers} />
         </Group>
 
         {/* 공개 범위 */}
         <View style={{ paddingHorizontal: S.gutter }}>
-          <Text style={st.groupTitle}>공개 범위</Text>
+          <Text style={st.groupTitle}>{t('runSave.visibility')}</Text>
           <View style={[st.groupCard, shadows.sm]}>
-            {PRIVACY_OPTIONS.map(([lbl, sub], i) => (
+            {PRIVACY_OPTIONS.map(([lbl, lk, sk], i) => (
               <React.Fragment key={lbl}>
                 {i > 0 && <View style={st.divider} />}
-                <SelectRow label={lbl} sub={sub} selected={privacy === lbl} onSelect={() => setPrivacy(lbl)} />
+                <SelectRow label={t(lk)} sub={t(sk)} selected={privacy === lbl} onSelect={() => setPrivacy(lbl)} />
               </React.Fragment>
             ))}
           </View>
         </View>
 
         {/* 정기 러닝 (선택) */}
-        <Group title="정기 러닝 (선택)">
+        <Group title={t('crw.gRegular')}>
           <View style={st.daysRow}>
             {DAYS.map(d => {
               const on = days.includes(d);
               return (
                 <Pressable key={d} onPress={() => toggleDay(d)} style={[st.dayCircle, on && st.dayCircleOn]}>
-                  <Text style={[st.dayTxt, on && { color: C.accentText }]}>{d}</Text>
+                  <Text style={[st.dayTxt, on && { color: C.accentText }]}>{t(DAY_KEY[d])}</Text>
                 </Pressable>
               );
             })}
           </View>
           <View style={st.divider} />
-          <FieldRow label="시간" value={time} onChange={setTime} placeholder="예: 오전 6:30" maxLength={20} />
+          <FieldRow label={t('res.time')} value={time} onChange={setTime} placeholder={t('crw.timePh')} maxLength={20} />
         </Group>
 
         {/* 첫 챌린지 (선택) — optional; chained after the crew POST (B7) */}
-        <Group title="첫 챌린지 (선택)">
+        <Group title={t('crw.gChallenge')}>
           <View style={st.challengeToggleRow}>
             <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={st.challengeToggleLabel}>크루 챌린지 시작하기</Text>
-              <Text style={st.challengeToggleSub}>크루원과 함께 달릴 첫 목표를 만들어요</Text>
+              <Text style={st.challengeToggleLabel}>{t('crw.chToggle')}</Text>
+              <Text style={st.challengeToggleSub}>{t('crw.chToggleSub')}</Text>
             </View>
             <Toggle on={challengeOn} onChange={setChallengeOn} />
           </View>
           {challengeOn && (
             <>
               <View style={st.divider} />
-              <NumberWheelRow label="목표 거리" value={challengeGoalKm} min={5} max={100} step={1} suffix="km" onChange={setChallengeGoalKm} />
+              <NumberWheelRow label={t('crt.targetDist')} value={challengeGoalKm} min={5} max={100} step={1} suffix="km" onChange={setChallengeGoalKm} />
               <View style={st.divider} />
-              <NumberWheelRow label="기간" value={challengePeriod} min={3} max={60} step={1} suffix="일" onChange={setChallengePeriod} />
-              <Text style={st.challengePreview}>오늘부터 {challengePeriod}일 · {kstDateStr(challengePeriod - 1)} 종료 · GPS 기록만 집계</Text>
+              <NumberWheelRow label={t('crw.chPeriod')} value={challengePeriod} min={3} max={60} step={1} suffix={t('unit.days')} onChange={setChallengePeriod} />
+              <Text style={st.challengePreview}>{tf('crw.chPreview', { n: challengePeriod, date: kstDateStr(challengePeriod - 1) })}</Text>
             </>
           )}
         </Group>
@@ -486,7 +491,7 @@ export default function CrewCreateScreen() {
         >
           {busy
             ? <ActivityIndicator size="small" color={C.accentText} />
-            : <Text style={[st.createTxt, !valid && { color: C.faint }]}>크루 만들기</Text>}
+            : <Text style={[st.createTxt, !valid && { color: C.faint }]}>{t('crw.create')}</Text>}
         </Pressable>
       </View>
 
