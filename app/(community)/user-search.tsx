@@ -42,6 +42,7 @@ import { searchUsers, type UserSearchItem } from '@/lib/profile-api';
 import { openProfile } from '@/lib/profile-nav';
 import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
+import { t, tf } from '@/lib/i18n';
 
 const MIN_Q = 2;
 const DEBOUNCE_MS = 400;
@@ -96,12 +97,12 @@ export default function UserSearchScreen() {
     try {
       const code = (await getInviteCode(crewId)) ?? (await issueInviteCode(crewId));
       await Share.share({
-        message: `FreshRun 크루${crewName ? ` '${crewName}'` : ''}에 초대해요!\n초대 코드: ${code}\n앱 커뮤니티 탭의 '코드로 가입'에서 입력해 주세요.`,
+        message: tf('usr.inviteMsgFlex', { name: crewName ? ` '${crewName}'` : '', code }),
       }).catch(() => {}); // user-cancelled sheet — quiet
     } catch {
       Alert.alert(
-        '초대 링크를 준비하지 못했어요',
-        '초대 링크 공유는 크루장 전용이에요 — 이름 검색 초대는 크루원 누구나 보낼 수 있어요.',
+        t('usr.linkFailTitle'),
+        t('usr.linkFailBody'),
       );
     } finally {
       setShareBusy(false);
@@ -117,7 +118,7 @@ export default function UserSearchScreen() {
     } catch {
       // 404 은닉 (차단·프로필 없음) or transient — honest, non-committal
       setInvite(m => ({ ...m, [u.user_id]: 'idle' }));
-      Alert.alert('초대하지 못했어요', `${u.nickname}님을 지금은 초대할 수 없어요.`);
+      Alert.alert(t('usr.inviteFailTitle'), tf('usr.inviteFailBody', { name: u.nickname }));
     }
   }, [crewId, invite]);
 
@@ -139,7 +140,7 @@ export default function UserSearchScreen() {
             {state === 'sending'
               ? <ActivityIndicator size="small" color={C.accentGrn} />
               : <Text style={[st.inviteBtnTxt, state === 'member' && { color: C.faint }]}>
-                  {state === 'sent' ? '초대됨' : state === 'member' ? '이미 멤버' : '초대'}
+                  {state === 'sent' ? t('usr.invited') : state === 'member' ? t('usr.alreadyMember') : t('usr.invite')}
                 </Text>}
           </View>
         )}
@@ -172,7 +173,7 @@ export default function UserSearchScreen() {
           <View style={{ flex: 1, minWidth: 0 }}>
             <Text style={st.rowName} numberOfLines={1}>{c.name}</Text>
             <Text style={st.rowSub} numberOfLines={1}>
-              {c.member_count}명{c.area ? ` · ${c.area}` : ''}
+              {tf('crw.nMembers', { n: c.member_count })}{c.area ? ` · ${c.area}` : ''}
             </Text>
           </View>
           <Icon name="chevron-forward" size={16} color={C.faint} />
@@ -190,7 +191,7 @@ export default function UserSearchScreen() {
         <Pressable onPress={() => router.back()} hitSlop={12} style={st.backBtn}>
           <Icon name="arrow-back" size={20} color={C.text} />
         </Pressable>
-        <Text style={st.appBarTitle}>{inviteMode ? '크루원 초대' : '검색'}</Text>
+        <Text style={st.appBarTitle}>{inviteMode ? t('usr.inviteTitle') : t('usr.searchTitle')}</Text>
         <View style={{ width: 36 }} />
       </View>
 
@@ -200,7 +201,7 @@ export default function UserSearchScreen() {
           <TextInput
             value={q}
             onChangeText={setQ}
-            placeholder={inviteMode ? '초대할 러너의 닉네임 검색' : '닉네임 또는 크루 이름 검색'}
+            placeholder={inviteMode ? t('usr.invitePh') : t('usr.searchPh')}
             placeholderTextColor={C.faint}
             autoFocus
             autoCorrect={false}
@@ -215,7 +216,7 @@ export default function UserSearchScreen() {
         {/* 유저/크루 segments — browse mode only (invite is user-scoped) */}
         {!inviteMode && (
           <View style={st.segRow}>
-            {([['user', '유저'], ['crew', '크루']] as [Seg, string][]).map(([id, lbl]) => (
+            {([['user', t('usr.segUser')], ['crew', t('usr.segCrew')]] as [Seg, string][]).map(([id, lbl]) => (
               <Pressable key={id} onPress={() => setSeg(id)} style={[st.segBtn, seg === id && st.segBtnOn]}>
                 <Text style={[st.segTxt, seg === id && st.segTxtOn]}>{lbl}</Text>
               </Pressable>
@@ -232,8 +233,8 @@ export default function UserSearchScreen() {
                 : <Icon name="share-outline" size={17} color={C.accentGrn} />}
             </View>
             <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={st.shareTitle}>링크로 초대</Text>
-              <Text style={st.shareSub}>앱이 없는 친구에게 초대 코드를 보내요</Text>
+              <Text style={st.shareTitle}>{t('usr.shareLink')}</Text>
+              <Text style={st.shareSub}>{t('usr.shareLinkSub')}</Text>
             </View>
             <Icon name="chevron-forward" size={16} color={C.faint} />
           </Pressable>
@@ -244,7 +245,7 @@ export default function UserSearchScreen() {
         <View style={st.centered}>
           <View style={st.hintIcon}><Icon name="search" size={24} color={C.faint} /></View>
           <Text style={st.hintTxt}>
-            {tooShort ? '2자 이상 입력해 주세요' : inviteMode ? '초대할 러너를 검색해 보세요' : '유저나 크루를 검색해 보세요'}
+            {tooShort ? t('usr.min2') : inviteMode ? t('usr.hintInvite') : t('usr.hintSearch')}
           </Text>
         </View>
       ) : loading && list === null ? (
@@ -252,7 +253,7 @@ export default function UserSearchScreen() {
       ) : showEmpty ? (
         <View style={st.centered}>
           <View style={st.hintIcon}><Icon name={activeSeg === 'user' ? 'person-outline' : 'people-outline'} size={24} color={C.faint} /></View>
-          <Text style={st.hintTxt}>{activeSeg === 'user' ? '검색 결과가 없어요' : '해당하는 크루가 없어요'}</Text>
+          <Text style={st.hintTxt}>{activeSeg === 'user' ? t('region.noResults') : t('usr.noCrews')}</Text>
         </View>
       ) : activeSeg === 'user' ? (
         <FlatList
