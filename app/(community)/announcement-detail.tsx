@@ -43,11 +43,12 @@ import { fmtWhen } from '@/lib/run-format';
 import { supabase } from '@/lib/supabase';
 import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
+import { t, tf } from '@/lib/i18n';
 
 const RSVP_OPTS: { value: RsvpStatus; label: string }[] = [
-  { value: 'going',     label: '참석' },
-  { value: 'maybe',     label: '미정' },
-  { value: 'not_going', label: '불참' },
+  { value: 'going',     label: 'annd.going' },
+  { value: 'maybe',     label: 'annd.maybe' },
+  { value: 'not_going', label: 'annd.notGoing' },
 ];
 
 function fmtRunAt(iso: string): string {
@@ -72,7 +73,7 @@ export default function AnnouncementDetailScreen() {
     if (!crewId || !announcementId) return;
     getAnnouncement(crewId, announcementId)
       .then(setAnn)
-      .catch(() => setError('공지를 불러올 수 없어요'));
+      .catch(() => setError(t('annd.loadFail')));
   }, [crewId, announcementId]);
   useEffect(() => { load(); }, [load]);
 
@@ -99,7 +100,7 @@ export default function AnnouncementDetailScreen() {
 
   function openInMaps() {
     if (!meetCoords) return;
-    const q = encodeURIComponent(ann?.place_name ?? '집결 장소');
+    const q = encodeURIComponent(ann?.place_name ?? t('meet.name'));
     const url = Platform.OS === 'ios'
       ? `http://maps.apple.com/?ll=${meetCoords.lat},${meetCoords.lng}&q=${q}`
       : `geo:${meetCoords.lat},${meetCoords.lng}?q=${meetCoords.lat},${meetCoords.lng}(${q})`;
@@ -132,20 +133,20 @@ export default function AnnouncementDetailScreen() {
       await rsvpAnnouncement(crewId!, ann.id, status);
       load(); // counts + roster need server truth after an overwrite vote
     } catch {
-      Alert.alert('투표 실패', '참석 투표를 저장하지 못했어요. 잠시 후 다시 시도해 주세요.');
+      Alert.alert(t('annd.voteFailT'), t('annd.voteFailB'));
     } finally {
       setVoting(false);
     }
   }
 
   function confirmDelete() {
-    Alert.alert('공지를 삭제할까요?', '삭제한 공지는 되돌릴 수 없어요.', [
-      { text: '취소', style: 'cancel' },
+    Alert.alert(t('annd.delAsk'), t('annd.delSub'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: '삭제', style: 'destructive',
+        text: t('common.delete'), style: 'destructive',
         onPress: () => deleteAnnouncement(crewId!, announcementId!)
           .then(() => router.back())
-          .catch(() => Alert.alert('삭제 실패', '잠시 후 다시 시도해 주세요.')),
+          .catch(() => Alert.alert(t('annd.delFailT'), t('auth.tryLater'))),
       },
     ]);
   }
@@ -156,7 +157,7 @@ export default function AnnouncementDetailScreen() {
         <Pressable onPress={() => router.back()} hitSlop={12} style={st.iconBtn}>
           <Icon name="arrow-back" size={20} color={C.text} />
         </Pressable>
-        <Text style={st.appBarTitle}>공지</Text>
+        <Text style={st.appBarTitle}>{t('annd.title')}</Text>
         {canManage && ann ? (
           <View style={{ flexDirection: 'row' }}>
             <Pressable
@@ -184,8 +185,8 @@ export default function AnnouncementDetailScreen() {
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: S.gutter, paddingBottom: 40 }}>
           <Text style={st.title}>{ann.title}</Text>
           <View style={st.metaRow}>
-            <Avatar name={ann.author_nickname ?? '크루장'} photoUrl={ann.author_avatar_url} size={20} initialsRatio={0.5} />
-            <Text style={st.meta}>{ann.author_nickname ?? '크루장'} · {fmtWhen(ann.created_at)}</Text>
+            <Avatar name={ann.author_nickname ?? t('ann.leaderFallback')} photoUrl={ann.author_avatar_url} size={20} initialsRatio={0.5} />
+            <Text style={st.meta}>{ann.author_nickname ?? t('ann.leaderFallback')} · {fmtWhen(ann.created_at)}</Text>
           </View>
           <Text style={st.body}>{ann.body}</Text>
 
@@ -219,13 +220,13 @@ export default function AnnouncementDetailScreen() {
                   >
                     <View style={st.meetPin}><Icon name="location" size={17} color={C.danger} /></View>
                     <View style={{ flex: 1, minWidth: 0 }}>
-                      <Text style={st.meetName} numberOfLines={1}>{ann.place_name ?? '집결 장소'}</Text>
+                      <Text style={st.meetName} numberOfLines={1}>{ann.place_name ?? t('meet.name')}</Text>
                       {ann.run_at != null && (
-                        <Text style={st.meetSub} numberOfLines={1}>{fmtRunAt(ann.run_at)} 집결</Text>
+                        <Text style={st.meetSub} numberOfLines={1}>{tf('annd.meetAt', { when: fmtRunAt(ann.run_at) })}</Text>
                       )}
                     </View>
                     <Pressable onPress={openInMaps} hitSlop={10}>
-                      <Text style={st.meetOpenTxt}>지도 앱에서 보기</Text>
+                      <Text style={st.meetOpenTxt}>{t('meet.openMaps')}</Text>
                     </Pressable>
                   </Pressable>
                 </View>
@@ -248,21 +249,21 @@ export default function AnnouncementDetailScreen() {
                         pressed && { opacity: 0.75 },
                       ]}
                     >
-                      <Text style={[st.rsvpLabel, mine && { color: C.accentGrn }]}>{o.label}</Text>
+                      <Text style={[st.rsvpLabel, mine && { color: C.accentGrn }]}>{t(o.label as import('@/lib/i18n').StringKey)}</Text>
                       <Text style={[st.rsvpCount, mine && { color: C.accentGrn }]}>{count}</Text>
                     </Pressable>
                   );
                 })}
               </View>
-              {!ann.rsvp_open && <Text style={st.closedTxt}>참석 투표가 마감됐어요</Text>}
+              {!ann.rsvp_open && <Text style={st.closedTxt}>{t('annd.voteClosed')}</Text>}
 
               {/* 참석 roster */}
               {ann.going_members.length > 0 && (
                 <View style={st.rosterWrap}>
-                  <Text style={st.rosterHead}>참석 {ann.going_members.length}명</Text>
+                  <Text style={st.rosterHead}>{tf('annd.goingN', { n: ann.going_members.length })}</Text>
                   <View style={st.rosterRow}>
                     {ann.going_members.map(m => {
-                      const name = m.nickname ?? '러너';
+                      const name = m.nickname ?? t('home.runner');
                       return (
                         <View key={m.user_id} style={st.rosterChip}>
                           {/* payload carries no avatar_url — initials-only (payload truth) */}

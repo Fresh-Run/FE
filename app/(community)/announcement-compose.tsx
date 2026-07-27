@@ -38,6 +38,7 @@ import {
 } from '@/lib/announcements-api';
 import { radius as R, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
+import { t, tf } from '@/lib/i18n';
 
 function partsFromIso(iso: string | null): { date: string; time: string } {
   if (!iso) return { date: '', time: '' };
@@ -92,7 +93,7 @@ export default function AnnouncementComposeScreen() {
         setLoadedForEdit(true);
       })
       .catch(() => {
-        Alert.alert('불러오기 실패', '공지를 불러오지 못했어요.');
+        Alert.alert(t('annc.loadFailT'), t('annc.loadFailB'));
         router.back();
       });
     return () => { cancelled = true; };
@@ -140,7 +141,7 @@ export default function AnnouncementComposeScreen() {
       else await createAnnouncement(crewId, input);
       router.back();
     } catch (e: unknown) {
-      Alert.alert(editing ? '수정 실패' : '작성 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요.');
+      Alert.alert(editing ? t('annc.editFail') : t('annc.postFail'), e instanceof Error ? e.message : t('auth.tryLater'));
     } finally {
       setSubmitting(false);
     }
@@ -152,7 +153,7 @@ export default function AnnouncementComposeScreen() {
         <Pressable onPress={() => router.back()} hitSlop={12} style={st.backBtn}>
           <Icon name="close" size={20} color={C.text} />
         </Pressable>
-        <Text style={st.appBarTitle}>{editing ? '공지 수정' : '공지 작성'}</Text>
+        <Text style={st.appBarTitle}>{editing ? t('annc.editTitle') : t('annc.newTitle')}</Text>
         <Pressable
           onPress={submit}
           disabled={!canSubmit}
@@ -160,7 +161,7 @@ export default function AnnouncementComposeScreen() {
         >
           {submitting
             ? <ActivityIndicator size="small" color={C.accentText} />
-            : <Text style={[st.submitTxt, !canSubmit && { color: C.faint }]}>{editing ? '수정' : '게시'}</Text>}
+            : <Text style={[st.submitTxt, !canSubmit && { color: C.faint }]}>{editing ? t('annc.edit') : t('annc.post')}</Text>}
         </Pressable>
       </View>
 
@@ -171,14 +172,14 @@ export default function AnnouncementComposeScreen() {
           <TextInput
             value={title}
             onChangeText={t => setTitle(t.slice(0, 100))}
-            placeholder="공지 제목"
+            placeholder={t('annc.titlePh')}
             placeholderTextColor={C.faint}
             style={st.titleInput}
           />
           <TextInput
             value={body}
             onChangeText={t => setBody(t.slice(0, 1000))}
-            placeholder="공지를 적어주세요"
+            placeholder={t('annc.bodyPh')}
             placeholderTextColor={C.faint}
             style={st.bodyInput}
             multiline
@@ -189,21 +190,21 @@ export default function AnnouncementComposeScreen() {
           <Pressable onPress={() => toggleScheduled(!scheduled)} style={st.scheduleToggle}>
             <Icon name={scheduled ? 'checkbox' : 'square-outline'} size={19} color={scheduled ? C.accentGrn : C.faint} />
             <View style={{ flex: 1 }}>
-              <Text style={st.scheduleToggleTxt}>러닝 일정 추가</Text>
-              <Text style={st.scheduleToggleSub}>일정을 넣으면 크루원 참석 투표가 열려요</Text>
+              <Text style={st.scheduleToggleTxt}>{t('annc.schedToggle')}</Text>
+              <Text style={st.scheduleToggleSub}>{t('annc.schedSub')}</Text>
             </View>
           </Pressable>
 
           {scheduled && (
             <View style={st.scheduleFields}>
-              <DateWheelRow label="날짜" value={date} onChange={setDate} />
-              <TimeWheelRow label="시각" value={time} onChange={setTime} />
+              <DateWheelRow label={t('annc.date')} value={date} onChange={setDate} />
+              <TimeWheelRow label={t('annc.time')} value={time} onChange={setTime} />
               <View style={st.fieldRow}>
-                <Text style={st.fieldLabel}>장소</Text>
+                <Text style={st.fieldLabel}>{t('annc.place')}</Text>
                 <TextInput
                   value={place}
                   onChangeText={t => setPlace(t.slice(0, 50))}
-                  placeholder="서울숲 입구 (선택)"
+                  placeholder={t('annc.placePh')}
                   placeholderTextColor={C.faint}
                   style={st.fieldInput}
                 />
@@ -217,15 +218,15 @@ export default function AnnouncementComposeScreen() {
                       which ignores prop updates (the stale-preview bug) */}
                   <RealMap key={`${placeCoords.lat},${placeCoords.lng}`} height={110} center={placeCoords} marker borderRadius={12} />
                   <View style={st.pinPreviewRow}>
-                    <Text style={st.pinPreviewTxt}>핀 지정됨 — 상세에서 지도로 열려요</Text>
+                    <Text style={st.pinPreviewTxt}>{t('annc.pinPreview')}</Text>
                     <Pressable onPress={() => setPlaceCoords(null)} hitSlop={8}>
-                      <Text style={st.pinRemoveTxt}>핀 제거</Text>
+                      <Text style={st.pinRemoveTxt}>{t('annc.pinRemove')}</Text>
                     </Pressable>
                   </View>
                 </View>
               )}
               {runAtIso && (
-                <Text style={st.fieldPreview}>한국 시간 기준으로 저장돼요</Text>
+                <Text style={st.fieldPreview}>{t('annc.kst')}</Text>
               )}
             </View>
           )}
