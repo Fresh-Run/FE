@@ -29,6 +29,24 @@ export function activateRunAudioSession(): void {
   }).catch(() => {});
 }
 
+/** Per-cue duck ENGAGE (third-parse fix, 2026-07-27): ducking is an
+    ACTIVATION-time effect and our code never called setActive(true) — cue 1
+    ducked on iOS's one implicit activation (cold session); after each
+    explicit release the synthesizer's warm engine re-renders WITHOUT a fresh
+    activation, so no later cue ever ducked. Both duck edges are now OURS:
+    this before every speak (mode re-assert = idempotent belt; setActive(true)
+    = the duck trigger), the three-hook release after. Fire-and-forget ahead
+    of a sync speak — worst case the dim lands milliseconds into the first
+    syllable (accepted at ruling). */
+export function engageCueAudioSession(): void {
+  setAudioModeAsync({
+    playsInSilentMode: true,
+    shouldPlayInBackground: true,
+    interruptionMode: 'duckOthers',
+  }).catch(() => {});
+  setIsAudioActiveAsync(true).catch(() => {});
+}
+
 export function deactivateRunAudioSession(): void {
   setIsAudioActiveAsync(false).catch(() => {});
   setIdleAudioPosture(); // back to the mixable idle posture after every run

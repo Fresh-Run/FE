@@ -9,7 +9,7 @@
  */
 import * as Speech from 'expo-speech';
 
-import { deactivateRunAudioSession } from '@/lib/audio-session';
+import { deactivateRunAudioSession, engageCueAudioSession } from '@/lib/audio-session';
 
 // 안내 항목 shape — callers map settings.audio_coach.announce_* into this
 // (the composer keeps its own vocabulary; server names stay at the edge)
@@ -79,6 +79,7 @@ const releaseAudioSession = () => { deactivateRunAudioSession(); };
 export function speakCue(text: string, rate: number): void {
   // stop any in-flight cue — a fresh split always wins
   Speech.stop();
+  engageCueAudioSession(); // explicit duck ENGAGE — every cue, not just the cold first
   Speech.speak(text, {
     language: 'ko-KR',
     rate,
