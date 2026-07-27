@@ -495,4 +495,10 @@ export const ko = {
   'crw.transferHint': '크루를 넘기고 싶다면 크루원 관리에서 양도할 수 있어요',
   'crw.disbandGo': '해체하기',
   'crw.statCapacity': '정원',
+  'region.allOf': '{name} 전체',
+  'region.searchSido': '시·도 검색',
+  'region.searchSigungu': '시·군·구 검색',
+  'region.useCurrent': '현재 위치 사용',
+  'region.useCurrentSub': '가까운 크루부터 자동으로 보여드려요',
+  'region.noResults': '검색 결과가 없어요',
 } as const;

@@ -35,6 +35,7 @@ import { Toggle } from '@/components/toggle';
 import { NumberWheelRow } from '@/components/wheel-sheet';
 import { createChallenge, dateToKstIsoDay, kstDateStr } from '@/lib/challenges-api';
 import { createCrew, CREW_TAG_GROUPS, CREW_TAG_MAX, type Crew, type CrewLevel } from '@/lib/crews-api';
+import { regionName } from '@/lib/korea-regions';
 import { useCurrentLocation } from '@/hooks/use-current-location';
 import { accentShadow, radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
@@ -133,7 +134,7 @@ export function RegionRow({ sido, sigungu, onPress, onClear }: {
 }) {
   const C = useTokens();
   const st = useStyles(makeSt);
-  const label = sido ? (sigungu ? `${sido} ${sigungu}` : sido) : t('crw.areaPick');
+  const label = sido ? (sigungu ? `${regionName(sido)} ${regionName(sigungu)}` : regionName(sido)) : t('crw.areaPick');
   return (
     <Pressable onPress={onPress} style={st.regionRow}>
       <View style={st.areaIcon}><Icon name="map-outline" size={18} color={C.accentGrn} /></View>

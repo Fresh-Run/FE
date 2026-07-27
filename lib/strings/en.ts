@@ -483,4 +483,10 @@ export const en: Record<keyof typeof ko, string> = {
   'crw.transferHint': 'Want to hand it over instead? Transfer leadership in member management',
   'crw.disbandGo': 'Disband',
   'crw.statCapacity': 'Capacity',
+  'region.allOf': 'All of {name}',
+  'region.searchSido': 'Search city/province',
+  'region.searchSigungu': 'Search district',
+  'region.useCurrent': 'Use current location',
+  'region.useCurrentSub': 'Shows nearby crews first, automatically',
+  'region.noResults': 'No results',
 };

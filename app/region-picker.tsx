@@ -19,7 +19,8 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/ui';
-import { SIDO_LIST, SIGUNGU, type Sido } from '@/lib/korea-regions';
+import { regionName, SIDO_LIST, SIGUNGU, type Sido } from '@/lib/korea-regions';
+import { t, tf } from '@/lib/i18n';
 import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { setCrewFilter } from '@/store/crew-filter';
@@ -42,9 +43,12 @@ export default function RegionPickerScreen() {
   const [query, setQuery] = useState('');
 
   const q = query.trim();
+  // bilingual search (romanization slice): match hangul OR the en form
+  const hit = (name: string) =>
+    !q || name.includes(q) || regionName(name).toLowerCase().includes(q.toLowerCase());
   const rows: string[] = drill
-    ? ['전체', ...SIGUNGU[drill].filter(g => !q || g.includes(q))]
-    : SIDO_LIST.filter(s => !q || s.includes(q));
+    ? ['전체', ...SIGUNGU[drill].filter(hit)]
+    : SIDO_LIST.filter(hit);
 
   function pickCurrent() {
     setCrewFilter({ mode: 'current' });
@@ -87,8 +91,8 @@ export default function RegionPickerScreen() {
             <Icon name="locate" size={17} color={C.accentGrn} />
           </View>
           <View style={{ flex: 1, minWidth: 0 }}>
-            <Text style={st.currentTitle}>현재 위치 사용</Text>
-            <Text style={st.currentSub}>가까운 크루부터 자동으로 보여드려요</Text>
+            <Text style={st.currentTitle}>{t('region.useCurrent')}</Text>
+            <Text style={st.currentSub}>{t('region.useCurrentSub')}</Text>
           </View>
           <Icon name="chevron-forward" size={16} color={C.faint} />
         </Pressable>
@@ -100,7 +104,7 @@ export default function RegionPickerScreen() {
         <TextInput
           value={query}
           onChangeText={setQuery}
-          placeholder={drill ? '시·군·구 검색' : '시·도 검색'}
+          placeholder={drill ? t('region.searchSigungu') : t('region.searchSido')}
           placeholderTextColor={C.faint}
           style={st.searchInput}
           autoCorrect={false}
@@ -113,13 +117,13 @@ export default function RegionPickerScreen() {
         renderItem={({ item }) => (
           <Pressable onPress={() => pickRow(item)} style={({ pressed }) => [st.row, pressed && { opacity: 0.6 }]}>
             <Text style={[st.rowTxt, item === '전체' && { color: C.accentGrn, fontWeight: '700' }]}>
-              {item === '전체' ? `${drill} 전체` : item}
+              {item === '전체' ? tf('region.allOf', { name: regionName(drill!) }) : regionName(item)}
             </Text>
             {!drill && <Icon name="chevron-forward" size={15} color={C.faint} />}
           </Pressable>
         )}
         ItemSeparatorComponent={() => <View style={st.divider} />}
-        ListEmptyComponent={<Text style={st.emptyTxt}>검색 결과가 없어요</Text>}
+        ListEmptyComponent={<Text style={st.emptyTxt}>{t('region.noResults')}</Text>}
         contentContainerStyle={{ paddingBottom: 28 }}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"

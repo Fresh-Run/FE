@@ -2,6 +2,7 @@
  * 커뮤니티 tab — crew browse + my crews.
  */
 import { useFocusEffect } from '@react-navigation/native';
+import { regionName } from '@/lib/korea-regions';
 import { router } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -78,7 +79,7 @@ function LocationCard({ filter, placeName, onPress }: {
   const st = useStyles(makeSt);
   const label = filter.mode === 'current'
     ? `현재 위치 · ${placeName ?? '위치 확인 중'}`
-    : `${filter.sido}${filter.sigungu ? ` · ${filter.sigungu}` : ''}`;
+    : `${regionName(filter.sido)}${filter.sigungu ? ` · ${regionName(filter.sigungu)}` : ''}`;
   return (
     <Pressable onPress={onPress} style={({ pressed }) => [st.locCard, shadows.sm, pressed && { opacity: 0.8 }]}>
       <View style={st.locIcon}>
@@ -174,7 +175,7 @@ function BrowseCrewCard({
           <View style={st.cardMeta}>
             <Icon name="location-outline" size={12} color={C.accentGrn} />
             <Text style={st.cardLocTxt} numberOfLines={1}>
-              {crew.sigungu ?? crew.area ?? ''}
+              {crew.sigungu ? regionName(crew.sigungu) : crew.area ?? ''}
               {crew.distance_km != null ? ` · ${crew.distance_km.toFixed(1)}km` : ''}
             </Text>
           </View>
