@@ -647,6 +647,5 @@ export const ko = {
   'fr.follow': '팔로우',
   'fr.requested': '요청됨',
   'fr.following': '팔로잉',
-  'fr.runsN': '러닝 {n}회',
   'fr.failTitle': '실패했어요',
 } as const;

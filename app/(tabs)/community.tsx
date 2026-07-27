@@ -34,7 +34,6 @@ import {
   type Crew,
 } from '@/hooks/use-crews';
 import { useCurrentLocation } from '@/hooks/use-current-location';
-import { SuggestedRunners } from '@/components/suggested-runners';
 import { levelLabel, getMyJoinRequests, searchCrews } from '@/lib/crews-api';
 import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
@@ -602,8 +601,7 @@ function MyCrewsTab() {
       {/* Owned crews — dashed create-placeholder is the empty state */}
       <View style={{ paddingHorizontal: S.gutter, paddingTop: S.xl }}>
         <View style={st.sectionHead}>
-          <SuggestedRunners />
-      <Text style={st.sectionTitle}>{t('com.myCrews')}</Text>
+          <Text style={st.sectionTitle}>{t('com.myCrews')}</Text>
           {(() => {
             // Lock only when free tier already owns a crew (guide: 무료 1개 한도)
             const createLocked = !isPremium && owned.length >= 1;

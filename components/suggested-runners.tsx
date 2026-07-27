@@ -1,33 +1,45 @@
 /**
- * 추천 러너 — friends discovery v1 (owner ruling 2026-07-28). DELIBERATELY
- * DISPOSABLE surface behind the stable /users/suggested contract
- * (EVOLUTION-EXPECTED — no dismiss, no explainers, no algorithm affordances;
- * those belong to the real feature later).
+ * 추천 러너 — friends discovery v1.1 (relocation ruling 2026-07-28).
+ * DELIBERATELY DISPOSABLE surface behind the stable /users/suggested
+ * contract (EVOLUTION-EXPECTED — no dismiss, no explainers, no algorithm
+ * affordances; those belong to the real feature later).
  *
- * Grammar: the follow-list row's 3-state pill VERBATIM (202→요청됨 +
- * pending-follows cache · 409 adopt · optimistic with rollback). Card body →
- * user-profile. Row HIDES entirely on empty/all-followed/error (auxiliary
- * surface, no empty theater). Loading = 3 skeleton cards.
+ * v1.1 architecture: ONE useSuggestedRunners() hook per screen (single
+ * fetch; follow-state shared) + a memoized presentational row rendered at
+ * every placement — repeated instances show the SAME faces and the SAME
+ * pill states (per-position slices would spend a 14-user list in two slots;
+ * variety belongs to the real ranking later).
+ *
+ * Card v1.1: avatar 52 + nickname + 3-state pill beneath — no sub-line
+ * (104px wide, more faces per viewport). Grammar: the follow-list row's
+ * 3-state pill VERBATIM (202→요청됨 + pending cache · 409 adopt ·
+ * optimistic rollback). Card body → user-profile. Row hides entirely on
+ * empty/all-followed/error (no empty theater); skeletons while loading.
  */
 import React, { useEffect, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Avatar } from '@/components/avatar';
-import { t, tf } from '@/lib/i18n';
+import { t } from '@/lib/i18n';
 import { ApiError, apiFetch, apiRequest } from '@/lib/api';
 import { getSuggestedUsers, type SuggestedUser } from '@/lib/profile-api';
 import { openProfile } from '@/lib/profile-nav';
-import { regionName } from '@/lib/korea-regions';
 import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { usePendingFollows } from '@/store/pending-follows';
 
 type BtnState = 'following' | 'requested' | 'none';
 
-export function SuggestedRunners() {
-  const C = useTokens();
-  const st = useStyles(makeSt);
-  const [rows, setRows] = useState<SuggestedUser[] | null>(null); // null = loading
+export type SuggestedRunnersState = {
+  rows: SuggestedUser[] | null; // null = loading
+  /** false = the row renders NOTHING anywhere (failed or resolved-empty) */
+  available: boolean;
+  stateFor: (u: SuggestedUser) => BtnState;
+  toggle: (u: SuggestedUser) => void;
+};
+
+export function useSuggestedRunners(): SuggestedRunnersState {
+  const [rows, setRows] = useState<SuggestedUser[] | null>(null);
   const [failed, setFailed] = useState(false);
   const [overlay, setOverlay] = useState<Record<string, BtnState>>({});
   const pendingIds = usePendingFollows(s => s.ids);
@@ -87,30 +99,32 @@ export function SuggestedRunners() {
       });
   }
 
-  if (failed || (rows !== null && rows.length === 0)) return null; // no empty theater
+  return { rows, available: !failed && (rows === null || rows.length > 0), stateFor, toggle };
+}
+
+export const SuggestedRunnersRow = React.memo(function SuggestedRunnersRow({ sr }: { sr: SuggestedRunnersState }) {
+  const C = useTokens();
+  const st = useStyles(makeSt);
+  if (!sr.available) return null; // no empty theater — anywhere it's placed
 
   return (
-    <View style={{ marginBottom: 18 }}>
+    <View style={st.wrap}>
       <Text style={st.title}>{t('fr.title')}</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingHorizontal: S.gutter }}>
-        {rows === null
+        {sr.rows === null
           ? [0, 1, 2].map(i => (
               <View key={i} style={[st.card, shadows.sm]}>
                 <View style={[st.skelCircle, { backgroundColor: C.surfaceAlt }]} />
                 <View style={[st.skelBar, { backgroundColor: C.surfaceAlt }]} />
-                <View style={[st.skelBar, { width: 44, backgroundColor: C.surfaceAlt }]} />
               </View>
             ))
-          : rows.map(u => {
-              const fs = stateFor(u);
+          : sr.rows.map(u => {
+              const fs = sr.stateFor(u);
               return (
                 <Pressable key={u.user_id} onPress={() => openProfile(u.user_id, u.nickname)} style={[st.card, shadows.sm]}>
-                  <Avatar name={u.nickname} photoUrl={u.avatar_url} size={56} />
+                  <Avatar name={u.nickname} photoUrl={u.avatar_url} size={52} />
                   <Text style={st.name} numberOfLines={1}>{u.nickname}</Text>
-                  <Text style={st.sub} numberOfLines={1}>
-                    {u.area ? regionName(u.area) : tf('fr.runsN', { n: u.public_run_count })}
-                  </Text>
-                  <Pressable onPress={() => toggle(u)} hitSlop={6} style={[st.pill, fs !== 'none' ? st.pillOn : st.pillOff]}>
+                  <Pressable onPress={() => sr.toggle(u)} hitSlop={6} style={[st.pill, fs !== 'none' ? st.pillOn : st.pillOff]}>
                     <Text style={[st.pillTxt, fs !== 'none' && { color: C.sub }]}>
                       {fs === 'following' ? t('fr.following') : fs === 'requested' ? t('fr.requested') : t('fr.follow')}
                     </Text>
@@ -121,17 +135,18 @@ export function SuggestedRunners() {
       </ScrollView>
     </View>
   );
-}
+});
 
 const makeSt = (C: Tokens) => StyleSheet.create({
+  wrap:  { marginBottom: 4 },
   title: { fontSize: 15, fontWeight: '700', color: C.text, letterSpacing: -0.3, paddingHorizontal: S.gutter, marginBottom: 10 },
-  card:  { width: 128, alignItems: 'center', backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: R.lg, paddingVertical: 14, paddingHorizontal: 10, gap: 6 },
-  name:  { fontSize: 13.5, fontWeight: '700', color: C.text, letterSpacing: -0.3, maxWidth: 104 },
-  sub:   { fontSize: 11.5, color: C.faint, letterSpacing: -0.2, maxWidth: 104 },
-  pill:    { marginTop: 2, paddingHorizontal: 16, paddingVertical: 6, borderRadius: R.pill },
+  // v1.1 tighter card: 104w · avatar 52 · pill beneath nickname · no sub-line
+  card:  { width: 104, alignItems: 'center', backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: R.lg, paddingVertical: 12, paddingHorizontal: 8, gap: 7 },
+  name:  { fontSize: 13, fontWeight: '700', color: C.text, letterSpacing: -0.3, maxWidth: 86 },
+  pill:    { paddingHorizontal: 14, paddingVertical: 5.5, borderRadius: R.pill },
   pillOff: { backgroundColor: C.accent },
   pillOn:  { backgroundColor: C.surfaceAlt, borderWidth: 1, borderColor: C.border },
-  pillTxt: { fontSize: 12.5, fontWeight: '700', color: C.accentText, letterSpacing: -0.2 },
-  skelCircle: { width: 56, height: 56, borderRadius: 28 },
-  skelBar:    { width: 72, height: 11, borderRadius: 6, marginTop: 2 },
+  pillTxt: { fontSize: 12, fontWeight: '700', color: C.accentText, letterSpacing: -0.2 },
+  skelCircle: { width: 52, height: 52, borderRadius: 26 },
+  skelBar:    { width: 64, height: 11, borderRadius: 6, marginTop: 2 },
 });

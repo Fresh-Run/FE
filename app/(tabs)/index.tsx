@@ -7,6 +7,7 @@
  * canvas home-cards.jsx 친구 feed is run cards).
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { SuggestedRunnersRow, useSuggestedRunners } from '@/components/suggested-runners';
 import { getLang, t, tf } from '@/lib/i18n';
 import { useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -49,6 +50,9 @@ import { useStore } from '@/store/use-store';
 import type { Coordinate } from '@/types';
 import { useWeather } from '@/hooks/use-weather';
 import { weatherIcon, weatherTone, type WeatherTone } from '@/lib/weather-api';
+
+// friends v1.1 interleave interval — constant for later retune (owner spec)
+const SUGGEST_EVERY_N = 3;
 
 // ─── Constants / helpers ──────────────────────────────────────────────────────
 
@@ -473,6 +477,27 @@ export default function HomeScreen() {
 
   const name = displayName ?? t('home.runner');
   const list: FeedRun[] = tab === '전체' ? nearby.items : feed.items;
+
+  // ── 추천 러너 (friends v1.1) — 친구 tab only, conditional placement.
+  // COLD-START (fewer than 3 posts in the fetched page — which subsumes
+  // "follows no one": an empty followed-feed IS the cold start; the page's
+  // item count is the in-hand signal, no extra fetch): row renders ABOVE the
+  // feed via the list header. RICH FEED: interleaved after every Nth card.
+  // TRANSITION SEAM: placement derives from the fetched page and re-evaluates
+  // ONLY when the list reference changes — the refresh boundary is the seam;
+  // the row never relocates mid-scroll.
+  const sr = useSuggestedRunners(); // ONE fetch; every rendered row shares state
+  const coldStart = tab === '친구' && list.length < 3;
+  const displayList: (FeedRun | { __suggest: string })[] = useMemo(() => {
+    if (tab !== '친구' || !sr.available || list.length < 3) return list;
+    const out: (FeedRun | { __suggest: string })[] = [];
+    list.forEach((it, i) => {
+      out.push(it);
+      if ((i + 1) % SUGGEST_EVERY_N === 0) out.push({ __suggest: `suggest-${i}` });
+    });
+    return out;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, list, sr.available]);
   // No-swap pre-warm (ruling ③, 2026-07-23): fire track fetches at
   // data-arrival so cards are usually track-ready before the eye lands.
   useEffect(() => {
@@ -501,12 +526,19 @@ export default function HomeScreen() {
       {/* Cold-start recovery of an unsaved run (crash safety, 러닝 저장 item) */}
       <PendingRunRecovery />
       <FlatList
-        data={list}
-        keyExtractor={(r) => r.run_id}
+        data={displayList}
+        keyExtractor={(r) => '__suggest' in r ? r.__suggest : r.run_id}
         showsVerticalScrollIndicator={false}
         viewabilityConfig={viewabilityConfig}
         onViewableItemsChanged={onViewableItemsChanged}
-        ListHeaderComponent={header}
+        ListHeaderComponent={
+          <>
+            {header}
+            {/* cold-start slot — above the feed (and above the empty state),
+                outside the data so ListEmptyComponent still renders */}
+            {coldStart && <SuggestedRunnersRow sr={sr} />}
+          </>
+        }
         refreshControl={
           <RefreshControl
             refreshing={tab === '전체' ? nearby.loading && nearby.items.length > 0 : feed.refreshing}
@@ -522,6 +554,7 @@ export default function HomeScreen() {
         contentContainerStyle={{ paddingBottom: tabBarInset }}
         ItemSeparatorComponent={() => <View style={{ height: 16 }} />}
         renderItem={({ item }) => {
+          if ('__suggest' in item) return <SuggestedRunnersRow sr={sr} />; // interleave slot
           // ── ONE RunCard path, both tabs (payload shape parity, probed) ────
           const ov = kudosOv[item.run_id];
           const shown = ov ? { ...item, my_kudos: ov.on, kudos_count: item.kudos_count + ov.delta } : item;

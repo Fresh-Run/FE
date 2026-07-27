@@ -635,6 +635,5 @@ export const en: Record<keyof typeof ko, string> = {
   'fr.follow': 'Follow',
   'fr.requested': 'Requested',
   'fr.following': 'Following',
-  'fr.runsN': '{n} runs',
   'fr.failTitle': 'Something went wrong',
 };
