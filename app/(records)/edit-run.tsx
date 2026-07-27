@@ -36,7 +36,7 @@ import { updateRun, type RunVisibility } from '@/lib/runs-api';
 import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { useRunDetail } from '@/hooks/use-runs';
-import { VISIBILITY_OPTIONS } from '@/app/(course)/run-save';
+import { visibilityOptions } from '@/app/(course)/run-save';
 
 export default function EditRunScreen() {
   const C = useTokens();
@@ -255,7 +255,7 @@ export default function EditRunScreen() {
           <View style={{ paddingHorizontal: S.gutter, paddingTop: 22 }}>
             <Text style={st.fieldLabel}>공개 범위</Text>
             <View style={[st.visCard, shadows.sm]}>
-              {VISIBILITY_OPTIONS.map((o, i) => (
+              {visibilityOptions().map((o, i) => (
                 <React.Fragment key={o.value}>
                   {i > 0 && <View style={st.divider} />}
                   <Pressable onPress={() => setVisibility(o.value)} style={st.visRow}>

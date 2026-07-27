@@ -1,3 +1,5 @@
+import { getLang, t } from '@/lib/i18n';
+
 export function fmtPace(sec: number): string {
   const m = Math.floor(sec / 60);
   const s = Math.round(sec % 60);
@@ -40,15 +42,21 @@ export function fmtDuration(sec: number): string {
   return `${m}:${String(s).padStart(2, '0')}`;
 }
 
+// i18n slice 1: locale-aware date words (en month names local to the
+// formatter — formats are formatter business, words come from the dicts)
+const MONTHS_EN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
 export function fmtDate(isoStr: string): string {
   const d = new Date(isoStr);
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const yesterday = new Date(today.getTime() - 86_400_000);
   const runDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-  if (runDay.getTime() === today.getTime()) return '오늘';
-  if (runDay.getTime() === yesterday.getTime()) return '어제';
-  return `${d.getMonth() + 1}월 ${d.getDate()}일`;
+  if (runDay.getTime() === today.getTime()) return t('date.today');
+  if (runDay.getTime() === yesterday.getTime()) return t('date.yesterday');
+  return getLang() === 'en'
+    ? `${MONTHS_EN[d.getMonth()]} ${d.getDate()}`
+    : `${d.getMonth() + 1}월 ${d.getDate()}일`;
 }
 
 export function fmtAgo(isoStr: string): string {
@@ -103,11 +111,11 @@ export function courseStats(item: CourseStatsInput) {
 // 03:23); 새벽 is the early-dawn slot 04:00–06:59.
 export function timeTitle(isoStr: string): string {
   const h = new Date(isoStr).getHours();
-  if (h >= 4  && h < 7)  return '새벽 러닝';
-  if (h >= 7  && h < 10) return '아침 러닝';
-  if (h >= 10 && h < 12) return '오전 러닝';
-  if (h >= 12 && h < 14) return '점심 러닝';
-  if (h >= 14 && h < 18) return '오후 러닝';
-  if (h >= 18 && h < 21) return '저녁 러닝';
-  return '야간 러닝';
+  if (h >= 4  && h < 7)  return t('title.dawn');
+  if (h >= 7  && h < 10) return t('title.morning');
+  if (h >= 10 && h < 12) return t('title.forenoon');
+  if (h >= 12 && h < 14) return t('title.lunch');
+  if (h >= 14 && h < 18) return t('title.afternoon');
+  if (h >= 18 && h < 21) return t('title.evening');
+  return t('title.night');
 }

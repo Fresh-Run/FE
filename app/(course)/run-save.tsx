@@ -42,6 +42,7 @@ import { Icon } from '@/components/ui';
 import { distUnit, fmtDist, fmtDuration, fmtPaceIn, fmtWhen, paceUnit, timeTitle } from '@/lib/run-format';
 import { MAX_RUN_PHOTOS, reencodeForUpload } from '@/lib/run-photos';
 import { maybeWriteRunToHealth } from '@/lib/health';
+import { t, tf, useT } from '@/lib/i18n';
 import { runSession } from '@/store/run-session';
 import { saveRun, type RunVisibility } from '@/lib/runs-api';
 import { radius as R, spacing as S, type Tokens } from '@/lib/theme';
@@ -58,18 +59,24 @@ import { useSettings } from '@/store/use-settings';
 const MIN_SAVE_KM = 0.05; // 50m floor (owner spec, 2026-07-11 outing) — GPS noise can fake sub-50m "runs"
 const MAP_HIDE_BELOW_KM = 0.3;
 
-export const VISIBILITY_OPTIONS: { value: RunVisibility; label: string; sub: string }[] = [
-  { value: 'public',    label: '전체 공개', sub: '피드와 프로필에 공개' },
-  { value: 'followers', label: '팔로워만',  sub: '팔로워에게만 보여요' },
-  { value: 'private',   label: '비공개',    sub: '나만 볼 수 있어요' },
-];
+/** Call-time (NOT module-scope const — the dark-epic static-capture class,
+    reborn for strings: a const would freeze one language at import). Shared
+    vocabulary with edit-run. */
+export function visibilityOptions(): { value: RunVisibility; label: string; sub: string }[] {
+  return [
+    { value: 'public',    label: t('vis.public'),    sub: t('vis.publicSub') },
+    { value: 'followers', label: t('vis.followers'), sub: t('vis.followersSub') },
+    { value: 'private',   label: t('vis.private'),   sub: t('vis.privateSub') },
+  ];
+}
 
 const visibilityLabel = (v: RunVisibility) =>
-  VISIBILITY_OPTIONS.find(o => o.value === v)?.label ?? '전체 공개';
+  visibilityOptions().find(o => o.value === v)?.label ?? t('vis.public');
 
 export default function RunSaveScreen() {
   const C = useTokens();
   const st = useStyles(makeSt);
+  const T = useT(); // reactive — a language flip repaints the screen
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const units = useSettings(s => s.settings.units);
@@ -131,7 +138,7 @@ export default function RunSaveScreen() {
       }
       setPhotos(p => [...p, ...clean].slice(0, MAX_RUN_PHOTOS));
     } catch {
-      Alert.alert('사진 추가 실패', '사진을 불러오지 못했어요. 다시 시도해 주세요.');
+      Alert.alert(t('runSave.photoFailTitle'), t('runSave.photoFailBody'));
     } finally {
       setPicking(false);
     }
@@ -150,11 +157,11 @@ export default function RunSaveScreen() {
         // the house denied-grammar (handleStart's location alert): honest
         // body + a REAL Settings route, never a dead-end OK
         Alert.alert(
-          '카메라 권한이 필요해요',
-          '러닝 사진을 찍으려면 카메라 접근을 허용해 주세요.',
+          t('runSave.cameraPermTitle'),
+          t('runSave.cameraPermBody'),
           [
-            { text: '취소', style: 'cancel' },
-            { text: '설정 열기', onPress: () => Linking.openSettings() },
+            { text: t('common.cancel'), style: 'cancel' },
+            { text: t('common.openSettings'), onPress: () => Linking.openSettings() },
           ],
         );
         return;
@@ -165,7 +172,7 @@ export default function RunSaveScreen() {
       const clean = await reencodeForUpload(a.uri, a.width, a.height);
       setPhotos(p => [...p, clean].slice(0, MAX_RUN_PHOTOS));
     } catch {
-      Alert.alert('촬영 실패', '사진을 찍지 못했어요. 다시 시도해 주세요.');
+      Alert.alert(t('runSave.shootFailTitle'), t('runSave.shootFailBody'));
     } finally {
       setPicking(false);
     }
@@ -231,9 +238,9 @@ export default function RunSaveScreen() {
       // still in memory AND on disk (pending-run crash copy) — so 다시 시도
       // re-attempts the identical POST with the current typed fields.
       setSaving(false);
-      Alert.alert('저장 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요', [
-        { text: '나중에', style: 'cancel' },
-        { text: '다시 시도', onPress: () => handleSave() },
+      Alert.alert(t('runSave.saveFailTitle'), e instanceof Error ? e.message : t('runSave.saveFailBody'), [
+        { text: t('common.later'), style: 'cancel' },
+        { text: t('common.retry'), onPress: () => handleSave() },
       ]);
     }
   }
@@ -269,7 +276,7 @@ export default function RunSaveScreen() {
         <Pressable onPress={handleBack} hitSlop={12} style={st.backBtn}>
           <Icon name="chevron-back" size={22} color={C.text} />
         </Pressable>
-        <Text style={st.appBarTitle}>러닝 저장</Text>
+        <Text style={st.appBarTitle}>{T('runSave.title')}</Text>
         <Pressable
           onPress={handleSave}
           disabled={tooShort || saving}
@@ -277,7 +284,7 @@ export default function RunSaveScreen() {
         >
           {saving
             ? <ActivityIndicator size="small" color={C.accentText} />
-            : <Text style={[st.savePillTxt, tooShort && { color: C.faint }]}>저장</Text>}
+            : <Text style={[st.savePillTxt, tooShort && { color: C.faint }]}>{T('runSave.save')}</Text>}
         </Pressable>
       </View>
 
@@ -294,10 +301,10 @@ export default function RunSaveScreen() {
                 <View style={st.tagIcon}><Icon name="people" size={14} color={C.accentGrn} /></View>
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <Text style={st.tagTxt} numberOfLines={2}>
-                    이 러닝은 <Text style={st.tagStrong}>{crewSession.crewName}</Text> 정기런으로 기록돼요
+                    {T('runSave.crewTag.before')}<Text style={st.tagStrong}>{crewSession.crewName}</Text>{T('runSave.crewTag.after')}
                   </Text>
                   {crewSession.announcementTitle ? (
-                    <Text style={st.tagSub} numberOfLines={1}>{`'${crewSession.announcementTitle}' 모임`}</Text>
+                    <Text style={st.tagSub} numberOfLines={1}>{tf('runSave.crewMeeting', { title: crewSession.announcementTitle })}</Text>
                   ) : null}
                 </View>
                 <Pressable onPress={() => setTagKept(false)} hitSlop={8} style={st.tagRemove}>
@@ -306,8 +313,8 @@ export default function RunSaveScreen() {
               </View>
             ) : (
               <Pressable onPress={() => setTagKept(true)} style={st.tagRemovedRow}>
-                <Text style={st.tagRemovedTxt}>정기런으로 기록하지 않아요</Text>
-                <Text style={st.tagUndo}>되돌리기</Text>
+                <Text style={st.tagRemovedTxt}>{T('runSave.tagRemoved')}</Text>
+                <Text style={st.tagUndo}>{T('runSave.undo')}</Text>
               </Pressable>
             )}
           </View>
@@ -323,16 +330,16 @@ export default function RunSaveScreen() {
             style={st.titleInput}
           />
           <Text style={st.caption}>
-            {run.course ? run.course.title : '자유 러닝'} · GPS 기록
+            {run.course ? run.course.title : T('common.freeRun')} · {T('runSave.gpsCaption')}
           </Text>
         </View>
 
         {/* ── Stats row (canvas: label above value, green distance, 3 cols) ── */}
         <View style={st.statsRow}>
           {([
-            ['거리',   fmtDist(run.distanceKm, units, 2), distUnit(units), true],
-            ['시간',   fmtDuration(run.elapsedSec), '', false],
-            ['페이스', run.avgPaceSecPerKm != null ? fmtPaceIn(run.avgPaceSecPerKm, units) : '--', paceUnit(units), false],
+            [T('runSave.statDist'), fmtDist(run.distanceKm, units, 2), distUnit(units), true],
+            [T('runSave.statTime'), fmtDuration(run.elapsedSec), '', false],
+            [T('runSave.statPace'), run.avgPaceSecPerKm != null ? fmtPaceIn(run.avgPaceSecPerKm, units) : '--', paceUnit(units), false],
           ] as [string, string, string, boolean][]).map(([label, val, unit, accent], i) => (
             <View key={i} style={st.statCell}>
               <Text style={st.statLbl}>{label}</Text>
@@ -385,7 +392,7 @@ export default function RunSaveScreen() {
             <Icon name="camera-outline" size={20} color={C.faint} />
           </Pressable>
           {photos.length === 0 ? (
-            <Text style={st.photoTxt}>사진 추가</Text>
+            <Text style={st.photoTxt}>{T('runSave.addPhoto')}</Text>
           ) : (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1 }} contentContainerStyle={{ gap: 8, paddingTop: 6, paddingRight: 6 }}>
               {photos.map(uri => (
@@ -410,7 +417,7 @@ export default function RunSaveScreen() {
           <TextInput
             value={memo}
             onChangeText={v => setMemo(v.slice(0, 2000))}
-            placeholder="오늘 러닝은 어땠나요? 메모를 남겨보세요..."
+            placeholder={T('runSave.memoPlaceholder')}
             placeholderTextColor={C.faint}
             multiline
             style={st.memoInput}
@@ -422,7 +429,7 @@ export default function RunSaveScreen() {
         <View style={{ paddingHorizontal: S.gutter }}>
           <Pressable onPress={() => setSheetOpen(true)} style={st.visRow}>
             <Icon name="lock-closed-outline" size={17} color={C.sub} />
-            <Text style={st.visLabel}>공개 범위</Text>
+            <Text style={st.visLabel}>{T('runSave.visibility')}</Text>
             <Text style={st.visValue}>{visibilityLabel(visibility)}</Text>
             <Icon name="chevron-forward" size={16} color={C.faint} />
           </Pressable>
@@ -432,13 +439,13 @@ export default function RunSaveScreen() {
         {tooShort && (
           <View style={st.noticeRow}>
             <Icon name="information-circle-outline" size={15} color={C.faint} />
-            <Text style={st.noticeTxt}>너무 짧은 러닝은 저장되지 않아요</Text>
+            <Text style={st.noticeTxt}>{T('runSave.tooShort')}</Text>
           </View>
         )}
 
         {/* ── 러닝 삭제하기 (canvas: plain red centered text) ── */}
         <Pressable onPress={handleDelete} style={({ pressed }) => [st.deleteBtn, { opacity: pressed ? 0.7 : 1 }]}>
-          <Text style={st.deleteTxt}>러닝 삭제하기</Text>
+          <Text style={st.deleteTxt}>{T('runSave.deleteRun')}</Text>
         </Pressable>
       </ScrollView>
 
@@ -446,13 +453,13 @@ export default function RunSaveScreen() {
       <Modal visible={discardOpen} transparent animationType="fade" onRequestClose={() => setDiscardOpen(false)}>
         <Pressable style={st.discardOverlay} onPress={() => setDiscardOpen(false)}>
           <Pressable style={st.discardCard} onPress={() => {}}>
-            <Text style={st.discardTitle}>러닝을 삭제할까요?</Text>
-            <Text style={st.discardSub}>이 러닝 기록은 저장되지 않고 사라져요.</Text>
+            <Text style={st.discardTitle}>{T('runSave.discardTitle')}</Text>
+            <Text style={st.discardSub}>{T('runSave.discardSub')}</Text>
             <Pressable onPress={confirmDiscard} style={({ pressed }) => [st.discardBtn, { opacity: pressed ? 0.85 : 1 }]}>
-              <Text style={st.discardBtnTxt}>삭제</Text>
+              <Text style={st.discardBtnTxt}>{T('common.delete')}</Text>
             </Pressable>
             <Pressable onPress={() => setDiscardOpen(false)} style={({ pressed }) => [st.discardCancel, { opacity: pressed ? 0.7 : 1 }]}>
-              <Text style={st.discardCancelTxt}>취소</Text>
+              <Text style={st.discardCancelTxt}>{T('common.cancel')}</Text>
             </Pressable>
           </Pressable>
         </Pressable>
@@ -463,9 +470,9 @@ export default function RunSaveScreen() {
         <Pressable style={st.sheetOverlay} onPress={() => setSheetOpen(false)}>
           <Pressable style={[st.sheet, { paddingBottom: Math.max(insets.bottom, 12) + 8 }]} onPress={() => {}}>
             <View style={st.sheetHandleRow}><View style={st.sheetHandle} /></View>
-            <Text style={st.sheetTitle}>공개 범위</Text>
+            <Text style={st.sheetTitle}>{T('runSave.visibility')}</Text>
             {/* canvas: selected option = accentDim card with ✓, no radios */}
-            {VISIBILITY_OPTIONS.map(o => {
+            {visibilityOptions().map(o => {
               const on = visibility === o.value;
               return (
                 <Pressable
