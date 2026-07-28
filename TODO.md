@@ -1220,7 +1220,7 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 - PART 2: kudos-sheet conversion restored (the 4a-now revert) — last-parent gate SATISFIED (my-profile 4b-2 + run-post 4c). kd.* 3 keys + common.retry reuse; useT anchor in the sheet body (overlays long-lived screens). FINAL PARITY 708/708.
 - Byte-scan (export EvNIG2Qd…): ko/en multi-word markers all 1; "Could not load the list" = 1 informational (shared value with bl.loadFail — dedup-aware, two keys one string, Hermes collapsed).
 - RESIDUE: ALL ELEVEN batch-3-touched files CLEAN (run-card·use-comments·follow trio·avatar·profile pair·run-post·reports-api·kudos-sheet).
-- **BATCH 3 BUILD COMPLETE: 4 checkpoints (4a-now duo shipped separately; 4b-1 · 4b-2 · 4c · 4d) — ONE publish next on owner word. The 소셜/피드 surface is bilingual end-to-end; both report entry points share one copy; no junction remains.**
+- **BATCH 3 STAGED (hash-tie ✓ — the 4d export EvNIG2Qd = the served bytes): owner walk pending — follow world · both profiles · run detail (comments + report sheet) · kudos sheet over both parents · both languages · ko regression. Stamp promotes.**
 
 ## 🔼 4c — RUN DETAIL + REPORT WIRE LABELS BUILT (11b91d9; NOT staged per spec)
 - WIRE VERIFIED FIRST: reason travels as the code enum (r.value → spam|abuse|inappropriate|impersonation|other; state typed ReportReason) — backend account CONFIRMED, no ko-string-on-wire site exists. REPORT_REASONS labels → key-holding StringKeys; BOTH render sites (user-profile + run-post) wrapped under their anchors.
