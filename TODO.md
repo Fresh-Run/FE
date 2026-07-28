@@ -1215,6 +1215,13 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 
 **핵심 판정: 스퍼 메커니즘은 그녀의 3부검(§8.13-8.15)이 이미 실험적으로 종결한 클래스** — 좌표 발명(Gemini 무지도) × T-map 전점방문 계약의 구조적 산물. **오늘의 신규 발견 = 인밴드 레인의 스퍼 무게이트 비대칭**: 데스크 실증 — 300m 골목 스퍼 = longest_retrace_m 609 → 그녀 자신의 §8.16 합격선(≤600) 위반이면서 유일한 라이브 게이트(오버캡 ≤800)는 통과, **인밴드 단독 후보는 게이트 자체가 없어 무조건 서빙**. 픽스 랭킹: ① 인밴드 스퍼 게이트 확장(if절 수준, 최고 레버리지) ② 스퍼 절제 후처리(가용성 보존 페어) ③ 앵커 dead_end 프로브 활성화(라이브 경로가 probe_dead_end=False로 호출 중) ④ 스냅-사이드 웨이포인트 드롭(M) ⑤ 프롬프트 = 사망 레인(§8.15 반증 3종, 재론 금지). 부수: _within_band 독스트링 −0.1 vs 상수 0.3 드리프트 · ANCHOR_EPIC 헤더 "미배선" vs 혼합 풀 라이브 코드 스테일. 풀 리포트 오너 메시지로 납품. STOP — 그녀 레인, 그녀 콜.
 
+## 🔼 4d — NOTIFICATIONS + ROUTING + fmtAgo BUILT (49bd8c7+62543db; NOT staged per spec)
+- STEP-1 FINDING: fmtAgo rendered ko on FOUR converted surfaces (crew-detail feed·crew-runs·crew-requests·kudos-sheet) + notifications — shipped defect; the locale branch fixes all five (방금 전/N분 전/N시간 전 ↔ just now/{n}m ago/{n}h ago, fmtDate-precedent dict words).
+- ACTOR-COPY REWRITE: 16 copies → {name}-slot tf templates + a SPLIT RENDERER (template.split('{name}') → before + bold actor + after; ko '{name}님이…' splits to ''+today's bytes — visual unchanged; en reorders freely). crew_invited dynamic = tf partial-fill ({crew} filled, {name} survives for the split — desk-proven). pbCopy 3 branches = CLEAN template mapping (pbOne/pbMany/pbZero — no STOP needed). ALL 16 en templates FLAGGED PENDING HARMONIZATION with her server push pairs (list in the checkpoint; revisit when her en strings arrive).
+- Sweeps: typeMeta tags+copies·PB_LABEL·TABS → key-holding (PB record_types wire keys untouched) · notif-routing 4 = bare-t alerts + 3 ntfr.* keys · straggler grep caught fallbackMeta's copy (ntf.fallbackCopy) · run-format '서울' = courseStats fallback, SLICE 7's (stated, untouched).
+- Anchors ×2 (screen + NotifRow — the long-lived list's row); tx alias (TABS loop shadows t). Parity 759/759. Export 3HqLhw0v…, template markers 7/7 both tables. Residue: notifications/notif-routing CLEAN.
+- SLICE 4 COMPLETE. Publish plan on owner word (with its own explicit confirm per the hardened rule).
+
 ## 🔼 4d-FINAL — KUDOS-SHEET RESTORED; BATCH 3 BUILD COMPLETE (8396a23; NOT staged per spec)
 - PART 1 RECONCILED: dictionaries EXACT, the 4c checkpoint's "27 keys" was an arithmetic misreport — actual 22 (rp.* 17 + rpt.* 5), 683+22=705, zero dupes. Report error, not dictionary error; ledger corrected here.
 - PART 2: kudos-sheet conversion restored (the 4a-now revert) — last-parent gate SATISFIED (my-profile 4b-2 + run-post 4c). kd.* 3 keys + common.retry reuse; useT anchor in the sheet body (overlays long-lived screens). FINAL PARITY 708/708.
