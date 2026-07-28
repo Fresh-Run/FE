@@ -38,12 +38,14 @@ import { useUserProfile, type UserRun } from '@/hooks/use-user-profile';
 import { usePendingFollows } from '@/store/pending-follows';
 import { useSettings } from '@/store/use-settings';
 import { useStore } from '@/store/use-store';
+import { t, tf, useT } from '@/lib/i18n';
 
 // Run card — other-user variant: ♥ is a real toggle (my_kudos), no 💬,
 // no visibility caption (approved deltas). Card tap → 러닝 포스트 (R3',
 // BE 4cd5685 opened non-owner run detail) with entry-payload seeds.
 
 export default function UserProfileScreen() {
+  const T = useT(); // reactive anchor — stack-mounted beneath 설정
   const C = useTokens();
   const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
@@ -96,7 +98,7 @@ export default function UserProfileScreen() {
         .catch(() => {
           setFollowOverlay(prev);
           usePendingFollows.getState().add(profile.user_id);
-          Alert.alert('실패', '요청을 취소하지 못했어요. 잠시 후 다시 시도해 주세요.');
+          Alert.alert(t('up.fail'), t('up.cancelReqFail'));
         });
       return;
     }
@@ -106,7 +108,7 @@ export default function UserProfileScreen() {
         .then(() => refetch())
         .catch(() => {
           setFollowOverlay(prev);
-          Alert.alert('실패', '팔로우 상태를 변경하지 못했어요. 잠시 후 다시 시도해 주세요.');
+          Alert.alert(t('up.fail'), t('up.followFail'));
         });
       return;
     }
@@ -131,7 +133,7 @@ export default function UserProfileScreen() {
           return;
         }
         setFollowOverlay(prev);
-        Alert.alert('실패', '팔로우 상태를 변경하지 못했어요. 잠시 후 다시 시도해 주세요.');
+        Alert.alert(t('up.fail'), t('up.followFail'));
       });
   }
 
@@ -162,7 +164,7 @@ export default function UserProfileScreen() {
       });
   }
 
-  const title = profile?.nickname ?? nickParam ?? '프로필';
+  const title = profile?.nickname ?? nickParam ?? T('up.profileFallback');
 
   // ⋯ overflow — keyed off the ROUTE uid, not the fetched payload: self never
   // lands on this screen by construction (openProfile routes my uid to 내
@@ -196,29 +198,29 @@ export default function UserProfileScreen() {
       .then(() => {
         closeSheet();
         // no toast primitive in the app — Alert is the house pattern
-        Alert.alert('신고가 접수되었어요', '검토 후 필요한 조치를 취할게요.');
+        Alert.alert(t('up.reported'), t('up.reportedSub'));
       })
       .catch((e: unknown) => {
         setReportBusy(false);
-        Alert.alert('신고 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요.');
+        Alert.alert(t('up.reportFail'), e instanceof Error ? e.message : t('auth.tryLater'));
       });
   }
 
   function confirmBlock() {
     if (!uid) return;
     closeSheet();
-    const who = profile?.nickname ?? nickParam ?? '이 사용자';
+    const who = profile?.nickname ?? nickParam ?? t('up.thisUser');
     Alert.alert(
-      `${who}님을 차단할까요?`,
-      '서로의 프로필과 러닝이 안 보이게 되고, 지금의 팔로우 관계가 사라져요. 차단을 풀어도 팔로우는 자동으로 복구되지 않아요. (신고와는 별개예요.)',
+      tf('up.blockAsk', { name: who }),
+      t('up.blockSub'),
       [
-        { text: '취소', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: '차단하기', style: 'destructive',
+          text: t('up.block'), style: 'destructive',
           onPress: () => {
             blockUser(uid)
               .then(() => router.back()) // profile now 404s to me — bounce out
-              .catch((e: unknown) => Alert.alert('차단 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요.'));
+              .catch((e: unknown) => Alert.alert(t('up.blockFail'), e instanceof Error ? e.message : t('auth.tryLater')));
           },
         },
       ],
@@ -239,9 +241,9 @@ export default function UserProfileScreen() {
       {/* Counts — 팔로잉/팔로워 → that user's follow lists */}
       <View style={st.countsRow}>
         {([
-          [profile.following_count, '팔로잉', 'following'],
-          [profile.follower_count,  '팔로워', 'followers'],
-          [profile.public_run_count, '활동',  null],
+          [profile.following_count, T('fl.tabFollowing'), 'following'],
+          [profile.follower_count,  T('fl.tabFollowers'), 'followers'],
+          [profile.public_run_count, T('pf.activity'),  null],
         ] as [number, string, string | null][]).map(([n, label, tabParam]) => (
           <Pressable
             key={label}
@@ -266,15 +268,15 @@ export default function UserProfileScreen() {
           ]}
         >
           <Text style={followState !== 'none' ? st.followTxtOutlined : st.followTxtFilled}>
-            {followState === 'following' ? '팔로잉' : followState === 'requested' ? '요청됨 · 취소' : '팔로우'}
+            {followState === 'following' ? T('fr.following') : followState === 'requested' ? T('up.requestedCancel') : T('fr.follow')}
           </Text>
         </Pressable>
       </View>
 
       {!profile?.locked && (
         <View style={st.sectionHead}>
-          <Text style={st.sectionTitle}>게시한 러닝</Text>
-          <Text style={st.sectionCount}>공개 {runs.length}개</Text>
+          <Text style={st.sectionTitle}>{T('up.postedRuns')}</Text>
+          <Text style={st.sectionCount}>{tf('up.publicN', { n: runs.length })}</Text>
         </View>
       )}
     </View>
@@ -316,8 +318,8 @@ export default function UserProfileScreen() {
       ) : error || !profile ? (
         <View style={st.centered}>
           <Icon name="warning-outline" size={36} color={C.faint} />
-          <Text style={st.stateTxt}>{error ?? '프로필을 불러올 수 없어요'}</Text>
-          <Pressable onPress={refetch} style={st.retryBtn}><Text style={st.retryTxt}>다시 시도</Text></Pressable>
+          <Text style={st.stateTxt}>{error ?? T('pf.loadFail')}</Text>
+          <Pressable onPress={refetch} style={st.retryBtn}><Text style={st.retryTxt}>{T('common.retry')}</Text></Pressable>
         </View>
       ) : (
         <FlatList
@@ -364,15 +366,15 @@ export default function UserProfileScreen() {
               <View style={st.lockCircle}>
                 <Icon name="lock-closed-outline" size={24} color={C.faint} />
               </View>
-              <Text style={st.lockTitle}>비공개 프로필입니다</Text>
+              <Text style={st.lockTitle}>{T('up.lockTitle')}</Text>
               <Text style={st.lockSub}>
-                팔로우하면 {profile.nickname}님이 게시한 러닝을 볼 수 있어요.
+                {tf('up.lockSub', { name: profile.nickname })}
               </Text>
             </View>
           ) : (
             <View style={st.centered}>
               <Icon name="walk-outline" size={36} color={C.faint} />
-              <Text style={st.stateTxt}>아직 공개된 러닝이 없어요</Text>
+              <Text style={st.stateTxt}>{T('up.noPublicRuns')}</Text>
             </View>
           )}
           contentContainerStyle={{ paddingBottom: 36 }}
@@ -393,17 +395,17 @@ export default function UserProfileScreen() {
               <>
                 <Pressable onPress={() => setSheetView('report')} style={({ pressed }) => [st.sheetRow, pressed && { opacity: 0.7 }]}>
                   <Icon name="flag-outline" size={19} color={C.text} />
-                  <Text style={st.sheetRowTxt}>신고하기</Text>
+                  <Text style={st.sheetRowTxt}>{T('up.report')}</Text>
                 </Pressable>
                 <View style={st.sheetDivider} />
                 <Pressable onPress={confirmBlock} style={({ pressed }) => [st.sheetRow, pressed && { opacity: 0.7 }]}>
                   <Icon name="ban-outline" size={19} color={C.danger} />
-                  <Text style={[st.sheetRowTxt, { color: C.danger }]}>차단하기</Text>
+                  <Text style={[st.sheetRowTxt, { color: C.danger }]}>{T('up.block')}</Text>
                 </Pressable>
               </>
             ) : (
               <>
-                <Text style={st.sheetTitle}>신고하기</Text>
+                <Text style={st.sheetTitle}>{T('up.report')}</Text>
                 {REPORT_REASONS.map(r => {
                   const on = reportReason === r.value;
                   return (
@@ -418,7 +420,7 @@ export default function UserProfileScreen() {
                 <TextInput
                   value={reportDetail}
                   onChangeText={t => setReportDetail(t.slice(0, 500))}
-                  placeholder="자세한 내용 (선택)"
+                  placeholder={T('up.reportDetailPh')}
                   placeholderTextColor={C.faint}
                   multiline
                   style={st.reportInput}
@@ -430,7 +432,7 @@ export default function UserProfileScreen() {
                 >
                   {reportBusy
                     ? <ActivityIndicator size="small" color={C.accentText} />
-                    : <Text style={[st.reportSubmitTxt, !reportReason && { color: C.faint }]}>신고 제출</Text>}
+                    : <Text style={[st.reportSubmitTxt, !reportReason && { color: C.faint }]}>{T('up.reportSubmit')}</Text>}
                 </Pressable>
               </>
             )}

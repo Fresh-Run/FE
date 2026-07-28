@@ -39,17 +39,21 @@ import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { prewarmTracks, useRunTrack } from '@/lib/track-cache';
 import { useSettings } from '@/store/use-settings';
+import { t, tf, useT } from '@/lib/i18n';
 
 // Own-list visibility is never null (legacy rows = 'followers' server-side)
-const VIS_CAPTION: Record<MyRun['visibility'], string> = {
-  public:    '공개 게시물',
-  followers: '팔로워 공개',
-  private:   '비공개',
-};
+// key-holding (static-capture rule) — resolved at render inside the card
+const VIS_CAPTION_KEY = {
+  public:    'mp.visPublic',
+  followers: 'mp.visFollowers',
+  private:   'mp.visPrivate',
+} as const;
 
 // Reduced feed-style run card (canvas shows area/tags — no backend source
 // for own runs; honest subset, tap → activity detail)
-function RunCard({ run, name, photoUrl, units, mapLive, onKudos }: { run: MyRun; name: string; photoUrl?: string | null; units: ReturnType<typeof useSettings.getState>['settings']['units']; mapLive: boolean; onKudos: () => void }) {
+function RunCard({ run, name, photoUrl, units, mapLive, onKudos }: {
+  run: MyRun; name: string; photoUrl?: string | null; units: ReturnType<typeof useSettings.getState>['settings']['units']; mapLive: boolean; onKudos: () => void }) {
+  const T = useT(); // reactive anchor (name-twin card, long-lived FlatList — the 4a-now shared-card treatment)
   const C = useTokens();
   const st = useStyles(makeSt);
   // visual-split ruling: full track when fetched, thumb while loading
@@ -84,9 +88,9 @@ function RunCard({ run, name, photoUrl, units, mapLive, onKudos }: { run: MyRun;
         <Text style={st.cardTitle}>{run.title ?? timeTitle(run.ran_at)}</Text>
         <View style={st.statsRow}>
           {([
-            [fmtDist(run.distance_km, units, 1), distUnit(units), '거리'],
-            [fmtDuration(run.duration_sec), '', '시간'],
-            [run.avg_pace_sec_per_km != null ? fmtPaceIn(run.avg_pace_sec_per_km, units) : '--', paceUnit(units), '페이스'],
+            [fmtDist(run.distance_km, units, 1), distUnit(units), T('runSave.statDist')],
+            [fmtDuration(run.duration_sec), '', T('res.time')],
+            [run.avg_pace_sec_per_km != null ? fmtPaceIn(run.avg_pace_sec_per_km, units) : '--', paceUnit(units), T('res.pace')],
           ] as [string, string, string][]).map(([val, unit, label], i) => (
             <View key={i} style={{ gap: 2 }}>
               <Text style={st.statVal}>
@@ -112,7 +116,7 @@ function RunCard({ run, name, photoUrl, units, mapLive, onKudos }: { run: MyRun;
             <Text style={st.kudosCount}>{run.comment_count}</Text>
           </View>
         </View>
-        <Text style={st.visCaption}>{VIS_CAPTION[run.visibility]}</Text>
+        <Text style={st.visCaption}>{T(VIS_CAPTION_KEY[run.visibility])}</Text>
       </View>
     </Pressable>
   );
@@ -123,6 +127,7 @@ function RunCard({ run, name, photoUrl, units, mapLive, onKudos }: { run: MyRun;
 // note's graduation condition).
 
 export default function MyProfileScreen() {
+  const T = useT(); // reactive anchor — stack-mounted beneath 설정
   const C = useTokens();
   const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
@@ -167,9 +172,9 @@ export default function MyProfileScreen() {
       {/* Counts — 팔로잉/팔로워 tap → follow list; 활동 non-tappable */}
       <View style={st.countsRow}>
         {([
-          [profile.followingCount, '팔로잉', 'following'],
-          [profile.followerCount,  '팔로워', 'followers'],
-          [profile.runCount,       '활동',   null],
+          [profile.followingCount, T('fl.tabFollowing'), 'following'],
+          [profile.followerCount,  T('fl.tabFollowers'), 'followers'],
+          [profile.runCount,       T('pf.activity'),   null],
         ] as [number, string, string | null][]).map(([n, label, tabParam]) => (
           <Pressable
             key={label}
@@ -190,22 +195,22 @@ export default function MyProfileScreen() {
           style={({ pressed }) => [st.actionBtn, { opacity: pressed ? 0.7 : 1 }]}
         >
           <Icon name="pencil-outline" size={15} color={C.text} />
-          <Text style={st.actionTxt}>프로필 편집</Text>
+          <Text style={st.actionTxt}>{T('mp.editProfile')}</Text>
         </Pressable>
         <Pressable
-          onPress={() => Alert.alert('준비 중', '프로필 공유는 다음 업데이트에서 지원돼요.')}
+          onPress={() => Alert.alert(t('mp.comingSoon'), t('mp.shareSoon'))}
           style={({ pressed }) => [st.actionBtn, { opacity: pressed ? 0.7 : 1 }]}
         >
           <Icon name="share-social-outline" size={15} color={C.text} />
-          <Text style={st.actionTxt}>프로필 공유</Text>
+          <Text style={st.actionTxt}>{T('mp.shareProfile')}</Text>
         </Pressable>
       </View>
 
       {/* Section head — "내 러닝" + real total (no 공개 framing until
           run visibility exists server-side) */}
       <View style={st.sectionHead}>
-        <Text style={st.sectionTitle}>내 러닝</Text>
-        <Text style={st.sectionCount}>{profile.runCount}개</Text>
+        <Text style={st.sectionTitle}>{T('mp.myRuns')}</Text>
+        <Text style={st.sectionCount}>{tf('mp.nCount', { n: profile.runCount })}</Text>
       </View>
     </View>
   );
@@ -217,7 +222,7 @@ export default function MyProfileScreen() {
         <Pressable onPress={() => router.back()} hitSlop={12} style={st.appBarBtn}>
           <Icon name="chevron-back" size={22} color={C.text} />
         </Pressable>
-        <Text style={st.appBarTitle}>내 프로필</Text>
+        <Text style={st.appBarTitle}>{T('fl.myProfile')}</Text>
         <Pressable onPress={() => router.push('/profile-settings' as any)} hitSlop={12} style={st.appBarBtn}>
           <Icon name="settings-outline" size={20} color={C.text} />
         </Pressable>
@@ -228,8 +233,8 @@ export default function MyProfileScreen() {
       ) : error || !profile ? (
         <View style={st.centered}>
           <Icon name="warning-outline" size={36} color={C.faint} />
-          <Text style={st.stateTxt}>{error ?? '프로필을 불러올 수 없어요'}</Text>
-          <Pressable onPress={refetch} style={st.retryBtn}><Text style={st.retryTxt}>다시 시도</Text></Pressable>
+          <Text style={st.stateTxt}>{error ?? T('pf.loadFail')}</Text>
+          <Pressable onPress={refetch} style={st.retryBtn}><Text style={st.retryTxt}>{T('common.retry')}</Text></Pressable>
         </View>
       ) : (
         <FlatList
@@ -247,7 +252,7 @@ export default function MyProfileScreen() {
           ListEmptyComponent={
             <View style={st.centered}>
               <Icon name="walk-outline" size={36} color={C.faint} />
-              <Text style={st.stateTxt}>아직 기록한 러닝이 없어요</Text>
+              <Text style={st.stateTxt}>{T('mp.noRuns')}</Text>
             </View>
           }
           contentContainerStyle={{ paddingBottom: 36 }}
