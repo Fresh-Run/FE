@@ -18,6 +18,7 @@ import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { useRunTrack } from '@/lib/track-cache';
 import type { UserRun } from '@/hooks/use-user-profile';
 import type { useSettings } from '@/store/use-settings';
+import { useT } from '@/lib/i18n';
 
 // Course affordances (이 코스 달리기 CTA + header bookmark, canvas card B)
 // REMOVED 2026-07-21 — owner step-back ruling; the feature returns
@@ -33,6 +34,10 @@ export function RunCard({ run, units, mapLive, onKudos, kudosOff, onOpen, onAvat
   /** discovery funnel: avatar tap → profile (absent = not tappable) */
   onAvatarPress?: () => void;
 }) {
+  // reactive anchor (owner ruling 4a-now): subscribes the card to lang —
+  // long-lived FlatList instances repaint on mid-session flips, and the
+  // timeTitle() fallback in this render body resolves fresh on that repaint
+  const T = useT();
   const C = useTokens();
   const st = useStyles(makeSt);
   // visual-split ruling: full track when fetched, thumb while loading
@@ -59,9 +64,9 @@ export function RunCard({ run, units, mapLive, onKudos, kudosOff, onOpen, onAvat
         <Text style={st.cardTitle}>{run.title ?? timeTitle(run.ran_at)}</Text>
         <View style={st.statsRow}>
           {([
-            [fmtDist(run.distance_km, units, 1), distUnit(units), '거리'],
-            [fmtDuration(run.duration_sec), '', '시간'],
-            [run.avg_pace_sec_per_km != null ? fmtPaceIn(run.avg_pace_sec_per_km, units) : '--', paceUnit(units), '페이스'],
+            [fmtDist(run.distance_km, units, 1), distUnit(units), T('runSave.statDist')],
+            [fmtDuration(run.duration_sec), '', T('res.time')],
+            [run.avg_pace_sec_per_km != null ? fmtPaceIn(run.avg_pace_sec_per_km, units) : '--', paceUnit(units), T('res.pace')],
           ] as [string, string, string][]).map(([val, unit, label], i) => (
             <View key={i} style={{ gap: 2 }}>
               <Text style={st.statVal}>

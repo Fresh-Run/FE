@@ -636,4 +636,9 @@ export const en: Record<keyof typeof ko, string> = {
   'fr.requested': 'Requested',
   'fr.following': 'Following',
   'fr.failTitle': 'Something went wrong',
+  'kd.count': '{n} likes',
+  'kd.loadFail': 'Could not load the list',
+  'kd.empty': 'No likes yet',
+  'cm.loadFail': 'Could not load comments',
+  'cm.postFail': 'Could not post the comment',
 };

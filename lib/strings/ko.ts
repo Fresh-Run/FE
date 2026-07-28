@@ -648,4 +648,9 @@ export const ko = {
   'fr.requested': '요청됨',
   'fr.following': '팔로잉',
   'fr.failTitle': '실패했어요',
+  'kd.count': '좋아요 {n}개',
+  'kd.loadFail': '목록을 불러올 수 없어요',
+  'kd.empty': '아직 좋아요가 없어요',
+  'cm.loadFail': '댓글을 불러올 수 없어요',
+  'cm.postFail': '댓글을 등록하지 못했어요',
 } as const;

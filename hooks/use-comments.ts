@@ -5,6 +5,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import { getRouteComments, postRouteComment, type RouteComment } from '@/lib/routes-api';
+import { t } from '@/lib/i18n';
 
 export type CommentView = {
   id: string;
@@ -18,7 +19,7 @@ function mapComment(row: RouteComment): CommentView {
   return {
     id: row.id,
     authorId: row.user_id ?? null,
-    authorName: row.nickname ?? '러너',
+    authorName: row.nickname ?? t('home.runner'),
     body: row.content,
     createdAt: row.created_at,
   };
@@ -38,7 +39,7 @@ export function useRouteComments(routeId: string | null) {
     setError(null);
     getRouteComments(routeId)
       .then(rows => { if (!cancelled) setComments(rows.map(mapComment)); })
-      .catch((e: unknown) => { if (!cancelled) setError(e instanceof Error ? e.message : '댓글을 불러올 수 없어요'); })
+      .catch((e: unknown) => { if (!cancelled) setError(e instanceof Error ? e.message : t('cm.loadFail')); })
       .finally(() => { if (!cancelled) setLoading(false); });
 
     return () => { cancelled = true; };
@@ -54,7 +55,7 @@ export function useRouteComments(routeId: string | null) {
       setComments(prev => [...prev, mapComment(row)]);
       return true;
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : '댓글을 등록하지 못했어요');
+      setError(e instanceof Error ? e.message : t('cm.postFail'));
       return false;
     } finally {
       setPosting(false);
