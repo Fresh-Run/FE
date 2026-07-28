@@ -1215,6 +1215,12 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 
 **핵심 판정: 스퍼 메커니즘은 그녀의 3부검(§8.13-8.15)이 이미 실험적으로 종결한 클래스** — 좌표 발명(Gemini 무지도) × T-map 전점방문 계약의 구조적 산물. **오늘의 신규 발견 = 인밴드 레인의 스퍼 무게이트 비대칭**: 데스크 실증 — 300m 골목 스퍼 = longest_retrace_m 609 → 그녀 자신의 §8.16 합격선(≤600) 위반이면서 유일한 라이브 게이트(오버캡 ≤800)는 통과, **인밴드 단독 후보는 게이트 자체가 없어 무조건 서빙**. 픽스 랭킹: ① 인밴드 스퍼 게이트 확장(if절 수준, 최고 레버리지) ② 스퍼 절제 후처리(가용성 보존 페어) ③ 앵커 dead_end 프로브 활성화(라이브 경로가 probe_dead_end=False로 호출 중) ④ 스냅-사이드 웨이포인트 드롭(M) ⑤ 프롬프트 = 사망 레인(§8.15 반증 3종, 재론 금지). 부수: _within_band 독스트링 −0.1 vs 상수 0.3 드리프트 · ANCHOR_EPIC 헤더 "미배선" vs 혼합 풀 라이브 코드 스테일. 풀 리포트 오너 메시지로 납품. STOP — 그녀 레인, 그녀 콜.
 
+## 🔼 4c — RUN DETAIL + REPORT WIRE LABELS BUILT (11b91d9; NOT staged per spec)
+- WIRE VERIFIED FIRST: reason travels as the code enum (r.value → spam|abuse|inappropriate|impersonation|other; state typed ReportReason) — backend account CONFIRMED, no ko-string-on-wire site exists. REPORT_REASONS labels → key-holding StringKeys; BOTH render sites (user-profile + run-post) wrapped under their anchors.
+- run-post 31 conversions: comments (head tf/empty/off/placeholder/게시), ⋯ sheet (수정/삭제/신고), report flow REUSES up.* (both entry points, one copy), delete confirm pair, stat labels (statDist/res.time reuse + 평균 페이스 → shr.metricPace per the dedup precedent), 러닝 app-bar title (the archaeologically famous lookalike, now rp.title), 분석 보기.
+- 27 new keys (rpt.* 5 + rp.* 22); parity 705/705 · useT anchor in the screen body, bare t() = alerts only · residue zero both files · export hash _xvXrdCwB9… multi-word dual-table scan 6/6 (single-word markers retired per spec — the Distance lesson).
+- Batch 3 = 3 of 4 checkpoints done. FINAL: kudos-sheet (last-parent gate now SATISFIED — both parents converted). ONE publish after it.
+
 ## 🔼 4b-2 — PROFILE PAIR BUILT (1b90183; NOT staged per spec)
 - 43 conversions (up 27 · mp 17 incl. the local name-twin card) / 33 new keys (up./mp./pf.) · reuse: local card = the shared card's exact 3 keys (ZERO new — as ruled, no merge refactor) · fl.tab*/fr.follow/following · pf.loadFail shared across both screens · common.*. Parity 683/683.
 - Sweeps: VIS_CAPTION (module-scope static-capture) → key-holding VIS_CAPTION_KEY · lookalikes 이 사용자/프로필 converted · nicknames/run.title stay.
