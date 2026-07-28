@@ -772,4 +772,5 @@ export const en: Record<keyof typeof ko, string> = {
   'ntfr.courseGoneT': 'Course not found',
   'ntfr.courseGoneB': 'It was deleted or made private.',
   'ntfr.courseLoadFail': 'Could not load the course',
+  'ntf.fallbackCopy': 'Something new for you',
 };

@@ -118,7 +118,7 @@ function dynamicCopy(n: AppNotification): string | null {
 }
 
 // Unknown future types still render, generically
-const fallbackMeta = (C: Tokens): Meta => ({ tag: 'ntf.tagFallback', tone: C.faint, icon: { name: 'notifications-outline', color: C.sub, bg: C.surfaceAlt }, copy: '새 소식이 있어요', actorless: true });
+const fallbackMeta = (C: Tokens): Meta => ({ tag: 'ntf.tagFallback', tone: C.faint, icon: { name: 'notifications-outline', color: C.sub, bg: C.surfaceAlt }, copy: 'ntf.fallbackCopy', actorless: true });
 
 // ─── Tabs (owner UX calls 2026-07-07; underline pattern from the concept
 //     canvas, membership over the REAL types) ────────────────────────────────

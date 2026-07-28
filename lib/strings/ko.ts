@@ -784,4 +784,5 @@ export const ko = {
   'ntfr.courseGoneT': '코스를 찾을 수 없어요',
   'ntfr.courseGoneB': '삭제되었거나 비공개로 전환된 코스예요.',
   'ntfr.courseLoadFail': '코스를 불러오지 못했어요',
+  'ntf.fallbackCopy': '새 소식이 있어요',
 } as const;
