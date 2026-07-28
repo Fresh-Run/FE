@@ -76,6 +76,7 @@ import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { useRunDetail } from '@/hooks/use-runs';
 import { useSettings } from '@/store/use-settings';
 import { useStore } from '@/store/use-store';
+import { t, tf, useT } from '@/lib/i18n';
 
 const HERO_H = 210;
 
@@ -92,6 +93,7 @@ function StatTile({ label, value, unit }: { label: string; value: string; unit?:
 }
 
 export default function RunPostScreen() {
+  const T = useT(); // reactive anchor — stack-mounted beneath 설정
   const C = useTokens();
   const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
@@ -162,7 +164,7 @@ export default function RunPostScreen() {
       router.replace('/(tabs)/records' as never);
     } catch (e: unknown) {
       setDeleting(false);
-      Alert.alert('삭제 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요');
+      Alert.alert(t('annd.delFailT'), e instanceof Error ? e.message : t('runSave.saveFailBody'));
     }
   }
   const [reportReason, setReportReason] = useState<ReportReason | null>(null);
@@ -180,11 +182,11 @@ export default function RunPostScreen() {
     reportRun(params.runId, reportReason, reportDetail)
       .then(() => {
         closeSheet();
-        Alert.alert('신고가 접수되었어요', '검토 후 필요한 조치를 취할게요.');
+        Alert.alert(t('up.reported'), t('up.reportedSub'));
       })
       .catch((e: unknown) => {
         setReportBusy(false);
-        Alert.alert('신고 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요.');
+        Alert.alert(t('up.reportFail'), e instanceof Error ? e.message : t('auth.tryLater'));
       });
   }
 
@@ -250,14 +252,14 @@ export default function RunPostScreen() {
       if (e instanceof ApiError && e.code === 'comments_disabled') {
         setCommentsOff403(true); // silent race net
       } else {
-        Alert.alert('댓글 실패', '댓글을 게시하지 못했어요. 잠시 후 다시 시도해 주세요.');
+        Alert.alert(t('rp.commentFailT'), t('rp.commentFailB'));
       }
     } finally {
       setPosting(false);
     }
   }
 
-  const nickname = params.nickname ?? '러너';
+  const nickname = params.nickname ?? T('home.runner');
   // Author photo: own runs read the store (always fresh); others use the
   // entry seed from the tapped row (sanitized detail carries no identity)
   const ownPhotoUrl = useStore(s => s.photoUrl);
@@ -268,14 +270,14 @@ export default function RunPostScreen() {
   // Own-comment delete (S-batch #2): long-press an own row → destructive
   // confirm → DELETE → local filter (counts derive from comments.length)
   function confirmDeleteComment(cm: RunComment) {
-    Alert.alert('댓글 삭제', '이 댓글을 삭제할까요?', [
-      { text: '취소', style: 'cancel' },
+    Alert.alert(t('rp.cmDelAsk'), t('rp.cmDelSub'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: '삭제', style: 'destructive',
+        text: t('common.delete'), style: 'destructive',
         onPress: () => {
           deleteRunComment(params.runId!, cm.id)
             .then(() => setComments(prev => (prev ?? []).filter(c => c.id !== cm.id)))
-            .catch(() => Alert.alert('삭제 실패', '잠시 후 다시 시도해 주세요'));
+            .catch(() => Alert.alert(t('annd.delFailT'), t('runSave.saveFailBody')));
         },
       },
     ]);
@@ -287,7 +289,7 @@ export default function RunPostScreen() {
         <Pressable onPress={() => router.back()} hitSlop={12} style={st.backBtn}>
           <Icon name="arrow-back" size={20} color={C.text} />
         </Pressable>
-        <Text style={st.appBarTitle}>러닝</Text>
+        <Text style={st.appBarTitle}>{T('rp.title')}</Text>
         {/* 공유 — the run-detail header idiom (활동 상세's icon; joined at
             the 2026-07-24 revision: card long-press RETIRED, every screen a
             run opens on carries the header share instead). Own-runs-only:
@@ -313,7 +315,7 @@ export default function RunPostScreen() {
       {loading ? (
         <View style={st.centered}><ActivityIndicator size="large" color={C.accent} /></View>
       ) : error || !run ? (
-        <Text style={st.emptyTxt}>{error ?? '기록을 찾을 수 없어요'}</Text>
+        <Text style={st.emptyTxt}>{error ?? T('rp.notFound')}</Text>
       ) : (
         <>
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 16 }} keyboardShouldPersistTaps="handled">
@@ -358,10 +360,10 @@ export default function RunPostScreen() {
 
               {/* Run stats — canvas-exact tiles (unit-aware) */}
               <View style={st.statsRow}>
-                <StatTile label="거리" value={fmtDist(run.distance_km, units, 2)} unit={distUnit(units)} />
-                <StatTile label="시간" value={fmtDuration(run.duration_sec)} />
+                <StatTile label={T('runSave.statDist')} value={fmtDist(run.distance_km, units, 2)} unit={distUnit(units)} />
+                <StatTile label={T('res.time')} value={fmtDuration(run.duration_sec)} />
                 <StatTile
-                  label="평균 페이스"
+                  label={T('shr.metricPace')}
                   value={run.avg_pace_sec_per_km != null ? fmtPaceIn(run.avg_pace_sec_per_km, units) : '--'}
                   unit={paceUnit(units)}
                 />
@@ -376,7 +378,7 @@ export default function RunPostScreen() {
                   style={({ pressed }) => [st.analysisLink, pressed && { opacity: 0.6 }]}
                 >
                   <Icon name="stats-chart-outline" size={13} color={C.accentGrn} />
-                  <Text style={st.analysisLinkTxt}>분석 보기</Text>
+                  <Text style={st.analysisLinkTxt}>{T('rp.analysis')}</Text>
                   <Icon name="chevron-forward" size={12} color={C.accentGrn} />
                 </Pressable>
               )}
@@ -403,11 +405,11 @@ export default function RunPostScreen() {
               )}
 
               {/* Comments */}
-              <Text style={st.commentsHead}>댓글 {commentCount}</Text>
+              <Text style={st.commentsHead}>{tf('rp.commentsN', { n: commentCount })}</Text>
               {comments === null ? (
                 <ActivityIndicator size="small" color={C.faint} style={{ paddingVertical: 16 }} />
               ) : comments.length === 0 ? (
-                <Text style={st.commentsEmpty}>{loadError ? '댓글을 불러오지 못했어요' : '첫 댓글을 남겨보세요.'}</Text>
+                <Text style={st.commentsEmpty}>{loadError ? T('rp.cmLoadFail') : T('rp.cmEmpty')}</Text>
               ) : (
                 <View style={{ gap: 14, paddingBottom: 8 }}>
                   {comments.map(cm => (
@@ -423,7 +425,7 @@ export default function RunPostScreen() {
                       </Pressable>
                       <View style={{ flex: 1, minWidth: 0 }}>
                         <Pressable onPress={() => openProfile(cm.user_id, cm.nickname)} hitSlop={4}>
-                          <Text style={st.commentAuthor}>{cm.nickname ?? '러너'}</Text>
+                          <Text style={st.commentAuthor}>{cm.nickname ?? T('home.runner')}</Text>
                         </Pressable>
                         <Text style={st.commentBody}>{cm.content}</Text>
                       </View>
@@ -443,14 +445,14 @@ export default function RunPostScreen() {
               the quiet-state line for the visit */}
           {commentsOff ? (
             <View style={[st.composer, { paddingBottom: Math.max(insets.bottom, S.sm) + 6, justifyContent: 'center' }]}>
-              <Text style={st.commentsOffTxt}>댓글을 받지 않는 러닝이에요</Text>
+              <Text style={st.commentsOffTxt}>{T('rp.commentsOff')}</Text>
             </View>
           ) : (
             <View style={[st.composer, { paddingBottom: Math.max(insets.bottom, S.sm) + 6 }]}>
               <TextInput
                 value={draft}
                 onChangeText={setDraft}
-                placeholder="댓글 달기..."
+                placeholder={T('rp.cmPh')}
                 placeholderTextColor={C.faint}
                 style={st.composerInput}
                 maxLength={500}
@@ -463,7 +465,7 @@ export default function RunPostScreen() {
               >
                 {posting
                   ? <ActivityIndicator size="small" color={C.accentText} />
-                  : <Text style={[st.sendTxt, !draft.trim() && { color: C.faint }]}>게시</Text>}
+                  : <Text style={[st.sendTxt, !draft.trim() && { color: C.faint }]}>{T('rp.post')}</Text>}
               </Pressable>
             </View>
           )}
@@ -490,38 +492,38 @@ export default function RunPostScreen() {
                     style={({ pressed }) => [st.sheetRow, pressed && { opacity: 0.7 }]}
                   >
                     <Icon name="create-outline" size={19} color={C.text} />
-                    <Text style={st.sheetRowTxt}>수정하기</Text>
+                    <Text style={st.sheetRowTxt}>{T('rp.edit')}</Text>
                   </Pressable>
                   <Pressable
                     onPress={() => { closeSheet(); setDelOpen(true); }}
                     style={({ pressed }) => [st.sheetRow, pressed && { opacity: 0.7 }]}
                   >
                     <Icon name="trash-outline" size={19} color={C.danger} />
-                    <Text style={[st.sheetRowTxt, { color: C.danger }]}>삭제하기</Text>
+                    <Text style={[st.sheetRowTxt, { color: C.danger }]}>{T('rp.delete')}</Text>
                   </Pressable>
                 </>
               ) : (
               <Pressable onPress={() => setSheetView('report')} style={({ pressed }) => [st.sheetRow, pressed && { opacity: 0.7 }]}>
                 <Icon name="flag-outline" size={19} color={C.text} />
-                <Text style={st.sheetRowTxt}>신고하기</Text>
+                <Text style={st.sheetRowTxt}>{T('up.report')}</Text>
               </Pressable>
               )
             ) : (
               <>
-                <Text style={st.sheetTitle}>신고하기</Text>
+                <Text style={st.sheetTitle}>{T('up.report')}</Text>
                 {REPORT_REASONS.map(r => {
                   const on = reportReason === r.value;
                   return (
                     <Pressable key={r.value} onPress={() => setReportReason(r.value)} style={({ pressed }) => [st.reasonRow, pressed && { opacity: 0.7 }]}>
                       <Icon name={on ? 'radio-button-on' : 'radio-button-off'} size={19} color={on ? C.accentGrn : C.faint} />
-                      <Text style={[st.sheetRowTxt, on && { fontWeight: '700' }]}>{r.label}</Text>
+                      <Text style={[st.sheetRowTxt, on && { fontWeight: '700' }]}>{T(r.label)}</Text>
                     </Pressable>
                   );
                 })}
                 <TextInput
                   value={reportDetail}
                   onChangeText={t => setReportDetail(t.slice(0, 500))}
-                  placeholder="자세한 내용 (선택)"
+                  placeholder={T('up.reportDetailPh')}
                   placeholderTextColor={C.faint}
                   multiline
                   style={st.reportInput}
@@ -533,7 +535,7 @@ export default function RunPostScreen() {
                 >
                   {reportBusy
                     ? <ActivityIndicator size="small" color={C.accentText} />
-                    : <Text style={[st.reportSubmitTxt, !reportReason && { color: C.faint }]}>신고 제출</Text>}
+                    : <Text style={[st.reportSubmitTxt, !reportReason && { color: C.faint }]}>{T('up.reportSubmit')}</Text>}
                 </Pressable>
               </>
             )}
@@ -560,13 +562,13 @@ export default function RunPostScreen() {
             <View style={st.delIconWrap}>
               <Icon name="trash-outline" size={26} color={C.danger} />
             </View>
-            <Text style={st.delTitle}>이 러닝을 삭제할까요?</Text>
-            <Text style={st.delBody}>좋아요·댓글·사진이 함께 삭제돼요. 되돌릴 수 없어요.</Text>
+            <Text style={st.delTitle}>{T('rp.delAsk')}</Text>
+            <Text style={st.delBody}>{T('rp.delBody')}</Text>
             <Pressable onPress={doDelete} disabled={deleting} style={st.delBtn}>
-              {deleting ? <ActivityIndicator size="small" color="#fff" /> : <Text style={st.delBtnTxt}>삭제하기</Text>}
+              {deleting ? <ActivityIndicator size="small" color="#fff" /> : <Text style={st.delBtnTxt}>{T('rp.delete')}</Text>}
             </Pressable>
             <Pressable onPress={() => !deleting && setDelOpen(false)} style={st.delCancelBtn}>
-              <Text style={st.delCancelTxt}>취소</Text>
+              <Text style={st.delCancelTxt}>{T('common.cancel')}</Text>
             </Pressable>
           </View>
         </View>

@@ -411,7 +411,7 @@ export default function UserProfileScreen() {
                   return (
                     <Pressable key={r.value} onPress={() => setReportReason(r.value)} style={({ pressed }) => [st.reasonRow, pressed && { opacity: 0.7 }]}>
                       <Icon name={on ? 'radio-button-on' : 'radio-button-off'} size={19} color={on ? C.accentGrn : C.faint} />
-                      <Text style={[st.sheetRowTxt, on && { fontWeight: '700' }]}>{r.label}</Text>
+                      <Text style={[st.sheetRowTxt, on && { fontWeight: '700' }]}>{T(r.label)}</Text>
                     </Pressable>
                   );
                 })}

@@ -7,12 +7,14 @@
 // her shape.
 import { ApiError, apiFetch } from '@/lib/api';
 
+// reason CODES are the wire contract (server enum + DB CHECK — anything else
+// 422s); labels are DISPLAY ONLY, resolved at render (server-value enum class)
 export const REPORT_REASONS = [
-  { value: 'spam',          label: '스팸' },
-  { value: 'abuse',         label: '욕설/혐오' },
-  { value: 'inappropriate', label: '부적절한 콘텐츠' },
-  { value: 'impersonation', label: '사칭' },
-  { value: 'other',         label: '기타' },
+  { value: 'spam',          label: 'rpt.spam' },
+  { value: 'abuse',         label: 'rpt.abuse' },
+  { value: 'inappropriate', label: 'rpt.inappropriate' },
+  { value: 'impersonation', label: 'rpt.impersonation' },
+  { value: 'other',         label: 'rpt.other' },
 ] as const;
 export type ReportReason = typeof REPORT_REASONS[number]['value'];
 
