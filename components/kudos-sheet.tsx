@@ -22,12 +22,10 @@ import { openProfile } from '@/lib/profile-nav';
 import { fmtAgo } from '@/lib/run-format';
 import { shadows, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
-import { tf, useT } from '@/lib/i18n';
 
 export function KudosSheet({ runId, kudosCount, onClose }: {
   runId: string; kudosCount: number; onClose: () => void;
 }) {
-  const T = useT(); // reactive anchor — tf below resolves fresh on the subscribed re-render
   const C = useTokens();
   const st = useStyles(makeSt);
   const [rows, setRows]       = React.useState<RunKudoser[] | null>(null);
@@ -50,13 +48,13 @@ export function KudosSheet({ runId, kudosCount, onClose }: {
         <View style={st.sheet}>
           <View style={st.sheetHead}>
             <View style={st.grabBar} />
-            <Text style={st.sheetTitle}>{tf('kd.count', { n: kudosCount })}</Text>
+            <Text style={st.sheetTitle}>좋아요 {kudosCount}개</Text>
           </View>
           {failed ? (
             <View style={st.sheetState}>
-              <Text style={st.stateTxt}>{T('kd.loadFail')}</Text>
+              <Text style={st.stateTxt}>목록을 불러올 수 없어요</Text>
               <Pressable onPress={() => { setRows(null); setAttempt(a => a + 1); }} style={st.retryBtn}>
-                <Text style={st.retryTxt}>{T('common.retry')}</Text>
+                <Text style={st.retryTxt}>다시 시도</Text>
               </Pressable>
             </View>
           ) : rows === null ? (
@@ -80,7 +78,7 @@ export function KudosSheet({ runId, kudosCount, onClose }: {
                 </View>
               )}
               ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
-              ListEmptyComponent={<Text style={[st.stateTxt, { textAlign: 'center' }]}>{T('kd.empty')}</Text>}
+              ListEmptyComponent={<Text style={[st.stateTxt, { textAlign: 'center' }]}>아직 좋아요가 없어요</Text>}
               contentContainerStyle={{ padding: 20, paddingTop: 14, paddingBottom: 28 }}
               showsVerticalScrollIndicator={false}
             />

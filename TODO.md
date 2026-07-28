@@ -1215,7 +1215,10 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 
 **핵심 판정: 스퍼 메커니즘은 그녀의 3부검(§8.13-8.15)이 이미 실험적으로 종결한 클래스** — 좌표 발명(Gemini 무지도) × T-map 전점방문 계약의 구조적 산물. **오늘의 신규 발견 = 인밴드 레인의 스퍼 무게이트 비대칭**: 데스크 실증 — 300m 골목 스퍼 = longest_retrace_m 609 → 그녀 자신의 §8.16 합격선(≤600) 위반이면서 유일한 라이브 게이트(오버캡 ≤800)는 통과, **인밴드 단독 후보는 게이트 자체가 없어 무조건 서빙**. 픽스 랭킹: ① 인밴드 스퍼 게이트 확장(if절 수준, 최고 레버리지) ② 스퍼 절제 후처리(가용성 보존 페어) ③ 앵커 dead_end 프로브 활성화(라이브 경로가 probe_dead_end=False로 호출 중) ④ 스냅-사이드 웨이포인트 드롭(M) ⑤ 프롬프트 = 사망 레인(§8.15 반증 3종, 재론 금지). 부수: _within_band 독스트링 −0.1 vs 상수 0.3 드리프트 · ANCHOR_EPIC 헤더 "미배선" vs 혼합 풀 라이브 코드 스테일. 풀 리포트 오너 메시지로 납품. STOP — 그녀 레인, 그녀 콜.
 
-## 🔼 4a-now TRIO — STAGED (2026-07-28; hash-tie ✓; owner walk pending: en feed cards read Distance/Time/Pace · kudos sheet · mid-session flip repaints cards live)
+## 🔼 4a-now — KUDOS-SHEET REVERTED OUT (owner ruling); duo re-staged
+- REVERT REASON (ledgered + the sheet stays ko): the sheet's ONLY live parents are my-profile and run-post, both unconverted — converting it creates an English-panel-over-Korean-screen junction that does not exist today; it fixes nothing until its parents convert. **SHIPS WITH THE LAST OF ITS TWO PARENTS (gated on 4c / combined batch 3)** — 4b alone would still leave it English over a Korean run detail. kd.* keys retired; parity 624/624 (622 + use-comments' 2).
+- RECON CORRECTION: personal-info.tsx is NOT a consumer (comment-only hits — the "kudos-sheet language" idiom reference); the sheet's parents are exactly my-profile + run-post. No slice-6 residue expected.
+- Remaining 4a-now cargo = run-card (3 reactive labels) + use-comments (2 error keys). Owner walk pending on the re-stage.
 
 ## ✅ ROLLBACK EXECUTED + SEAM FIXED + BATCH 2 v3 STAGED (2026-07-28, the full owner sequence)
 - ① ROLLBACK DONE: production ← 9020a466 republish (readback: new id, batch-1 hash — batch-2 bytes OFF the testers' channel). Floor stands 9020a466.
