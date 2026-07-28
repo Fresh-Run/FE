@@ -731,4 +731,7 @@ export const ko = {
   'rp.delete': '삭제하기',
   'rp.delAsk': '이 러닝을 삭제할까요?',
   'rp.delBody': '좋아요·댓글·사진이 함께 삭제돼요. 되돌릴 수 없어요.',
+  'kd.count': '좋아요 {n}개',
+  'kd.loadFail': '목록을 불러올 수 없어요',
+  'kd.empty': '아직 좋아요가 없어요',
 } as const;

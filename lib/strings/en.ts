@@ -719,4 +719,7 @@ export const en: Record<keyof typeof ko, string> = {
   'rp.delete': 'Delete',
   'rp.delAsk': 'Delete this run?',
   'rp.delBody': 'Kudos, comments and photos are deleted with it. This cannot be undone.',
+  'kd.count': '{n} likes',
+  'kd.loadFail': 'Could not load the list',
+  'kd.empty': 'No likes yet',
 };
