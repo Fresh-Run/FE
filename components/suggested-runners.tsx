@@ -130,7 +130,8 @@ export const SuggestedRunnersRow = React.memo(function SuggestedRunnersRow({ sr 
                   <Avatar name={u.nickname} photoUrl={u.avatar_url} size={52} />
                   <Text style={st.name} numberOfLines={1}>{u.nickname}</Text>
                   <Pressable onPress={() => sr.toggle(u)} hitSlop={6} style={[st.pill, fs !== 'none' ? st.pillOn : st.pillOff]}>
-                    <Text style={[st.pillTxt, fs !== 'none' && { color: C.sub }]}>
+                    {/* one line in ANY locale — shrink, never wrap (the widget-crunch grammar) */}
+                    <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={[st.pillTxt, fs !== 'none' && { color: C.sub }]}>
                       {fs === 'following' ? T('fr.following') : fs === 'requested' ? T('fr.requested') : T('fr.follow')}
                     </Text>
                   </Pressable>
@@ -148,7 +149,7 @@ const makeSt = (C: Tokens) => StyleSheet.create({
   // v1.1 tighter card: 104w · avatar 52 · pill beneath nickname · no sub-line
   card:  { width: 104, alignItems: 'center', backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: R.lg, paddingVertical: 12, paddingHorizontal: 8, gap: 7 },
   name:  { fontSize: 13, fontWeight: '700', color: C.text, letterSpacing: -0.3, maxWidth: 86 },
-  pill:    { paddingHorizontal: 14, paddingVertical: 5.5, borderRadius: R.pill },
+  pill:    { paddingHorizontal: 12, paddingVertical: 5.5, borderRadius: R.pill, maxWidth: 88 },
   pillOff: { backgroundColor: C.accent },
   pillOn:  { backgroundColor: C.surfaceAlt, borderWidth: 1, borderColor: C.border },
   pillTxt: { fontSize: 12, fontWeight: '700', color: C.accentText, letterSpacing: -0.2 },
