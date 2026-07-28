@@ -28,8 +28,10 @@ import { openProfile } from '@/lib/profile-nav';
 import { fmtWhen } from '@/lib/run-format';
 import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
+import { t, tf, useT } from '@/lib/i18n';
 
 export default function FollowRequestsScreen() {
+  const T = useT(); // reactive anchor — stack-mounted beneath 설정, repaints on lang flip
   const C = useTokens();
   const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
@@ -49,8 +51,8 @@ export default function FollowRequestsScreen() {
     } catch (e: unknown) {
       // 404 = already handled elsewhere — refetch shows the truth
       load();
-      Alert.alert(approve ? '수락 실패' : '거절 실패',
-        e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요.');
+      Alert.alert(approve ? t('fq.approveFail') : t('fq.rejectFail'),
+        e instanceof Error ? e.message : t('auth.tryLater'));
     } finally {
       setBusyId(null);
     }
@@ -62,8 +64,8 @@ export default function FollowRequestsScreen() {
         <Pressable onPress={() => router.back()} hitSlop={12} style={st.backBtn}>
           <Icon name="arrow-back" size={20} color={C.text} />
         </Pressable>
-        <Text style={st.appBarTitle}>팔로우 요청</Text>
-        <Text style={st.appBarCount}>{rows ? `${rows.length}건` : ''}</Text>
+        <Text style={st.appBarTitle}>{T('fq.title')}</Text>
+        <Text style={st.appBarCount}>{rows ? tf('fq.nCount', { n: rows.length }) : ''}</Text>
       </View>
 
       {rows === null ? (
@@ -71,14 +73,14 @@ export default function FollowRequestsScreen() {
       ) : rows.length === 0 ? (
         <View style={st.centered}>
           <Icon name="person-add-outline" size={36} color={C.faint} />
-          <Text style={st.emptyTxt}>대기 중인 팔로우 요청이 없어요</Text>
+          <Text style={st.emptyTxt}>{T('fq.empty')}</Text>
         </View>
       ) : (
         <FlatList
           data={rows}
           keyExtractor={r => r.user_id}
           renderItem={({ item }) => {
-            const name = item.nickname ?? '러너';
+            const name = item.nickname ?? T('home.runner');
             const busy = busyId === item.user_id;
             return (
               <View style={[st.row, shadows.sm]}>
@@ -90,7 +92,7 @@ export default function FollowRequestsScreen() {
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <Text style={st.name} numberOfLines={1}>{name}</Text>
                     <Text style={st.sub} numberOfLines={1}>
-                      {fmtWhen(item.followed_at)}{item.is_following ? ' · 내가 팔로우하는 러너' : ''}
+                      {fmtWhen(item.followed_at)}{item.is_following ? T('fq.mutual') : ''}
                     </Text>
                   </View>
                 </Pressable>
@@ -99,10 +101,10 @@ export default function FollowRequestsScreen() {
                 ) : (
                   <View style={st.actions}>
                     <Pressable onPress={() => respond(item, true)} hitSlop={6} style={({ pressed }) => [st.acceptBtn, pressed && { opacity: 0.85 }]}>
-                      <Text style={st.acceptTxt}>수락</Text>
+                      <Text style={st.acceptTxt}>{T('fq.accept')}</Text>
                     </Pressable>
                     <Pressable onPress={() => respond(item, false)} hitSlop={6} style={({ pressed }) => [st.rejectBtn, pressed && { opacity: 0.7 }]}>
-                      <Text style={st.rejectTxt}>거절</Text>
+                      <Text style={st.rejectTxt}>{T('fq.reject')}</Text>
                     </Pressable>
                   </View>
                 )}

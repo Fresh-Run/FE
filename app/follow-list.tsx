@@ -29,16 +29,18 @@ import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { usePendingFollows } from '@/store/pending-follows';
 import { useStore } from '@/store/use-store';
+import { t, tf, useT } from '@/lib/i18n';
 
 type Tab = 'following' | 'followers';
 
 export default function FollowListScreen() {
+  const T = useT(); // reactive anchor — stack-mounted beneath 설정, repaints on lang flip
   const C = useTokens();
   const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
   // uid/name absent → own lists (existing behavior); present → that user's
   const params = useLocalSearchParams<{ tab?: string; uid?: string; name?: string }>();
-  const displayName = useStore(s => s.displayName) ?? '내 프로필';
+  const displayName = useStore(s => s.displayName) ?? T('fl.myProfile');
   const title = params.name ?? displayName;
   const { following, followers, loading, error, refetch } = useFollowList(params.uid ?? null);
 
@@ -73,7 +75,7 @@ export default function FollowListScreen() {
         .catch((e: unknown) => {
           setOverlay(p => ({ ...p, [u.user_id]: cur })); // rollback
           usePendingFollows.getState().add(u.user_id);
-          Alert.alert('실패했어요', e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요');
+          Alert.alert(t('fr.failTitle'), e instanceof Error ? e.message : t('runSave.saveFailBody'));
         });
       return;
     }
@@ -82,7 +84,7 @@ export default function FollowListScreen() {
       apiFetch<void>(`/api/users/${u.user_id}/follow`, { method: 'DELETE' })
         .catch((e: unknown) => {
           setOverlay(p => ({ ...p, [u.user_id]: cur })); // rollback
-          Alert.alert('실패했어요', e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요');
+          Alert.alert(t('fr.failTitle'), e instanceof Error ? e.message : t('runSave.saveFailBody'));
         });
       return;
     }
@@ -105,7 +107,7 @@ export default function FollowListScreen() {
           return;
         }
         setOverlay(p => ({ ...p, [u.user_id]: cur })); // rollback
-        Alert.alert('실패했어요', e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요');
+        Alert.alert(t('fr.failTitle'), e instanceof Error ? e.message : t('runSave.saveFailBody'));
       });
   }, [stateFor]);
 
@@ -113,18 +115,18 @@ export default function FollowListScreen() {
   // account is private now, that re-follow lands as a REQUEST (approval-unified).
   const confirmRemove = useCallback((u: FollowUser) => {
     Alert.alert(
-      '팔로워를 삭제할까요?',
-      `${u.nickname ?? '이 러너'}님을 내 팔로워에서 삭제해요. 차단이 아니라서 상대는 다시 팔로우할 수 있어요 (내 계정이 비공개면 팔로우 요청으로 도착해요).`,
+      t('fl.removeAsk'),
+      tf('fl.removeSub', { name: u.nickname ?? t('fl.thisRunner') }),
       [
-        { text: '취소', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: '삭제', style: 'destructive',
+          text: t('common.delete'), style: 'destructive',
           onPress: () => {
             setRemoved(p => new Set(p).add(u.user_id)); // optimistic
             apiFetch<void>(`/api/me/followers/${u.user_id}`, { method: 'DELETE' })
               .catch((e: unknown) => {
                 setRemoved(p => { const n = new Set(p); n.delete(u.user_id); return n; }); // rollback
-                Alert.alert('삭제 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요');
+                Alert.alert(t('fl.removeFail'), e instanceof Error ? e.message : t('runSave.saveFailBody'));
               });
           },
         },
@@ -151,8 +153,8 @@ export default function FollowListScreen() {
       {/* Segmented tabs with counts */}
       <View style={st.tabRow}>
         {([
-          ['following', '팔로잉', following.length],
-          ['followers', '팔로워', visibleFollowers.length],
+          ['following', T('fl.tabFollowing'), following.length],
+          ['followers', T('fl.tabFollowers'), visibleFollowers.length],
         ] as [Tab, string, number][]).map(([id, label, n]) => {
           const on = tab === id;
           return (
@@ -172,7 +174,7 @@ export default function FollowListScreen() {
         <View style={st.centered}>
           <Icon name="warning-outline" size={36} color={C.faint} />
           <Text style={st.stateTxt}>{error}</Text>
-          <Pressable onPress={refetch} style={st.retryBtn}><Text style={st.retryTxt}>다시 시도</Text></Pressable>
+          <Pressable onPress={refetch} style={st.retryBtn}><Text style={st.retryTxt}>{T('common.retry')}</Text></Pressable>
         </View>
       ) : (
         <FlatList
@@ -191,7 +193,7 @@ export default function FollowListScreen() {
                   style={({ pressed }) => [st.rowBody, pressed && { opacity: 0.7 }]}
                 >
                   <Avatar name={item.nickname} size={44} photoUrl={item.avatar_url} ring={C.border} ringWidth={1} initialsRatio={0.4} upper />
-                  <Text style={st.rowName} numberOfLines={1}>{item.nickname ?? '러너'}</Text>
+                  <Text style={st.rowName} numberOfLines={1}>{item.nickname ?? T('home.runner')}</Text>
                 </Pressable>
                 <Pressable
                   onPress={() => toggle(item)}
@@ -199,12 +201,12 @@ export default function FollowListScreen() {
                   hitSlop={6}
                 >
                   <Text style={[st.followTxt, { color: fs !== 'none' ? C.sub : C.accentText }]}>
-                    {fs === 'following' ? '팔로잉' : fs === 'requested' ? '요청됨' : '팔로우'}
+                    {fs === 'following' ? T('fr.following') : fs === 'requested' ? T('fl.requestedCancel') : T('fr.follow')}
                   </Text>
                 </Pressable>
                 {showRemove && (
                   <Pressable onPress={() => confirmRemove(item)} style={st.removeBtn} hitSlop={6}>
-                    <Text style={st.removeTxt}>삭제</Text>
+                    <Text style={st.removeTxt}>{T('fl.remove')}</Text>
                   </Pressable>
                 )}
               </View>
@@ -213,7 +215,7 @@ export default function FollowListScreen() {
           ListEmptyComponent={
             <View style={st.centered}>
               <Icon name="people-outline" size={36} color={C.faint} />
-              <Text style={st.stateTxt}>{tab === 'following' ? '아직 팔로우한 러너가 없어요' : '아직 팔로워가 없어요'}</Text>
+              <Text style={st.stateTxt}>{tab === 'following' ? T('fl.emptyFollowing') : T('fl.emptyFollowers')}</Text>
             </View>
           }
         />

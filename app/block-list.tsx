@@ -24,8 +24,10 @@ import { Icon } from '@/components/ui';
 import { listBlocks, unblockUser, type BlockedUser } from '@/lib/blocks-api';
 import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
+import { t, tf, useT } from '@/lib/i18n';
 
 export default function BlockListScreen() {
+  const T = useT(); // reactive anchor — stack-mounted beneath 설정, repaints on lang flip
   const C = useTokens();
   const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
@@ -44,17 +46,17 @@ export default function BlockListScreen() {
 
   const confirmUnblock = useCallback((u: BlockedUser) => {
     Alert.alert(
-      `${u.nickname ?? '이 러너'}님 차단을 해제할까요?`,
-      '다시 서로의 프로필과 러닝을 볼 수 있어요. 예전 팔로우 관계는 자동으로 복구되지 않아요 — 필요하면 다시 팔로우해 주세요.',
+      tf('bl.unblockAsk', { name: u.nickname ?? t('fl.thisRunner') }),
+      t('bl.unblockSub'),
       [
-        { text: '취소', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: '차단 해제',
+          text: t('bl.unblock'),
           onPress: () => {
             setRemoved(p => new Set(p).add(u.user_id)); // optimistic
             unblockUser(u.user_id).catch((e: unknown) => {
               setRemoved(p => { const n = new Set(p); n.delete(u.user_id); return n; }); // rollback
-              Alert.alert('차단 해제 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요.');
+              Alert.alert(t('bl.unblockFail'), e instanceof Error ? e.message : t('auth.tryLater'));
             });
           },
         },
@@ -70,7 +72,7 @@ export default function BlockListScreen() {
         <Pressable onPress={() => router.back()} hitSlop={12} style={st.backBtn}>
           <Icon name="chevron-back" size={22} color={C.text} />
         </Pressable>
-        <Text style={st.appBarTitle}>차단 관리</Text>
+        <Text style={st.appBarTitle}>{T('bl.title')}</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -79,8 +81,8 @@ export default function BlockListScreen() {
       ) : visible.length === 0 ? (
         <View style={st.centered}>
           <Icon name={error ? 'warning-outline' : 'shield-checkmark-outline'} size={36} color={C.faint} />
-          <Text style={st.stateTxt}>{error ? '목록을 불러오지 못했어요' : '차단한 사용자가 없어요'}</Text>
-          {error && <Pressable onPress={load} style={st.retryBtn}><Text style={st.retryTxt}>다시 시도</Text></Pressable>}
+          <Text style={st.stateTxt}>{error ? T('bl.loadFail') : T('bl.empty')}</Text>
+          {error && <Pressable onPress={load} style={st.retryBtn}><Text style={st.retryTxt}>{T('common.retry')}</Text></Pressable>}
         </View>
       ) : (
         <FlatList
@@ -91,9 +93,9 @@ export default function BlockListScreen() {
           renderItem={({ item }) => (
             <View style={[st.row, shadows.sm]}>
               <Avatar name={item.nickname} size={44} photoUrl={item.avatar_url} ring={C.border} ringWidth={1} initialsRatio={0.4} upper />
-              <Text style={st.rowName} numberOfLines={1}>{item.nickname ?? '러너'}</Text>
+              <Text style={st.rowName} numberOfLines={1}>{item.nickname ?? T('home.runner')}</Text>
               <Pressable onPress={() => confirmUnblock(item)} style={st.unblockBtn} hitSlop={6}>
-                <Text style={st.unblockTxt}>차단 해제</Text>
+                <Text style={st.unblockTxt}>{T('bl.unblock')}</Text>
               </Pressable>
             </View>
           )}

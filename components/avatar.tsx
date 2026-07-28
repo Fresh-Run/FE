@@ -17,6 +17,7 @@ import React, { useState } from 'react';
 import { Image, Text, View } from 'react-native';
 
 import { avatarBg } from '@/lib/fr-hash';
+import { useT } from '@/lib/i18n';
 
 export function Avatar({ name, size = 40, photoUrl, ring, ringWidth = 2, initialsRatio = 0.42, letterSpacing, upper = false }: {
   /** null/undefined/blank falls back to '러너' */
@@ -33,6 +34,7 @@ export function Avatar({ name, size = 40, photoUrl, ring, ringWidth = 2, initial
   /** the uppercase-initial + '?' fallback idiom (profile-ish surfaces) */
   upper?: boolean;
 }) {
+  const T = useT(); // reactive anchor (shared everywhere — the fallback initial follows the locale)
   const [brokenUrl, setBrokenUrl] = useState<string | null>(null);
   const border = ring ? { borderWidth: ringWidth, borderColor: ring } : null;
   if (photoUrl && photoUrl !== brokenUrl) {
@@ -44,7 +46,7 @@ export function Avatar({ name, size = 40, photoUrl, ring, ringWidth = 2, initial
       />
     );
   }
-  const n = (name ?? '').trim() || '러너';
+  const n = (name ?? '').trim() || T('home.runner');
   return (
     <View style={[
       { width: size, height: size, borderRadius: size / 2, backgroundColor: avatarBg(n), alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
