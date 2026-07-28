@@ -20,7 +20,7 @@ import React, { useEffect, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Avatar } from '@/components/avatar';
-import { t } from '@/lib/i18n';
+import { t, useT } from '@/lib/i18n';
 import { ApiError, apiFetch, apiRequest } from '@/lib/api';
 import { getSuggestedUsers, type SuggestedUser } from '@/lib/profile-api';
 import { openProfile } from '@/lib/profile-nav';
@@ -105,11 +105,16 @@ export function useSuggestedRunners(): SuggestedRunnersState {
 export const SuggestedRunnersRow = React.memo(function SuggestedRunnersRow({ sr }: { sr: SuggestedRunnersState }) {
   const C = useTokens();
   const st = useStyles(makeSt);
+  // REACTIVE t — the mixed-locale seam fix (owner walk find, 2026-07-28):
+  // bare t() froze mount-time locale (pre-hydration ko) while later triggers
+  // repainted parts fresh (post-hydration en) → one component, two locales.
+  // useT subscribes: hydration or a 언어 flip repaints the WHOLE row together.
+  const T = useT();
   if (!sr.available) return null; // no empty theater — anywhere it's placed
 
   return (
     <View style={st.wrap}>
-      <Text style={st.title}>{t('fr.title')}</Text>
+      <Text style={st.title}>{T('fr.title')}</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingHorizontal: S.gutter }}>
         {sr.rows === null
           ? [0, 1, 2].map(i => (
@@ -126,7 +131,7 @@ export const SuggestedRunnersRow = React.memo(function SuggestedRunnersRow({ sr 
                   <Text style={st.name} numberOfLines={1}>{u.nickname}</Text>
                   <Pressable onPress={() => sr.toggle(u)} hitSlop={6} style={[st.pill, fs !== 'none' ? st.pillOn : st.pillOff]}>
                     <Text style={[st.pillTxt, fs !== 'none' && { color: C.sub }]}>
-                      {fs === 'following' ? t('fr.following') : fs === 'requested' ? t('fr.requested') : t('fr.follow')}
+                      {fs === 'following' ? T('fr.following') : fs === 'requested' ? T('fr.requested') : T('fr.follow')}
                     </Text>
                   </Pressable>
                 </Pressable>
