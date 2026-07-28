@@ -9,6 +9,7 @@ import type { AppNotification } from '@/lib/notifications-api';
 import { openProfile } from '@/lib/profile-nav';
 import { getPublicRoutes } from '@/lib/routes-api';
 import { setPendingPost } from '@/store/pending-post';
+import { t } from '@/lib/i18n';
 
 /** The only fields a tap needs. AppNotification satisfies this structurally,
     and a push's `content.data` is coerced into it. A remote push carries no
@@ -85,13 +86,13 @@ export function deepLink(n: DeepLinkTarget): (() => void) | null {
           .then(rows => {
             const row = rows.find(r => r.id === routeId);
             if (!row) {
-              Alert.alert('코스를 찾을 수 없어요', '삭제되었거나 비공개로 전환된 코스예요.');
+              Alert.alert(t('ntfr.courseGoneT'), t('ntfr.courseGoneB'));
               return;
             }
             setPendingPost(row);
             router.push('/(course)/course-post' as never);
           })
-          .catch(() => Alert.alert('코스를 불러오지 못했어요', '잠시 후 다시 시도해 주세요.'));
+          .catch(() => Alert.alert(t('ntfr.courseLoadFail'), t('auth.tryLater')));
       };
     }
     case 'crew_chat':

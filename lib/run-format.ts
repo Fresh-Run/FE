@@ -1,4 +1,4 @@
-import { getLang, t } from '@/lib/i18n';
+import { getLang, t, tf } from '@/lib/i18n';
 
 export function fmtPace(sec: number): string {
   const m = Math.floor(sec / 60);
@@ -60,11 +60,13 @@ export function fmtDate(isoStr: string): string {
 }
 
 export function fmtAgo(isoStr: string): string {
+  // i18n 4d: locale-aware (fmtDate precedent) — this renders on FIVE
+  // surfaces incl. four converted ones; words come from the dicts
   const min = Math.floor((Date.now() - new Date(isoStr).getTime()) / 60_000);
-  if (min < 1) return '방금 전';
-  if (min < 60) return `${min}분 전`;
+  if (min < 1) return t('date.justNow');
+  if (min < 60) return tf('date.minAgo', { n: min });
   const h = Math.floor(min / 60);
-  if (h < 24) return `${h}시간 전`;
+  if (h < 24) return tf('date.hourAgo', { n: h });
   return fmtDate(isoStr);
 }
 

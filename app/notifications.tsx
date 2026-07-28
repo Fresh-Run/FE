@@ -45,6 +45,7 @@ import {
 import { fmtAgo } from '@/lib/run-format';
 import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
+import { t as tx, tf, useT, type StringKey } from '@/lib/i18n';
 
 // ─── Type mapping (owner-approved 2026-07-07; no design source) ──────────────
 
@@ -55,68 +56,69 @@ type Meta = {
   tag: string;
   tone: string;
   icon: 'avatar' | { name: string; color: string; bg: string };
-  /** copy after the bold actor name; null actorPrefix = actorless copy */
+  /** StringKey of a template with a {name} slot (actor types) or plain copy (actorless) */
   copy: string;
   actorless?: boolean;
 };
 
 const typeMeta = (C: Tokens): Record<string, Meta> => ({
-  route_liked:         { tag: '좋아요',   tone: C.accentGrn, icon: 'avatar', copy: '님이 내 코스를 좋아해요' },
-  route_commented:     { tag: '댓글',     tone: C.accentGrn, icon: 'avatar', copy: '님이 내 코스에 댓글을 남겼어요' },
-  run_kudoed:          { tag: '응원',     tone: C.accentGrn, icon: 'avatar', copy: '님이 내 러닝을 응원해요' },
+  route_liked:         { tag: 'ntf.tagLike',    tone: C.accentGrn, icon: 'avatar', copy: 'ntf.routeLiked' },
+  route_commented:     { tag: 'ntf.tagComment', tone: C.accentGrn, icon: 'avatar', copy: 'ntf.routeCommented' },
+  run_kudoed:          { tag: 'ntf.tagKudos',   tone: C.accentGrn, icon: 'avatar', copy: 'ntf.runKudoed' },
   // 10th type, discovered live 2026-07-07 (ships with her run-comments batch)
-  run_commented:       { tag: '댓글',     tone: C.accentGrn, icon: 'avatar', copy: '님이 내 러닝에 댓글을 남겼어요' },
-  user_followed:       { tag: '팔로우',   tone: CREW_BLUE,   icon: 'avatar', copy: '님이 회원님을 팔로우하기 시작했어요' },
+  run_commented:       { tag: 'ntf.tagComment', tone: C.accentGrn, icon: 'avatar', copy: 'ntf.runCommented' },
+  user_followed:       { tag: 'ntf.tagFollow',  tone: CREW_BLUE,   icon: 'avatar', copy: 'ntf.userFollowed' },
   // v2 승인제 (BE 610c7f3) — was falling through to FALLBACK_META, generic
   // and inert (the dropped-type bug, 2026-07-13). payload is null by
   // contract → the deep-link target is the 팔로우 요청 inbox LIST.
-  follow_requested:    { tag: '팔로우 요청', tone: CREW_BLUE, icon: 'avatar', copy: '님이 팔로우를 요청했어요' },
+  follow_requested:    { tag: 'ntf.tagFollowReq', tone: CREW_BLUE, icon: 'avatar', copy: 'ntf.followRequested' },
   // v2 승인제 (지연 QA find 2026-07-14 — added 07-12, was falling to
   // FALLBACK_META): target_id = the APPROVER's uid, payload null (probed).
-  follow_request_approved: { tag: '팔로우', tone: CREW_BLUE, icon: 'avatar', copy: '님이 팔로우 요청을 수락했어요' },
-  crew_joined:         { tag: '크루',     tone: CREW_BLUE,   icon: { name: 'people-outline',    color: CREW_BLUE,  bg: CREW_BLUE + '22' },  copy: '님이 크루에 가입했어요' },
-  join_requested:      { tag: '크루 신청', tone: CREW_BLUE,   icon: { name: 'people-outline',    color: CREW_BLUE,  bg: CREW_BLUE + '22' },  copy: '님이 크루 가입을 신청했어요' },
-  join_approved:       { tag: '크루 승인', tone: CREW_BLUE,   icon: { name: 'people-outline',    color: CREW_BLUE,  bg: CREW_BLUE + '22' },  copy: '님이 크루 가입을 승인했어요' },
-  crew_announcement:   { tag: '공지',     tone: CREW_BLUE,   icon: { name: 'megaphone-outline', color: CREW_BLUE,  bg: CREW_BLUE + '22' },  copy: '님이 크루에 새 공지를 올렸어요' },
+  follow_request_approved: { tag: 'ntf.tagFollow', tone: CREW_BLUE, icon: 'avatar', copy: 'ntf.followApproved' },
+  crew_joined:         { tag: 'ntf.tagCrew',    tone: CREW_BLUE,   icon: { name: 'people-outline',    color: CREW_BLUE,  bg: CREW_BLUE + '22' },  copy: 'ntf.crewJoined' },
+  join_requested:      { tag: 'ntf.tagCrewReq', tone: CREW_BLUE,   icon: { name: 'people-outline',    color: CREW_BLUE,  bg: CREW_BLUE + '22' },  copy: 'ntf.joinRequested' },
+  join_approved:       { tag: 'ntf.tagCrewOk',  tone: CREW_BLUE,   icon: { name: 'people-outline',    color: CREW_BLUE,  bg: CREW_BLUE + '22' },  copy: 'ntf.joinApproved' },
+  crew_announcement:   { tag: 'ntf.tagNotice',  tone: CREW_BLUE,   icon: { name: 'megaphone-outline', color: CREW_BLUE,  bg: CREW_BLUE + '22' },  copy: 'ntf.crewAnnounced' },
   // #4 slice (2026-07-21): was falling to FALLBACK_META (generic + inert);
   // actor = the sender (probed). Deep link → crew-chat (crewId-only entry).
-  crew_chat:           { tag: '크루 채팅', tone: CREW_BLUE,   icon: 'avatar', copy: '님이 크루 채팅에 메시지를 보냈어요' },
-  challenge_completed: { tag: '챌린지',   tone: TROPHY_ORG,  icon: { name: 'trophy-outline',    color: TROPHY_ORG, bg: TROPHY_ORG + '22' }, copy: '챌린지를 달성했어요. 축하해요!', actorless: true },
+  crew_chat:           { tag: 'ntf.tagCrewChat', tone: CREW_BLUE,   icon: 'avatar', copy: 'ntf.crewChatMsg' },
+  challenge_completed: { tag: 'ntf.tagChallenge', tone: TROPHY_ORG, icon: { name: 'trophy-outline',    color: TROPHY_ORG, bg: TROPHY_ORG + '22' }, copy: 'ntf.challengeDone', actorless: true },
   // crew_invited (BE 23d2936) — a person invited you; actor avatar (like
   // user_followed), 크루 tab. Copy is dynamic (crew_name); row tap → the
   // crew-invite preview→join screen (payload.invite_code).
-  crew_invited:        { tag: '크루 초대', tone: CREW_BLUE,   icon: 'avatar', copy: '님이 크루에 초대했어요' },
+  crew_invited:        { tag: 'ntf.tagCrewInvite', tone: CREW_BLUE, icon: 'avatar', copy: 'ntf.crewInvited' },
   // pb_achieved (BE 8cee8d8) — SELF-targeted (수신자==행위자); actorless per
   // guide (actor is you). Copy is dynamic (record_types). Row tap → 활동 상세.
-  pb_achieved:         { tag: '기록',     tone: TROPHY_ORG,  icon: { name: 'ribbon-outline',    color: TROPHY_ORG, bg: TROPHY_ORG + '22' }, copy: '새 기록을 세웠어요! 🎉', actorless: true },
+  pb_achieved:         { tag: 'ntf.tagRecord',  tone: TROPHY_ORG,  icon: { name: 'ribbon-outline',    color: TROPHY_ORG, bg: TROPHY_ORG + '22' }, copy: 'ntf.pbZero', actorless: true },
 });
 
 // pb_achieved record-type labels — "최고 5K 환산" aligned with the insights
 // screen (pace-equivalent, never implies a 5K distance run).
 const PB_LABEL: Record<string, string> = {
-  best_pace: '최고 페이스',
-  best_5k: '최고 5K 환산',
-  longest_distance: '최장 거리',
-  longest_duration: '최장 러닝',
+  best_pace: 'pb.bestPace',
+  best_5k: 'pb.best5k',
+  longest_distance: 'pb.longestDist',
+  longest_duration: 'pb.longestDur',
 };
 
 /** Dynamic per-row copy for types whose text depends on payload; else null. */
 function dynamicCopy(n: AppNotification): string | null {
   if (n.type === 'crew_invited') {
     const name = n.payload?.crew_name;
-    return name ? `님이 ${name}에 초대했어요` : '님이 크루에 초대했어요';
+    // tf fills only {crew}; the {name} slot survives for the row's actor split
+    return name ? tf('ntf.crewInvitedTo', { crew: name }) : tx('ntf.crewInvited');
   }
   if (n.type === 'pb_achieved') {
     const types = n.payload?.record_types ?? [];
-    if (types.length === 1) return `${PB_LABEL[types[0]] ?? '개인'} 기록을 경신했어요! 🎉`;
-    if (types.length > 1) return `새 기록 ${types.length}개를 세웠어요! 🎉`;
-    return '새 기록을 세웠어요! 🎉'; // defensive: missing/empty record_types
+    if (types.length === 1) return tf('ntf.pbOne', { label: PB_LABEL[types[0]] ? tx(PB_LABEL[types[0]] as StringKey) : tx('ntf.pbPersonal') });
+    if (types.length > 1) return tf('ntf.pbMany', { n: types.length });
+    return tx('ntf.pbZero'); // defensive: missing/empty record_types
   }
   return null;
 }
 
 // Unknown future types still render, generically
-const fallbackMeta = (C: Tokens): Meta => ({ tag: '알림', tone: C.faint, icon: { name: 'notifications-outline', color: C.sub, bg: C.surfaceAlt }, copy: '새 소식이 있어요', actorless: true });
+const fallbackMeta = (C: Tokens): Meta => ({ tag: 'ntf.tagFallback', tone: C.faint, icon: { name: 'notifications-outline', color: C.sub, bg: C.surfaceAlt }, copy: '새 소식이 있어요', actorless: true });
 
 // ─── Tabs (owner UX calls 2026-07-07; underline pattern from the concept
 //     canvas, membership over the REAL types) ────────────────────────────────
@@ -128,10 +130,10 @@ const fallbackMeta = (C: Tokens): Meta => ({ tag: '알림', tone: C.faint, icon:
 type TabKey = 'all' | 'follow' | 'social' | 'crew';
 
 const TABS: { key: TabKey; label: string }[] = [
-  { key: 'all',    label: '전체' },
-  { key: 'follow', label: '팔로우' },
-  { key: 'social', label: '소셜' },
-  { key: 'crew',   label: '크루' },
+  { key: 'all',    label: 'ntf.fAll' },
+  { key: 'follow', label: 'ntf.tagFollow' },
+  { key: 'social', label: 'ntf.fSocial' },
+  { key: 'crew',   label: 'ntf.tagCrew' },
 ];
 
 const FOLLOW_TYPES = new Set(['user_followed', 'follow_requested', 'follow_request_approved']);
@@ -166,10 +168,11 @@ function NotifIcon({ meta, actor, photoUrl }: { meta: Meta; actor: string; photo
 }
 
 function NotifRow({ n, onPress, onDelete }: { n: AppNotification; onPress: () => void; onDelete: () => void }) {
+  const T = useT(); // reactive anchor — the long-lived list's row
   const C = useTokens();
   const st = useStyles(makeSt);
   const meta = typeMeta(C)[n.type] ?? fallbackMeta(C);
-  const actor = n.actor_nickname ?? '러너';
+  const actor = n.actor_nickname ?? T('home.runner');
   const linked = deepLink(n) !== null;
   return (
     <ReanimatedSwipeable
@@ -179,7 +182,7 @@ function NotifRow({ n, onPress, onDelete }: { n: AppNotification; onPress: () =>
       renderRightActions={() => (
         <Pressable onPress={onDelete} style={st.deleteAction}>
           <Icon name="trash-outline" size={19} color="#fff" />
-          <Text style={st.deleteTxt}>삭제</Text>
+          <Text style={st.deleteTxt}>{T('common.delete')}</Text>
         </Pressable>
       )}
     >
@@ -202,13 +205,18 @@ function NotifRow({ n, onPress, onDelete }: { n: AppNotification; onPress: () =>
       )}
       <View style={{ flex: 1, minWidth: 0 }}>
         <View style={st.rowHead}>
-          <Text style={[st.tag, { color: meta.tone }]}>{meta.tag}</Text>
+          <Text style={[st.tag, { color: meta.tone }]}>{T(meta.tag as StringKey)}</Text>
           <Text style={st.ago}>{fmtAgo(n.created_at)}</Text>
         </View>
         <Text style={st.body}>
           {(() => {
-            const copy = dynamicCopy(n) ?? meta.copy;
-            return meta.actorless ? copy : <><Text style={st.actor}>{actor}</Text>{copy}</>;
+            // Actor types: the copy is a template with a {name} slot — split
+            // there so the bold actor renders in place (ko '{name}님이 …' →
+            // ''+'님이 …' = today's visual; en reorders freely).
+            const template = dynamicCopy(n) ?? T(meta.copy as StringKey);
+            if (meta.actorless) return template;
+            const [before, after] = template.split('{name}');
+            return <>{before}<Text style={st.actor}>{actor}</Text>{after ?? ''}</>;
           })()}
         </Text>
       </View>
@@ -226,6 +234,7 @@ function NotifRow({ n, onPress, onDelete }: { n: AppNotification; onPress: () =>
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function NotificationsScreen() {
+  const T = useT(); // reactive anchor — long-lived list screen
   const C = useTokens();
   const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
@@ -264,7 +273,7 @@ export default function NotificationsScreen() {
     setRows(prev.filter(r => r.id !== n.id)); // optimistic remove
     deleteNotification(n.id).catch(() => {
       setRows(prev); // rollback to the exact prior list (position preserved)
-      Alert.alert('삭제 실패', '알림을 삭제하지 못했어요. 잠시 후 다시 시도해 주세요.');
+      Alert.alert(tx('annd.delFailT'), tx('ntf.delFailB'));
     });
   }
 
@@ -274,7 +283,7 @@ export default function NotificationsScreen() {
     setRows(rs => rs?.map(r => ({ ...r, is_read: true })) ?? null);
     markAllNotificationsRead().catch(() => {
       setRows(prev);
-      Alert.alert('저장 실패', '읽음 처리를 저장하지 못했어요. 잠시 후 다시 시도해 주세요.');
+      Alert.alert(tx('runSave.saveFailTitle'), tx('ntf.readFailB'));
     });
   }
 
@@ -284,7 +293,7 @@ export default function NotificationsScreen() {
         <Pressable onPress={() => router.back()} hitSlop={12} style={st.appBarBtn}>
           <Icon name="chevron-back" size={22} color={C.text} />
         </Pressable>
-        <Text style={st.appBarTitle}>알림</Text>
+        <Text style={st.appBarTitle}>{T('ntf.title')}</Text>
         {/* ✓ = mark-all-read (canvas affordance) · gear → 알림 설정 */}
         <Pressable onPress={onReadAll} hitSlop={8} style={st.appBarBtn}>
           <Icon name="checkmark-done-outline" size={21} color={C.accentGrn} />
@@ -300,7 +309,7 @@ export default function NotificationsScreen() {
           const on = tab === t.key;
           return (
             <Pressable key={t.key} onPress={() => setTab(t.key)} hitSlop={6} style={st.tabBtn}>
-              <Text style={[st.tabLabel, on && st.tabLabelOn]}>{t.label}</Text>
+              <Text style={[st.tabLabel, on && st.tabLabelOn]}>{T(t.label as StringKey)}</Text>
               {on && <View style={st.tabUnderline} />}
             </Pressable>
           );
@@ -312,8 +321,8 @@ export default function NotificationsScreen() {
       ) : error ? (
         <View style={st.centered}>
           <Icon name="warning-outline" size={36} color={C.faint} />
-          <Text style={st.stateTxt}>알림을 불러올 수 없어요</Text>
-          <Pressable onPress={() => load()} style={st.retryBtn}><Text style={st.retryTxt}>다시 시도</Text></Pressable>
+          <Text style={st.stateTxt}>{T('ntf.loadFail')}</Text>
+          <Pressable onPress={() => load()} style={st.retryBtn}><Text style={st.retryTxt}>{T('common.retry')}</Text></Pressable>
         </View>
       ) : (
         <FlatList
@@ -324,7 +333,7 @@ export default function NotificationsScreen() {
           ListEmptyComponent={
             <View style={st.centered}>
               <Icon name="notifications-off-outline" size={36} color={C.faint} />
-              <Text style={st.stateTxt}>아직 알림이 없어요</Text>
+              <Text style={st.stateTxt}>{T('ntf.empty')}</Text>
             </View>
           }
           contentContainerStyle={{ padding: S.gutter, paddingTop: S.md, paddingBottom: 28 }}
