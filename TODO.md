@@ -1218,7 +1218,7 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 ## 🔼 4a-now — KUDOS-SHEET REVERTED OUT (owner ruling); duo re-staged
 - REVERT REASON (ledgered + the sheet stays ko): the sheet's ONLY live parents are my-profile and run-post, both unconverted — converting it creates an English-panel-over-Korean-screen junction that does not exist today; it fixes nothing until its parents convert. **SHIPS WITH THE LAST OF ITS TWO PARENTS (gated on 4c / combined batch 3)** — 4b alone would still leave it English over a Korean run detail. kd.* keys retired; parity 624/624 (622 + use-comments' 2).
 - RECON CORRECTION: personal-info.tsx is NOT a consumer (comment-only hits — the "kudos-sheet language" idiom reference); the sheet's parents are exactly my-profile + run-post. No slice-6 residue expected.
-- Remaining 4a-now cargo = run-card (3 reactive labels) + use-comments (2 error keys). Owner walk pending on the re-stage.
+- DUO RE-STAGED: group 1380a69e (supersedes 33fd5182) — hash-tie ✓, scan 4/4 (Distance in · {n} likes GONE · 좋아요 inline restored · use-comments survives). Owner walk pending: en cards Distance/Time/Pace · mid-session flip repaint · ko regression · sheet still ko BY RULING.
 
 ## ✅ ROLLBACK EXECUTED + SEAM FIXED + BATCH 2 v3 STAGED (2026-07-28, the full owner sequence)
 - ① ROLLBACK DONE: production ← 9020a466 republish (readback: new id, batch-1 hash — batch-2 bytes OFF the testers' channel). Floor stands 9020a466.
