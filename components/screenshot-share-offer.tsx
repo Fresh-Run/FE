@@ -12,6 +12,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text } from 'react-native';
 
 import { Icon } from '@/components/ui';
+import { useT } from '@/lib/i18n';
 import { shadows, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 
@@ -20,6 +21,7 @@ const OFFER_MS = 6000;
 export function ScreenshotShareOffer({ runId }: { runId: string }) {
   const C = useTokens();
   const st = useStyles(makeSt);
+  const T = useT(); // junction component — rendered by run-post AND activity
   const [visible, setVisible] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -45,7 +47,7 @@ export function ScreenshotShareOffer({ runId }: { runId: string }) {
       style={({ pressed }) => [st.chip, shadows.md, pressed && { opacity: 0.85 }]}
     >
       <Icon name="sparkles" size={14} color={C.accent} />
-      <Text style={st.txt}>스크린샷 찍으셨네요 — 공유 카드로 만들기</Text>
+      <Text style={st.txt}>{T('sso.offer')}</Text>
     </Pressable>
   );
 }

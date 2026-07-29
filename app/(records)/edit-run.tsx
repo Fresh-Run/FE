@@ -30,6 +30,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/ui';
+import { t, useT } from '@/lib/i18n';
 import { timeTitle } from '@/lib/run-format';
 import { MAX_RUN_PHOTOS, reencodeForUpload, uploadRunPhotoToSlot } from '@/lib/run-photos';
 import { updateRun, type RunVisibility } from '@/lib/runs-api';
@@ -39,6 +40,7 @@ import { useRunDetail } from '@/hooks/use-runs';
 import { visibilityOptions } from '@/app/(course)/run-save';
 
 export default function EditRunScreen() {
+  const T = useT();
   const C = useTokens();
   const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
@@ -92,7 +94,7 @@ export default function EditRunScreen() {
       }
       setPhotos(p => [...p, ...clean].slice(0, MAX_RUN_PHOTOS));
     } catch {
-      Alert.alert('사진 추가 실패', '사진을 불러오지 못했어요. 다시 시도해 주세요.');
+      Alert.alert(t('runSave.photoFailTitle'), t('runSave.photoFailBody'));
     } finally {
       setPicking(false);
     }
@@ -105,11 +107,11 @@ export default function EditRunScreen() {
       const perm = await ImagePicker.requestCameraPermissionsAsync();
       if (!perm.granted) {
         Alert.alert(
-          '카메라 권한이 필요해요',
-          '러닝 사진을 찍으려면 카메라 접근을 허용해 주세요.',
+          t('runSave.cameraPermTitle'),
+          t('runSave.cameraPermBody'),
           [
-            { text: '취소', style: 'cancel' },
-            { text: '설정 열기', onPress: () => Linking.openSettings() },
+            { text: t('common.cancel'), style: 'cancel' },
+            { text: t('common.openSettings'), onPress: () => Linking.openSettings() },
           ],
         );
         return;
@@ -120,7 +122,7 @@ export default function EditRunScreen() {
       const uri = await reencodeForUpload(a.uri, a.width, a.height);
       setPhotos(p => [...p, { key: uri, localUri: uri }].slice(0, MAX_RUN_PHOTOS));
     } catch {
-      Alert.alert('사진 추가 실패', '사진을 불러오지 못했어요. 다시 시도해 주세요.');
+      Alert.alert(t('runSave.photoFailTitle'), t('runSave.photoFailBody'));
     } finally {
       setPicking(false);
     }
@@ -143,7 +145,7 @@ export default function EditRunScreen() {
       if (changed) {
         const usedSlots = new Set(kept.map(p => {
           const m = p.match(/\/(\d+)\.\w+$/);
-          if (!m) throw new Error('사진 경로 형식을 알 수 없어요');
+          if (!m) throw new Error(t('er.photoPathErr'));
           return Number(m[1]);
         }));
         const free = [1, 2, 3].filter(s => !usedSlots.has(s));
@@ -161,7 +163,7 @@ export default function EditRunScreen() {
       });
       router.back(); // 활동 상세 + 기록 focus-refetch pick it up
     } catch (e: unknown) {
-      Alert.alert('저장 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요');
+      Alert.alert(t('runSave.saveFailTitle'), e instanceof Error ? e.message : t('runSave.saveFailBody'));
     } finally {
       setSaving(false);
     }
@@ -175,11 +177,11 @@ export default function EditRunScreen() {
         <Pressable onPress={() => router.back()} hitSlop={12} style={st.backBtn}>
           <Icon name="close" size={22} color={C.text} />
         </Pressable>
-        <Text style={st.appBarTitle}>러닝 편집</Text>
+        <Text style={st.appBarTitle}>{T('er.title')}</Text>
         <Pressable onPress={save} disabled={saving || !run} style={st.savePill}>
           {saving
             ? <ActivityIndicator size="small" color={C.accentText} />
-            : <Text style={st.savePillTxt}>저장</Text>}
+            : <Text style={st.savePillTxt}>{T('runSave.save')}</Text>}
         </Pressable>
       </View>
 
@@ -188,13 +190,13 @@ export default function EditRunScreen() {
       ) : error || !run ? (
         <View style={st.centered}>
           <Icon name="warning-outline" size={34} color={C.faint} />
-          <Text style={st.stateTxt}>{error ?? '기록을 찾을 수 없어요'}</Text>
+          <Text style={st.stateTxt}>{error ?? T('rp.notFound')}</Text>
         </View>
       ) : (
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 60 }} keyboardShouldPersistTaps="handled">
           {/* Title — run-save field semantics (placeholder is a promise) */}
           <View style={{ paddingHorizontal: S.gutter, paddingTop: 8 }}>
-            <Text style={st.fieldLabel}>제목</Text>
+            <Text style={st.fieldLabel}>{T('er.fieldTitle')}</Text>
             <TextInput
               value={title}
               onChangeText={v => setTitle(v.slice(0, 60))}
@@ -208,7 +210,7 @@ export default function EditRunScreen() {
                  verbatim: dashed add square + camera square + 76px thumbs
                  with × badges; existing photos render from signed URLs ── */}
           <View style={{ paddingHorizontal: S.gutter, paddingTop: 18 }}>
-            <Text style={st.fieldLabel}>사진</Text>
+            <Text style={st.fieldLabel}>{T('er.fieldPhoto')}</Text>
             <View style={st.photoRow}>
               <Pressable
                 onPress={addPhotos}
@@ -233,7 +235,7 @@ export default function EditRunScreen() {
                 <Icon name="camera-outline" size={20} color={C.faint} />
               </Pressable>
               {photos.length === 0 ? (
-                <Text style={st.photoTxt}>사진 추가</Text>
+                <Text style={st.photoTxt}>{T('runSave.addPhoto')}</Text>
               ) : (
                 <ScrollView horizontal showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false} style={{ flex: 1 }} contentContainerStyle={{ gap: 8, paddingTop: 6, paddingRight: 6 }}>
                   {photos.map(p => (
@@ -255,7 +257,7 @@ export default function EditRunScreen() {
 
           {/* 공개 범위 — the run-save 3-way picker, inline */}
           <View style={{ paddingHorizontal: S.gutter, paddingTop: 22 }}>
-            <Text style={st.fieldLabel}>공개 범위</Text>
+            <Text style={st.fieldLabel}>{T('runSave.visibility')}</Text>
             <View style={[st.visCard, shadows.sm]}>
               {visibilityOptions().map((o, i) => (
                 <React.Fragment key={o.value}>
@@ -265,7 +267,7 @@ export default function EditRunScreen() {
                       <Text style={st.visLabel}>{o.label}</Text>
                       <Text style={st.visSub}>
                         {o.value === 'private'
-                          ? '나만 볼 수 있어요 · 피드와 프로필에서 사라져요'
+                          ? T('er.privSub')
                           : o.sub}
                       </Text>
                     </View>
@@ -280,18 +282,18 @@ export default function EditRunScreen() {
 
           {/* 메모 */}
           <View style={{ paddingHorizontal: S.gutter, paddingTop: 22 }}>
-            <Text style={st.fieldLabel}>메모</Text>
+            <Text style={st.fieldLabel}>{T('act.memo')}</Text>
             <TextInput
               value={notes}
               onChangeText={v => setNotes(v.slice(0, 2000))}
-              placeholder="이 러닝에 대한 메모 (나만 볼 수 있어요)"
+              placeholder={T('er.memoPh')}
               placeholderTextColor={C.faint}
               multiline
               style={[st.notesInput, shadows.sm]}
             />
           </View>
 
-          <Text style={st.footNote}>거리·시간·경로는 기록 그대로 유지돼요.</Text>
+          <Text style={st.footNote}>{T('er.footNote')}</Text>
         </ScrollView>
       )}
     </KeyboardAvoidingView>

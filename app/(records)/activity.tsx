@@ -22,6 +22,7 @@ import { PaceChart, SplitsTable } from '@/components/run-splits';
 import { Icon } from '@/components/ui';
 // MiniMap fallback now lives inside MediaCarousel (no polyline → seed map)
 import { useRunDetail } from '@/hooks/use-runs';
+import { t, tf, useT } from '@/lib/i18n';
 import { deleteRun } from '@/lib/runs-api';
 import { useRunTrack } from '@/lib/track-cache';
 import { distUnit, fmtDist, fmtDuration, fmtPaceIn, fmtWhen, timeTitle } from '@/lib/run-format';
@@ -65,6 +66,7 @@ const HERO_H = 200;
 export default function ActivityScreen() {
   const C = useTokens();
   const st = useStyles(makeSt);
+  const T = useT();
   const insets = useSafeAreaInsets();
   const { runId } = useLocalSearchParams<{ runId: string }>();
   const { run, loading, error, refetch } = useRunDetail(runId ?? null);
@@ -106,7 +108,7 @@ export default function ActivityScreen() {
       router.replace('/(tabs)/records' as never);
     } catch (e: unknown) {
       setDeleting(false);
-      Alert.alert('삭제 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요');
+      Alert.alert(t('annd.delFailT'), e instanceof Error ? e.message : t('runSave.saveFailBody'));
     }
   }
 
@@ -130,9 +132,9 @@ export default function ActivityScreen() {
         </Pressable>
         <View style={st.centeredState}>
           <Icon name="warning-outline" size={36} color={C.faint} />
-          <Text style={st.stateTxt}>{error ?? '기록을 찾을 수 없어요'}</Text>
+          <Text style={st.stateTxt}>{error ?? T('rp.notFound')}</Text>
           <Pressable onPress={refetch} style={st.retryBtn}>
-            <Text style={st.retryTxt}>다시 시도</Text>
+            <Text style={st.retryTxt}>{T('common.retry')}</Text>
           </Pressable>
         </View>
       </View>
@@ -237,17 +239,17 @@ export default function ActivityScreen() {
 
           {/* Stat grid 2×2 (canvas FrActivityDetail) */}
           <View style={st.tileRow}>
-            <StatTile icon="location-outline" label="거리" value={dist} unit={distUnit(units)} accent />
-            <StatTile icon="time-outline"     label="시간" value={dur} />
+            <StatTile icon="location-outline" label={T('runSave.statDist')} value={dist} unit={distUnit(units)} accent />
+            <StatTile icon="time-outline"     label={T('runSave.statTime')} value={dur} />
           </View>
           <View style={[st.tileRow, { marginTop: 10 }]}>
-            <StatTile icon="speedometer-outline" label="평균 페이스" value={pace} />
+            <StatTile icon="speedometer-outline" label={T('res.avgPace')} value={pace} />
             <StatTile
               icon="flame-outline"
-              label="소모 칼로리 (추정)"
+              label={T('act.kcalLabel')}
               value={kcal ?? '—'}
               unit={kcal ? 'kcal' : undefined}
-              hint={kcal ? undefined : '체중 입력 시 표시'}
+              hint={kcal ? undefined : T('act.kcalHint')}
             />
           </View>
 
@@ -258,8 +260,8 @@ export default function ActivityScreen() {
             <View style={st.flaggedRow}>
               <Icon name="information-circle-outline" size={13} color={C.faint} />
               <Text style={st.flaggedTxt}>
-                GPS 검증으로 거리가 조정됐어요
-                {run.distance_km_reported != null ? ` (기록값 ${fmtDist(run.distance_km_reported, units, 2)}${distUnit(units)})` : ''}
+                {T('act.adjusted')}
+                {run.distance_km_reported != null ? tf('act.adjustedVal', { v: `${fmtDist(run.distance_km_reported, units, 2)}${distUnit(units)}` }) : ''}
               </Text>
             </View>
           ) : null}
@@ -267,7 +269,7 @@ export default function ActivityScreen() {
           {/* 구간 기록 — hidden entirely on splitless (sub-km/trackless) runs */}
           {splits.length > 0 && (
             <>
-              <Text style={st.sectionTitle}>구간 기록</Text>
+              <Text style={st.sectionTitle}>{T('act.sectionSplits')}</Text>
               <SplitsTable splits={splits} units={units} />
             </>
           )}
@@ -275,7 +277,7 @@ export default function ActivityScreen() {
           {/* 페이스 차트 — needs at least two splits (elevation parked, 지연 ⓑ) */}
           {splits.length >= 2 && (
             <>
-              <Text style={st.sectionTitle}>페이스 분석</Text>
+              <Text style={st.sectionTitle}>{T('act.sectionPace')}</Text>
               {/* The Strava quartet COMPLETES (v88 consumption 2026-07-23):
                   run.moving_sec (=Σ splits.moving_sec, stops excluded) pairs
                   with duration_sec as the elapsed side — the split-sum
@@ -288,12 +290,12 @@ export default function ActivityScreen() {
                   stretches until a wall-clock field exists. */}
               <View style={[st.paceStatsCard, shadows.sm]}>
                 {([
-                  ['평균 페이스', run.moving_sec != null && run.distance_km > 0
+                  [T('res.avgPace'), run.moving_sec != null && run.distance_km > 0
                     ? fmtPaceIn(Math.round(run.moving_sec / run.distance_km), units)
                     : run.avg_pace_sec_per_km != null ? fmtPaceIn(run.avg_pace_sec_per_km, units) : '--'],
-                  ['이동 시간', fmtDuration(run.moving_sec ?? run.duration_sec)],
-                  ['총 시간', fmtDuration(run.duration_sec)],
-                  ['최고 구간', (() => {
+                  [T('act.movingTime'), fmtDuration(run.moving_sec ?? run.duration_sec)],
+                  [T('act.totalTime'), fmtDuration(run.duration_sec)],
+                  [T('act.bestLap'), (() => {
                     const full = splits.filter(s => !s.partial);
                     return full.length ? fmtPaceIn(Math.min(...full.map(s => s.moving_sec ?? s.sec)), units) : '--';
                   })()],
@@ -313,7 +315,7 @@ export default function ActivityScreen() {
             <View style={[st.notesCard, shadows.sm]}>
               <View style={st.notesHeader}>
                 <Icon name="create-outline" size={14} color={C.faint} />
-                <Text style={st.notesLabel}>메모</Text>
+                <Text style={st.notesLabel}>{T('act.memo')}</Text>
               </View>
               <Text style={st.notesTxt}>{run.notes}</Text>
             </View>
@@ -343,13 +345,13 @@ export default function ActivityScreen() {
             <View style={st.delIconWrap}>
               <Icon name="trash-outline" size={26} color={C.danger} />
             </View>
-            <Text style={st.delTitle}>이 러닝을 삭제할까요?</Text>
-            <Text style={st.delBody}>좋아요·댓글·사진이 함께 삭제돼요. 되돌릴 수 없어요.</Text>
+            <Text style={st.delTitle}>{T('rp.delAsk')}</Text>
+            <Text style={st.delBody}>{T('rp.delBody')}</Text>
             <Pressable onPress={doDelete} disabled={deleting} style={st.delBtn}>
-              {deleting ? <ActivityIndicator size="small" color="#fff" /> : <Text style={st.delBtnTxt}>삭제하기</Text>}
+              {deleting ? <ActivityIndicator size="small" color="#fff" /> : <Text style={st.delBtnTxt}>{T('rp.delete')}</Text>}
             </Pressable>
             <Pressable onPress={() => !deleting && setDelOpen(false)} style={st.delCancelBtn}>
-              <Text style={st.delCancelTxt}>취소</Text>
+              <Text style={st.delCancelTxt}>{T('common.cancel')}</Text>
             </Pressable>
           </View>
         </View>

@@ -18,6 +18,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import Svg, { Line, Rect, Text as SvgText } from 'react-native-svg';
 
 import type { RunSplit } from '@/hooks/use-runs';
+import { useT } from '@/lib/i18n';
 import { fmtPaceIn } from '@/lib/run-format';
 import { radius as R, shadows, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
@@ -50,6 +51,7 @@ const clamp01 = (t: number) => Math.min(1, Math.max(0, t));
 export function SplitsTable({ splits, units }: { splits: RunSplit[]; units: Units }) {
   const C = useTokens();
   const st = useStyles(makeSt);
+  const T = useT(); // junction component — rendered by run-result AND activity
   if (splits.length === 0) return null;
   const fullCount = splits.filter(x => !x.partial).length;
   const lapSec = (s: RunSplit) => lapPaceSec(s, fullCount);
@@ -66,7 +68,7 @@ export function SplitsTable({ splits, units }: { splits: RunSplit[]; units: Unit
     <View style={[st.card, shadows.sm]}>
       <View style={st.headRow}>
         <Text style={[st.headTxt, { width: 34 }]}>Km</Text>
-        <Text style={[st.headTxt, { width: 52 }]}>페이스</Text>
+        <Text style={[st.headTxt, { width: 52 }]}>{T('runSave.statPace')}</Text>
         <View style={{ flex: 1 }} />
       </View>
       {splits.map((s, i) => {

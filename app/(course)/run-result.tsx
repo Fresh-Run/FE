@@ -22,7 +22,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useNavigation } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { t, tf } from '@/lib/i18n';
+import { t, tf, useT } from '@/lib/i18n';
 import {
   ActivityIndicator,
   Alert,
@@ -59,6 +59,7 @@ const MIN_SAVE_KM = 0.05; // 50m floor (owner spec, 2026-07-11 outing)
 // ─── 구간 페이스 chart — canvas FrDoneSplits ported to RN Svg ─────────────────
 function SplitsChart({ splits, avg }: { splits: number[]; avg: number }) {
   const C = useTokens();
+  const T = useT(); // slice-5a sweep: the 평균 SvgText was the file's last ko literal
   const W = 320, H = 108, padT = 16, padB = 20, padL = 4, padR = 4;
   const n = splits.length, innerW = W - padL - padR, innerH = H - padT - padB;
   const bw = innerW / n;
@@ -89,7 +90,7 @@ function SplitsChart({ splits, avg }: { splits: number[]; avg: number }) {
         );
       })}
       <SvgLine x1={padL} y1={avgY} x2={W - padR} y2={avgY} stroke={C.sub} strokeWidth="1.4" strokeDasharray="4 4" opacity="0.7" />
-      <SvgText x={W - padR} y={avgY - 4} textAnchor="end" fontSize="9" fontWeight="700" fill={C.faint}>평균</SvgText>
+      <SvgText x={W - padR} y={avgY - 4} textAnchor="end" fontSize="9" fontWeight="700" fill={C.faint}>{T('res.avgMark')}</SvgText>
       {splits.map((_, i) => (
         <SvgText key={`x${i}`} x={padL + bw * (i + 0.5)} y={H - 5} textAnchor="middle" fontSize="9.5" fontWeight="600" fill={C.faint}>
           {i + 1}km
