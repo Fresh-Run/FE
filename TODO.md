@@ -1223,6 +1223,11 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 - Promotion discipline UNCHANGED: every promotion to a tester-facing channel gets its own explicit one-confirm.
 - AMENDMENT (7/30, marker-placement correction): the hold was NEVER a written rule with its own ledger line — it operated as a standing VERBAL instruction that contradicted written constraint ④ ("invites/testers never wait"). Retiring it RESTORES ④ rather than superseding anything; ③ (core-loop scope) was retired separately by the Phase 2 epic itself, and the 36531a0 marker mis-attributed that. Markers corrected in place (③ → Phase-2 attribution · ④ → reaffirmed). **Ledger-hygiene lesson: verbal rules that contradict written constraints are invisible to audit until someone reads both — standing verbal instructions get a ledger line at issuance.**
 
+## 🔗 route_id 컨슘 + 알림 폴백 스플릿 BUILT (미스테이지) — 큐드 빌드 양 반쪽 완료
+- PART 1: 필드명 검증 = **route_id** (RouteResponse schemas.py:607, 가이드 §63 "그대로 POST /runs의 route_id에 전달" — 우리 스테일 타입은 id?였음, 검증이 잡음). GeneratedRoute.route_id: string|null (널 = 저장-실패 엣지) · create.tsx:500 id: route.route_id ?? null · 구 "ledgered 지연 ask" 코멘트 → 널-엣지 가드 서술로 교체 · 다운스트림 무접촉 (7/29 리콘 체인). tsc가 구 id? 소비자 부재 증명. **생성-직후 러닝의 route_id 유실 클로즈** (그녀 v116 × 우리 원-라이너).
+- PART 2: ntf.actorFallback '러너'/'A runner' (문장-주어) — notifications:175만 스위치; home.runner 'Runner' 20 레이블 사이트 무접촉 (grep: notifications 내 잔여 0). 파리티 928/928.
+- 스캔 (b3a37777…): 'A runner'=1 · 러너=15 (단어 1개 = 규칙상 부적격, 정직 기록 — 증명은 tsc+소스). 윈드폴 온-레코드: 그녀 d0cdf19 = 날씨 condition·comment 수신자-lang 분기 — 우리 패스스루가 자동 소비.
+
 ## ✅ 슬라이스 5 PROMOTED + 에픽 PARKED (2026-07-31) — 오너 [17:23] FULL (9d4b4b27 완주 + 2값 디프, 본 대로) · 원-컨펌 발화·응답 (지연 노티 포함) · 5a86ce45 → production d69cbfc3-cbeb-4bd5-bf90-146dbc64e613 · 프로모션 해시-타이 MATCH (105gmp_6… 양채널 동일)
 - 라이브: 런-디테일 월드 (정션 2픽스: run-splits 헤더·SSO 칩) · 기록 탭+월간 리포트 (오디널·사전-주도 월 이름) · PB 트라이앵글 · 날씨 상세 (등급 표시맵). **롤백 플로어 전진 → d69cbfc3** (72a1b103 은퇴).
 - 📍 **i18n 에픽 PARKED at the slice-5 seam (오너 스텝-백)**: 슬라이스 1–5 라이브 (927키) · 잔여 = 슬라이스 6 (설정 허브 ~273) · 7 (코스 월드 ~168 + run-format 서울 폴백 + 웰컴 헤드라인 서울→전국 라이드) · 8 (롱테일 + 언어-캡션 은퇴 제안) — ~596히트. 리줌 웜스타트: 배치 맵 line-검색 "BATCH MAP", 5-시리즈 리콘 노트, 리액티브-t 스윕 리스트 (run-result 베어-t 포함).

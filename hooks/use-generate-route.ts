@@ -16,7 +16,9 @@ export type Waypoint = {
 };
 
 export type GeneratedRoute = {
-  id?: string; // routes row id — for linking runs.route_id once tracking exists
+  /** 저장된 routes 행 id (BE v116, 2026-07-29 additive) — 생성 직후 달리기가
+      runs.route_id로 그대로 전달. null = 서버 저장 실패 엣지 (코스는 서빙됨). */
+  route_id: string | null;
   summary: string;
   total_distance_km: number;
   estimated_duration_min: number | null;

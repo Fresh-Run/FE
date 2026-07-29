@@ -492,13 +492,12 @@ export default function CreateScreen() {
             <Text style={st.secondaryBtnTxt}>{t('crt.adjust')}</Text>
           </Pressable>
           <Pressable
-            // Debt batch 2: the stale 준비-중 stub died — tracking SHIPPED.
-            // Generated routes carry no id (RouteResponse — ledgered 지연
-            // ask), so the run gets the course title/shape/overlay but
-            // route_id stays null until the id lands.
+            // route_id (BE v116): the generated course's stored row id rides
+            // into the run link. Null only on the server's save-failure edge
+            // (course still serves) — guard, don't expect.
             onPress={() => {
               setActiveCourse({
-                id: null,
+                id: route.route_id ?? null,
                 title: route.summary,
                 distanceKm: route.total_distance_km,
                 polyline: route.polyline ?? null,

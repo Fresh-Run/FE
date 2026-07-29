@@ -172,7 +172,9 @@ function NotifRow({ n, onPress, onDelete }: { n: AppNotification; onPress: () =>
   const C = useTokens();
   const st = useStyles(makeSt);
   const meta = typeMeta(C)[n.type] ?? fallbackMeta(C);
-  const actor = n.actor_nickname ?? T('home.runner');
+  // sentence-subject fallback (v114 ruling): "A runner liked your run", not
+  // "Runner liked…" — home.runner stays the label-position fallback elsewhere
+  const actor = n.actor_nickname ?? T('ntf.actorFallback');
   const linked = deepLink(n) !== null;
   return (
     <ReanimatedSwipeable
