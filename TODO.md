@@ -1223,6 +1223,8 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 - Promotion discipline UNCHANGED: every promotion to a tester-facing channel gets its own explicit one-confirm.
 - AMENDMENT (7/30, marker-placement correction): the hold was NEVER a written rule with its own ledger line — it operated as a standing VERBAL instruction that contradicted written constraint ④ ("invites/testers never wait"). Retiring it RESTORES ④ rather than superseding anything; ③ (core-loop scope) was retired separately by the Phase 2 epic itself, and the 36531a0 marker mis-attributed that. Markers corrected in place (③ → Phase-2 attribution · ④ → reaffirmed). **Ledger-hygiene lesson: verbal rules that contradict written constraints are invisible to audit until someone reads both — standing verbal instructions get a ledger line at issuance.**
 
+## 🔼 세팅스 트랩 픽스 STAGED — 3c672ff9-a3f4-42d7-93c7-04e8bb3b571e (커밋 d3ece83) · 해시-타이 MATCH · 플로어 c0ec6b3d · 워크: 프로필 설정 = 앱설정 로우 부재 (재현 경로 소멸) · 관리 그룹 회귀 (프로필 편집·차단 관리) · 코스 플로우 fullScreenModal 정상 · 콜드-스타트 홈 랜딩 정상 · 프로모션 개별 컨펌 대기
+
 ## 🧭 세팅스 트랩 픽스 BUILT (미스테이지) — 4피스 + 스윕
 - ① 앱 설정 로우 DELETED (오너 룰링: 프로필 탭과 리던던트 — 슬라이스 6이 원하면 실제 허브를 의도적으로 재도입; 5237b7d "고아" 삭제가 이 라이브 컨슈머를 그리핑 미스 — 인시던트 인-코드 기록) ② app/+not-found.tsx 신설 (브랜디드, nf.* 3키 양 로케일, 원-버튼 → replace('/(tabs)') — 데드-href 클래스 벨트) ③ 루트 스택 initialRouteName="(tabs)" ((course)-퍼스트 폴백 소스-킬) ④ create.tsx X = canGoBack 폴백 (데드-X 벨트).
 - ⑤ 루트-스트링 스윕 (레슨 집행): 57 참조 경로 vs 59 캐노니컬 루트 — **데드 레퍼런스 0, /settings가 클래스의 유일 멤버였음** (스윕 스크립트 1차 정규화 버그 자체-캐치 후 재실행; 코멘트-스트립 포함).
