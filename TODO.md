@@ -1223,6 +1223,9 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 - Promotion discipline UNCHANGED: every promotion to a tester-facing channel gets its own explicit one-confirm.
 - AMENDMENT (7/30, marker-placement correction): the hold was NEVER a written rule with its own ledger line — it operated as a standing VERBAL instruction that contradicted written constraint ④ ("invites/testers never wait"). Retiring it RESTORES ④ rather than superseding anything; ③ (core-loop scope) was retired separately by the Phase 2 epic itself, and the 36531a0 marker mis-attributed that. Markers corrected in place (③ → Phase-2 attribution · ④ → reaffirmed). **Ledger-hygiene lesson: verbal rules that contradict written constraints are invisible to audit until someone reads both — standing verbal instructions get a ledger line at issuance.**
 
+## ✅ 셰어 아크 PROMOTED (2026-07-31) — 오너 [00:40] FULL (정렬·핀치·루트 비율·페이스 라벨/일치, 본 대로) · "PROMOTE. / HOLD." 양기재 → 원-컨펌 해소 · 72d76465 → production c0ec6b3d-3e37-4718-9ef2-dd9d57f26a57 · 프로모션 해시-타이 MATCH. **롤백 플로어 전진 → c0ec6b3d** (164a67cd 은퇴).
+- 라이브: 루트 애스펙트 피델리티 (제주-클래스 해안 비율) · 스트로크/닷 카운터-스케일 · 페이스 컨벤션 (평균=총시간 전면·무빙 페이스 분석-온리·카드=히어로 동일 숫자) · 밸류-서브박스 스마트-얼라인. 제주 러너의 두 결함 (스퀴글·페이스 미스매치) 클로즈.
+
 ## 🔼 셰어-카드 그룹 v2 STAGED — 72d76465-1ad6-4700-83b1-a239d32c3017 (커밋 a677767; b240c789 대체 — 피델리티+컨벤션+카운터-스케일 카고 승계 + 밸류-스냅 합류) · 해시-타이 MATCH · 플로어 164a67cd · 워크: 페이스 타일 센터라인/시블링-센터 = 숫자 정렬 · 핀치 후 스냅 유지 · 제주-류 루트 비율 + 스트로크/닷 프리셋 · 평균/무빙 두 라벨 · 프로모션 개별 컨펌 대기
 
 ## 🎯 스마트-얼라인 밸류-서브박스 BUILT (미스테이지) — 오너 워크 파인딩 (페이스 타일 ~31px 오프)
