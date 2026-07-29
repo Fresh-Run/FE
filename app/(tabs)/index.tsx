@@ -169,20 +169,25 @@ function WeatherStrip({ onPress }: { onPress: () => void }) {
 
 const makeWst = (C: Tokens) => StyleSheet.create({
   strip:      { width: '100%', flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 16, paddingTop: 11, paddingBottom: 11, paddingLeft: 14, paddingRight: 12 },
-  // Hobart containment (8/3, ruled exception): tempGroup owns the flexible
-  // space — long en place names ("Hobart City Council") truncate here and
-  // can never crush the right section (metrics/pmGroup went shrink-0).
-  tempGroup:  { flexDirection: 'row', alignItems: 'baseline', gap: 6, flex: 1, minWidth: 0 },
+  // Hobart containment v2 (8/3 — v1's flex:1 basis-0 starved ko names to
+  // 한…): ORIGINAL topology restored, two deviations only. ① metrics keeps
+  // grow (the original slack owner — domestic look unchanged) but on AUTO
+  // basis: the v0 garble was metrics' basis-0 box painting its children
+  // over neighbors; auto basis floors it at child minimums — shrink yes,
+  // garble never. ② area gains minWidth 68 ≈ six ko chars @11.5 — short
+  // names render WHOLE; only Hobart-length names ellipsize, and the AQI
+  // label keeps its original 미세… yield (pmGroup shrink restored).
+  tempGroup:  { flexDirection: 'row', alignItems: 'baseline', gap: 6, flexShrink: 1, minWidth: 0 },
   temp:       { fontSize: 22, fontWeight: '700', color: C.text, letterSpacing: -0.8, flexShrink: 0 },
-  area:       { fontSize: 11.5, color: C.faint, letterSpacing: -0.2, flexShrink: 10 },
+  area:       { fontSize: 11.5, color: C.faint, letterSpacing: -0.2, flexShrink: 10, minWidth: 68 },
   divider:    { width: 1, height: 26, backgroundColor: C.border, flexShrink: 0 },
-  metrics:    { flexDirection: 'row', gap: 8, flexShrink: 0, alignItems: 'center' },
+  metrics:    { flexDirection: 'row', gap: 8, flexGrow: 1, flexShrink: 1, minWidth: 0, alignItems: 'center' },
   metric:     { flexDirection: 'row', alignItems: 'center', gap: 4, flexShrink: 0 },
   // ⑥-r4 seam: paddingRight is box-owned — flex can't eat it, the ellipsis
   // never kisses the chip. Floor 52→48 (owner yield): "미…" binds ONLY at
   // the 375pt/1.35 corner (303 ≤ 309, 6px spare); everyday states never
   // touch the floor.
-  pmGroup:    { flexDirection: 'row', alignItems: 'center', gap: 4, flexShrink: 0, minWidth: 48, paddingRight: 6 },
+  pmGroup:    { flexDirection: 'row', alignItems: 'center', gap: 4, flexShrink: 1, minWidth: 48, paddingRight: 6 },
   metricTxt:  { fontSize: 12.5, fontWeight: '600', color: C.text },
   aqiDot:     { width: 6, height: 6, borderRadius: 3, flexShrink: 0 },
   verdict:    { flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5, flexShrink: 0 },

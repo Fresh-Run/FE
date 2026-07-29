@@ -1223,6 +1223,11 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 - Promotion discipline UNCHANGED: every promotion to a tester-facing channel gets its own explicit one-confirm.
 - AMENDMENT (7/30, marker-placement correction): the hold was NEVER a written rule with its own ledger line — it operated as a standing VERBAL instruction that contradicted written constraint ④ ("invites/testers never wait"). Retiring it RESTORES ④ rather than superseding anything; ③ (core-loop scope) was retired separately by the Phase 2 epic itself, and the 36531a0 marker mis-attributed that. Markers corrected in place (③ → Phase-2 attribution · ④ → reaffirmed). **Ledger-hygiene lesson: verbal rules that contradict written constraints are invisible to audit until someone reads both — standing verbal instructions get a ledger line at issuance.**
 
+## 🌦️ 스트립 컨테인먼트 v2 BUILT (미스테이지) — v1 도메스틱 워크 FAIL (한…) 정정
+- v1 사인: flex:1 = basis-0 — 이름 그룹이 잔여-공간만 수령 → ko 이름 기아. v0 가블 메커니즘 규명: metrics basis-0 박스가 자식 플로어 합보다 작아져 이웃 위로 페인트.
+- v2 = **원본 토폴로지 복원 + 편차 2**: ① metrics grow 유지·basis AUTO (도메스틱 룩 원본 — 제로-박스 오버플로 사멸 = 가블 불능) ② area minWidth 68 (ko 6자 플로어 — 짧은 이름 절대 통짜). pmGroup shrink 복원 (미세… 원본 일드). 스케일링·스트링·페치 무접촉.
+- 데스크 픽스처 (글리프-버짓 추정치, 워크가 확정): 한강로3가 56px < 68 플로어 → WHOLE · Hobart 112px → 68px 말줄임 (~11자) · pm 48 플로어로 컴팩트 · 가블 상태 구조적 불능. 금지 상태 = 오버랩뿐 (룰 3) — 충족.
+
 ## 🔼 웨더 스트립 컨테인먼트 STAGED — fb25cda0-49e3-4cf8-b9f0-7da822b2bde8 (커밋 5275df5) · 해시-타이 MATCH (아래 로컬=서브드) · 플로어 53b6e9b9 · 워크: 국내 지명 = 스트립 픽셀-패밀리어 (회귀) · 호바트 케이스 = 시뮬 긴-지명 or 프로모트 후 스크린샷 · 프로모션 개별 컨펌 대기
 
 ## 🌦️ 웨더 스트립 레이아웃 컨테인먼트 BUILT (미스테이지) — 아일랜드 가드 룰드 예외 (호바트 스크린샷)
