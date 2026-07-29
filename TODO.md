@@ -1223,6 +1223,8 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 - Promotion discipline UNCHANGED: every promotion to a tester-facing channel gets its own explicit one-confirm.
 - AMENDMENT (7/30, marker-placement correction): the hold was NEVER a written rule with its own ledger line — it operated as a standing VERBAL instruction that contradicted written constraint ④ ("invites/testers never wait"). Retiring it RESTORES ④ rather than superseding anything; ③ (core-loop scope) was retired separately by the Phase 2 epic itself, and the 36531a0 marker mis-attributed that. Markers corrected in place (③ → Phase-2 attribution · ④ → reaffirmed). **Ledger-hygiene lesson: verbal rules that contradict written constraints are invisible to audit until someone reads both — standing verbal instructions get a ledger line at issuance.**
 
+## ✅ 블랭크 네임 픽스 PROMOTED (2026-07-31) — 오너 [01:30] FULL (양 도어·리네임 왕복·무변경 무반응·로우 카피) · 원-컨펌 · ad6e0e27 → production d753fda8-880d-4dd6-807a-f357361f6684 · 프로모션 해시-타이 MATCH (O-N39kEa… 양채널 동일). **롤백 플로어 전진 → d753fda8** (8231fa81 은퇴) — 4948e12 이래 파람리스-도어 블랭크 클로즈.
+
 ## 🔼 블랭크 네임 픽스 STAGED — ad6e0e27-748f-4105-a622-5d0fb3272850 (커밋 e083944) · 해시-타이 MATCH · 플로어 8231fa81 · 워크: 프로필 설정→프로필 편집 = 이름 렌더 (재현 경로) · 탭 도어 회귀 · 리네임 라운드트립 · 무변경 저장 = 무동작 (게이트 레그) · 로우 카피 "이름 · 신체 정보" · 프로모션 개별 컨펌 대기
 
 ## 👤 프로필-편집 블랭크 네임 FIX BUILT (미스테이지) — 도어+벨트+카피
