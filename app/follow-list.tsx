@@ -42,7 +42,7 @@ export default function FollowListScreen() {
   const params = useLocalSearchParams<{ tab?: string; uid?: string; name?: string }>();
   const displayName = useStore(s => s.displayName) ?? T('fl.myProfile');
   const title = params.name ?? displayName;
-  const { following, followers, loading, error, refetch } = useFollowList(params.uid ?? null);
+  const { following, followers, counts, loading, error, refetch, loadMore, loadingMore } = useFollowList(params.uid ?? null);
 
   const [tab, setTab] = useState<Tab>(params.tab === 'followers' ? 'followers' : 'following');
   // Optimistic follow-state overlay by user_id — applies across both tabs.
@@ -153,8 +153,8 @@ export default function FollowListScreen() {
       {/* Segmented tabs with counts */}
       <View style={st.tabRow}>
         {([
-          ['following', T('fl.tabFollowing'), following.length],
-          ['followers', T('fl.tabFollowers'), visibleFollowers.length],
+          ['following', T('fl.tabFollowing'), counts.following ?? following.length],
+          ['followers', T('fl.tabFollowers'), counts.followers != null ? counts.followers - removed.size : visibleFollowers.length],
         ] as [Tab, string, number][]).map(([id, label, n]) => {
           const on = tab === id;
           return (
@@ -182,6 +182,11 @@ export default function FollowListScreen() {
           keyExtractor={u => u.user_id}
           contentContainerStyle={{ paddingHorizontal: S.gutter, paddingTop: 16, paddingBottom: 28, gap: 10 }}
           showsVerticalScrollIndicator={false}
+          onEndReached={() => loadMore(tab)}
+          onEndReachedThreshold={0.4}
+          ListFooterComponent={loadingMore[tab]
+            ? <View style={{ paddingVertical: 18 }}><ActivityIndicator size="small" color={C.accent} /></View>
+            : null}
           renderItem={({ item }) => {
             const fs = stateFor(item);
             return (

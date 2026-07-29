@@ -1223,6 +1223,12 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 - Promotion discipline UNCHANGED: every promotion to a tester-facing channel gets its own explicit one-confirm.
 - AMENDMENT (7/30, marker-placement correction): the hold was NEVER a written rule with its own ledger line — it operated as a standing VERBAL instruction that contradicted written constraint ④ ("invites/testers never wait"). Retiring it RESTORES ④ rather than superseding anything; ③ (core-loop scope) was retired separately by the Phase 2 epic itself, and the 36531a0 marker mis-attributed that. Markers corrected in place (③ → Phase-2 attribution · ④ → reaffirmed). **Ledger-hygiene lesson: verbal rules that contradict written constraints are invisible to audit until someone reads both — standing verbal instructions get a ledger line at issuance.**
 
+## 📜 팔로우-리스트 페이지네이션 FIX BUILT (미스테이지) + 클래스 스윕
+- 진단: **never-built** (베어 페치 — limit/offset 미송신, onEndReached 부재; 서버 기본 20이 전부). 양 탭 동일 훅.
+- 픽스: PAGE=20 명시 (기본치 고정 — 클리프 이동 금지 룰) · loadMore(kind) 오프셋=로드된 행수 · 인플라이트 ref (연타 가드) + user_id 디덥 (페이지 사이 팔로우 발생 시 오프셋 시프트 벨트) · 풋터 스피너 (신규 스트링 0) · **탭 라벨 = 프로필 truth-counts** (guide §197; 로컬-리무브 차감) — 로드-수 라벨은 28에서 "20"을 말하는 거짓이라 동반 픽스.
+- 라이브-프로브: limit/offset 파라미터 수용 200 ✓ · 오프셋 시맨틱 = 그녀 서버-사이드 증명 (28/전페이지) 채택 — 도달 가능 픽스처 전원 빈 목록/잠금 (테스트1 count 5·list [] = 잠금 비대칭 재확인).
+- 스윕 (리포트-온리, 픽스 별도 패스): **정상** 기록(커서)·홈 친구·crew-runs·crew-chat / **트렁케이트·캡**: 프로필 런 limit=50 원샷 (use-user-profile:87) · 알림 원샷 (notifications-api:45) · 홈 전체 nearby 오프셋 미송신 (디스커버리 — 수용가능 후보) · run/route 코멘트 무파라미터 (기본 페이지) · 북마크 limit=100 (클리프 101 — 금지 패턴 기존재) · crew 가입요청 limit=100 · me/join-requests limit=50 · announcements 립은 오프셋-지원, 컨슈머 원샷 (검증 필요) / **N/A**: blocks·follow-requests·kudos 목록 (무페이지네이션 계약) · crew 멤버 (미확인 플래그).
+
 ## ✅ 해외 피드 픽스 PROMOTED (2026-08-02) — aad83ee0 → production b6209826-c435-4eb8-9bb6-53b3c4246630 · 프로모션 해시-타이 MATCH (TsnNSNhL… 양채널 동일)
 - 스탬프 기록: [20:55] PARTIAL "PROMOTE. / HOLD." 양기재 → 원-컨펌 "PROMOTE — confirmed"로 실행 · **[20:56] 클리너 스탬프 실행 직후 도착, 운영 기록으로 채택** (오너 최신 직접 진술 우선): 전체 탭 정상 · 친구 탭 정상 · 날씨 스트립 정상 · 영어 플립 이상 없음 · NOT WALKED: koreaOnly 브랜치 (서울 디바이스 — 데스크-프루프).
 - **롤백 플로어 전진 → b6209826** (2e586e61 은퇴). 오픈 레그: **호바트 테스터 = koreaOnly 카드 필드-검증** (다음 앱 오픈 시 수신 — 그의 리포트가 클로저) · route_id 실런 E2E (아웃도어) · likes-off 카운트-탭 (기회 스탬프).
