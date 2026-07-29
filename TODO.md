@@ -1223,6 +1223,8 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 - Promotion discipline UNCHANGED: every promotion to a tester-facing channel gets its own explicit one-confirm.
 - AMENDMENT (7/30, marker-placement correction): the hold was NEVER a written rule with its own ledger line — it operated as a standing VERBAL instruction that contradicted written constraint ④ ("invites/testers never wait"). Retiring it RESTORES ④ rather than superseding anything; ③ (core-loop scope) was retired separately by the Phase 2 epic itself, and the 36531a0 marker mis-attributed that. Markers corrected in place (③ → Phase-2 attribution · ④ → reaffirmed). **Ledger-hygiene lesson: verbal rules that contradict written constraints are invisible to audit until someone reads both — standing verbal instructions get a ledger line at issuance.**
 
+## 🔼 스트립 v4 STAGED — 1f69e7ed-0b95-4dcc-be7b-78c50501d9c5 (커밋 5898d33; 8edb3b63/v3 대체) · 해시-타이 MATCH · 플로어 53b6e9b9 · 워크 = 스트래들 판정: 도메스틱 5자 이름 통짜 + "미세먼지" 온리 + 닷 트래픽-라이트 (그린/옐로/레드) + 겨울-온도 시뮬 가능하면 육안 · 웨더-디테일 그레이드 워드 색 변화 회귀 글랜스 · 프로모션 개별 컨펌 대기
+
 ## 🌦️ 스트립 v4 BUILT (미스테이지) — AQI 그레이드-워드 제거 + 트래픽-라이트 닷 (v3 한… 스크린샷 정정; 지오메트리 = 오너 룰링 대기 1건)
 - 룰링 1: 스트립 = 닷 + "미세먼지"만 (그레이드 워드 사망, ~37px 회수) · 웨더-디테일 풀 워드 + GRADE_KEY 무접촉.
 - 룰링 2 검증: 블루 = 좋음의 색일 뿐 (4등급 블루/그린/오렌지/레드) — 콜랩스 룰링 불요. C.aqi 리컬러: 좋음 블루→그린 · 보통 그린→옐로 · 나쁨 오렌지→레드 · 매우나쁨 레드. 팔레트 엔트리 무접촉 (paceTone 안전) · UV 무접촉 · 버딕트 칩 = 자체 스케일이 이미 트래픽-라이트 (accent/sun/danger) — 일관, 무접촉.
