@@ -1223,6 +1223,8 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 - Promotion discipline UNCHANGED: every promotion to a tester-facing channel gets its own explicit one-confirm.
 - AMENDMENT (7/30, marker-placement correction): the hold was NEVER a written rule with its own ledger line — it operated as a standing VERBAL instruction that contradicted written constraint ④ ("invites/testers never wait"). Retiring it RESTORES ④ rather than superseding anything; ③ (core-loop scope) was retired separately by the Phase 2 epic itself, and the 36531a0 marker mis-attributed that. Markers corrected in place (③ → Phase-2 attribution · ④ → reaffirmed). **Ledger-hygiene lesson: verbal rules that contradict written constraints are invisible to audit until someone reads both — standing verbal instructions get a ledger line at issuance.**
 
+## 🔼 route_id+폴백 STAGED — e5ee0e99-bd69-4536-8a51-391779d89f98 (커밋 6054d61) · 해시-타이 MATCH (SPlAf4nh…) · A runner=1 · 플로어 d69cbfc3 · 워크: 생성→달리기→저장 → runs.route_id 논널 확인 (스웨거/지연) + 탈퇴-계정 알림 있으면 "A runner …" 육안 · 프로모션 개별 컨펌 대기
+
 ## 🔗 route_id 컨슘 + 알림 폴백 스플릿 BUILT (미스테이지) — 큐드 빌드 양 반쪽 완료
 - PART 1: 필드명 검증 = **route_id** (RouteResponse schemas.py:607, 가이드 §63 "그대로 POST /runs의 route_id에 전달" — 우리 스테일 타입은 id?였음, 검증이 잡음). GeneratedRoute.route_id: string|null (널 = 저장-실패 엣지) · create.tsx:500 id: route.route_id ?? null · 구 "ledgered 지연 ask" 코멘트 → 널-엣지 가드 서술로 교체 · 다운스트림 무접촉 (7/29 리콘 체인). tsc가 구 id? 소비자 부재 증명. **생성-직후 러닝의 route_id 유실 클로즈** (그녀 v116 × 우리 원-라이너).
 - PART 2: ntf.actorFallback '러너'/'A runner' (문장-주어) — notifications:175만 스위치; home.runner 'Runner' 20 레이블 사이트 무접촉 (grep: notifications 내 잔여 0). 파리티 928/928.
