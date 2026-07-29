@@ -523,7 +523,9 @@ export default function CreateScreen() {
     <View style={[st.root, { paddingTop: insets.top }]}>
       {/* ── Header ──────────────────────────────────────────────────────── */}
       <View style={st.header}>
-        <Pressable onPress={() => router.back()} hitSlop={12} style={st.closeBtn}>
+        {/* dead-X belt (7/31): at stack base router.back() is a NO-OP — the
+            trap's second half. Fall to the chooser when there's no history. */}
+        <Pressable onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)/create' as never)} hitSlop={12} style={st.closeBtn}>
           <Icon name="close" size={20} color={C.text} />
         </Pressable>
         <Text style={st.headerTitle}>{t('crt.header')}</Text>

@@ -231,7 +231,12 @@ export default function ProfileSettingsScreen() {
 
         <Group title="관리">
           <NavRow icon="person-outline" label="프로필 편집" value="이름 · 소개 · 신체 정보" onPress={() => router.push('/personal-info' as any)} />
-          <NavRow icon="options-outline" label="앱 설정" value="단위 · 테마 · 러닝 동작" onPress={() => router.push('/settings' as any)} />
+          {/* 앱 설정 row DELETED (owner ruling 7/31): its href pointed at
+              app/settings.tsx, deleted in 5237b7d as an "orphan" WITH this
+              live consumer — the unmatched→코스설정 trap. Contents live in
+              the profile tab; slice 6 reintroduces a real hub deliberately
+              if wanted. Lesson: route deletions grep ROUTE-STRINGS
+              ('/settings'), not filenames. */}
           {/* 차단 관리 — goes live with 지연's block stack (was a server gap) */}
           <NavRow icon="ban-outline" label="차단 관리" value="차단한 사용자" onPress={() => router.push('/block-list' as any)} />
         </Group>

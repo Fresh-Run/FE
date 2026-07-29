@@ -880,6 +880,10 @@ export const ko = {
   'pbc.detail': '기록 자세히 보기',
   'pbc.share': '성과 공유하기',
   'pbc.shareMsg': 'FreshRun 새 기록! {sub}\n{val} (이전 {prev}, {pct}% 향상)',
+  // ── 낫-파운드 (7/31 데드-href 벨트) ─────────────────────────────────────
+  'nf.title': '길을 잃었어요',
+  'nf.body': '이 화면은 존재하지 않아요. 홈으로 돌아가 다시 시작해 주세요.',
+  'nf.home': '홈으로',
   'ntf.title': '알림',
   'ntf.loadFail': '알림을 불러올 수 없어요',
   'ntf.empty': '아직 알림이 없어요',

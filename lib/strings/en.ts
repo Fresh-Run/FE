@@ -865,6 +865,10 @@ export const en: Record<keyof typeof ko, string> = {
   'pbc.detail': 'View run details',
   'pbc.share': 'Share this',
   'pbc.shareMsg': 'New record on FreshRun! {sub}\n{val} (before {prev}, {pct}% better)',
+  // ── Not-found (7/31 dead-href belt) ─────────────────────────────────────
+  'nf.title': 'Lost the trail',
+  'nf.body': "This screen doesn't exist. Head home and start again.",
+  'nf.home': 'Go home',
   'ntf.title': 'Notifications',
   'ntf.loadFail': 'Could not load notifications',
   'ntf.empty': 'No notifications yet',

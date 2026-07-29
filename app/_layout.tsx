@@ -102,7 +102,10 @@ function RootLayoutInner() {
     <NavThemeProvider value={resolved === 'dark' ? DarkTheme : DefaultTheme}>
       {/* Native headers hidden by default — every screen renders its own
           in-content header per the design. Future sub-screens inherit this. */}
-      <Stack screenOptions={{ headerShown: false }}>
+      {/* initialRouteName (7/31 trap fix): without it, state resets fell to
+          the FIRST listed screen — (course) — mounting 코스 설정 as a stack
+          base with a dead X. (tabs) is the app's true base, always. */}
+      <Stack initialRouteName="(tabs)" screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(course)"       options={{ presentation: 'fullScreenModal' }} />
         <Stack.Screen name="weather-detail" options={{ animation: 'slide_from_bottom' }} />
       </Stack>

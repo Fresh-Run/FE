@@ -1223,6 +1223,11 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 - Promotion discipline UNCHANGED: every promotion to a tester-facing channel gets its own explicit one-confirm.
 - AMENDMENT (7/30, marker-placement correction): the hold was NEVER a written rule with its own ledger line — it operated as a standing VERBAL instruction that contradicted written constraint ④ ("invites/testers never wait"). Retiring it RESTORES ④ rather than superseding anything; ③ (core-loop scope) was retired separately by the Phase 2 epic itself, and the 36531a0 marker mis-attributed that. Markers corrected in place (③ → Phase-2 attribution · ④ → reaffirmed). **Ledger-hygiene lesson: verbal rules that contradict written constraints are invisible to audit until someone reads both — standing verbal instructions get a ledger line at issuance.**
 
+## 🧭 세팅스 트랩 픽스 BUILT (미스테이지) — 4피스 + 스윕
+- ① 앱 설정 로우 DELETED (오너 룰링: 프로필 탭과 리던던트 — 슬라이스 6이 원하면 실제 허브를 의도적으로 재도입; 5237b7d "고아" 삭제가 이 라이브 컨슈머를 그리핑 미스 — 인시던트 인-코드 기록) ② app/+not-found.tsx 신설 (브랜디드, nf.* 3키 양 로케일, 원-버튼 → replace('/(tabs)') — 데드-href 클래스 벨트) ③ 루트 스택 initialRouteName="(tabs)" ((course)-퍼스트 폴백 소스-킬) ④ create.tsx X = canGoBack 폴백 (데드-X 벨트).
+- ⑤ 루트-스트링 스윕 (레슨 집행): 57 참조 경로 vs 59 캐노니컬 루트 — **데드 레퍼런스 0, /settings가 클래스의 유일 멤버였음** (스윕 스크립트 1차 정규화 버그 자체-캐치 후 재실행; 코멘트-스트립 포함).
+- 콜드-스타트/딥링크 데스크 추론: '/' 해석 불변 ((tabs)/index) · 노티 라우팅 = 런타임 push 무영향 · 콜드 딥링크는 이제 (tabs)가 보장된 베이스 (백 플로어 개선) · (course) fullScreenModal 옵션 무접촉 — 디바이스 워크가 확정. 파리티 934/934.
+
 ## ✅ 셰어 아크 PROMOTED (2026-07-31) — 오너 [00:40] FULL (정렬·핀치·루트 비율·페이스 라벨/일치, 본 대로) · "PROMOTE. / HOLD." 양기재 → 원-컨펌 해소 · 72d76465 → production c0ec6b3d-3e37-4718-9ef2-dd9d57f26a57 · 프로모션 해시-타이 MATCH. **롤백 플로어 전진 → c0ec6b3d** (164a67cd 은퇴).
 - 라이브: 루트 애스펙트 피델리티 (제주-클래스 해안 비율) · 스트로크/닷 카운터-스케일 · 페이스 컨벤션 (평균=총시간 전면·무빙 페이스 분석-온리·카드=히어로 동일 숫자) · 밸류-서브박스 스마트-얼라인. 제주 러너의 두 결함 (스퀴글·페이스 미스매치) 클로즈.
 
