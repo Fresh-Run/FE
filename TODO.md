@@ -1223,6 +1223,11 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 - Promotion discipline UNCHANGED: every promotion to a tester-facing channel gets its own explicit one-confirm.
 - AMENDMENT (7/30, marker-placement correction): the hold was NEVER a written rule with its own ledger line — it operated as a standing VERBAL instruction that contradicted written constraint ④ ("invites/testers never wait"). Retiring it RESTORES ④ rather than superseding anything; ③ (core-loop scope) was retired separately by the Phase 2 epic itself, and the 36531a0 marker mis-attributed that. Markers corrected in place (③ → Phase-2 attribution · ④ → reaffirmed). **Ledger-hygiene lesson: verbal rules that contradict written constraints are invisible to audit until someone reads both — standing verbal instructions get a ledger line at issuance.**
 
+## 🔼 배치 4 v3 — kudos→liked (오너 워크 룰링) + 재스테이지
+- ntf.runKudoed: '{name} gave kudos to your run' → '{name} liked your run' — 앱의 좋아요-리스트가 이미 "{n} likes"/"No likes yet": kudos는 동일 액션에 다른 어휘를 쓰던 유일한 서피스.
+- **BE 푸시 문면과 재발산 (OPEN)**: 그녀의 push는 "gave kudos to your run" — 매칭 요청 중, 그녀 컨펌까지 발산 온-레코드.
+- en 사전 잔여 "kudos" 2건 리포트-온리 (룰링 전 무변경): rp.delBody ("Kudos, comments and photos are deleted…") · ntf.tagKudos (태그 칩 'Kudos').
+
 ## 🔼 배치 4 v2 STAGED (2026-07-30) — fef329a4-d3f5-42b5-903c-29875e0a7e28 (cb3c9c75 SUPERSEDED — 하모나이즈 5916449 + PB 템플릿 c05c8a8 합류) · 프로모션 게이트 대기
 - v2 프리플라이트 ✓ (env 스테이징·제로 로컬호스트/tsc/eslint) · 해시-타이 MATCH (htfQu95N…, 커밋 c05c8a8) · 마커 7/7 (신규 kudos/your-crew/fastest pace/New {label}!/Crew challenge 🎉 각 1 · 구 cheered 0 · fmtAgo 방금 전 1).
 

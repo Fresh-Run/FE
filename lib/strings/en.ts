@@ -748,7 +748,7 @@ export const en: Record<keyof typeof ko, string> = {
   'ntf.tagFallback': 'Alert',
   'ntf.routeLiked': '{name} liked your course',
   'ntf.routeCommented': '{name} commented on your course',
-  'ntf.runKudoed': '{name} gave kudos to your run',
+  'ntf.runKudoed': '{name} liked your run',
   'ntf.runCommented': '{name} commented on your run',
   'ntf.userFollowed': '{name} started following you',
   'ntf.followRequested': '{name} requested to follow you',
