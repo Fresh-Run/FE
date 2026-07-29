@@ -1215,6 +1215,13 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 
 **핵심 판정: 스퍼 메커니즘은 그녀의 3부검(§8.13-8.15)이 이미 실험적으로 종결한 클래스** — 좌표 발명(Gemini 무지도) × T-map 전점방문 계약의 구조적 산물. **오늘의 신규 발견 = 인밴드 레인의 스퍼 무게이트 비대칭**: 데스크 실증 — 300m 골목 스퍼 = longest_retrace_m 609 → 그녀 자신의 §8.16 합격선(≤600) 위반이면서 유일한 라이브 게이트(오버캡 ≤800)는 통과, **인밴드 단독 후보는 게이트 자체가 없어 무조건 서빙**. 픽스 랭킹: ① 인밴드 스퍼 게이트 확장(if절 수준, 최고 레버리지) ② 스퍼 절제 후처리(가용성 보존 페어) ③ 앵커 dead_end 프로브 활성화(라이브 경로가 probe_dead_end=False로 호출 중) ④ 스냅-사이드 웨이포인트 드롭(M) ⑤ 프롬프트 = 사망 레인(§8.15 반증 3종, 재론 금지). 부수: _within_band 독스트링 −0.1 vs 상수 0.3 드리프트 · ANCHOR_EPIC 헤더 "미배선" vs 혼합 풀 라이브 코드 스테일. 풀 리포트 오너 메시지로 납품. STOP — 그녀 레인, 그녀 콜.
 
+## 📜 RULING (2026-07-30, ledger-only): ENGLISH-BATCH HOLD RETIRED
+- OLD (retired): "promote English batches only when coverage is more complete" — set when the epic was two slices deep and coverage was lopsided; no longer describes the state (slices 1–4 converted: 크루·커뮤니티·소셜·피드·프로필·런 상세·리포팅·알림).
+- NEW: **English batches promote as they land, under normal walk-and-stamp discipline.** Revisit only if a real en-locale user reports incoherence.
+- Reasons on record (auditability): ① the hold was blocking a defect repair — fmtAgo, Korean timestamps on five English surfaces ② en-locale accounts = 1 of 47, and it is the Apple reviewer's fixture ③ held batches compound — each enlarges the eventual walk and coarsens the rollback floor.
+- CARRY-OVER, still binding: **the 언어 caption retires at slice 8, not before.** Until then English is discoverable only by device locale — do not surface the language control while coverage is partial.
+- Promotion discipline UNCHANGED: every promotion to a tester-facing channel gets its own explicit one-confirm.
+
 ## 🔼 배치 4 STAGED (2026-07-30) — cb3c9c75-c14e-4934-aa9e-e0e9e1a0d7e4 · 프로모션 게이트 대기
 - 내용 = 4d (알림+라우팅+fmtAgo 5서피스 결함 픽스) + 필드-픽스 (톱컷오프 run-save·edit-run +26 / 리센터 NAV_ALTITUDE_M 스냅 / 헤드라인 원복 — 배치 컨텐트 제로-디프). 커밋 d902af4 (49bd8c7..d902af4).
 - 프리플라이트 ✓ (env 스테이징·제로 로컬호스트 / tsc / eslint) · 해시-타이 MATCH (3_ecIs5vr0…) · 마커 8/8 (서울 헤드라인=1·전국=0·방금 전=1·응원해요 템플릿=1·{n}m ago=1·cheered=1·New {label} record! utf16=1 — 🎉 인접 = UTF-16 룰 재확인).
