@@ -14,10 +14,10 @@
  * still render NOT AT ALL (the line-132 rule); parity notes in TODO.md.
  *
  * Also ships: 피드 설정 (v1.5, settings.feed server-backed — 자동 게시 /
- * 좋아요·댓글 허용), 프로필 편집 / 앱 설정 doors, 회원 탈퇴 (the 8bc494e
- * flow — canvas draws a simple modal; ours keeps the server-mandated
- * crew-owner 409 path). 앱 설정 row = the preserved door for the settings
- * hub, whose ONLY previous entry was the gear this screen now owns.
+ * 좋아요·댓글 허용), 프로필 편집 door (nickname param seeded 7/31), 회원 탈퇴
+ * (the 8bc494e flow — canvas draws a simple modal; ours keeps the
+ * server-mandated crew-owner 409 path). The 앱 설정 row DIED 7/31 (trap
+ * fix — its /settings target was deleted in 5237b7d).
  */
 import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -27,6 +27,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '@/components/ui';
 import { Toggle } from '@/components/toggle';
 import { getMyProfile, listFollowRequests, updateProfile, type ProfileVisibility } from '@/lib/profile-api';
+import { useStore } from '@/store/use-store';
 import { shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { useSettings } from '@/store/use-settings';
@@ -98,6 +99,10 @@ export default function ProfileSettingsScreen() {
     listFollowRequests().then(rows => setReqCount(rows.length)).catch(() => {});
   }, []);
   const [visBusy, setVisBusy] = useState(false);
+  // 프로필 편집 door seed (7/31): the hub keeps no profile object (the fetch
+  // below discards nickname) — the store displayName is the same value the
+  // home greeting paints, synchronous and per-user cached.
+  const displayName = useStore(s => s.displayName);
   useEffect(() => {
     getMyProfile()
       .then(p => {
@@ -230,7 +235,10 @@ export default function ProfileSettingsScreen() {
         </Group>
 
         <Group title="관리">
-          <NavRow icon="person-outline" label="프로필 편집" value="이름 · 소개 · 신체 정보" onPress={() => router.push('/personal-info' as any)} />
+          {/* param seed (7/31): the paramless push shipped a blank name field
+              since 4948e12 (personal-info seeds from params only) — both doors
+              now pass nickname; the screen's own store fallback is the belt. */}
+          <NavRow icon="person-outline" label="프로필 편집" value="이름 · 신체 정보" onPress={() => router.push({ pathname: '/personal-info' as any, params: displayName ? { nickname: displayName } : undefined })} />
           {/* 앱 설정 row DELETED (owner ruling 7/31): its href pointed at
               app/settings.tsx, deleted in 5237b7d as an "orphan" WITH this
               live consumer — the unmatched→코스설정 trap. Contents live in

@@ -120,7 +120,12 @@ export default function PersonalInfoScreen() {
   const setPhotoUrl = useStore(s => s.setPhotoUrl);
 
   const email = session?.user.email ?? '—';
-  const originalName = params.nickname ?? '';
+  // name-seed belt (7/31): param-only seeding shipped blank via the paramless
+  // 프로필 설정 door since 4948e12 — seeds get fallbacks. originalNameRef
+  // tracks the EFFECTIVE seed so the rename-gate in handleSave never fires
+  // a same-name PATCH after a store adopt.
+  const displayName = useStore(s => s.displayName);
+  const originalNameRef = useRef(params.nickname ?? '');
 
   // 신체 정보 — SERVER-backed (S2 done 2026-07-13; use-local-profile PATCHes
   // /me/profile server-first, device = per-user cache). Re-probed 2026-07-14.
@@ -128,7 +133,15 @@ export default function PersonalInfoScreen() {
   const hydrated = useLocalProfile(s => s.hydrated);
   useEffect(() => { useLocalProfile.getState().hydrate(); }, []);
 
-  const [name, setName]         = useState(originalName);
+  const [name, setName]         = useState(params.nickname ?? '');
+  // adopt-once from the store when the param is absent (:sibling pattern below)
+  const nameAdoptedRef = useRef(false);
+  useEffect(() => {
+    if (nameAdoptedRef.current || params.nickname || !displayName) return;
+    nameAdoptedRef.current = true;
+    originalNameRef.current = displayName;
+    setName(displayName);
+  }, [displayName, params.nickname]);
   const [nameError, setNameError] = useState<string | null>(null);
   const [birthYear, setBirthYear] = useState(local.birthYear);
   const [weightKg, setWeightKg]   = useState(local.weightKg);
@@ -272,7 +285,7 @@ export default function PersonalInfoScreen() {
     setNameError(null);
     try {
       // 이름 → server (only when changed)
-      if (trimmed !== originalName) {
+      if (trimmed !== originalNameRef.current) {
         await updateNickname(trimmed);
         setDisplayName(trimmed); // greeting/comments use the store name
       }
