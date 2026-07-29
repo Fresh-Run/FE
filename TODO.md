@@ -1223,6 +1223,11 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 - Promotion discipline UNCHANGED: every promotion to a tester-facing channel gets its own explicit one-confirm.
 - AMENDMENT (7/30, marker-placement correction): the hold was NEVER a written rule with its own ledger line — it operated as a standing VERBAL instruction that contradicted written constraint ④ ("invites/testers never wait"). Retiring it RESTORES ④ rather than superseding anything; ③ (core-loop scope) was retired separately by the Phase 2 epic itself, and the 36531a0 marker mis-attributed that. Markers corrected in place (③ → Phase-2 attribution · ④ → reaffirmed). **Ledger-hygiene lesson: verbal rules that contradict written constraints are invisible to audit until someone reads both — standing verbal instructions get a ledger line at issuance.**
 
+## 🌦️ 스트립 컨테인먼트 v3 BUILT (미스테이지) — 픽스드-디바이더 룰링 (v1·v2 대체)
+- 룰링 인-코드 버바팀: "Owner-ruled 7/29: divider fixed; right side never yields; name ellipsizes. Supersedes v1 (all-rigid) and v2 (dual-floor flex)." — 컴포넌트 헤더 + 스타일 블록 양쪽.
+- 메커닉스: metrics shrink-0·AUTO basis (제로-박스 레슨 존치) · tempGroup 유일 플렉스 박스 (grow+shrink) · v2 minWidth 68 플로어 DROP (픽스드 디바이더 하에서 리던던트/위험) · pmGroup 컴팩트 머시너리 전면 제거 (minWidth 48·paddingRight 6 seam·numberOfLines — 도달 불능, 제거 코멘트) · 스테일 ⑥-r4 헤더 코멘트도 v3로 교체.
+- 픽스처: 도메스틱 = ⑥-final 실측 (286≤309 @375pt, 전-내추럴 + 이름 포함 여유) 채택 — **한강로2가 통짜 + 미세먼지 좋음 4자+등급 COMPLETE (shrink-0 구조 보장)**; 자체 글리프-심은 실측과 모순되어 폐기 (추정 인플레). 호바트 = 이름 단독 일드 (말줄임), 우측 풀, 오버랩 구조 불능.
+
 ## 🔼 스트립 컨테인먼트 v2 STAGED — b957dd35-5e46-4688-9908-149d38d524d1 (커밋 bc3b411; fb25cda0/v1 대체) · 해시-타이 MATCH · 플로어 53b6e9b9 · 워크: 도메스틱 = 이름 통짜 + 원본 룩 (v1 FAIL 지점 재검) · 호바트 = 시뮬 or 스크린샷 · 프로모션 개별 컨펌 대기
 
 ## 🌦️ 스트립 컨테인먼트 v2 BUILT (미스테이지) — v1 도메스틱 워크 FAIL (한…) 정정

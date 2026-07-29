@@ -121,11 +121,10 @@ function WeatherStrip({ onPress }: { onPress: () => void }) {
   // design-control exception, sized at the written font sizes (the 1.0
   // render), pixel-identical across devices/OS text settings. The global
   // Dynamic Type question stays OPEN for a future ruling (ledgered).
-  // Safety rails retained for long content: 미세group numberOfLines=1
-  // tail-ellipsis + minWidth 48 floor + paddingRight 6 seam (flex can't eat
-  // padding — the ellipsis never kisses the chip); yield order = place name
-  // (flexShrink 10) → 미세 label to floor → nothing else; gaps 8. Fixed-size
-  // worst case (375pt): 286 ≤ 309 — comfortable.
+  // Owner-ruled 7/29 (v3): divider fixed; right side never yields; name
+  // ellipsizes. Supersedes v1 (all-rigid) and v2 (dual-floor flex). The
+  // right section renders at full natural width for every user/locale —
+  // '미세먼지 {grade}' always complete; the place name is the ONLY yielder.
   const { weather: w, placeName } = useWeather();
   const tone = w ? weatherTone(w.running_index.score) : null;
   const vc = tone ? verdictColor(C, tone) : null;
@@ -148,7 +147,9 @@ function WeatherStrip({ onPress }: { onPress: () => void }) {
         {w?.pm10 ? (
           <View style={wst.pmGroup}>
             <View style={[wst.aqiDot, { backgroundColor: C.aqi[w.pm10.grade] ?? C.faint }]} />
-            <RNText style={wst.metricTxt} numberOfLines={1} ellipsizeMode="tail" allowFontScaling={false}>
+            {/* v3: numberOfLines/ellipsize removed — the right side never
+                compacts, so truncation here is unreachable by construction */}
+            <RNText style={wst.metricTxt} allowFontScaling={false}>
               미세먼지 {w.pm10.grade}
             </RNText>
           </View>
@@ -169,25 +170,21 @@ function WeatherStrip({ onPress }: { onPress: () => void }) {
 
 const makeWst = (C: Tokens) => StyleSheet.create({
   strip:      { width: '100%', flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 16, paddingTop: 11, paddingBottom: 11, paddingLeft: 14, paddingRight: 12 },
-  // Hobart containment v2 (8/3 — v1's flex:1 basis-0 starved ko names to
-  // 한…): ORIGINAL topology restored, two deviations only. ① metrics keeps
-  // grow (the original slack owner — domestic look unchanged) but on AUTO
-  // basis: the v0 garble was metrics' basis-0 box painting its children
-  // over neighbors; auto basis floors it at child minimums — shrink yes,
-  // garble never. ② area gains minWidth 68 ≈ six ko chars @11.5 — short
-  // names render WHOLE; only Hobart-length names ellipsize, and the AQI
-  // label keeps its original 미세… yield (pmGroup shrink restored).
-  tempGroup:  { flexDirection: 'row', alignItems: 'baseline', gap: 6, flexShrink: 1, minWidth: 0 },
+  // Owner-ruled 7/29: divider fixed; right side never yields; name
+  // ellipsizes. Supersedes v1 (all-rigid) and v2 (dual-floor flex).
+  // Mechanics: metrics = natural width, shrink-0, AUTO basis (the v0
+  // zero-box overlap lesson stands — never basis 0); tempGroup is the
+  // ONLY flexible box (grows into slack, shrinks first and alone).
+  tempGroup:  { flexDirection: 'row', alignItems: 'baseline', gap: 6, flexGrow: 1, flexShrink: 1, minWidth: 0 },
   temp:       { fontSize: 22, fontWeight: '700', color: C.text, letterSpacing: -0.8, flexShrink: 0 },
-  area:       { fontSize: 11.5, color: C.faint, letterSpacing: -0.2, flexShrink: 10, minWidth: 68 },
+  area:       { fontSize: 11.5, color: C.faint, letterSpacing: -0.2, flexShrink: 10 },
   divider:    { width: 1, height: 26, backgroundColor: C.border, flexShrink: 0 },
-  metrics:    { flexDirection: 'row', gap: 8, flexGrow: 1, flexShrink: 1, minWidth: 0, alignItems: 'center' },
+  metrics:    { flexDirection: 'row', gap: 8, flexShrink: 0, alignItems: 'center' },
   metric:     { flexDirection: 'row', alignItems: 'center', gap: 4, flexShrink: 0 },
-  // ⑥-r4 seam: paddingRight is box-owned — flex can't eat it, the ellipsis
-  // never kisses the chip. Floor 52→48 (owner yield): "미…" binds ONLY at
-  // the 375pt/1.35 corner (303 ≤ 309, 6px spare); everyday states never
-  // touch the floor.
-  pmGroup:    { flexDirection: 'row', alignItems: 'center', gap: 4, flexShrink: 1, minWidth: 48, paddingRight: 6 },
+  // v3: the ⑥-r4 minWidth-floor/seam compact machinery is REMOVED — with a
+  // shrink-0 right side the label can never compress, so the floor and the
+  // ellipsis seam protect nothing. Natural box, full '미세먼지 {grade}'.
+  pmGroup:    { flexDirection: 'row', alignItems: 'center', gap: 4 },
   metricTxt:  { fontSize: 12.5, fontWeight: '600', color: C.text },
   aqiDot:     { width: 6, height: 6, borderRadius: 3, flexShrink: 0 },
   verdict:    { flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5, flexShrink: 0 },
