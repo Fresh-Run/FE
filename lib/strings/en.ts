@@ -817,7 +817,7 @@ export const en: Record<keyof typeof ko, string> = {
   'mpk.title': 'Select period',
   'mpk.empty': 'No runs in this year',
   // ── Weather detail (slice 5c) ────────────────────────────────────────────
-  'wx.title': 'Weather analysis',
+  'wx.title': 'Weather',
   'wx.scoreGood': 'Prime conditions',
   'wx.scoreOk': 'Decent conditions',
   'wx.scoreBad': 'Take care out there',
@@ -837,7 +837,7 @@ export const en: Record<keyof typeof ko, string> = {
   'wx.feels': '{cond} · feels like {n}°',
   'wx.loading': 'Loading weather',
   'wx.aiLabel': 'AI run index',
-  'wx.aiMine': ' · personalized',
+  'wx.aiMine': '', // owner walk fix: en label is 'AI run index' alone (ko keeps · 내 기준)
   'wx.waiting': 'Waiting for weather data',
   'wx.cta': 'Start a run',
   'wx.gGood': 'Good',
