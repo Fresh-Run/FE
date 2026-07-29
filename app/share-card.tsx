@@ -57,6 +57,7 @@ import type { Coordinate } from '@/types';
 
 // stroke counter-scale (8/3 ruling): the preset must hold at any pinch zoom
 const AnimatedPath = Reanimated.createAnimatedComponent(Path);
+const AnimatedCircle = Reanimated.createAnimatedComponent(Circle);
 
 // ─── Prefs (persisted metric selection — v1 local; settings.share later) ─────
 
@@ -434,6 +435,9 @@ export default function ShareCardScreen() {
   // counter-scale: the layer transform scales everything incl. the stroke;
   // dividing by sc keeps the chosen preset (3/4.5/6) visually constant
   const strokeProps = useAnimatedProps(() => ({ strokeWidth: strokeW / sc.value }));
+  // addendum: the start/end dots counter-scale the same way (same class)
+  const startDotProps = useAnimatedProps(() => ({ r: 5 / sc.value, strokeWidth: 3 / sc.value }));
+  const endDotProps = useAnimatedProps(() => ({ r: 5.5 / sc.value, strokeWidth: 2 / sc.value }));
 
   // v2 free-placed metric layers — fixed three (hooks unconditional; the
   // toggle hides the RENDER, never the hook)
@@ -562,8 +566,8 @@ export default function ShareCardScreen() {
                 <Reanimated.View style={[st.routeLayer, { width: layerSize, height: layerSize, left: (canvasW - layerSize) / 2, top: (canvasH - layerSize) / 2 }, layerStyle]}>
                   <Svg viewBox={`0 0 ${layerSize} ${layerSize}`} width="100%" height="100%">
                     <AnimatedPath d={route.d} stroke={stroke} animatedProps={strokeProps} strokeLinecap="round" strokeLinejoin="round" fill="none" opacity={0.95} />
-                    <Circle cx={route.start[0]} cy={route.start[1]} r={5} fill="#fff" stroke={stroke} strokeWidth={3} />
-                    <Circle cx={route.end[0]} cy={route.end[1]} r={5.5} fill={stroke} stroke="#fff" strokeWidth={2} />
+                    <AnimatedCircle cx={route.start[0]} cy={route.start[1]} animatedProps={startDotProps} fill="#fff" stroke={stroke} />
+                    <AnimatedCircle cx={route.end[0]} cy={route.end[1]} animatedProps={endDotProps} fill={stroke} stroke="#fff" />
                   </Svg>
                 </Reanimated.View>
               </GestureDetector>
