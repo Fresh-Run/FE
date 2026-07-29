@@ -106,12 +106,16 @@ export const colors = {
   paceSlow: palette.aqiBad,
   danger:      palette.red500,
 
-  // AQI status map (index by Korean label)
+  // AQI status map (index by Korean label) — v4 traffic light (owner-ruled
+  // 8/3 from the strip screenshot): the strip's dot now carries the grade
+  // ALONE, so the scale collapsed to green/yellow/red (나쁨-class both red).
+  // Palette entries untouched (paceTone rides palette.aqiBad directly);
+  // UV keeps its conventional 5-step scale below.
   aqi: {
-    '좋음':    palette.aqiGood,
-    '보통':    palette.aqiOk,
-    '나쁨':    palette.aqiBad,
-    '매우나쁨': palette.aqiVeryBad,
+    '좋음':    palette.aqiOk,      // green  (was blue)
+    '보통':    palette.amber400,   // yellow (was green)
+    '나쁨':    palette.aqiVeryBad, // red    (was orange)
+    '매우나쁨': palette.aqiVeryBad, // red    (unchanged)
   } as Record<string, string>,
 
   // UV status map — 기상청 5단계 (BE weather_service _UV_BOUNDS; guide §62).

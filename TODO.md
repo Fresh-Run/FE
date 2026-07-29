@@ -1223,6 +1223,11 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 - Promotion discipline UNCHANGED: every promotion to a tester-facing channel gets its own explicit one-confirm.
 - AMENDMENT (7/30, marker-placement correction): the hold was NEVER a written rule with its own ledger line — it operated as a standing VERBAL instruction that contradicted written constraint ④ ("invites/testers never wait"). Retiring it RESTORES ④ rather than superseding anything; ③ (core-loop scope) was retired separately by the Phase 2 epic itself, and the 36531a0 marker mis-attributed that. Markers corrected in place (③ → Phase-2 attribution · ④ → reaffirmed). **Ledger-hygiene lesson: verbal rules that contradict written constraints are invisible to audit until someone reads both — standing verbal instructions get a ledger line at issuance.**
 
+## 🌦️ 스트립 v4 BUILT (미스테이지) — AQI 그레이드-워드 제거 + 트래픽-라이트 닷 (v3 한… 스크린샷 정정; 지오메트리 = 오너 룰링 대기 1건)
+- 룰링 1: 스트립 = 닷 + "미세먼지"만 (그레이드 워드 사망, ~37px 회수) · 웨더-디테일 풀 워드 + GRADE_KEY 무접촉.
+- 룰링 2 검증: 블루 = 좋음의 색일 뿐 (4등급 블루/그린/오렌지/레드) — 콜랩스 룰링 불요. C.aqi 리컬러: 좋음 블루→그린 · 보통 그린→옐로 · 나쁨 오렌지→레드 · 매우나쁨 레드. 팔레트 엔트리 무접촉 (paceTone 안전) · UV 무접촉 · 버딕트 칩 = 자체 스케일이 이미 트래픽-라이트 (accent/sun/danger) — 일관, 무접촉.
+- 지오메트리: v3 토폴로지 유지 + minWidth 68 복원 (스펙 수치). **데스크 실수치 @375pt (글리프 테이블 명시): 내추럴 5자 = 344/349 (+5 스페어) ✓ · 플로어-68 박스 = 354/349 (−5 초과) ✗ · 겨울 −12° 가산 +9**. 테이블의 역사적 팻-바이어스 (~10-15%, ⑥-실측 대비) 적용 시 플로어도 수용 — **경계 스트래들: 침묵 희생 금지 조항 발동, 플로어 수치 룰링 대기** (메뉴: 플로어 60 = 5자 정합 +3 스페어 / 68 유지 + 바이어스 신뢰 / 칩 패딩 −8 / 습도 메트릭 −46). 신규 스트링 0.
+
 ## 🌦️ 스트립 컨테인먼트 v3 BUILT (미스테이지) — 픽스드-디바이더 룰링 (v1·v2 대체)
 - 룰링 인-코드 버바팀: "Owner-ruled 7/29: divider fixed; right side never yields; name ellipsizes. Supersedes v1 (all-rigid) and v2 (dual-floor flex)." — 컴포넌트 헤더 + 스타일 블록 양쪽.
 - 메커닉스: metrics shrink-0·AUTO basis (제로-박스 레슨 존치) · tempGroup 유일 플렉스 박스 (grow+shrink) · v2 minWidth 68 플로어 DROP (픽스드 디바이더 하에서 리던던트/위험) · pmGroup 컴팩트 머시너리 전면 제거 (minWidth 48·paddingRight 6 seam·numberOfLines — 도달 불능, 제거 코멘트) · 스테일 ⑥-r4 헤더 코멘트도 v3로 교체.

@@ -121,10 +121,11 @@ function WeatherStrip({ onPress }: { onPress: () => void }) {
   // design-control exception, sized at the written font sizes (the 1.0
   // render), pixel-identical across devices/OS text settings. The global
   // Dynamic Type question stays OPEN for a future ruling (ledgered).
-  // Owner-ruled 7/29 (v3): divider fixed; right side never yields; name
-  // ellipsizes. Supersedes v1 (all-rigid) and v2 (dual-floor flex). The
-  // right section renders at full natural width for every user/locale —
-  // '미세먼지 {grade}' always complete; the place name is the ONLY yielder.
+  // Owner-ruled 7/29 (v3) + v4 (8/3, live screenshot — eyes overrule math):
+  // divider fixed; right side never yields; name ellipsizes ONLY beyond the
+  // 5-6-ko-char floor. v4 killed the AQI grade WORD (dot color carries it,
+  // traffic-light C.aqi) to buy the name its room; 5-char domestic names
+  // render WHOLE at 375pt — the binding constraint the layout solves for.
   const { weather: w, placeName } = useWeather();
   const tone = w ? weatherTone(w.running_index.score) : null;
   const vc = tone ? verdictColor(C, tone) : null;
@@ -147,10 +148,10 @@ function WeatherStrip({ onPress }: { onPress: () => void }) {
         {w?.pm10 ? (
           <View style={wst.pmGroup}>
             <View style={[wst.aqiDot, { backgroundColor: C.aqi[w.pm10.grade] ?? C.faint }]} />
-            {/* v3: numberOfLines/ellipsize removed — the right side never
-                compacts, so truncation here is unreachable by construction */}
+            {/* v4 (owner-ruled): the grade WORD is gone — the dot's traffic-
+                light color carries it. Weather-detail keeps full grade words. */}
             <RNText style={wst.metricTxt} allowFontScaling={false}>
-              미세먼지 {w.pm10.grade}
+              미세먼지
             </RNText>
           </View>
         ) : null}
@@ -177,7 +178,10 @@ const makeWst = (C: Tokens) => StyleSheet.create({
   // ONLY flexible box (grows into slack, shrinks first and alone).
   tempGroup:  { flexDirection: 'row', alignItems: 'baseline', gap: 6, flexGrow: 1, flexShrink: 1, minWidth: 0 },
   temp:       { fontSize: 22, fontWeight: '700', color: C.text, letterSpacing: -0.8, flexShrink: 0 },
-  area:       { fontSize: 11.5, color: C.faint, letterSpacing: -0.2, flexShrink: 10 },
+  // v4: the v2 name floor RETURNS (binding constraint: 5-6 ko chars whole
+  // at 375pt — the grade word died to buy this room); ellipsis is for
+  // genuinely long names only.
+  area:       { fontSize: 11.5, color: C.faint, letterSpacing: -0.2, flexShrink: 10, minWidth: 68 },
   divider:    { width: 1, height: 26, backgroundColor: C.border, flexShrink: 0 },
   metrics:    { flexDirection: 'row', gap: 8, flexShrink: 0, alignItems: 'center' },
   metric:     { flexDirection: 'row', alignItems: 'center', gap: 4, flexShrink: 0 },
