@@ -1223,7 +1223,7 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 - Promotion discipline UNCHANGED: every promotion to a tester-facing channel gets its own explicit one-confirm.
 - AMENDMENT (7/30, marker-placement correction): the hold was NEVER a written rule with its own ledger line — it operated as a standing VERBAL instruction that contradicted written constraint ④ ("invites/testers never wait"). Retiring it RESTORES ④ rather than superseding anything; ③ (core-loop scope) was retired separately by the Phase 2 epic itself, and the 36531a0 marker mis-attributed that. Markers corrected in place (③ → Phase-2 attribution · ④ → reaffirmed). **Ledger-hygiene lesson: verbal rules that contradict written constraints are invisible to audit until someone reads both — standing verbal instructions get a ledger line at issuance.**
 
-## 🔼 슬라이스 5 그룹 STAGED (2026-07-31) — 9d4b4b27-539b-495e-b1fa-9e69c20c02e5 (커밋 d9ba81d) · 프로모션 게이트 대기
+## 🔼 슬라이스 5 그룹 v2 STAGED — 5a86ce45-c343-4301-bb19-1999d98287c6 (9d4b4b27 대체; 커밋 7b3865d — 워크-픽스 2값: Weather 타이틀·personalized 제거, ko 불변) · 해시-타이 MATCH (105gmp_6…) · 마커: 구 2값 0·AI run index 1·ko 내 기준 1 · 프로모션 게이트 대기
 - 내용 = 5a+5b+5c 원-그룹 (정션 2픽스 라이브 결함 포함 · 139키 · 파리티 927/927). 프리플라이트 ✓ (env·tsc·eslint 11파일) · 해시-타이 MATCH (tBPZyPcp…) · 마커 9/9 (양 로케일 스프레드: 조정캡션·오디널·PB축하·날씨tf).
 - 플로어 = 72a1b103 (배치4). 오너 원-워크 (기록 월드·인사이트·PB 모달·날씨 상세, 양 언어) = 게이트 — 프로모션 개별 컨펌 후, 그 후 에픽 파킹 (슬라이스 6-8, ~596히트 잔여).
 
