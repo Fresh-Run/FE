@@ -1223,6 +1223,9 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 - Promotion discipline UNCHANGED: every promotion to a tester-facing channel gets its own explicit one-confirm.
 - AMENDMENT (7/30, marker-placement correction): the hold was NEVER a written rule with its own ledger line — it operated as a standing VERBAL instruction that contradicted written constraint ④ ("invites/testers never wait"). Retiring it RESTORES ④ rather than superseding anything; ③ (core-loop scope) was retired separately by the Phase 2 epic itself, and the 36531a0 marker mis-attributed that. Markers corrected in place (③ → Phase-2 attribution · ④ → reaffirmed). **Ledger-hygiene lesson: verbal rules that contradict written constraints are invisible to audit until someone reads both — standing verbal instructions get a ledger line at issuance.**
 
+## ✅ 스트립 v4 PROMOTED (2026-08-03) — 오너 [23:55] PARTIAL (도메스틱 통짜·미세먼지+닷·우측 정상·디테일 색 클린 — **스트래들 디바이스 판정: 68 플로어 적합**) · 원-컨펌 · 1f69e7ed → production 164a67cd-89c7-4f2e-9d52-92da7dd894a2 · 프로모션 해시-타이 MATCH. **롤백 플로어 전진 → 164a67cd** (53b6e9b9 은퇴). 호바트 아크의 스트립 레인 클로즈 (v1 all-rigid → v2 dual-floor → v3 fixed-divider → v4 grade-word-drop — 눈이 수학을 지배한 4-이터레이션).
+- 미완 레그: ① 호바트 긴-이름 ellipsis = 프로모트-후 스크린샷 (그들의 koreaOnly 카드 리포트와 동일 사이클 가능) ② 겨울 음수 온도 = 계절 불가 (시즌 도래 시 기회 스탬프).
+
 ## 🔼 스트립 v4 STAGED — 1f69e7ed-0b95-4dcc-be7b-78c50501d9c5 (커밋 5898d33; 8edb3b63/v3 대체) · 해시-타이 MATCH · 플로어 53b6e9b9 · 워크 = 스트래들 판정: 도메스틱 5자 이름 통짜 + "미세먼지" 온리 + 닷 트래픽-라이트 (그린/옐로/레드) + 겨울-온도 시뮬 가능하면 육안 · 웨더-디테일 그레이드 워드 색 변화 회귀 글랜스 · 프로모션 개별 컨펌 대기
 
 ## 🌦️ 스트립 v4 BUILT (미스테이지) — AQI 그레이드-워드 제거 + 트래픽-라이트 닷 (v3 한… 스크린샷 정정; 지오메트리 = 오너 룰링 대기 1건)
