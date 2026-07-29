@@ -23,7 +23,7 @@ import { useT } from '@/lib/i18n';
 // Course affordances (이 코스 달리기 CTA + header bookmark, canvas card B)
 // REMOVED 2026-07-21 — owner step-back ruling; the feature returns
 // post-launch. Full prop/UI/style implementation lives at commit 82c5bc9.
-export function RunCard({ run, units, mapLive, onKudos, kudosOff, onOpen, onAvatarPress }: {
+export function RunCard({ run, units, mapLive, onKudos, kudosOff, onOpen, onAvatarPress, onCountPress }: {
   run: UserRun;
   units: ReturnType<typeof useSettings.getState>['settings']['units'];
   mapLive: boolean;
@@ -33,6 +33,8 @@ export function RunCard({ run, units, mapLive, onKudos, kudosOff, onOpen, onAvat
   onOpen?: () => void;
   /** discovery funnel: avatar tap → profile (absent = not tappable) */
   onAvatarPress?: () => void;
+  /** K1: like-count tap → likers sheet (absent = inert count, pre-K1 render) */
+  onCountPress?: () => void;
 }) {
   // reactive anchor (owner ruling 4a-now): subscribes the card to lang —
   // long-lived FlatList instances repaint on mid-session flips, and the
@@ -78,18 +80,26 @@ export function RunCard({ run, units, mapLive, onKudos, kudosOff, onOpen, onAvat
         </View>
       </View>
       <View style={st.cardFooter}>
-        {kudosOff ? (
-          /* count-only — the read-only kudos idiom; no press affordance */
-          <View style={st.kudosBtn}>
+        {/* K1 split: ♥ owns the toggle, the COUNT owns the likers sheet
+            (onCountPress — optional: unwired parents render an inert count).
+            kudosOff hides only the toggle; existing likes stay viewable. */}
+        <View style={st.kudosBtn}>
+          {kudosOff ? (
             <Icon name="heart-outline" size={18} color={C.sub} />
-            <Text style={st.kudosCount}>{run.kudos_count}</Text>
-          </View>
-        ) : (
-          <Pressable onPress={onKudos} hitSlop={8} style={({ pressed }) => [st.kudosBtn, pressed && { opacity: 0.6 }]}>
-            <Icon name={run.my_kudos ? 'heart' : 'heart-outline'} size={18} color={run.my_kudos ? C.danger : C.sub} />
-            <Text style={[st.kudosCount, run.my_kudos && { color: C.danger }]}>{run.kudos_count}</Text>
+          ) : (
+            <Pressable onPress={onKudos} hitSlop={8} style={({ pressed }) => pressed ? { opacity: 0.6 } : null}>
+              <Icon name={run.my_kudos ? 'heart' : 'heart-outline'} size={18} color={run.my_kudos ? C.danger : C.sub} />
+            </Pressable>
+          )}
+          <Pressable
+            onPress={onCountPress}
+            disabled={!onCountPress}
+            hitSlop={8}
+            style={({ pressed }) => pressed && !!onCountPress ? { opacity: 0.6 } : null}
+          >
+            <Text style={[st.kudosCount, !kudosOff && run.my_kudos && { color: C.danger }]}>{run.kudos_count}</Text>
           </Pressable>
-        )}
+        </View>
         {/* 💬 read-only count — tap opens the post, same as the card body */}
         <Pressable
           onPress={onOpen}

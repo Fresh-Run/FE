@@ -7,6 +7,7 @@
  * canvas home-cards.jsx 친구 feed is run cards).
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { KudosSheet } from '@/components/kudos-sheet';
 import { SuggestedRunnersRow, useSuggestedRunners } from '@/components/suggested-runners';
 import { getLang, t, tf } from '@/lib/i18n';
 import { useFocusEffect } from '@react-navigation/native';
@@ -451,6 +452,8 @@ export default function HomeScreen() {
 
   // Kudos overlay for run cards, BOTH tabs (the user-profile pattern verbatim)
   const [kudosOv, setKudosOv] = useState<Record<string, { on: boolean; delta: number }>>({});
+  // K1: likers sheet target (my-profile's kudosRun pattern)
+  const [kudosSheetRun, setKudosSheetRun] = useState<{ id: string; count: number } | null>(null);
   const toggleRunKudos = useCallback((run: FeedRun) => {
     const cur = kudosOv[run.run_id]?.on ?? run.my_kudos;
     const next = !cur;
@@ -566,6 +569,9 @@ export default function HomeScreen() {
                 mapLive={liveIds.has(item.run_id)}
                 onKudos={() => toggleRunKudos(item)}
                 kudosOff={item.allow_likes === false}
+                // K1: count tap → likers sheet (my-profile pattern; shown =
+                // overlay-adjusted so the sheet header count matches the card)
+                onCountPress={() => setKudosSheetRun({ id: shown.run_id, count: shown.kudos_count })}
                 onOpen={() => router.push({
                   pathname: '/run-post' as never,
                   params: {
@@ -625,6 +631,10 @@ export default function HomeScreen() {
         }
       />
 
+      {/* K1: likers sheet from any card — my-profile pattern verbatim */}
+      {kudosSheetRun && (
+        <KudosSheet runId={kudosSheetRun.id} kudosCount={kudosSheetRun.count} onClose={() => setKudosSheetRun(null)} />
+      )}
     </View>
   );
 }

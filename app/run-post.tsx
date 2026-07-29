@@ -391,17 +391,24 @@ export default function RunPostScreen() {
                   <Text style={st.kudosTxt}>{likeCount}</Text>
                 </Pressable>
               ) : kudosOff ? (
-                /* likes_disabled — the read-only own-run idiom: count stays
-                   honest, the press affordance is GONE */
+                /* likes_disabled — toggle affordance GONE, but the count
+                   opens the sheet (K1 ruling: existing likes stay viewable) */
                 <View style={st.kudosBtn}>
                   <Icon name="heart-outline" size={18} color={C.sub} />
-                  <Text style={st.kudosTxt}>{likeCount}</Text>
+                  <Pressable onPress={() => setLikersOpen(true)} hitSlop={8} style={({ pressed }) => pressed ? { opacity: 0.6 } : null}>
+                    <Text style={st.kudosTxt}>{likeCount}</Text>
+                  </Pressable>
                 </View>
               ) : (
-                <Pressable onPress={toggleKudos} style={({ pressed }) => [st.kudosBtn, liked && st.kudosBtnActive, pressed && { opacity: 0.8 }]}>
-                  <Icon name={liked ? 'heart' : 'heart-outline'} size={18} color={liked ? C.danger : C.sub} />
-                  <Text style={[st.kudosTxt, liked && { color: C.danger }]}>{likeCount}</Text>
-                </Pressable>
+                /* K1 split: ♥ toggles, the COUNT opens the likers sheet */
+                <View style={[st.kudosBtn, liked && st.kudosBtnActive]}>
+                  <Pressable onPress={toggleKudos} hitSlop={8} style={({ pressed }) => pressed ? { opacity: 0.8 } : null}>
+                    <Icon name={liked ? 'heart' : 'heart-outline'} size={18} color={liked ? C.danger : C.sub} />
+                  </Pressable>
+                  <Pressable onPress={() => setLikersOpen(true)} hitSlop={8} style={({ pressed }) => pressed ? { opacity: 0.6 } : null}>
+                    <Text style={[st.kudosTxt, liked && { color: C.danger }]}>{likeCount}</Text>
+                  </Pressable>
+                </View>
               )}
 
               {/* Comments */}

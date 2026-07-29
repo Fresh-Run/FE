@@ -27,6 +27,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/avatar';
+import { KudosSheet } from '@/components/kudos-sheet';
 import { RunCard } from '@/components/run-card';
 import { Icon } from '@/components/ui';
 import { ApiError, apiFetch, apiRequest } from '@/lib/api';
@@ -60,6 +61,8 @@ export default function UserProfileScreen() {
   // follow_request_pending stays the fallback corrector.
   const [followOverlay, setFollowOverlay] = useState<'following' | 'requested' | 'none' | null>(null);
   const [kudosOverlay, setKudosOverlay]   = useState<Record<string, { on: boolean; delta: number }>>({});
+  // K1: likers sheet target (my-profile's kudosRun pattern)
+  const [kudosSheetRun, setKudosSheetRun] = useState<{ id: string; count: number } | null>(null);
   const pendingIds = usePendingFollows(st_ => st_.ids);
   useEffect(() => { usePendingFollows.getState().hydrate(); }, []);
 
@@ -341,6 +344,8 @@ export default function UserProfileScreen() {
                   mapLive={liveIds.has(item.run_id)}
                   onKudos={() => toggleKudos(item)}
                   kudosOff={likesOff}
+                  // K1: count tap → likers sheet (overlay-adjusted count)
+                  onCountPress={() => setKudosSheetRun({ id: shown.run_id, count: shown.kudos_count })}
                   // Own rows keep no tap here (내 프로필/기록 → activity is
                   // the own-run analysis path); others → 러닝 포스트
                   onOpen={!shown.is_mine ? () => router.push({
@@ -440,6 +445,11 @@ export default function UserProfileScreen() {
         </Pressable>
         </KeyboardAvoidingView>
       </Modal>
+
+      {/* K1: likers sheet from any card — my-profile pattern verbatim */}
+      {kudosSheetRun && (
+        <KudosSheet runId={kudosSheetRun.id} kudosCount={kudosSheetRun.count} onClose={() => setKudosSheetRun(null)} />
+      )}
     </View>
   );
 }
