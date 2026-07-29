@@ -20,6 +20,7 @@ import { SafeImage } from '@/components/safe-image';
 import { MonthPicker } from '@/components/month-picker';
 import { Icon } from '@/components/ui';
 import { useRuns, type Run } from '@/hooks/use-runs';
+import { t, tf, useT, type StringKey } from '@/lib/i18n';
 import { distUnit, fmtDate, fmtDist, fmtDuration, fmtPaceIn, fmtWhen, timeTitle } from '@/lib/run-format';
 import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
@@ -54,6 +55,7 @@ function sparkPaths(vals: readonly number[], W: number, H: number) {
 function MonthStats() {
   const C = useTokens();
   const st = useStyles(makeSt);
+  const T = useT(); // tab root world — long-lived mount
   const units = useSettings(s => s.settings.units);
   // Server month stats (stats-api swap): client aggregation over fetched
   // runs went quietly wrong once cursor pagination landed (only page one
@@ -119,10 +121,10 @@ function MonthStats() {
   const { line, area } = sparkPaths(buckets, CHART_W, CHART_H);
 
   const stats: [string, string, string][] = [
-    ['총 거리',     fmtDist(totalDist, units, 1),          distUnit(units)],
-    ['세션',        String(s?.run_count ?? 0),              '회'],
-    ['평균 페이스', s?.avg_pace_sec_per_km != null ? fmtPaceIn(s.avg_pace_sec_per_km, units) : '--', ''],
-    ['총 시간',     timeStr,                                'h'],
+    [T('res.totalDist'), fmtDist(totalDist, units, 1),          distUnit(units)],
+    [T('rec.sessions'),  String(s?.run_count ?? 0),              T('mi.unitRuns')],
+    [T('res.avgPace'),   s?.avg_pace_sec_per_km != null ? fmtPaceIn(s.avg_pace_sec_per_km, units) : '--', ''],
+    [T('act.totalTime'), timeStr,                                'h'],
   ];
 
   return (
@@ -134,7 +136,7 @@ function MonthStats() {
           <Icon name="chevron-back" size={18} color={C.text} />
         </Pressable>
         <Pressable onPress={() => setPickerOpen(true)} hitSlop={8} style={st.monthLabelBtn}>
-          <Text style={st.monthLabel}>{ym.year}년 {ym.month}월</Text>
+          <Text style={st.monthLabel}>{tf('date.ym', { y: ym.year, m: ym.month, mon: T(('date.m' + ym.month) as StringKey) })}</Text>
           <Icon name="chevron-down" size={15} color={C.sub} />
         </Pressable>
         <Pressable
@@ -168,12 +170,12 @@ function MonthStats() {
           {delta !== null && (
             <View style={[st.deltaBadge, { backgroundColor: delta >= 0 ? C.accentDim : C.danger + '16' }]}>
               <Text style={[st.deltaTxt, { color: delta >= 0 ? C.accentGrn : C.danger }]}>
-                지난달 {delta >= 0 ? '+' : ''}{delta}%
+                {tf('rec.lastMonth', { v: `${delta >= 0 ? '+' : ''}${delta}` })}
               </Text>
             </View>
           )}
         </View>
-        <Text style={st.heroSub}>이번 달 총 거리</Text>
+        <Text style={st.heroSub}>{T('rec.monthTotal')}</Text>
 
         <View style={st.chartWrap}>
           <Svg
@@ -218,20 +220,21 @@ function MonthStats() {
 function InsightUpsell({ premium }: { premium: boolean }) {
   const C = useTokens();
   const st = useStyles(makeSt);
+  const T = useT();
   const onPress = premium
     ? () => router.push('/monthly-insight' as never)
-    : () => Alert.alert('준비 중', '프리미엄 구독은 다음 업데이트에서 만나볼 수 있어요.');
+    : () => Alert.alert(t('mp.comingSoon'), t('rec.soonBody'));
   return (
     <Pressable onPress={onPress} style={({ pressed }) => [st.upsellCard, pressed && { opacity: 0.85 }]}>
       <View style={st.upsellIcon}>
         <Icon name={premium ? 'sparkles' : 'lock-closed-outline'} size={19} color={C.accentGrn} />
       </View>
       <View style={{ flex: 1, minWidth: 0 }}>
-        <Text style={st.upsellTitle}>{premium ? 'AI 월간 분석' : 'AI 월간 분석 잠금 해제'}</Text>
-        <Text style={st.upsellSub}>{premium ? '이번 달 러닝 리포트가 준비됐어요' : '프리미엄으로 더 깊은 인사이트를'}</Text>
+        <Text style={st.upsellTitle}>{premium ? T('rec.aiTitle') : T('rec.aiLocked')}</Text>
+        <Text style={st.upsellSub}>{premium ? T('rec.aiReady') : T('rec.aiUpsell')}</Text>
       </View>
       <View style={st.upsellBtn}>
-        <Text style={st.upsellBtnTxt}>보기</Text>
+        <Text style={st.upsellBtnTxt}>{T('rec.view')}</Text>
       </View>
     </Pressable>
   );
@@ -292,6 +295,7 @@ function RunRow({ run }: { run: Run }) {
 export default function RecordsScreen() {
   const C = useTokens();
   const st = useStyles(makeSt);
+  const T = useT();
   const insets = useSafeAreaInsets();
   const tabBarInset = useTabBarInset();
   const { runs, loading, loadingMore, hasMore, loadMore, error, signedOut, refetch } = useRuns();
@@ -318,10 +322,10 @@ export default function RecordsScreen() {
   if (signedOut) {
     return (
       <View style={[st.root, { paddingTop: insets.top }]}>
-        <Text style={[st.screenTitle, st.headerPad]}>기록</Text>
+        <Text style={[st.screenTitle, st.headerPad]}>{T('tab.records')}</Text>
         <View style={st.centeredState}>
           <Icon name="person-outline" size={36} color={C.faint} />
-          <Text style={st.stateTxt}>로그인이 필요해요</Text>
+          <Text style={st.stateTxt}>{T('com.loginNeeded')}</Text>
         </View>
       </View>
     );
@@ -330,12 +334,12 @@ export default function RecordsScreen() {
   if (error) {
     return (
       <View style={[st.root, { paddingTop: insets.top }]}>
-        <Text style={[st.screenTitle, st.headerPad]}>기록</Text>
+        <Text style={[st.screenTitle, st.headerPad]}>{T('tab.records')}</Text>
         <View style={st.centeredState}>
           <Icon name="warning-outline" size={36} color={C.faint} />
           <Text style={st.stateTxt}>{error}</Text>
           <Pressable onPress={refetch} style={st.retryBtn}>
-            <Text style={st.retryTxt}>다시 시도</Text>
+            <Text style={st.retryTxt}>{T('common.retry')}</Text>
           </Pressable>
         </View>
       </View>
@@ -355,7 +359,7 @@ export default function RecordsScreen() {
         }}
         scrollEventThrottle={120}
       >
-        <Text style={[st.screenTitle, st.headerPad]}>기록</Text>
+        <Text style={[st.screenTitle, st.headerPad]}>{T('tab.records')}</Text>
 
         <View style={{ paddingHorizontal: S.gutter }}>
           <MonthStats />
@@ -368,13 +372,13 @@ export default function RecordsScreen() {
         {runs.length === 0 ? (
           <View style={st.centeredState}>
             <Icon name="footsteps-outline" size={36} color={C.faint} />
-            <Text style={st.stateTxt}>아직 기록이 없어요</Text>
-            <Text style={st.stateSub}>첫 번째 러닝을 시작해 보세요</Text>
+            <Text style={st.stateTxt}>{T('rec.empty')}</Text>
+            <Text style={st.stateSub}>{T('rec.emptySub')}</Text>
           </View>
         ) : (
           <>
             <View style={st.sectionHead}>
-              <Text style={st.sectionTitle}>활동 내역</Text>
+              <Text style={st.sectionTitle}>{T('rec.sectionActivity')}</Text>
             </View>
             <View style={{ paddingHorizontal: S.gutter, gap: 12 }}>
               {runs.map(run => <RunRow key={run.id} run={run} />)}
@@ -383,7 +387,7 @@ export default function RecordsScreen() {
             {loadingMore ? (
               <ActivityIndicator size="small" color={C.faint} style={{ paddingVertical: 18 }} />
             ) : !hasMore && runs.length > 0 ? (
-              <Text style={st.endNote}>모든 기록을 다 봤어요</Text>
+              <Text style={st.endNote}>{T('rec.endNote')}</Text>
             ) : null}
           </>
         )}

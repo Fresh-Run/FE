@@ -31,6 +31,7 @@ import { MonthPicker } from '@/components/month-picker';
 import { Icon } from '@/components/ui';
 import { ApiError } from '@/lib/api';
 import { getMonthlyInsight, type MonthlyInsight, type MonthRank, type PaceTrendPoint } from '@/lib/insights-api';
+import { getLang, t, tf, useT, type StringKey } from '@/lib/i18n';
 import { distUnit, fmtDist, fmtDuration, fmtPaceIn, paceUnit } from '@/lib/run-format';
 import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
@@ -38,36 +39,46 @@ import { useSettings } from '@/store/use-settings';
 
 // ─── Maps ─────────────────────────────────────────────────────────────────────
 
-const RECORD_LABEL: Record<string, string> = {
-  best_pace: '최고 페이스',
+const RECORD_LABEL_KEY: Record<string, StringKey> = {
+  best_pace: 'axis.bestPace',
   // 5K 환산 시간 (pace-equivalent, not an actual 5K distance) — phrasing aligned
   // with the month_rank tile so the screen never mixes "5K" and "5K 환산".
-  best_5k: '최고 5K 환산',
-  longest_distance: '최장 거리',
-  longest_duration: '최장 러닝',
+  best_5k: 'axis.best5k',
+  longest_distance: 'axis.longestDist',
+  longest_duration: 'axis.longestDur',
 };
 
-const TIME_OF_DAY_LABEL: Record<string, string> = {
-  dawn: '새벽', morning: '아침', day: '낮', evening: '저녁', night: '밤',
+const TIME_OF_DAY_KEY: Record<string, StringKey> = {
+  dawn: 'mi.todDawn', morning: 'mi.todMorning', day: 'mi.todDay', evening: 'mi.todEvening', night: 'mi.todNight',
 };
 
-const WEEKDAYS = ['월', '화', '수', '목', '금', '토', '일'];
+const WEEKDAY_KEYS: StringKey[] = ['dayS.mon', 'dayS.tue', 'dayS.wed', 'dayS.thu', 'dayS.fri', 'dayS.sat', 'dayS.sun'];
+const monthKey = (m: number) => ('date.m' + m) as StringKey;
+// en ordinals for the month-rank headline ({n}번째로 has no 1:1 English twin)
+function ordinalEn(n: number): string {
+  const rem100 = n % 100;
+  if (rem100 >= 11 && rem100 <= 13) return n + 'th';
+  const rem = n % 10;
+  return n + (rem === 1 ? 'st' : rem === 2 ? 'nd' : rem === 3 ? 'rd' : 'th');
+}
 
 // month_rank → honest copy (guide §137). rank==1 → "가장 …", else "{rank}번째로 …".
 // best_5k is a PACE-EQUIVALENT — never imply a 5K distance was run; the axis
 // says "5K 환산 페이스" and the sub reiterates 환산 기준.
 function monthRankCopy(mr: MonthRank): { headline: string; sub: string } {
-  const nth = mr.rank === 1 ? '가장' : `${mr.rank}번째로`;
-  const AXIS: Record<MonthRank['type'], string> = {
-    best_pace: `${nth} 빠른 페이스`,
-    best_5k: `${nth} 빠른 5K 환산 페이스`,
-    longest_distance: `${nth} 긴 거리`,
-    longest_duration: `${nth} 긴 시간`,
+  const TOP: Record<MonthRank['type'], StringKey> = {
+    best_pace: 'mi.rankTopPace', best_5k: 'mi.rankTop5k',
+    longest_distance: 'mi.rankTopDist', longest_duration: 'mi.rankTopDur',
   };
-  const sub = mr.type === 'best_5k'
-    ? `5K 환산 페이스 기준 · 이번 달 ${mr.total}회 중`
-    : `이번 달 ${mr.total}회 중`;
-  return { headline: `이번 달 ${AXIS[mr.type]}`, sub };
+  const NTH: Record<MonthRank['type'], StringKey> = {
+    best_pace: 'mi.rankNthPace', best_5k: 'mi.rankNth5k',
+    longest_distance: 'mi.rankNthDist', longest_duration: 'mi.rankNthDur',
+  };
+  // ko fills the raw number ({n}번째로); en fills a real ordinal (2nd, 3rd…)
+  const n = getLang() === 'en' ? ordinalEn(mr.rank) : String(mr.rank);
+  const headline = mr.rank === 1 ? t(TOP[mr.type]) : tf(NTH[mr.type], { n });
+  const sub = tf(mr.type === 'best_5k' ? 'mi.rankSub5k' : 'mi.rankSub', { total: mr.total });
+  return { headline, sub };
 }
 
 function fmtRecordValue(type: string, value: number, units: 'km' | 'mi'): string {
@@ -93,6 +104,7 @@ function SectionCard({ title, hint, children }: { title: string; hint?: string; 
 
 function PaceTrendChart({ points, units }: { points: PaceTrendPoint[]; units: 'km' | 'mi' }) {
   const C = useTokens();
+  const T = useT(); // component renders localized month names
   const st = useStyles(makeSt);
   const W = 300, H = 64, PAD = 12;
   const nums = points.map(p => p.avg_pace_sec_per_km).filter((v): v is number => v != null);
@@ -123,7 +135,7 @@ function PaceTrendChart({ points, units }: { points: PaceTrendPoint[]; units: 'k
       <View style={st.trendLabels}>
         {points.map((p, i) => (
           <View key={i} style={{ flex: 1, alignItems: i === 0 ? 'flex-start' : i === points.length - 1 ? 'flex-end' : 'center' }}>
-            <Text style={st.trendMonth}>{p.month}월</Text>
+            <Text style={st.trendMonth}>{T(monthKey(p.month))}</Text>
             <Text style={[st.trendPace, p.avg_pace_sec_per_km == null && { color: C.faint, fontWeight: '600' }]}>
               {p.avg_pace_sec_per_km != null ? fmtPaceIn(p.avg_pace_sec_per_km, units) : '—'}
             </Text>
@@ -139,6 +151,7 @@ function PaceTrendChart({ points, units }: { points: PaceTrendPoint[]; units: 'k
 export default function MonthlyInsightScreen() {
   const C = useTokens();
   const st = useStyles(makeSt);
+  const T = useT();
   const insets = useSafeAreaInsets();
   const units = useSettings(s => s.settings.units);
 
@@ -159,8 +172,8 @@ export default function MonthlyInsightScreen() {
     } catch (e: unknown) {
       setData(null);
       setError(e instanceof ApiError && e.status === 403
-        ? 'AI 월간 분석은 프리미엄 전용이에요'
-        : e instanceof Error ? e.message : '리포트를 불러올 수 없어요');
+        ? t('mi.premiumOnly')
+        : e instanceof Error ? e.message : t('mi.loadFail'));
     } finally {
       setLoading(false);
     }
@@ -188,15 +201,15 @@ export default function MonthlyInsightScreen() {
   function shareReport() {
     if (!s) return;
     const lines = [
-      `FreshRun ${ym.month}월 리포트 🏃`,
-      `총 ${fmtDist(s.total_distance_km, units, 1)}${distUnit(units)} · ${s.run_count}회 러닝`,
-      `평균 페이스 ${s.avg_pace_sec_per_km != null ? `${fmtPaceIn(s.avg_pace_sec_per_km, units)}${paceUnit(units)}` : '—'} · 최장 ${fmtDist(s.longest_run_km, units, 1)}${distUnit(units)}`,
+      tf('mi.shareTitle', { m: ym.month, mon: t(monthKey(ym.month)) }),
+      tf('mi.shareLine1', { d: `${fmtDist(s.total_distance_km, units, 1)}${distUnit(units)}`, n: s.run_count }),
+      tf('mi.shareLine2', { p: s.avg_pace_sec_per_km != null ? `${fmtPaceIn(s.avg_pace_sec_per_km, units)}${paceUnit(units)}` : '—', l: `${fmtDist(s.longest_run_km, units, 1)}${distUnit(units)}` }),
     ];
     if (s.delta_distance_km != null) {
       const d = s.delta_distance_km;
       lines.push(d === 0
-        ? '지난달과 같은 거리를 달렸어요'
-        : `지난달보다 ${d > 0 ? '+' : '−'}${fmtDist(Math.abs(d), units, 1)}${distUnit(units)}`);
+        ? t('mi.shareSame')
+        : tf('mi.shareDelta', { sd: `${d > 0 ? '+' : '−'}${fmtDist(Math.abs(d), units, 1)}${distUnit(units)}` }));
     }
     Share.share({ message: lines.join('\n') }).catch(() => {}); // dismiss = clean
   }
@@ -210,7 +223,7 @@ export default function MonthlyInsightScreen() {
         <Pressable onPress={() => router.back()} hitSlop={12} style={st.appBarBtn}>
           <Icon name="chevron-back" size={22} color={C.text} />
         </Pressable>
-        <Text style={st.appBarTitle}>월간 리포트</Text>
+        <Text style={st.appBarTitle}>{T('mi.title')}</Text>
         <Pressable
           onPress={canShare ? shareReport : undefined}
           disabled={!canShare}
@@ -259,14 +272,14 @@ export default function MonthlyInsightScreen() {
       ) : error || !data ? (
         <View style={st.centered}>
           <Icon name="warning-outline" size={36} color={C.faint} />
-          <Text style={st.stateTxt}>{error ?? '리포트를 불러올 수 없어요'}</Text>
-          <Pressable onPress={load} style={st.retryBtn}><Text style={st.retryTxt}>다시 시도</Text></Pressable>
+          <Text style={st.stateTxt}>{error ?? T('mi.loadFail')}</Text>
+          <Pressable onPress={load} style={st.retryBtn}><Text style={st.retryTxt}>{T('common.retry')}</Text></Pressable>
         </View>
       ) : emptyMonth ? (
         <View style={st.centered}>
           <View style={st.emptyIcon}><Icon name="walk-outline" size={26} color={C.faint} /></View>
-          <Text style={st.stateTxt}>{ym.month}월엔 러닝 기록이 없어요</Text>
-          <Text style={st.emptySub}>러닝을 기록하면 AI 리포트가 만들어져요</Text>
+          <Text style={st.stateTxt}>{tf('mi.emptyMonth', { m: ym.month, mon: T(monthKey(ym.month)) })}</Text>
+          <Text style={st.emptySub}>{T('mi.emptySub')}</Text>
         </View>
       ) : (
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 36 }}>
@@ -276,7 +289,7 @@ export default function MonthlyInsightScreen() {
               <View style={st.heroCircle} pointerEvents="none" />
               <View style={st.heroPill}>
                 <Icon name="sparkles" size={11} color={C.accent} />
-                <Text style={st.heroPillTxt}>{ym.month}월 리포트</Text>
+                <Text style={st.heroPillTxt}>{tf('mi.heroPill', { m: ym.month, mon: T(monthKey(ym.month)) })}</Text>
               </View>
               <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6 }}>
                 <Text style={st.heroDist}>{fmtDist(s!.total_distance_km, units, 1)}</Text>
@@ -284,8 +297,8 @@ export default function MonthlyInsightScreen() {
               </View>
               <Text style={st.heroSub}>
                 {s!.delta_distance_km != null
-                  ? `지난달 대비 ${s!.delta_distance_km >= 0 ? '+' : '−'}${fmtDist(Math.abs(s!.delta_distance_km), units, 1)}${distUnit(units)}`
-                  : '이번 달의 누적 거리예요'}
+                  ? tf('mi.deltaVs', { sd: `${s!.delta_distance_km >= 0 ? '+' : '−'}${fmtDist(Math.abs(s!.delta_distance_km), units, 1)}${distUnit(units)}` })
+                  : T('mi.heroCum')}
               </Text>
             </View>
           </View>
@@ -308,10 +321,10 @@ export default function MonthlyInsightScreen() {
           {/* 4-tile metric grid (locked recomposition) */}
           <View style={st.grid}>
             {([
-              ['러닝 횟수', String(s!.run_count), '회'],
-              ['총 시간', fmtDuration(s!.total_duration_sec), ''],
-              ['평균 페이스', s!.avg_pace_sec_per_km != null ? fmtPaceIn(s!.avg_pace_sec_per_km, units) : '--', paceUnit(units)],
-              ['최장 러닝', fmtDist(s!.longest_run_km, units, 1), distUnit(units)],
+              [T('mi.statRuns'), String(s!.run_count), T('mi.unitRuns')],
+              [T('act.totalTime'), fmtDuration(s!.total_duration_sec), ''],
+              [T('res.avgPace'), s!.avg_pace_sec_per_km != null ? fmtPaceIn(s!.avg_pace_sec_per_km, units) : '--', paceUnit(units)],
+              [T('mi.statLongest'), fmtDist(s!.longest_run_km, units, 1), distUnit(units)],
             ] as [string, string, string][]).map(([label, value, unit]) => (
               <View key={label} style={[st.metricTile, shadows.sm]}>
                 <Text style={st.metricLabel}>{label}</Text>
@@ -325,16 +338,16 @@ export default function MonthlyInsightScreen() {
 
           {/* 이번 달 개인 기록 */}
           {data.records.length > 0 && (
-            <SectionCard title="이번 달 개인 기록" hint="화살표는 역대 기록 경신을 뜻해요.">
+            <SectionCard title={T('mi.secPR')} hint={T('mi.prHint')}>
               <View style={st.prGrid}>
                 {data.records.map(r => (
                   <View key={r.type} style={{ gap: 3, width: '46%' }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                      <Text style={st.prLabel}>{RECORD_LABEL[r.type] ?? r.type}</Text>
+                      <Text style={st.prLabel}>{RECORD_LABEL_KEY[r.type] ? T(RECORD_LABEL_KEY[r.type]) : r.type}</Text>
                       {r.all_time_best && <Icon name="trending-up" size={12} color={C.accentGrn} />}
                     </View>
                     <Text style={st.prValue}>{fmtRecordValue(r.type, r.value, units)}</Text>
-                    <Text style={st.prSub}>{new Date(r.ran_at).getMonth() + 1}월 {new Date(r.ran_at).getDate()}일 · {fmtDist(r.distance_km, units, 1)}{distUnit(units)}</Text>
+                    <Text style={st.prSub}>{tf('date.md', { m: new Date(r.ran_at).getMonth() + 1, mon: T(monthKey(new Date(r.ran_at).getMonth() + 1)), d: new Date(r.ran_at).getDate() })} · {fmtDist(r.distance_km, units, 1)}{distUnit(units)}</Text>
                   </View>
                 ))}
               </View>
@@ -342,7 +355,7 @@ export default function MonthlyInsightScreen() {
           )}
 
           {/* 주간 거리 */}
-          <SectionCard title="주간 거리">
+          <SectionCard title={T('mi.secWeekly')}>
             <View style={st.weekRow}>
               {data.weeks.map(w => {
                 const h = Math.round((w.distance_km / wMax) * 96) + 8;
@@ -359,7 +372,7 @@ export default function MonthlyInsightScreen() {
           </SectionCard>
 
           {/* 러닝 패턴 */}
-          <SectionCard title="러닝 패턴">
+          <SectionCard title={T('mi.secPattern')}>
             <View style={st.weekdayRow}>
               {data.pattern.weekday_counts.map((n, i) => {
                 const peak = n === wdMax && n > 0;
@@ -367,7 +380,7 @@ export default function MonthlyInsightScreen() {
                 return (
                   <View key={i} style={{ flex: 1, alignItems: 'center', gap: 6 }}>
                     <View style={[st.weekdayBar, { height: h }, peak && { backgroundColor: C.accent }]} />
-                    <Text style={[st.weekdayLbl, peak && { color: C.text, fontWeight: '700' }]}>{WEEKDAYS[i]}</Text>
+                    <Text style={[st.weekdayLbl, peak && { color: C.text, fontWeight: '700' }]}>{T(WEEKDAY_KEYS[i])}</Text>
                   </View>
                 );
               })}
@@ -375,15 +388,15 @@ export default function MonthlyInsightScreen() {
             {/* run_days lead (꾸준함 지표) — served, probed 2026-07-13 */}
             <View style={st.runDaysRow}>
               <Icon name="calendar-outline" size={14} color={C.accentGrn} />
-              <Text style={st.runDaysTxt}>이번 달 <Text style={st.runDaysNum}>{data.pattern.run_days}일</Text> 러닝했어요</Text>
+              <Text style={st.runDaysTxt}>{T('mi.runDaysBefore')}<Text style={st.runDaysNum}>{tf('mi.days', { n: data.pattern.run_days })}</Text>{T('mi.runDaysAfter')}</Text>
             </View>
             <View style={st.patternFoot}>
               <View style={st.patternCell}>
                 <View style={st.patternIcon}><Icon name="sparkles" size={15} color={C.accentGrn} /></View>
                 <View style={{ minWidth: 0 }}>
-                  <Text style={st.patternLbl}>주 활동 시간</Text>
+                  <Text style={st.patternLbl}>{T('mi.todLabel')}</Text>
                   <Text style={st.patternVal}>
-                    {TIME_OF_DAY_LABEL[data.pattern.time_of_day] ?? data.pattern.time_of_day} {data.pattern.time_of_day_pct}%
+                    {TIME_OF_DAY_KEY[data.pattern.time_of_day] ? T(TIME_OF_DAY_KEY[data.pattern.time_of_day]) : data.pattern.time_of_day} {data.pattern.time_of_day_pct}%
                   </Text>
                 </View>
               </View>
@@ -391,8 +404,8 @@ export default function MonthlyInsightScreen() {
               <View style={st.patternCell}>
                 <View style={st.patternIcon}><Icon name="flame-outline" size={15} color={C.accentGrn} /></View>
                 <View style={{ minWidth: 0 }}>
-                  <Text style={st.patternLbl}>연속 러닝</Text>
-                  <Text style={st.patternVal}>{data.pattern.longest_streak_days}일</Text>
+                  <Text style={st.patternLbl}>{T('mi.streakLabel')}</Text>
+                  <Text style={st.patternVal}>{tf('mi.days', { n: data.pattern.longest_streak_days })}</Text>
                 </View>
               </View>
             </View>
@@ -404,7 +417,7 @@ export default function MonthlyInsightScreen() {
               delta stat: a delta would drop the contract's gap semantics.
               Hidden when all three months are null. */}
           {(data.pace_trend ?? []).some(p => p.avg_pace_sec_per_km != null) && (
-            <SectionCard title="페이스 추이" hint="최근 3개월 평균 페이스 — 아래일수록 빨라요.">
+            <SectionCard title={T('mi.secTrend')} hint={T('mi.trendHint')}>
               <PaceTrendChart points={data.pace_trend} units={units} />
             </SectionCard>
           )}

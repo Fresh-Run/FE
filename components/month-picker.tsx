@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '@/components/ui';
 import { type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
+import { tf, useT, type StringKey } from '@/lib/i18n';
 
 export function MonthPicker({ visible, year, month, isEnabled, onSelect, onClose }: {
   visible: boolean;
@@ -25,6 +26,7 @@ export function MonthPicker({ visible, year, month, isEnabled, onSelect, onClose
 }) {
   const C = useTokens();
   const st = useStyles(makeSt);
+  const T = useT(); // junction — monthly-insight + records both render this sheet
   const insets = useSafeAreaInsets();
   const [yr, setYr] = useState(year);
   // Re-open always starts at the selected year, not where the user last browsed
@@ -38,14 +40,14 @@ export function MonthPicker({ visible, year, month, isEnabled, onSelect, onClose
         <Pressable style={st.backdrop} onPress={onClose} />
         <View style={[st.sheet, { paddingBottom: Math.max(insets.bottom, 14) + 12 }]}>
           <View style={st.grabBar} />
-          <Text style={st.title}>기간 선택</Text>
+          <Text style={st.title}>{T('mpk.title')}</Text>
 
           {/* Year stepper */}
           <View style={st.yearRow}>
             <Pressable onPress={() => setYr(y => y - 1)} hitSlop={6} style={st.yearBtn}>
               <Icon name="chevron-back" size={18} color={C.text} />
             </Pressable>
-            <Text style={st.yearTxt}>{yr}년</Text>
+            <Text style={st.yearTxt}>{tf('date.yearN', { n: yr })}</Text>
             <Pressable onPress={() => setYr(y => y + 1)} hitSlop={6} style={st.yearBtn}>
               <Icon name="chevron-forward" size={18} color={C.text} />
             </Pressable>
@@ -67,14 +69,14 @@ export function MonthPicker({ visible, year, month, isEnabled, onSelect, onClose
                   ]}
                 >
                   <Text style={[st.cellTxt, { color: on ? C.accentText : ok ? C.text : C.faint }]}>
-                    {mn}월
+                    {T(('date.m' + mn) as StringKey)}
                   </Text>
                 </Pressable>
               );
             })}
           </View>
 
-          {!yearHasData && <Text style={st.emptyTxt}>이 해에는 기록이 없어요</Text>}
+          {!yearHasData && <Text style={st.emptyTxt}>{T('mpk.empty')}</Text>}
         </View>
       </View>
     </Modal>

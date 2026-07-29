@@ -1223,6 +1223,13 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 - Promotion discipline UNCHANGED: every promotion to a tester-facing channel gets its own explicit one-confirm.
 - AMENDMENT (7/30, marker-placement correction): the hold was NEVER a written rule with its own ledger line — it operated as a standing VERBAL instruction that contradicted written constraint ④ ("invites/testers never wait"). Retiring it RESTORES ④ rather than superseding anything; ③ (core-loop scope) was retired separately by the Phase 2 epic itself, and the 36531a0 marker mis-attributed that. Markers corrected in place (③ → Phase-2 attribution · ④ → reaffirmed). **Ledger-hygiene lesson: verbal rules that contradict written constraints are invisible to audit until someone reads both — standing verbal instructions get a ledger line at issuance.**
 
+## 🌐 i18n 5b — 기록 탭 페어 BUILT (미스테이지) — records·monthly-insight·month-picker
+- 키 신규 76 (date.m1-12+md/ym/yearN=15 · axis.* 4 · mi.* 43 · rec.* 13 · mpk.* 2 — 사전-주도 월 이름: en 'Jan'-스타일이 사전에서 나옴, 포매터 무변경) · 재사용 res.totalDist/avgPace·act.totalTime·tab.records·com.loginNeeded·mp.comingSoon·common.retry·dayS.* 7. 파리티 883/883.
+- AXIS 룰링 집행: axis.* 신설 (헤드라인 포지션), pb.* 미재사용; en은 pb 하모나이즈 어휘의 대문자형 정합 (Fastest pace/Best 5K equiv./Longest run/Longest duration). 환산 편차 보존. 동일-ko 두 키 (axis.longestDur=기록축 'Longest duration' vs mi.statLongest=거리타일 'Longest run') — ko 동형·en 상이가 정확함의 증명.
+- 월-랭크 오디널: 타입별 top/nth 8템플릿 + en ordinalEn 헬퍼 (11-13th 예외 데스크-프루프) — ko {n}번째로/en 2nd·3rd 락-스텝. 런데이즈 리치-텍스트 3-키 스플릿. 셰어 컴포지션 tf 5줄.
+- AI 프로즈 판정: ai.coaching+plan = 서버가 보내되 앱이 의도적 무렌더 (07-09 오너+BE 결정) — 화면 전체가 수치/enum, STAYS-KO 대상 프로즈 제로. 에러-스테이트 저장 = resolved-string (P2 클래스, 리액티브-스윕 리스트 유지).
+- 바이트-스캔 (af31d899…): 15/15 · '최장 러닝'=1 = 두 키 콜랩스 (디덥 룰 서브케이스).
+
 ## 🌐 i18n 5a — 런-디테일 월드 BUILT (미스테이지) — activity·edit-run·run-splits·SSO + run-result 스윕
 - JUNCTION 결함 2건 픽스 (fmtAgo 클래스): run-splits '페이스' 헤더 + SSO 칩 — 양쪽 다 컨버티드 서피스(run-result·run-post)에 ko로 라이브였음. run-result:92 '평균' SvgText 동승 스윕 → run-result 전체 잔여 그렙 CLEAN. media-carousel = ko 코멘트-온리, 전환 0 (센서스 보정).
 - 키: 신규 19 (act.* 10 · er.* 7 · res.avgMark · sso.offer) · 재사용 15+ (runSave 사진/카메라/저장 패밀리 통째, rp.delAsk/delBody/delete/notFound, res.avgPace, common 3, annd.delFailT) — 액티비티 딜리트 모달 = rp 키 제로-신규. 파리티 807/807.
