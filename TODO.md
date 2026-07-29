@@ -1223,6 +1223,8 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 - Promotion discipline UNCHANGED: every promotion to a tester-facing channel gets its own explicit one-confirm.
 - AMENDMENT (7/30, marker-placement correction): the hold was NEVER a written rule with its own ledger line — it operated as a standing VERBAL instruction that contradicted written constraint ④ ("invites/testers never wait"). Retiring it RESTORES ④ rather than superseding anything; ③ (core-loop scope) was retired separately by the Phase 2 epic itself, and the 36531a0 marker mis-attributed that. Markers corrected in place (③ → Phase-2 attribution · ④ → reaffirmed). **Ledger-hygiene lesson: verbal rules that contradict written constraints are invisible to audit until someone reads both — standing verbal instructions get a ledger line at issuance.**
 
+## 🔼 웨더 스트립 컨테인먼트 STAGED — fb25cda0-49e3-4cf8-b9f0-7da822b2bde8 (커밋 5275df5) · 해시-타이 MATCH (아래 로컬=서브드) · 플로어 53b6e9b9 · 워크: 국내 지명 = 스트립 픽셀-패밀리어 (회귀) · 호바트 케이스 = 시뮬 긴-지명 or 프로모트 후 스크린샷 · 프로모션 개별 컨펌 대기
+
 ## 🌦️ 웨더 스트립 레이아웃 컨테인먼트 BUILT (미스테이지) — 아일랜드 가드 룰드 예외 (호바트 스크린샷)
 - 결함 메커니즘: metrics가 flex:1 (basis 0 — 잔여 공간만), 긴 en 지명이 tempGroup basis를 팽창 → 우측 크러시·AQI 텍스트 오버랩 (미쒜고). ko 3-4자는 노출 불가였던 클래스.
 - 픽스 4프롭 (레이아웃-온리): tempGroup flexShrink:1→flex:1 (유연 공간 소유 — 긴 지명은 여기서 잘림) · area ellipsizeMode 명시 · metrics flex:1→flexShrink:0 · pmGroup flexShrink:1→0 (우측 고정). allowFontScaling·ko 스트링·폰트·페치 무접촉 — 디프 전문 게시로 증명 (역-격리 증명). 신규 스트링 0.
