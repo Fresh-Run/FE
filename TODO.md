@@ -1223,6 +1223,8 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 - Promotion discipline UNCHANGED: every promotion to a tester-facing channel gets its own explicit one-confirm.
 - AMENDMENT (7/30, marker-placement correction): the hold was NEVER a written rule with its own ledger line — it operated as a standing VERBAL instruction that contradicted written constraint ④ ("invites/testers never wait"). Retiring it RESTORES ④ rather than superseding anything; ③ (core-loop scope) was retired separately by the Phase 2 epic itself, and the 36531a0 marker mis-attributed that. Markers corrected in place (③ → Phase-2 attribution · ④ → reaffirmed). **Ledger-hygiene lesson: verbal rules that contradict written constraints are invisible to audit until someone reads both — standing verbal instructions get a ledger line at issuance.**
 
+## 🔼 팔로우-리스트 페이지네이션 STAGED — 952feda2-6bcc-4232-96ad-621005057702 (커밋 75d7d98) · 해시-타이 MATCH (pXCiTMZ2…) · 플로어 b6209826 · 워크: 28-팔로우 계정 스크롤 → 20행 지나 나머지 8 로드 (풋터 스피너) · 탭 라벨 = 28 트루-카운트 · 연타 스크롤 중복행 무 · 프로모션 개별 컨펌 대기
+
 ## 📜 팔로우-리스트 페이지네이션 FIX BUILT (미스테이지) + 클래스 스윕
 - 진단: **never-built** (베어 페치 — limit/offset 미송신, onEndReached 부재; 서버 기본 20이 전부). 양 탭 동일 훅.
 - 픽스: PAGE=20 명시 (기본치 고정 — 클리프 이동 금지 룰) · loadMore(kind) 오프셋=로드된 행수 · 인플라이트 ref (연타 가드) + user_id 디덥 (페이지 사이 팔로우 발생 시 오프셋 시프트 벨트) · 풋터 스피너 (신규 스트링 0) · **탭 라벨 = 프로필 truth-counts** (guide §197; 로컬-리무브 차감) — 로드-수 라벨은 28에서 "20"을 말하는 거짓이라 동반 픽스.
