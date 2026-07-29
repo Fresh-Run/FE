@@ -1223,6 +1223,8 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 - Promotion discipline UNCHANGED: every promotion to a tester-facing channel gets its own explicit one-confirm.
 - AMENDMENT (7/30, marker-placement correction): the hold was NEVER a written rule with its own ledger line — it operated as a standing VERBAL instruction that contradicted written constraint ④ ("invites/testers never wait"). Retiring it RESTORES ④ rather than superseding anything; ③ (core-loop scope) was retired separately by the Phase 2 epic itself, and the 36531a0 marker mis-attributed that. Markers corrected in place (③ → Phase-2 attribution · ④ → reaffirmed). **Ledger-hygiene lesson: verbal rules that contradict written constraints are invisible to audit until someone reads both — standing verbal instructions get a ledger line at issuance.**
 
+## ✅ 세팅스 트랩 픽스 PROMOTED (2026-07-31) — 오너 [01:12] PARTIAL (로우 제거·설정 행 회귀·콜드-스타트·코스 X 확인; not-found/벨트 = 구조적 도달 불가 스코프) · 원-컨펌 · 3c672ff9 → production 8231fa81-1406-4851-aa7e-4adad67098b5 · 프로모션 해시-타이 MATCH. **롤백 플로어 전진 → 8231fa81** (c0ec6b3d 은퇴). 언매치드→코스설정 트랩 클로즈 (4피스 + 루트-스트링 스윕 데드 0 — /settings 유일 멤버).
+
 ## 🔼 세팅스 트랩 픽스 STAGED — 3c672ff9-a3f4-42d7-93c7-04e8bb3b571e (커밋 d3ece83) · 해시-타이 MATCH · 플로어 c0ec6b3d · 워크: 프로필 설정 = 앱설정 로우 부재 (재현 경로 소멸) · 관리 그룹 회귀 (프로필 편집·차단 관리) · 코스 플로우 fullScreenModal 정상 · 콜드-스타트 홈 랜딩 정상 · 프로모션 개별 컨펌 대기
 
 ## 🧭 세팅스 트랩 픽스 BUILT (미스테이지) — 4피스 + 스윕
