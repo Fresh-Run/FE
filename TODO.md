@@ -1223,6 +1223,8 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 - Promotion discipline UNCHANGED: every promotion to a tester-facing channel gets its own explicit one-confirm.
 - AMENDMENT (7/30, marker-placement correction): the hold was NEVER a written rule with its own ledger line — it operated as a standing VERBAL instruction that contradicted written constraint ④ ("invites/testers never wait"). Retiring it RESTORES ④ rather than superseding anything; ③ (core-loop scope) was retired separately by the Phase 2 epic itself, and the 36531a0 marker mis-attributed that. Markers corrected in place (③ → Phase-2 attribution · ④ → reaffirmed). **Ledger-hygiene lesson: verbal rules that contradict written constraints are invisible to audit until someone reads both — standing verbal instructions get a ledger line at issuance.**
 
+## ✅ 팔로우-리스트 페이지네이션 PROMOTED (2026-08-02) — 오너 [21:15] FULL (라벨 실수·스피너-로드·중복 무·팔로워/필 회귀 클린) · 원-컨펌 · 952feda2 → production 53b6e9b9-2202-4029-b56e-bd9151db3f83 · 프로모션 해시-타이 MATCH (pXCiTMZ2… 양채널 동일). **롤백 플로어 전진 → 53b6e9b9** (b6209826 은퇴). 28-팔로우 트렁케이션 클로즈 — 그녀 서버-프루프 × 우리 무한스크롤. 스윕의 8 트렁케이트 서피스 = 오너 우선순위 룰링 대기 (별도 패스).
+
 ## 🔼 팔로우-리스트 페이지네이션 STAGED — 952feda2-6bcc-4232-96ad-621005057702 (커밋 75d7d98) · 해시-타이 MATCH (pXCiTMZ2…) · 플로어 b6209826 · 워크: 28-팔로우 계정 스크롤 → 20행 지나 나머지 8 로드 (풋터 스피너) · 탭 라벨 = 28 트루-카운트 · 연타 스크롤 중복행 무 · 프로모션 개별 컨펌 대기
 
 ## 📜 팔로우-리스트 페이지네이션 FIX BUILT (미스테이지) + 클래스 스윕
