@@ -1223,6 +1223,11 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 - Promotion discipline UNCHANGED: every promotion to a tester-facing channel gets its own explicit one-confirm.
 - AMENDMENT (7/30, marker-placement correction): the hold was NEVER a written rule with its own ledger line — it operated as a standing VERBAL instruction that contradicted written constraint ④ ("invites/testers never wait"). Retiring it RESTORES ④ rather than superseding anything; ③ (core-loop scope) was retired separately by the Phase 2 epic itself, and the 36531a0 marker mis-attributed that. Markers corrected in place (③ → Phase-2 attribution · ④ → reaffirmed). **Ledger-hygiene lesson: verbal rules that contradict written constraints are invisible to audit until someone reads both — standing verbal instructions get a ledger line at issuance.**
 
+## 💗 K1 — 쿠도스 시트 도어 BUILT (6d7a9bb, 미스테이지) — 3서피스 카운트-탭
+- run-card ♥+카운트 단일 Pressable 스플릿: ♥=기존 토글 · 카운트=신규 옵셔널 onCountPress (미배선 부모 = 종전 이너트 렌더, 논브레이킹) · kudosOff 룰링 집행: 토글만 숨고 카운트-탭 유지.
+- 도어 3: 홈 피드 + user-profile (my-profile kudosRun 패턴 버바팀 — 오버레이-보정 카운트로 시트 헤더 일치) · run-post 타인-모드 (♥ 토글 불변, 카운트→시트; kudosOff 브랜치도 카운트-탭).
+- index.tsx 격리 증명: 훅 4개 전부 카드+시트 코드 (임포트·스테이트·배선·마운트) — 웨더 아일랜드 무접촉. 신규 스트링 0 (시트 기존 키; 파리티 928 불변). 번들 해시 8a4127bd… 아웃-오브-스코프 준수: 셀프-라이크 토글 무 (K2, 그녀 400-리프트 대기) · my-profile 트윈 무접촉 · 4b 폴드 유예 지속.
+
 ## 🔼 route_id+폴백 STAGED — e5ee0e99-bd69-4536-8a51-391779d89f98 (커밋 6054d61) · 해시-타이 MATCH (SPlAf4nh…) · A runner=1 · 플로어 d69cbfc3 · **라이브-프로브 ✓ (스테이징 후 즉시)**: 데모 생성 200/7.5s → route_id 논널 (8c5db0a9…) · 필드명 와이어 확정 · en summary "3.3km loop course" = 그녀 lang-레인 실증 · 프로브 루트 DELETE 204→404 월드-복원 · 워크 잔여: 실런 저장→runs.route_id 논널 (폰 필요분만) + "A runner" 육안 · 프로모션 개별 컨펌 대기
 
 ## 🔗 route_id 컨슘 + 알림 폴백 스플릿 BUILT (미스테이지) — 큐드 빌드 양 반쪽 완료
