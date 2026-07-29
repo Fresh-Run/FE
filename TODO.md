@@ -1223,6 +1223,11 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 - Promotion discipline UNCHANGED: every promotion to a tester-facing channel gets its own explicit one-confirm.
 - AMENDMENT (7/30, marker-placement correction): the hold was NEVER a written rule with its own ledger line — it operated as a standing VERBAL instruction that contradicted written constraint ④ ("invites/testers never wait"). Retiring it RESTORES ④ rather than superseding anything; ③ (core-loop scope) was retired separately by the Phase 2 epic itself, and the 36531a0 marker mis-attributed that. Markers corrected in place (③ → Phase-2 attribution · ④ → reaffirmed). **Ledger-hygiene lesson: verbal rules that contradict written constraints are invisible to audit until someone reads both — standing verbal instructions get a ledger line at issuance.**
 
+## ✅ 슬라이스 5 PROMOTED + 에픽 PARKED (2026-07-31) — 오너 [17:23] FULL (9d4b4b27 완주 + 2값 디프, 본 대로) · 원-컨펌 발화·응답 (지연 노티 포함) · 5a86ce45 → production d69cbfc3-cbeb-4bd5-bf90-146dbc64e613 · 프로모션 해시-타이 MATCH (105gmp_6… 양채널 동일)
+- 라이브: 런-디테일 월드 (정션 2픽스: run-splits 헤더·SSO 칩) · 기록 탭+월간 리포트 (오디널·사전-주도 월 이름) · PB 트라이앵글 · 날씨 상세 (등급 표시맵). **롤백 플로어 전진 → d69cbfc3** (72a1b103 은퇴).
+- 📍 **i18n 에픽 PARKED at the slice-5 seam (오너 스텝-백)**: 슬라이스 1–5 라이브 (927키) · 잔여 = 슬라이스 6 (설정 허브 ~273) · 7 (코스 월드 ~168 + run-format 서울 폴백 + 웰컴 헤드라인 서울→전국 라이드) · 8 (롱테일 + 언어-캡션 은퇴 제안) — ~596히트. 리줌 웜스타트: 배치 맵 line-검색 "BATCH MAP", 5-시리즈 리콘 노트, 리액티브-t 스윕 리스트 (run-result 베어-t 포함).
+- 오픈 스레드 불변: BE 푸시 kudos 발산 (그녀 컨펌) · route_saved 빌드 결정 · route_id 원-라이너 (그녀 디플로이 게이트) · home.runner 투-키 룰링 (v114 확인 대기).
+
 ## 🔼 슬라이스 5 그룹 v2 STAGED — 5a86ce45-c343-4301-bb19-1999d98287c6 (9d4b4b27 대체; 커밋 7b3865d — 워크-픽스 2값: Weather 타이틀·personalized 제거, ko 불변) · 해시-타이 MATCH (105gmp_6…) · 마커: 구 2값 0·AI run index 1·ko 내 기준 1 · 프로모션 게이트 대기
 - 내용 = 5a+5b+5c 원-그룹 (정션 2픽스 라이브 결함 포함 · 139키 · 파리티 927/927). 프리플라이트 ✓ (env·tsc·eslint 11파일) · 해시-타이 MATCH (tBPZyPcp…) · 마커 9/9 (양 로케일 스프레드: 조정캡션·오디널·PB축하·날씨tf).
 - 플로어 = 72a1b103 (배치4). 오너 원-워크 (기록 월드·인사이트·PB 모달·날씨 상세, 양 언어) = 게이트 — 프로모션 개별 컨펌 후, 그 후 에픽 파킹 (슬라이스 6-8, ~596히트 잔여).
