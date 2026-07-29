@@ -762,7 +762,7 @@ export const en: Record<keyof typeof ko, string> = {
   'ntf.crewInvitedTo': '{name} invited you to {crew}',
   'ntf.challengeDone': 'Crew challenge completed! 🎉',
   'ntf.pbZero': 'You set a new record! 🎉',
-  'ntf.pbOne': 'New {label} record! 🎉',
+  'ntf.pbOne': 'New {label}! 🎉',
   'ntf.pbMany': '{n} new records! 🎉',
   'ntf.pbPersonal': 'personal',
   'pb.bestPace': 'fastest pace',
