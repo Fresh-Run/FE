@@ -1223,6 +1223,8 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 - Promotion discipline UNCHANGED: every promotion to a tester-facing channel gets its own explicit one-confirm.
 - AMENDMENT (7/30, marker-placement correction): the hold was NEVER a written rule with its own ledger line — it operated as a standing VERBAL instruction that contradicted written constraint ④ ("invites/testers never wait"). Retiring it RESTORES ④ rather than superseding anything; ③ (core-loop scope) was retired separately by the Phase 2 epic itself, and the 36531a0 marker mis-attributed that. Markers corrected in place (③ → Phase-2 attribution · ④ → reaffirmed). **Ledger-hygiene lesson: verbal rules that contradict written constraints are invisible to audit until someone reads both — standing verbal instructions get a ledger line at issuance.**
 
+## 🔼 K1+route_id 그룹 STAGED — da8e7c9c-5904-407f-b348-06b3b1e6c9c0 (커밋 9c3bef9; e5ee0e99 대체 — 그 카고 승계) · 해시-타이 MATCH (XvYfsauz…) · A runner=1 · 플로어 d69cbfc3 · 워크 = K1 3도어 탭 (홈 양탭·타인 프로필·런 포스트, kudosOff 카운트-탭 포함) + e5ee0e99分 잔여 (route_id 실런 E2E는 아웃도어 게이트 유지) · 프로모션 개별 컨펌 대기
+
 ## 💗 K1 — 쿠도스 시트 도어 BUILT (6d7a9bb, 미스테이지) — 3서피스 카운트-탭
 - run-card ♥+카운트 단일 Pressable 스플릿: ♥=기존 토글 · 카운트=신규 옵셔널 onCountPress (미배선 부모 = 종전 이너트 렌더, 논브레이킹) · kudosOff 룰링 집행: 토글만 숨고 카운트-탭 유지.
 - 도어 3: 홈 피드 + user-profile (my-profile kudosRun 패턴 버바팀 — 오버레이-보정 카운트로 시트 헤더 일치) · run-post 타인-모드 (♥ 토글 불변, 카운트→시트; kudosOff 브랜치도 카운트-탭).
