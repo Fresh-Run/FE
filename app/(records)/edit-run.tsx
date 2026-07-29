@@ -168,7 +168,9 @@ export default function EditRunScreen() {
   }
 
   return (
-    <KeyboardAvoidingView style={[st.root, { paddingTop: insets.top }]} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    // +16: appBar's paddingVertical 10 puts content at insets.top+26 —
+    // run-result parity (same top-cutoff class as run-save)
+    <KeyboardAvoidingView style={[st.root, { paddingTop: insets.top + 16 }]} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <View style={st.appBar}>
         <Pressable onPress={() => router.back()} hitSlop={12} style={st.backBtn}>
           <Icon name="close" size={22} color={C.text} />

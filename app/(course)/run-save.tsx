@@ -269,7 +269,10 @@ export default function RunSaveScreen() {
   }
 
   return (
-    <KeyboardAvoidingView style={[st.root, { paddingTop: insets.top }]} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    // +16: appBar's paddingVertical 10 puts content at insets.top+26 —
+    // run-result parity; a bare insets.top clipped under notch/Dynamic
+    // Island when the modal measured the inset late (field report)
+    <KeyboardAvoidingView style={[st.root, { paddingTop: insets.top + 16 }]} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       {/* App bar: ‹ (→ back to the paused run; recovery lane → discard
           confirm) · title · 저장 pill */}
       <View style={st.appBar}>

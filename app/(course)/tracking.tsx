@@ -601,7 +601,9 @@ export default function TrackingScreen() {
     const target = drawnPath.length > 0
       ? drawnPath[drawnPath.length - 1]
       : hereCoord ? { latitude: hereCoord.lat, longitude: hereCoord.lng } : null;
-    if (target) mapRef.current?.animateCamera({ center: target }, { duration: 400 });
+    // altitude: recenter snaps to the course-follow close view (tester ask) —
+    // opinionated reset of any pinched-out zoom, owner walks and rules
+    if (target) mapRef.current?.animateCamera({ center: target, altitude: NAV_ALTITUDE_M }, { duration: 400 });
   };
 
   // GPS-lost chip: >15s without a raw fix while running. Honest caveat
