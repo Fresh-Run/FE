@@ -152,6 +152,8 @@ const SAFE_MARGIN_PX = 20;    // consistent inset for the margin guide lines
 type LayerGeom = {
   tx: SharedValue<number>; ty: SharedValue<number>; sc: SharedValue<number>;
   w: SharedValue<number>; h: SharedValue<number>;
+  /** measured width of the VALUE Text alone — X-snap targets the value glyphs */
+  vw: SharedValue<number>;
 };
 type GuideCtx = {
   geoms: Partial<Record<ShareMetricKey, LayerGeom>>; // registered at hook mount
@@ -191,9 +193,10 @@ function useMetricLayer(
   const rawY = useSharedValue(base.y * canvasH);
   const w = useSharedValue(0); // measured (unscaled) row size — onLayout below
   const h = useSharedValue(0);
+  const vw = useSharedValue(0); // measured value-Text width — onValueLayout below
   const snappedX = useSharedValue(0); // 0/1 — tick fires on the rising edge only
   const snappedY = useSharedValue(0);
-  guides.geoms[key] = { tx, ty, sc, w, h }; // idempotent per-render registration
+  guides.geoms[key] = { tx, ty, sc, w, h, vw }; // idempotent per-render registration
   // reposition on hydrate/format-flip (fractions are the truth)
   useEffect(() => {
     tx.value = base.x * canvasW;
@@ -226,10 +229,16 @@ function useMetricLayer(
           'worklet';
           rawX.value += e.changeX;
           rawY.value += e.changeY;
-          const halfW = (w.value * sc.value) / 2;
+          // Snap on the value sub-box, not the container — the label trails
+          // visually (owner walk finding 7/30: pace's 55px label offset its
+          // value ~31px from box-center guides). vw falls back to the box
+          // until the value's first onLayout. Exact under center-origin
+          // scale: value visual center = raw + w/2 + sc·(vw − w)/2 (the box
+          // scales about ITS center; the value rides left of it).
+          const vEff = vw.value || w.value;
+          const halfW = (vEff * sc.value) / 2;
           const halfH = (h.value * sc.value) / 2;
-          // scale is about the view center → center = raw + unscaled half
-          const cx = rawX.value + w.value / 2;
+          const cx = rawX.value + w.value / 2 + (sc.value * (vEff - w.value)) / 2;
           const cy = rawY.value + h.value / 2;
           // candidate = [snap-to center position, guide-line px]
           const xc: [number, number][] = [
@@ -246,9 +255,10 @@ function useMetricLayer(
           for (const k2 of siblings) {
             const g = guides.geoms[k2];
             if (!g || g.w.value === 0) continue;
-            const sHalfW = (g.w.value * g.sc.value) / 2;
+            const gvEff = g.vw.value || g.w.value; // sibling value sub-box too
+            const sHalfW = (gvEff * g.sc.value) / 2;
             const sHalfH = (g.h.value * g.sc.value) / 2;
-            const scx = g.tx.value + g.w.value / 2;
+            const scx = g.tx.value + g.w.value / 2 + (g.sc.value * (gvEff - g.w.value)) / 2;
             const scy = g.ty.value + g.h.value / 2;
             xc.push([scx, scx]);                                     // H-center align
             xc.push([scx - sHalfW + halfW, scx - sHalfW]);           // left-align
@@ -269,7 +279,8 @@ function useMetricLayer(
           }
           const xSnap = bestXd <= SNAP_THRESHOLD_PX;
           const ySnap = bestYd <= SNAP_THRESHOLD_PX;
-          tx.value = xSnap ? bestX - w.value / 2 : rawX.value; // magnetic pull ↔ clean release
+          // invert the value-center mapping — layout x from the target center
+          tx.value = xSnap ? bestX - w.value / 2 - (sc.value * (vEff - w.value)) / 2 : rawX.value; // magnetic pull ↔ clean release
           ty.value = ySnap ? bestY - h.value / 2 : rawY.value;
           guides.guideX.value = xSnap ? bestXg : -1; // lines exist ONLY while snapped
           guides.guideY.value = ySnap ? bestYg : -1;
@@ -282,7 +293,7 @@ function useMetricLayer(
         .onEnd(end),
       Gesture.Pinch().enabled(enabled).onChange(e => { sc.value *= e.scaleChange; }).onEnd(end),
     );
-  }, [key, canvasW, canvasH, persist, tx, ty, sc, rawX, rawY, w, h, snappedX, snappedY, guides, enabled]);
+  }, [key, canvasW, canvasH, persist, tx, ty, sc, rawX, rawY, w, h, vw, snappedX, snappedY, guides, enabled]);
   const style = useAnimatedStyle(() => ({
     transform: [{ translateX: tx.value }, { translateY: ty.value }, { scale: sc.value }],
   }));
@@ -290,7 +301,10 @@ function useMetricLayer(
     w.value = e.nativeEvent.layout.width;
     h.value = e.nativeEvent.layout.height;
   };
-  return { gesture, style, onLayout };
+  const onValueLayout = (e: { nativeEvent: { layout: { width: number } } }) => {
+    vw.value = e.nativeEvent.layout.width;
+  };
+  return { gesture, style, onLayout, onValueLayout };
 }
 
 // ─── Background adjust layer (v2.1) — pan+pinch, CLAMPED to cover-fit ────────
@@ -578,7 +592,7 @@ export default function ShareCardScreen() {
             {rows.map(([k, v, l]) => (
               <GestureDetector key={k} gesture={layerFor[k].gesture}>
                 <Reanimated.View onLayout={layerFor[k].onLayout} style={[st.metricLayer, layerFor[k].style]}>
-                  <Text style={st.statVal}>{v}</Text>
+                  <Text style={st.statVal} onLayout={layerFor[k].onValueLayout}>{v}</Text>
                   <Text style={st.statLbl}>{l}</Text>
                 </Reanimated.View>
               </GestureDetector>

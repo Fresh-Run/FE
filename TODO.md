@@ -1223,6 +1223,11 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 - Promotion discipline UNCHANGED: every promotion to a tester-facing channel gets its own explicit one-confirm.
 - AMENDMENT (7/30, marker-placement correction): the hold was NEVER a written rule with its own ledger line — it operated as a standing VERBAL instruction that contradicted written constraint ④ ("invites/testers never wait"). Retiring it RESTORES ④ rather than superseding anything; ③ (core-loop scope) was retired separately by the Phase 2 epic itself, and the 36531a0 marker mis-attributed that. Markers corrected in place (③ → Phase-2 attribution · ④ → reaffirmed). **Ledger-hygiene lesson: verbal rules that contradict written constraints are invisible to audit until someone reads both — standing verbal instructions get a ledger line at issuance.**
 
+## 🎯 스마트-얼라인 밸류-서브박스 BUILT (미스테이지) — 오너 워크 파인딩 (페이스 타일 ~31px 오프)
+- 메커니즘 (진단 확정): 타일 = 로우 (밸류+갭+라벨), 스냅 = 컨테이너 박스 — 눈은 밸류를 정렬 대상으로 읽음; 평균 페이스 라벨 55px가 밸류를 박스-센터에서 ~31px 밀어냄 (거리/시간 ~15px — 그래서 좁은 둘만 "깨끗").
+- 픽스: 밸류 Text 세컨드 onLayout (vw) — X-스냅 후보·시블링·어사인먼트 전부 밸류-서브박스 기준, 센터-오리진 스케일 하 EXACT (value-center = raw + w/2 + sc·(vw−w)/2 — 단순 스왑은 sc≠1에서 오차; 정확식 채택). vw=0 폴백 = 박스 (첫 레이아웃 전 안전). Y-축 = 박스 유지. 렌더 박스 불변.
+- 데스크 프루프: sc 1.0/1.5/2.0 전부 타깃 적중 · 좌-엣지 불변 (박스-좌=밸류-좌) · 페이스·거리 센터라인 밸류-센터 동일 187.5. 스트링-프리.
+
 ## 🔼 셰어-카드 피델리티+컨벤션 STAGED — b240c789-df79-4e8f-a58c-a50abd21cba7 (커밋 fd539da — 애든덤 포함: 시작/끝 닷 카운터-스케일, 플래그 소비) · 해시-타이 MATCH (ldcGu1H0…) · 플로어 164a67cd · 워크: 제주-류 트랙 셰어 = 해안 비율 + 어느 줌에도 스트로크/닷 프리셋 유지 · 활동 상세 = 평균 페이스(히어로)/무빙 페이스(분석) 두 라벨 · 카드 페이스 = 히어로와 동일 숫자 · 프로모션 개별 컨펌 대기
 
 ## 📤 셰어-카드 피델리티 + 페이스 컨벤션 BUILT (미스테이지) — 오너 룰링 집행
