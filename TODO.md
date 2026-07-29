@@ -1223,6 +1223,11 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 - Promotion discipline UNCHANGED: every promotion to a tester-facing channel gets its own explicit one-confirm.
 - AMENDMENT (7/30, marker-placement correction): the hold was NEVER a written rule with its own ledger line — it operated as a standing VERBAL instruction that contradicted written constraint ④ ("invites/testers never wait"). Retiring it RESTORES ④ rather than superseding anything; ③ (core-loop scope) was retired separately by the Phase 2 epic itself, and the 36531a0 marker mis-attributed that. Markers corrected in place (③ → Phase-2 attribution · ④ → reaffirmed). **Ledger-hygiene lesson: verbal rules that contradict written constraints are invisible to audit until someone reads both — standing verbal instructions get a ledger line at issuance.**
 
+## 🌏 해외 피드 에러 카드 FIX BUILT (미스테이지) — 전체 탭 코리아-온리 스테이트
+- 판별자 = **status 400 + 송신 좌표의 클라 bbox-미러 외부** (프로즈-프리 — 그녀 400 문구 미의존; bbox 확장 시 400 자체가 소멸해 브랜치 휴면 = 어떤 BE 정책에도 정합). 미러 상수는 코스-월드 가드와 동일 (33-39/124-132), 프리-블록 아님 — 판별 전용.
+- useNearbyFeed → koreaOnly 플래그 (error와 동승 — 단독이면 스피너 스트랜드, 데스크서 잡음) · 렌더 = ListState (글로브, 리트라이 무) — 카피 2키 양 로케일 (룰링: 서브 = 프렌즈-탭 안내, 호바트 테스터의 오늘 경로) · 타 에러 = 기존 ErrorState+리트라이 불변 · 친구 탭 무접촉.
+- **앵커 확인 결과 부재** (홈 = P2 베어-t 클래스) → HomeScreen에 useT 신설 (신규 키 앵커드; 기존 하드코드 ko는 슬라이스 7 소관 불변). 아일랜드 격리: 훅 3개 (임포트·앵커·렌더 브랜치) — 웨더 스트립 무접촉. 파리티 930/930.
+
 ## 📒 [L] 레저 2건 (2026-08-02)
 - **[L] 코멘트-삭제 스테일 알림**: 그녀 delete_run_comment가 알림 미정리 (M10은 run-삭제만 커버) — 그녀 백로그 07/29 등재. 픽스 후보: 서버-사이드 클린업 (그녀) vs 알림-탭 404-핸들링 (우리). 트리거: 유저 컴플레인. 필드 인스턴스: 호바트 테스터.
 - **[L] 해외 위치-거부 → SEOUL_FALLBACK 텔레포트**: 맵·날씨가 서울로 (use-current-location.ts:17). 수용 가능한 디그레이드; 개선 후보: last-known-fix. 트리거 미정.

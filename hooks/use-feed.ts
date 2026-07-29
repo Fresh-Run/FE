@@ -15,6 +15,7 @@ import {
   type ActivityRun,
   type NearbyRun,
 } from '@/lib/feed-api';
+import { ApiError } from '@/lib/api';
 import type { Coordinate } from '@/types';
 
 const PAGE = 20; // server default page size (limit≤100)
@@ -94,23 +95,42 @@ export function useFeed() {
 // Replaced useNearbyRoutes 2026-07-16 (전체 discovery slice) — course cards
 // left 전체; /routes/nearby lost its only consumer and retired with it.
 
+// Client mirror of her nearby-feed Korea bbox (routes.py: 400 "lat/lng out
+// of Korea bounds") — same range the course-world guards mirror. Used only
+// to DISCRIMINATE her 400, never to pre-block the fetch: if the server
+// policy widens, no 400 arrives and this never fires.
+const KOREA_BBOX = { latMin: 33, latMax: 39, lngMin: 124, lngMax: 132 };
+const outsideKorea = (c: Coordinate) =>
+  c.lat < KOREA_BBOX.latMin || c.lat > KOREA_BBOX.latMax || c.lng < KOREA_BBOX.lngMin || c.lng > KOREA_BBOX.lngMax;
+
 export function useNearbyFeed(coord: Coordinate | null, radiusKm: number, refreshKey = 0) {
   const [items, setItems]     = useState<NearbyRun[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState<string | null>(null);
   const [fetched, setFetched] = useState(false); // distinguishes "not asked" from "[] answered"
+  // Abroad: her 400 + our coords demonstrably outside the bbox → the
+  // Korea-only state (no retry — retrying cannot succeed). Prose-free
+  // discriminator: status + geometry, never the English detail string.
+  const [koreaOnly, setKoreaOnly] = useState(false);
 
   useEffect(() => {
     if (!coord) return;
     let cancelled = false;
     setLoading(true);
     setError(null);
+    setKoreaOnly(false);
     getNearbyFeed(coord.lat, coord.lng, radiusKm)
       .then(rows => { if (!cancelled) { setItems(rows); setFetched(true); } })
-      .catch((e: unknown) => { if (!cancelled) setError(e instanceof Error ? e.message : '주변 러닝을 불러올 수 없어요'); })
+      .catch((e: unknown) => {
+        if (cancelled) return;
+        // koreaOnly rides WITH error (the render chain enters on error, then
+        // branches) — clearing error here would strand the UI on the spinner
+        if (e instanceof ApiError && e.status === 400 && outsideKorea(coord)) setKoreaOnly(true);
+        setError(e instanceof Error ? e.message : '주변 러닝을 불러올 수 없어요');
+      })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [coord, radiusKm, refreshKey]);
 
-  return { items, loading, error, fetched };
+  return { items, loading, error, fetched, koreaOnly };
 }

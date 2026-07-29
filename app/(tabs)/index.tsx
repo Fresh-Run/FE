@@ -9,7 +9,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { KudosSheet } from '@/components/kudos-sheet';
 import { SuggestedRunnersRow, useSuggestedRunners } from '@/components/suggested-runners';
-import { getLang, t, tf } from '@/lib/i18n';
+import { getLang, t, tf, useT } from '@/lib/i18n';
 import { useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
@@ -404,6 +404,9 @@ const makeLst = (C: Tokens) => StyleSheet.create({
 export default function HomeScreen() {
   const C = useTokens();
   const lst = useStyles(makeLst);
+  // reactive anchor — added with the Korea-only state (this screen had NONE:
+  // the P2 bare-t class; home is THE long-lived mount, so new keys anchor)
+  const T = useT();
   const insets      = useSafeAreaInsets();
   const tabBarInset = useTabBarInset(); // 홈 was the last clipper — floating pill overlap
   const displayName = useStore((s) => s.displayName);
@@ -592,7 +595,12 @@ export default function HomeScreen() {
           loading
             ? <View style={lst.wrap}><ActivityIndicator size="large" color={C.accent} /></View>
             : error
-              ? <ErrorState message={error} onRetry={tab === '전체' ? () => setNearbyKey(k => k + 1) : feed.refresh} />
+              ? tab === '전체' && nearby.koreaOnly
+                // abroad (her bbox 400 + our coords outside the mirror):
+                // honest Korea-only state, NO retry — retrying cannot succeed;
+                // the sub deliberately points at the tab that works anywhere
+                ? <ListState icon="globe-outline" title={T('home.nearbyKoreaOnly')} sub={T('home.nearbyKoreaOnlySub')} />
+                : <ErrorState message={error} onRetry={tab === '전체' ? () => setNearbyKey(k => k + 1) : feed.refresh} />
               : tab === '친구'
                 ? <ListState icon="people-outline" title="팔로우한 러너들의 러닝이 여기에 보여요" sub="전체 탭에서 주변 러닝을 둘러보세요" />
                 : locStatus === 'denied'

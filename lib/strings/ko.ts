@@ -128,6 +128,8 @@ export const ko = {
   'home.aiResetSub': '다음 초기화 {day} · 프리미엄은 무제한',
   'home.aiEstMin': '약 {min}분',
   'home.aiRemaining': ' · 이번 주 {n}회 남았어요',
+  'home.nearbyKoreaOnly': '주변 피드는 아직 한국에서만 제공돼요',
+  'home.nearbyKoreaOnlySub': '친구 탭은 어디서나 볼 수 있어요',
   'terrain.flat': '평지 우선',
   'terrain.mixed': '균형',
   'terrain.hill': '언덕 훈련',
