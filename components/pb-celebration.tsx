@@ -18,6 +18,7 @@ import {
 
 import { Icon } from '@/components/ui';
 import { frHash } from '@/lib/fr-hash';
+import { t, tf, useT, type StringKey } from '@/lib/i18n';
 import type { NewRecord } from '@/lib/runs-api';
 import {
   distUnit,
@@ -33,11 +34,11 @@ import { useStyles, useTokens } from '@/hooks/use-tokens';
 // Priority when one run sets several records (approved: pace > 5k > dist > dur)
 const PRIORITY: NewRecord['type'][] = ['best_pace', 'best_5k', 'longest_distance', 'longest_duration'];
 
-const SUBTITLE: Record<NewRecord['type'], string> = {
-  best_pace:        '역대 최고 페이스를 달성했어요!',
-  best_5k:          '5km 최고 기록을 세웠어요!',
-  longest_distance: '가장 먼 거리를 달렸어요!',
-  longest_duration: '가장 오래 달렸어요!',
+const SUBTITLE_KEY: Record<NewRecord['type'], StringKey> = {
+  best_pace:        'pbc.subPace',
+  best_5k:          'pbc.sub5k',
+  longest_distance: 'pbc.subDist',
+  longest_duration: 'pbc.subDur',
 };
 
 /** Per-type value formatting — pace/distance are unit-aware. */
@@ -46,7 +47,7 @@ function fmtValue(type: NewRecord['type'], value: number, units: Units): { text:
     case 'best_pace':        return { text: fmtPaceIn(value, units), caption: paceUnit(units) };
     case 'best_5k':          return { text: fmtDuration(value), caption: '5km' };
     case 'longest_distance': return { text: fmtDist(value, units, 2), caption: distUnit(units) };
-    case 'longest_duration': return { text: fmtDuration(value), caption: '시간' };
+    case 'longest_duration': return { text: fmtDuration(value), caption: t('pbc.capDur') };
   }
 }
 
@@ -122,6 +123,7 @@ export function PbCelebration({
 }) {
   const C = useTokens();
   const st = useStyles(makeSt);
+  const T = useT(); // modal hosted by long-lived parents (run-result, records)
   const pop = useRef(new Animated.Value(0.8)).current;
   useEffect(() => {
     if (!records) return;
@@ -149,20 +151,20 @@ export function PbCelebration({
             </View>
           </View>
 
-          <Text style={st.title}>새로운 기록 경신!</Text>
-          <Text style={st.subtitle}>{SUBTITLE[main.type]}</Text>
-          {extra > 0 && <Text style={st.extraCaption}>+{extra}개 기록 동시 경신</Text>}
+          <Text style={st.title}>{T('pbc.title')}</Text>
+          <Text style={st.subtitle}>{T(SUBTITLE_KEY[main.type])}</Text>
+          {extra > 0 && <Text style={st.extraCaption}>{tf('pbc.multi', { n: extra })}</Text>}
 
           {/* 이전 / 현재 comparison */}
           <View style={st.compareRow}>
             <View style={st.prevPanel}>
-              <Text style={st.panelLabel}>이전</Text>
+              <Text style={st.panelLabel}>{T('pbc.prev')}</Text>
               <Text style={st.prevValue}>{prev.text}</Text>
               <Text style={st.panelCaption}>{prev.caption}</Text>
             </View>
             <View style={st.curPanel}>
               <View style={st.bestTag}><Text style={st.bestTagTxt}>BEST</Text></View>
-              <Text style={[st.panelLabel, { color: C.accentGrn }]}>현재</Text>
+              <Text style={[st.panelLabel, { color: C.accentGrn }]}>{T('pbc.cur')}</Text>
               <View style={st.curValueRow}>
                 <Text style={st.curValue}>{cur.text}</Text>
                 <Icon name="trending-up" size={16} color={C.accentGrn} />
@@ -175,25 +177,25 @@ export function PbCelebration({
           <View style={st.chipRow}>
             <View style={st.chip}>
               <Icon name="flash" size={14} color={C.accentGrn} />
-              <Text style={st.chipTxt}>{main.improvement_pct}% 향상</Text>
+              <Text style={st.chipTxt}>{tf('pbc.improved', { n: main.improvement_pct })}</Text>
             </View>
           </View>
 
           {/* CTA dismisses — run-result IS the record detail here (approved) */}
           <Pressable onPress={onClose} style={({ pressed }) => [st.primaryBtn, accentShadow(C.accent), { opacity: pressed ? 0.9 : 1 }]}>
-            <Text style={st.primaryTxt}>기록 자세히 보기</Text>
+            <Text style={st.primaryTxt}>{T('pbc.detail')}</Text>
           </Pressable>
           {/* Text share via RN Share (debt batch 1) — the button was a
               준비-중 lie; the designed share CARD stays on the design-
               session docket, this is the honest interim. */}
           <Pressable
             onPress={() => Share.share({
-              message: `FreshRun 새 기록! ${SUBTITLE[main.type]}\n${cur.text}${cur.caption ? ` ${cur.caption}` : ''} (이전 ${prev.text}, ${main.improvement_pct}% 향상)`,
+              message: tf('pbc.shareMsg', { sub: t(SUBTITLE_KEY[main.type]), val: `${cur.text}${cur.caption ? ` ${cur.caption}` : ''}`, prev: prev.text, pct: main.improvement_pct }),
             }).catch(() => {})}
             style={({ pressed }) => [st.shareBtn, { opacity: pressed ? 0.7 : 1 }]}
           >
             <Icon name="share-outline" size={17} color={C.sub} />
-            <Text style={st.shareTxt}>성과 공유하기</Text>
+            <Text style={st.shareTxt}>{T('pbc.share')}</Text>
           </Pressable>
         </Animated.View>
       </View>

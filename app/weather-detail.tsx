@@ -11,6 +11,7 @@ import Svg, { Circle, G } from 'react-native-svg';
 
 import { Icon } from '@/components/ui';
 import { useWeather } from '@/hooks/use-weather';
+import { t, tf, useT, type StringKey } from '@/lib/i18n';
 import { weatherIcon, weatherTone } from '@/lib/weather-api';
 import { accentShadow,
   radius as R,
@@ -101,19 +102,26 @@ function MetricTile({ iconName, label, value, sub, subColor }: MetricTileProps) 
 
 // Score → title copy (client-derived; same thresholds as weatherTone)
 function scoreTitle(score: number): string {
-  if (score >= 70) return '최적의 컨디션';
-  if (score >= 40) return '무난한 컨디션';
-  return '주의가 필요해요';
+  if (score >= 70) return t('wx.scoreGood');
+  if (score >= 40) return t('wx.scoreOk');
+  return t('wx.scoreBad');
 }
-const BADGE_COPY: Record<ReturnType<typeof weatherTone>, string> = {
-  good: '러닝하기 딱 좋아요',
-  ok:   '무난한 러닝 날씨예요',
-  bad:  '오늘은 무리하지 마세요',
+const BADGE_KEY: Record<ReturnType<typeof weatherTone>, StringKey> = {
+  good: 'wx.badgeGood',
+  ok:   'wx.badgeOk',
+  bad:  'wx.badgeBad',
 };
+// 등급 표시 키맵 — 서버 enum 와이어(색 맵 키 포함)는 ko 그대로, 표시만 번역
+const GRADE_KEY: Record<string, StringKey> = {
+  '좋음': 'wx.gGood', '보통': 'wx.gModerate', '나쁨': 'wx.gPoor', '매우나쁨': 'wx.gVeryPoor',
+  '낮음': 'wx.gLow', '높음': 'wx.gHigh', '매우높음': 'wx.gVeryHigh', '위험': 'wx.gDanger',
+};
+const gradeDisp = (g: string | undefined) => (g == null ? g : GRADE_KEY[g] ? t(GRADE_KEY[g]) : g);
 
 export default function WeatherDetailScreen() {
   const C = useTokens();
   const styles = useStyles(makeStyles);
+  const T = useT();
   const insets = useSafeAreaInsets();
   // Real data (W1) — quiet-dashes contract while loading/offline-uncached
   const { weather: w, placeName } = useWeather();
@@ -124,26 +132,26 @@ export default function WeatherDetailScreen() {
   const metrics: MetricTileProps[] = [
     {
       iconName: 'water-outline',
-      label:    '습도',
+      label:    T('wx.humidity'),
       value:    w ? `${w.humidity_pct}%` : '--%',
     },
     {
       iconName:  'cloud-outline',
-      label:     '미세먼지 (AQI)',
+      label:     T('wx.pm10'),
       value:     w?.pm10 ? String(Math.round(w.pm10.value)) : '—',
-      sub:       w?.pm10?.grade,
+      sub:       gradeDisp(w?.pm10?.grade),
       subColor:  w?.pm10 ? C.aqi[w.pm10.grade] : undefined,
     },
     {
       iconName:  'cloud-outline',
-      label:     '초미세 PM2.5',
+      label:     T('wx.pm25'),
       value:     w?.pm25 ? String(Math.round(w.pm25.value)) : '—',
-      sub:       w?.pm25?.grade,
+      sub:       gradeDisp(w?.pm25?.grade),
       subColor:  w?.pm25 ? C.aqi[w.pm25.grade] : undefined,
     },
     {
       iconName:  'reorder-three-outline',
-      label:     '바람',
+      label:     T('wx.wind'),
       value:     w ? w.wind_ms.toFixed(1) : '—',
       sub:       '㎧',
     },
@@ -155,16 +163,16 @@ export default function WeatherDetailScreen() {
     // midnight — tile hides after dark.
     ...(w && (!w.uv || !w.is_day) ? [] : [{
       iconName:  'sunny-outline',
-      label:     '오늘 최고 자외선',
+      label:     T('wx.uvMax'),
       value:     w?.uv ? String(w.uv.value) : '—',
-      sub:       w?.uv?.grade,
+      sub:       gradeDisp(w?.uv?.grade),
       subColor:  w?.uv ? C.uv[w.uv.grade] : undefined,
     }]),
     // 강수확률 repurposed to 강수량 (rain_1h_mm; owner call 2026-07-08)
     {
       iconName: 'rainy-outline',
-      label:    '강수량 (1시간)',
-      value:    w ? (w.rain_1h_mm != null ? `${w.rain_1h_mm}mm` : '없음') : '—',
+      label:    T('wx.rain1h'),
+      value:    w ? (w.rain_1h_mm != null ? `${w.rain_1h_mm}mm` : T('wx.none')) : '—',
     },
   ];
 
@@ -176,7 +184,7 @@ export default function WeatherDetailScreen() {
         <Pressable onPress={() => router.back()} hitSlop={12} style={styles.headerBtn}>
           <Icon name="close" size={22} color={C.text} />
         </Pressable>
-        <Text style={styles.headerTitle}>날씨 상세 분석</Text>
+        <Text style={styles.headerTitle}>{T('wx.title')}</Text>
         {/* Share — was a dead Pressable (no onPress) since the screen shipped;
             wired 2026-07-20 (#2b): the screen's own summary is the content.
             Disabled until weather data exists (nothing honest to share). */}
@@ -187,10 +195,15 @@ export default function WeatherDetailScreen() {
           onPress={() => {
             if (!w) return;
             Share.share({
-              message:
-                `${placeName ?? '현재 위치'} 러닝 날씨 — ${Math.round(w.temp_c)}° ${w.condition}, ` +
-                `체감 ${Math.round(w.feels_like_c)}° · AI 러닝 지수 ${w.running_index.score}/100 (${scoreTitle(w.running_index.score)})` +
-                ` — FreshRun`,
+              // server values pass through untouched: {cond} = w.condition (ko wire)
+              message: tf('wx.share', {
+                place: placeName ?? t('wx.curLoc'),
+                t: Math.round(w.temp_c),
+                cond: w.condition,
+                feels: Math.round(w.feels_like_c),
+                score: w.running_index.score,
+                verdict: scoreTitle(w.running_index.score),
+              }),
             }).catch(() => {}); // user-cancelled share sheets throw on some platforms — quiet
           }}
         >
@@ -209,7 +222,7 @@ export default function WeatherDetailScreen() {
           <View style={styles.badgeRow}>
             <View style={styles.badge}>
               <View style={styles.badgeDot} />
-              <Text style={styles.badgeText}>{BADGE_COPY[tone]}</Text>
+              <Text style={styles.badgeText}>{T(BADGE_KEY[tone])}</Text>
             </View>
           </View>
         )}
@@ -225,7 +238,7 @@ export default function WeatherDetailScreen() {
             })()}
           </View>
           <Text style={styles.heroSub}>
-            {w ? `${w.condition} · 체감 ${Math.round(w.feels_like_c)}°` : '날씨 불러오는 중'} · {placeName ?? '위치 확인 중'}
+            {w ? tf('wx.feels', { cond: w.condition, n: Math.round(w.feels_like_c) }) : T('wx.loading')} · {placeName ?? T('wx.locating')}
           </Text>
         </View>
 
@@ -236,10 +249,10 @@ export default function WeatherDetailScreen() {
           <View style={styles.aiRight}>
             <View style={styles.aiLabelRow}>
               <Icon name="sparkles" size={13} color={C.accentGrn} />
-              <Text style={styles.aiLabel}>AI 러닝 지수{w?.running_index.personalized ? ' · 내 기준' : ''}</Text>
+              <Text style={styles.aiLabel}>{T('wx.aiLabel')}{w?.running_index.personalized ? T('wx.aiMine') : ''}</Text>
             </View>
             <Text style={styles.aiTitle}>{score != null ? scoreTitle(score) : '—'}</Text>
-            <Text style={styles.aiDesc}>{w?.running_index.comment ?? '날씨 데이터를 기다리는 중이에요'}</Text>
+            <Text style={styles.aiDesc}>{w?.running_index.comment ?? T('wx.waiting')}</Text>
           </View>
         </View>
 
@@ -260,7 +273,7 @@ export default function WeatherDetailScreen() {
           onPress={() => router.push('/(tabs)/create' as any)}
         >
           <Icon name="play-circle" size={20} color={C.accentText} />
-          <Text style={styles.ctaLabel}>러닝 시작하기</Text>
+          <Text style={styles.ctaLabel}>{T('wx.cta')}</Text>
         </Pressable>
       </View>
 

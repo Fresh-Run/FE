@@ -1223,6 +1223,11 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 - Promotion discipline UNCHANGED: every promotion to a tester-facing channel gets its own explicit one-confirm.
 - AMENDMENT (7/30, marker-placement correction): the hold was NEVER a written rule with its own ledger line — it operated as a standing VERBAL instruction that contradicted written constraint ④ ("invites/testers never wait"). Retiring it RESTORES ④ rather than superseding anything; ③ (core-loop scope) was retired separately by the Phase 2 epic itself, and the 36531a0 marker mis-attributed that. Markers corrected in place (③ → Phase-2 attribution · ④ → reaffirmed). **Ledger-hygiene lesson: verbal rules that contradict written constraints are invisible to audit until someone reads both — standing verbal instructions get a ledger line at issuance.**
 
+## 🌐 i18n 5c — 날씨 상세 + PB 축하 BUILT (미스테이지) — SLICE 5 COMPLETE (5a+5b+5c 전부 커밋, 원-그룹 스테이징 대기)
+- PB 트라이앵글 클로즈: pbc.* 13키 (축하문 톤 유지, 명사 정합 — fastest pace/5K/longest run/longest duration, record 중복 무) · 셰어 메시지 tf 템플릿.
+- 날씨: wx.* 31키. AQI 판정 = 서버 ko enum이 와이어+색맵 키+표시 3역 — GRADE_KEY 표시-온리 키맵 (8등급: AQI 4 + UV 5, 보통 공유), 와이어·C.aqi/C.uv 룩업 무접촉, 미지 등급 = 원문 패스스루. 셰어 컴포지션 = {cond} 서버-슬롯 패스스루. STAYS-KO: w.condition·running_index.comment (서버). 홈 스트립 무접촉 (frozen-scaling 섬 보존, git-diff 증명).
+- 파리티 927/927 (신규 44). 바이트-스캔 (6c405fff…) 13/13. 잔여 = GRADE_KEY 와이어 리터럴 (데이터).
+
 ## 🌐 i18n 5b — 기록 탭 페어 BUILT (미스테이지) — records·monthly-insight·month-picker
 - 키 신규 76 (date.m1-12+md/ym/yearN=15 · axis.* 4 · mi.* 43 · rec.* 13 · mpk.* 2 — 사전-주도 월 이름: en 'Jan'-스타일이 사전에서 나옴, 포매터 무변경) · 재사용 res.totalDist/avgPace·act.totalTime·tab.records·com.loginNeeded·mp.comingSoon·common.retry·dayS.* 7. 파리티 883/883.
 - AXIS 룰링 집행: axis.* 신설 (헤드라인 포지션), pb.* 미재사용; en은 pb 하모나이즈 어휘의 대문자형 정합 (Fastest pace/Best 5K equiv./Longest run/Longest duration). 환산 편차 보존. 동일-ko 두 키 (axis.longestDur=기록축 'Longest duration' vs mi.statLongest=거리타일 'Longest run') — ko 동형·en 상이가 정확함의 증명.
