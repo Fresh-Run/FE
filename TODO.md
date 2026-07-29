@@ -1223,6 +1223,10 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 - Promotion discipline UNCHANGED: every promotion to a tester-facing channel gets its own explicit one-confirm.
 - AMENDMENT (7/30, marker-placement correction): the hold was NEVER a written rule with its own ledger line — it operated as a standing VERBAL instruction that contradicted written constraint ④ ("invites/testers never wait"). Retiring it RESTORES ④ rather than superseding anything; ③ (core-loop scope) was retired separately by the Phase 2 epic itself, and the 36531a0 marker mis-attributed that. Markers corrected in place (③ → Phase-2 attribution · ④ → reaffirmed). **Ledger-hygiene lesson: verbal rules that contradict written constraints are invisible to audit until someone reads both — standing verbal instructions get a ledger line at issuance.**
 
+## 🌦️ 웨더 스트립 레이아웃 컨테인먼트 BUILT (미스테이지) — 아일랜드 가드 룰드 예외 (호바트 스크린샷)
+- 결함 메커니즘: metrics가 flex:1 (basis 0 — 잔여 공간만), 긴 en 지명이 tempGroup basis를 팽창 → 우측 크러시·AQI 텍스트 오버랩 (미쒜고). ko 3-4자는 노출 불가였던 클래스.
+- 픽스 4프롭 (레이아웃-온리): tempGroup flexShrink:1→flex:1 (유연 공간 소유 — 긴 지명은 여기서 잘림) · area ellipsizeMode 명시 · metrics flex:1→flexShrink:0 · pmGroup flexShrink:1→0 (우측 고정). allowFontScaling·ko 스트링·폰트·페치 무접촉 — 디프 전문 게시로 증명 (역-격리 증명). 신규 스트링 0.
+
 ## 🌏 해외 아크 CLOSED (2026-08-03) — 그녀 v121 트랙 bbox 교체
 - **그녀 v121: Korea 트랙 bbox → 좌표-새너티** (월드-레인지 + 널-아일랜드 제외 + 100km 스타트-앵커 윈도) · 안티치트 무접촉 · **도쿄 E2E 검증** (track·distance·verified·splits·start_lat 전부) · 파이프라인 스캔 결과 bbox가 유일한 Korea 가정. /feed/nearby는 **의도적 Korea-400 존치** — 우리 빈-스테이트 카드(b6209826)와 정합. 과거 해외 런 복구 불가 (포인트 저장-전 드롭). **오픈 클로저: 호바트 테스터 런 → 스크린샷 → 그녀 DB 컨펌.**
 - **[PRODUCT] 해외-트랙 아이템 사망 — 배포된 픽스로 대체.** (기록 노트: 그 아이템은 본 레저에 쓰인 라인이 없었음 — 오프-레저 아이템의 사망을 여기 기록. 구두-룰 레슨 적용.)
