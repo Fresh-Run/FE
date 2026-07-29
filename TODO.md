@@ -1223,6 +1223,8 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 - Promotion discipline UNCHANGED: every promotion to a tester-facing channel gets its own explicit one-confirm.
 - AMENDMENT (7/30, marker-placement correction): the hold was NEVER a written rule with its own ledger line — it operated as a standing VERBAL instruction that contradicted written constraint ④ ("invites/testers never wait"). Retiring it RESTORES ④ rather than superseding anything; ③ (core-loop scope) was retired separately by the Phase 2 epic itself, and the 36531a0 marker mis-attributed that. Markers corrected in place (③ → Phase-2 attribution · ④ → reaffirmed). **Ledger-hygiene lesson: verbal rules that contradict written constraints are invisible to audit until someone reads both — standing verbal instructions get a ledger line at issuance.**
 
+## 📜 RULING (8/2): "지연 pre-notified" 스탠딩-스텝 은퇴 — 그녀 노티는 케이스별 reasoned, 게이트 아님, 사전 단언 금지 (CLAUDE.md 컨트롤 ④ + 원-엔트리 스트라이크; 과거 기록 라인은 히스토리로 보존. 원-컨펌 질문 문구에서도 제거.)
+
 ## 🔼 해외 피드 픽스 STAGED — aad83ee0-ec7a-485a-9fb7-0042e074f6b6 (커밋 2cd4b31) · 해시-타이 MATCH (TsnNSNhL…) · 마커 4/4 · 플로어 2e586e61 · 워크: 시뮬 해외 좌표 스푸프 → 전체 탭 = 코리아-온리 카드 (리트라이 무·프렌즈 안내) / 국내 = 종전 동작 · 프로모션 개별 컨펌 대기 — 호바트 테스터가 프로모트 시 실물 수신
 
 ## 🌏 해외 피드 에러 카드 FIX BUILT (미스테이지) — 전체 탭 코리아-온리 스테이트
@@ -1987,5 +1989,5 @@ Decision owed at the gate, not before. Both drafted so the REVISIT is a choice, 
 ## DOCTRINE AMENDMENT (owner, 2026-07-20): DEV LANE RETIRED FOR VERIFICATION
 
 Both phones run the TF build; **all publishes go production-first**; owner verification happens on TF after the OTA dance; the [HH:MM] gates the verified-ledger entry per slice. NOT an exception — standing doctrine.
-**Compensating controls (standing):** (1) HARD pre-flight before every production publish, output shown: env-guard + hash-tied byte-scan + tsc/eslint + per-item desk proofs. (2) Rollback pre-armed: every publish checkpoint states the previous known-good production group ID before firing. (3) 지연 pre-notified before each production publish (she lives on TF).
+**Compensating controls (standing):** (1) HARD pre-flight before every production publish, output shown: env-guard + hash-tied byte-scan + tsc/eslint + per-item desk proofs. (2) Rollback pre-armed: every publish checkpoint states the previous known-good production group ID before firing. (3) ~~지연 pre-notified before each production publish (she lives on TF).~~ [STRUCK 8/2 — 오너 룰링: 그녀 노티는 케이스별 판단, 스탠딩 게이트 아님·사전 단언 금지. 상단 룰링 엔트리 참조.]
 **REVISIT checkpoint: at the external gate, production-only publishing is re-evaluated** (strangers must not receive unverified bundles) — the dev lane returns or an internal staging channel is created. The `development` channel is DORMANT — alive for build #9 installs, no longer a publish target.
