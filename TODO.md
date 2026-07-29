@@ -1223,6 +1223,8 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 - Promotion discipline UNCHANGED: every promotion to a tester-facing channel gets its own explicit one-confirm.
 - AMENDMENT (7/30, marker-placement correction): the hold was NEVER a written rule with its own ledger line — it operated as a standing VERBAL instruction that contradicted written constraint ④ ("invites/testers never wait"). Retiring it RESTORES ④ rather than superseding anything; ③ (core-loop scope) was retired separately by the Phase 2 epic itself, and the 36531a0 marker mis-attributed that. Markers corrected in place (③ → Phase-2 attribution · ④ → reaffirmed). **Ledger-hygiene lesson: verbal rules that contradict written constraints are invisible to audit until someone reads both — standing verbal instructions get a ledger line at issuance.**
 
+## 🔼 블랭크 네임 픽스 STAGED — ad6e0e27-748f-4105-a622-5d0fb3272850 (커밋 e083944) · 해시-타이 MATCH · 플로어 8231fa81 · 워크: 프로필 설정→프로필 편집 = 이름 렌더 (재현 경로) · 탭 도어 회귀 · 리네임 라운드트립 · 무변경 저장 = 무동작 (게이트 레그) · 로우 카피 "이름 · 신체 정보" · 프로모션 개별 컨펌 대기
+
 ## 👤 프로필-편집 블랭크 네임 FIX BUILT (미스테이지) — 도어+벨트+카피
 - ① 도어: 허브는 프로필 객체 미보유 (getMyProfile 페치가 nickname 폐기) — **스토어 displayName 채택** (홈 그리팅과 동일 값, 동기·퍼-유저 캐시): 프로필 편집 로우가 { nickname } 전달 (4948e12 이래 파람리스 블랭크 인시던트 인-코드).
 - ② 벨트: personal-info 네임 시드 = param ?? 스토어 어답트-원스 (시블링 :142 패턴) · **originalNameRef가 유효 시드 추적 — 어답트 후 세이브가 세임-네임 PATCH를 절대 발사 안 함** (리네임-게이트 보존).
