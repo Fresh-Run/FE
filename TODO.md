@@ -1223,6 +1223,8 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 - Promotion discipline UNCHANGED: every promotion to a tester-facing channel gets its own explicit one-confirm.
 - AMENDMENT (7/30, marker-placement correction): the hold was NEVER a written rule with its own ledger line — it operated as a standing VERBAL instruction that contradicted written constraint ④ ("invites/testers never wait"). Retiring it RESTORES ④ rather than superseding anything; ③ (core-loop scope) was retired separately by the Phase 2 epic itself, and the 36531a0 marker mis-attributed that. Markers corrected in place (③ → Phase-2 attribution · ④ → reaffirmed). **Ledger-hygiene lesson: verbal rules that contradict written constraints are invisible to audit until someone reads both — standing verbal instructions get a ledger line at issuance.**
 
+## 🔼 셰어-카드 피델리티+컨벤션 STAGED — b240c789-df79-4e8f-a58c-a50abd21cba7 (커밋 fd539da — 애든덤 포함: 시작/끝 닷 카운터-스케일, 플래그 소비) · 해시-타이 MATCH (ldcGu1H0…) · 플로어 164a67cd · 워크: 제주-류 트랙 셰어 = 해안 비율 + 어느 줌에도 스트로크/닷 프리셋 유지 · 활동 상세 = 평균 페이스(히어로)/무빙 페이스(분석) 두 라벨 · 카드 페이스 = 히어로와 동일 숫자 · 프로모션 개별 컨펌 대기
+
 ## 📤 셰어-카드 피델리티 + 페이스 컨벤션 BUILT (미스테이지) — 오너 룰링 집행
 - **룰링 (인-코드+레저): 평균 페이스 = 총시간 페이스 (avg_pace_sec_per_km, 서버 저장) 그 라벨 전면; 무빙 페이스는 분석 카드 안에서만, 자기 라벨로. 한 라벨 두 숫자 금지.** 제주 8'51"/7'52" 필드 증거 클로즈.
 - 집행: share-card:467 → avg 버바팀 (무빙 포뮬러 삭제) · activity 분석 로우 → act.movingPace 신규 키 (포뮬러 유지, 라벨 교체) · 히어로 타일 불변 (이미 총시간). 스윕: monthly-insight·records·run-save·run-result 전부 총시간-기반 확인 — 위반 2사이트가 전부 (run-splits 랩 페이스 = 무빙 by design, 평균 라벨 아님 — 정합).
