@@ -1223,6 +1223,14 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 - Promotion discipline UNCHANGED: every promotion to a tester-facing channel gets its own explicit one-confirm.
 - AMENDMENT (7/30, marker-placement correction): the hold was NEVER a written rule with its own ledger line — it operated as a standing VERBAL instruction that contradicted written constraint ④ ("invites/testers never wait"). Retiring it RESTORES ④ rather than superseding anything; ③ (core-loop scope) was retired separately by the Phase 2 epic itself, and the 36531a0 marker mis-attributed that. Markers corrected in place (③ → Phase-2 attribution · ④ → reaffirmed). **Ledger-hygiene lesson: verbal rules that contradict written constraints are invisible to audit until someone reads both — standing verbal instructions get a ledger line at issuance.**
 
+## 🌏 해외 아크 CLOSED (2026-08-03) — 그녀 v121 트랙 bbox 교체
+- **그녀 v121: Korea 트랙 bbox → 좌표-새너티** (월드-레인지 + 널-아일랜드 제외 + 100km 스타트-앵커 윈도) · 안티치트 무접촉 · **도쿄 E2E 검증** (track·distance·verified·splits·start_lat 전부) · 파이프라인 스캔 결과 bbox가 유일한 Korea 가정. /feed/nearby는 **의도적 Korea-400 존치** — 우리 빈-스테이트 카드(b6209826)와 정합. 과거 해외 런 복구 불가 (포인트 저장-전 드롭). **오픈 클로저: 호바트 테스터 런 → 스크린샷 → 그녀 DB 컨펌.**
+- **[PRODUCT] 해외-트랙 아이템 사망 — 배포된 픽스로 대체.** (기록 노트: 그 아이템은 본 레저에 쓰인 라인이 없었음 — 오프-레저 아이템의 사망을 여기 기록. 구두-룰 레슨 적용.)
+
+## 👻 팬텀 기록 (해외 아크 2호) — "자유러닝 해외에서 안 됨"
+- 양측 공동 오독: 자유러닝은 내내 작동 — 시끄러운 인접 실패 (피드 에러 카드 + 트랙리스 저장)가 고장처럼 보이게 함. 1호 = 친구-피드 팬텀 (클라 지오 의존성 제로 입증).
+- **레슨: 시끄러운 인접 실패는 팬텀 리포트를 생성한다 — 레인 배정 전에 주장된 증상 각각을 독립 검증할 것.**
+
 ## ✅ 팔로우-리스트 페이지네이션 PROMOTED (2026-08-02) — 오너 [21:15] FULL (라벨 실수·스피너-로드·중복 무·팔로워/필 회귀 클린) · 원-컨펌 · 952feda2 → production 53b6e9b9-2202-4029-b56e-bd9151db3f83 · 프로모션 해시-타이 MATCH (pXCiTMZ2… 양채널 동일). **롤백 플로어 전진 → 53b6e9b9** (b6209826 은퇴). 28-팔로우 트렁케이션 클로즈 — 그녀 서버-프루프 × 우리 무한스크롤. 스윕의 8 트렁케이트 서피스 = 오너 우선순위 룰링 대기 (별도 패스).
 
 ## 🔼 팔로우-리스트 페이지네이션 STAGED — 952feda2-6bcc-4232-96ad-621005057702 (커밋 75d7d98) · 해시-타이 MATCH (pXCiTMZ2…) · 플로어 b6209826 · 워크: 28-팔로우 계정 스크롤 → 20행 지나 나머지 8 로드 (풋터 스피너) · 탭 라벨 = 28 트루-카운트 · 연타 스크롤 중복행 무 · 프로모션 개별 컨펌 대기
