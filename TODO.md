@@ -1223,6 +1223,8 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 - Promotion discipline UNCHANGED: every promotion to a tester-facing channel gets its own explicit one-confirm.
 - AMENDMENT (7/30, marker-placement correction): the hold was NEVER a written rule with its own ledger line — it operated as a standing VERBAL instruction that contradicted written constraint ④ ("invites/testers never wait"). Retiring it RESTORES ④ rather than superseding anything; ③ (core-loop scope) was retired separately by the Phase 2 epic itself, and the 36531a0 marker mis-attributed that. Markers corrected in place (③ → Phase-2 attribution · ④ → reaffirmed). **Ledger-hygiene lesson: verbal rules that contradict written constraints are invisible to audit until someone reads both — standing verbal instructions get a ledger line at issuance.**
 
+## 🔼 해외 피드 픽스 STAGED — aad83ee0-ec7a-485a-9fb7-0042e074f6b6 (커밋 2cd4b31) · 해시-타이 MATCH (TsnNSNhL…) · 마커 4/4 · 플로어 2e586e61 · 워크: 시뮬 해외 좌표 스푸프 → 전체 탭 = 코리아-온리 카드 (리트라이 무·프렌즈 안내) / 국내 = 종전 동작 · 프로모션 개별 컨펌 대기 — 호바트 테스터가 프로모트 시 실물 수신
+
 ## 🌏 해외 피드 에러 카드 FIX BUILT (미스테이지) — 전체 탭 코리아-온리 스테이트
 - 판별자 = **status 400 + 송신 좌표의 클라 bbox-미러 외부** (프로즈-프리 — 그녀 400 문구 미의존; bbox 확장 시 400 자체가 소멸해 브랜치 휴면 = 어떤 BE 정책에도 정합). 미러 상수는 코스-월드 가드와 동일 (33-39/124-132), 프리-블록 아님 — 판별 전용.
 - useNearbyFeed → koreaOnly 플래그 (error와 동승 — 단독이면 스피너 스트랜드, 데스크서 잡음) · 렌더 = ListState (글로브, 리트라이 무) — 카피 2키 양 로케일 (룰링: 서브 = 프렌즈-탭 안내, 호바트 테스터의 오늘 경로) · 타 에러 = 기존 ErrorState+리트라이 불변 · 친구 탭 무접촉.
