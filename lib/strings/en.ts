@@ -729,6 +729,7 @@ export const en: Record<keyof typeof ko, string> = {
   'act.sectionSplits': 'Splits',
   'act.sectionPace': 'Pace analysis',
   'act.movingTime': 'Moving time',
+  'act.movingPace': 'Moving pace',
   'act.totalTime': 'Total time',
   'act.bestLap': 'Best split',
   'act.memo': 'Notes',

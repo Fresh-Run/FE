@@ -290,7 +290,10 @@ export default function ActivityScreen() {
                   stretches until a wall-clock field exists. */}
               <View style={[st.paceStatsCard, shadows.sm]}>
                 {([
-                  [T('res.avgPace'), run.moving_sec != null && run.distance_km > 0
+                  // 8/3 convention ruling: this moving-based number keeps its
+                  // formula but loses the 평균 label — 무빙 페이스. The hero
+                  // tile above is THE 평균 페이스 (server total-time).
+                  [T('act.movingPace'), run.moving_sec != null && run.distance_km > 0
                     ? fmtPaceIn(Math.round(run.moving_sec / run.distance_km), units)
                     : run.avg_pace_sec_per_km != null ? fmtPaceIn(run.avg_pace_sec_per_km, units) : '--'],
                   [T('act.movingTime'), fmtDuration(run.moving_sec ?? run.duration_sec)],

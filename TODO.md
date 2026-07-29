@@ -1223,6 +1223,12 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 - Promotion discipline UNCHANGED: every promotion to a tester-facing channel gets its own explicit one-confirm.
 - AMENDMENT (7/30, marker-placement correction): the hold was NEVER a written rule with its own ledger line — it operated as a standing VERBAL instruction that contradicted written constraint ④ ("invites/testers never wait"). Retiring it RESTORES ④ rather than superseding anything; ③ (core-loop scope) was retired separately by the Phase 2 epic itself, and the 36531a0 marker mis-attributed that. Markers corrected in place (③ → Phase-2 attribution · ④ → reaffirmed). **Ledger-hygiene lesson: verbal rules that contradict written constraints are invisible to audit until someone reads both — standing verbal instructions get a ledger line at issuance.**
 
+## 📤 셰어-카드 피델리티 + 페이스 컨벤션 BUILT (미스테이지) — 오너 룰링 집행
+- **룰링 (인-코드+레저): 평균 페이스 = 총시간 페이스 (avg_pace_sec_per_km, 서버 저장) 그 라벨 전면; 무빙 페이스는 분석 카드 안에서만, 자기 라벨로. 한 라벨 두 숫자 금지.** 제주 8'51"/7'52" 필드 증거 클로즈.
+- 집행: share-card:467 → avg 버바팀 (무빙 포뮬러 삭제) · activity 분석 로우 → act.movingPace 신규 키 (포뮬러 유지, 라벨 교체) · 히어로 타일 불변 (이미 총시간). 스윕: monthly-insight·records·run-save·run-result 전부 총시간-기반 확인 — 위반 2사이트가 전부 (run-splits 랩 페이스 = 무빙 by design, 평균 라벨 아님 — 정합).
+- 루트 피델리티: routePath 유니폼 스케일 (min-fit) + cos(lat) 경도 보정 + 레터박스 센터링 — MiniMap 자체 수학 무접촉 (62px 미니 이디엄 유지, 디버전스 코멘트) · 스트로크 = 핀치 팩터 카운터-스케일 (AnimatedPath + useAnimatedProps — 프리셋 3/4.5/6 어느 줌에도 유지). 데스크 픽스처: 제주 롱-신 = 250×36px (7:1 보존, 종전 250×250 스퀘어-스트레치) · 루프 = 238×250 (박스 충전).
+- 신규 키 1 (act.movingPace) · 파리티 931/931. 플래그 (미확장 스코프): 시작/끝 닷도 핀치에 비례 성장 — 동클래스, 룰링 시 원-라인.
+
 ## ✅ 스트립 v4 PROMOTED (2026-08-03) — 오너 [23:55] PARTIAL (도메스틱 통짜·미세먼지+닷·우측 정상·디테일 색 클린 — **스트래들 디바이스 판정: 68 플로어 적합**) · 원-컨펌 · 1f69e7ed → production 164a67cd-89c7-4f2e-9d52-92da7dd894a2 · 프로모션 해시-타이 MATCH. **롤백 플로어 전진 → 164a67cd** (53b6e9b9 은퇴). 호바트 아크의 스트립 레인 클로즈 (v1 all-rigid → v2 dual-floor → v3 fixed-divider → v4 grade-word-drop — 눈이 수학을 지배한 4-이터레이션).
 - 미완 레그: ① 호바트 긴-이름 ellipsis = 프로모트-후 스크린샷 (그들의 koreaOnly 카드 리포트와 동일 사이클 가능) ② 겨울 음수 온도 = 계절 불가 (시즌 도래 시 기회 스탬프).
 

@@ -40,7 +40,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { t, tf } from '@/lib/i18n';
 import { Image, Pressable, ScrollView, Share, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
-import Reanimated, { runOnJS, useAnimatedStyle, useSharedValue, type SharedValue } from 'react-native-reanimated';
+import Reanimated, { runOnJS, useAnimatedProps, useAnimatedStyle, useSharedValue, type SharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { captureRef } from 'react-native-view-shot';
@@ -54,6 +54,9 @@ import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { useSettings } from '@/store/use-settings';
 import type { Coordinate } from '@/types';
+
+// stroke counter-scale (8/3 ruling): the preset must hold at any pinch zoom
+const AnimatedPath = Reanimated.createAnimatedComponent(Path);
 
 // ─── Prefs (persisted metric selection — v1 local; settings.share later) ─────
 
@@ -113,12 +116,23 @@ const HOUSE_BGS: Bg[] = [
 
 function routePath(polyline: Coordinate[], size: number, pad: number): { d: string; start: [number, number]; end: [number, number] } | null {
   if (polyline.length < 2) return null;
+  // Fidelity ruling (8/3, Jeju coastal squiggle): UNIFORM scale — one factor
+  // for both axes (min-fit), cos(lat)-corrected longitude, letterboxed to
+  // center. A coastal 7:1 route keeps its shore proportions instead of being
+  // stretched square. DELIBERATE DIVERGENCE from MiniMap's per-axis math —
+  // the 62px stylized minis keep their idiom; here the route is the subject.
   const lats = polyline.map(c => c.lat);
   const lngs = polyline.map(c => c.lng);
-  const minLat = Math.min(...lats), latR = (Math.max(...lats) - minLat) || 0.001;
-  const minLng = Math.min(...lngs), lngR = (Math.max(...lngs) - minLng) || 0.001;
-  const px = (c: Coordinate) => pad + ((c.lng - minLng) / lngR) * (size - 2 * pad);
-  const py = (c: Coordinate) => size - pad - ((c.lat - minLat) / latR) * (size - 2 * pad);
+  const minLat = Math.min(...lats), maxLat = Math.max(...lats);
+  const minLng = Math.min(...lngs), maxLng = Math.max(...lngs);
+  const kx = Math.cos(((minLat + maxLat) / 2) * Math.PI / 180); // lng° → lat°-equivalent
+  const spanX = (maxLng - minLng) * kx || 0.0001;
+  const spanY = (maxLat - minLat) || 0.0001;
+  const s = (size - 2 * pad) / Math.max(spanX, spanY);
+  const ox = pad + ((size - 2 * pad) - spanX * s) / 2; // letterbox centering
+  const oy = pad + ((size - 2 * pad) - spanY * s) / 2;
+  const px = (c: Coordinate) => ox + (c.lng - minLng) * kx * s;
+  const py = (c: Coordinate) => size - oy - (c.lat - minLat) * s;
   const d = polyline.map((c, i) => `${i === 0 ? 'M' : 'L'} ${px(c).toFixed(1)} ${py(c).toFixed(1)}`).join(' ');
   const first = polyline[0], last = polyline[polyline.length - 1];
   return { d, start: [px(first), py(first)], end: [px(last), py(last)] };
@@ -417,6 +431,9 @@ export default function ShareCardScreen() {
       { rotateZ: `${rot.value}rad` },
     ],
   }));
+  // counter-scale: the layer transform scales everything incl. the stroke;
+  // dividing by sc keeps the chosen preset (3/4.5/6) visually constant
+  const strokeProps = useAnimatedProps(() => ({ strokeWidth: strokeW / sc.value }));
 
   // v2 free-placed metric layers — fixed three (hooks unconditional; the
   // toggle hides the RENDER, never the hook)
@@ -464,9 +481,11 @@ export default function ShareCardScreen() {
   // adopted: the stranger reading a story understands wall time; the
   // moving·총 pair is analysis-grade and lives on 활동 상세). 페이스 keeps
   // the moving-based VALUE (fallback-chained) — the honest average.
-  const avgPace = run.moving_sec != null && run.distance_km > 0
-    ? Math.round(run.moving_sec / run.distance_km)
-    : run.avg_pace_sec_per_km;
+  // Pace-convention ruling (8/3, Jeju 8'51"/7'52" field evidence): 평균 페이스
+  // = the server-stored TOTAL-time pace, everywhere the label appears — the
+  // card must match the run-detail hero exactly. Moving pace lives only in
+  // the analysis card, under its own label.
+  const avgPace = run.avg_pace_sec_per_km;
   const title = run.title ?? timeTitle(run.ran_at);
   const rows: [ShareMetricKey, string, string][] = [];
   if (prefs.metrics.dist) rows.push(['dist', `${fmtDist(run.distance_km, units, 2)}${distUnit(units)}`, t('shr.metricDist')]);
@@ -542,7 +561,7 @@ export default function ShareCardScreen() {
               <GestureDetector gesture={gesture}>
                 <Reanimated.View style={[st.routeLayer, { width: layerSize, height: layerSize, left: (canvasW - layerSize) / 2, top: (canvasH - layerSize) / 2 }, layerStyle]}>
                   <Svg viewBox={`0 0 ${layerSize} ${layerSize}`} width="100%" height="100%">
-                    <Path d={route.d} stroke={stroke} strokeWidth={strokeW} strokeLinecap="round" strokeLinejoin="round" fill="none" opacity={0.95} />
+                    <AnimatedPath d={route.d} stroke={stroke} animatedProps={strokeProps} strokeLinecap="round" strokeLinejoin="round" fill="none" opacity={0.95} />
                     <Circle cx={route.start[0]} cy={route.start[1]} r={5} fill="#fff" stroke={stroke} strokeWidth={3} />
                     <Circle cx={route.end[0]} cy={route.end[1]} r={5.5} fill={stroke} stroke="#fff" strokeWidth={2} />
                   </Svg>

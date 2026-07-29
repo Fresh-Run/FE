@@ -741,6 +741,9 @@ export const ko = {
   'act.sectionSplits': '구간 기록',
   'act.sectionPace': '페이스 분석',
   'act.movingTime': '이동 시간',
+  // 페이스 컨벤션 룰링 (8/3): 평균 페이스 = 총시간 페이스 (서버 저장값) 전면;
+  // 무빙 페이스는 분석 카드 안에서만, 이 라벨로
+  'act.movingPace': '무빙 페이스',
   'act.totalTime': '총 시간',
   'act.bestLap': '최고 구간',
   'act.memo': '메모',
