@@ -1223,7 +1223,10 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 - Promotion discipline UNCHANGED: every promotion to a tester-facing channel gets its own explicit one-confirm.
 - AMENDMENT (7/30, marker-placement correction): the hold was NEVER a written rule with its own ledger line — it operated as a standing VERBAL instruction that contradicted written constraint ④ ("invites/testers never wait"). Retiring it RESTORES ④ rather than superseding anything; ③ (core-loop scope) was retired separately by the Phase 2 epic itself, and the 36531a0 marker mis-attributed that. Markers corrected in place (③ → Phase-2 attribution · ④ → reaffirmed). **Ledger-hygiene lesson: verbal rules that contradict written constraints are invisible to audit until someone reads both — standing verbal instructions get a ledger line at issuance.**
 
-## 🔼 배치 4 STAGED (2026-07-30) — cb3c9c75-c14e-4934-aa9e-e0e9e1a0d7e4 · 프로모션 게이트 대기
+## 🔼 배치 4 v2 STAGED (2026-07-30) — fef329a4-d3f5-42b5-903c-29875e0a7e28 (cb3c9c75 SUPERSEDED — 하모나이즈 5916449 + PB 템플릿 c05c8a8 합류) · 프로모션 게이트 대기
+- v2 프리플라이트 ✓ (env 스테이징·제로 로컬호스트/tsc/eslint) · 해시-타이 MATCH (htfQu95N…, 커밋 c05c8a8) · 마커 7/7 (신규 kudos/your-crew/fastest pace/New {label}!/Crew challenge 🎉 각 1 · 구 cheered 0 · fmtAgo 방금 전 1).
+
+## 🔼 (superseded) 배치 4 STAGED — cb3c9c75-c14e-4934-aa9e-e0e9e1a0d7e4
 - 내용 = 4d (알림+라우팅+fmtAgo 5서피스 결함 픽스) + 필드-픽스 (톱컷오프 run-save·edit-run +26 / 리센터 NAV_ALTITUDE_M 스냅 / 헤드라인 원복 — 배치 컨텐트 제로-디프). 커밋 d902af4 (49bd8c7..d902af4).
 - 프리플라이트 ✓ (env 스테이징·제로 로컬호스트 / tsc / eslint) · 해시-타이 MATCH (3_ecIs5vr0…) · 마커 8/8 (서울 헤드라인=1·전국=0·방금 전=1·응원해요 템플릿=1·{n}m ago=1·cheered=1·New {label} record! utf16=1 — 🎉 인접 = UTF-16 룰 재확인).
 - 플로어 = 158cb9ab (배치3, 추인). 오너 [HH:MM] 스탬프 (빌드 10 워크: 노티 양언어·fmtAgo en·톱컷오프·리센터 줌 룰링) = 프로모션 게이트 — 프로모션은 개별 명시 컨펌 후에만.
