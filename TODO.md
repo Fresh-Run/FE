@@ -1223,6 +1223,8 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 - Promotion discipline UNCHANGED: every promotion to a tester-facing channel gets its own explicit one-confirm.
 - AMENDMENT (7/30, marker-placement correction): the hold was NEVER a written rule with its own ledger line — it operated as a standing VERBAL instruction that contradicted written constraint ④ ("invites/testers never wait"). Retiring it RESTORES ④ rather than superseding anything; ③ (core-loop scope) was retired separately by the Phase 2 epic itself, and the 36531a0 marker mis-attributed that. Markers corrected in place (③ → Phase-2 attribution · ④ → reaffirmed). **Ledger-hygiene lesson: verbal rules that contradict written constraints are invisible to audit until someone reads both — standing verbal instructions get a ledger line at issuance.**
 
+## 🔼 스트립 컨테인먼트 v2 STAGED — b957dd35-5e46-4688-9908-149d38d524d1 (커밋 bc3b411; fb25cda0/v1 대체) · 해시-타이 MATCH · 플로어 53b6e9b9 · 워크: 도메스틱 = 이름 통짜 + 원본 룩 (v1 FAIL 지점 재검) · 호바트 = 시뮬 or 스크린샷 · 프로모션 개별 컨펌 대기
+
 ## 🌦️ 스트립 컨테인먼트 v2 BUILT (미스테이지) — v1 도메스틱 워크 FAIL (한…) 정정
 - v1 사인: flex:1 = basis-0 — 이름 그룹이 잔여-공간만 수령 → ko 이름 기아. v0 가블 메커니즘 규명: metrics basis-0 박스가 자식 플로어 합보다 작아져 이웃 위로 페인트.
 - v2 = **원본 토폴로지 복원 + 편차 2**: ① metrics grow 유지·basis AUTO (도메스틱 룩 원본 — 제로-박스 오버플로 사멸 = 가블 불능) ② area minWidth 68 (ko 6자 플로어 — 짧은 이름 절대 통짜). pmGroup shrink 복원 (미세… 원본 일드). 스케일링·스트링·페치 무접촉.
