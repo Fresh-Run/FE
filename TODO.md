@@ -1223,6 +1223,11 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 - Promotion discipline UNCHANGED: every promotion to a tester-facing channel gets its own explicit one-confirm.
 - AMENDMENT (7/30, marker-placement correction): the hold was NEVER a written rule with its own ledger line — it operated as a standing VERBAL instruction that contradicted written constraint ④ ("invites/testers never wait"). Retiring it RESTORES ④ rather than superseding anything; ③ (core-loop scope) was retired separately by the Phase 2 epic itself, and the 36531a0 marker mis-attributed that. Markers corrected in place (③ → Phase-2 attribution · ④ → reaffirmed). **Ledger-hygiene lesson: verbal rules that contradict written constraints are invisible to audit until someone reads both — standing verbal instructions get a ledger line at issuance.**
 
+## 💗 라이크-시스템 그래머+리컨실 FIX BUILT (미스테이지) — 5피스
+- **D1 원-그래머 (♥=토글·카운트=시트, 전면)**: run-post 자기-모드 단일 Pressable 스플릿 (♥ 디스에이블드+딤 — K2가 400-리프트 시 롤백 토글 스왑, 인-코멘트; 카운트→시트) · my-profile 트윈 동일 스플릿 (레이아웃 불변, 핸들러만). 공유 run-card = K1 이후 클린 확인 (♥→시트 배선 무).
+- **D2 리컨실-온-어라이벌 ("2" 픽스)**: run-post 이펙트 — 합의(서버 my_kudos===로컬 liked) 시 델타 제로; 미드-플라이트 가드 생존 (인-코멘트: "보호 코드로 보일 것" 트랩 명기 — 랜딩 후 리컨실을 영원히 막던 게 진짜 결함) · 홈+user-profile = **④ 선택: 데이터-어라이벌 시 홀세일 클리어** (로우 아이덴티티가 서버-트루스 도착 시점과 정확히 일치; 퍼-로우 매칭은 미드-플라이트 오버레이 하나를 구제할 뿐 — 다음 탭이 재생성. 심플+정확) · 서버 무증상 (단일 로우 — 클라-온리 확정).
+- 스트링-프리 (파리티 934 불변).
+
 ## ✅ 크루 바텀 클리핑 PROMOTED (2026-08-01) — 오너 [17:20] FULL (en 서머리 2줄 완전·crew-edit 동일·ko 불변·키보드 스크롤) · 원-컨펌 · 453bfb83 → production dac0e660-9400-4edd-bdea-b89cd7d8036f · 프로모션 해시-타이 MATCH (hmV7w5jn… 양채널 동일). **롤백 플로어 전진 → dac0e660** (d753fda8 은퇴). 매직-110 클래스 사망 — 실측 패딩이 미래 카피 성장 면역.
 
 ## 🔼 크루 바텀 클리핑 픽스 STAGED — 453bfb83-8987-4f96-8784-ff6563e6664c (커밋 d74d174) · 해시-타이 MATCH · 플로어 d753fda8 · 워크: en 크루-생성 바텀 스크롤 = 서머리 완전 가시 (버튼 위 여유) · ko 불변 · crew-edit 동일 · 키보드-열림 스크롤 회귀 (KAV) · 프로모션 개별 컨펌 대기

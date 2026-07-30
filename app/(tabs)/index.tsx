@@ -464,6 +464,12 @@ export default function HomeScreen() {
 
   // Kudos overlay for run cards, BOTH tabs (the user-profile pattern verbatim)
   const [kudosOv, setKudosOv] = useState<Record<string, { on: boolean; delta: number }>>({});
+  // RECONCILE ON ARRIVAL (8/1, the "2"-count fix): fresh rows already CONTAIN
+  // landed likes — a surviving overlay double-counts them. Wholesale clear on
+  // data arrival (over per-row matching): rows identity changes exactly at
+  // server-truth arrival, and a lost mid-flight overlay just re-creates on
+  // the next tap — simpler and correct.
+  useEffect(() => { setKudosOv({}); }, [feed.items, nearby.items]);
   // K1: likers sheet target (my-profile's kudosRun pattern)
   const [kudosSheetRun, setKudosSheetRun] = useState<{ id: string; count: number } | null>(null);
   const toggleRunKudos = useCallback((run: FeedRun) => {

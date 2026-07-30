@@ -61,6 +61,9 @@ export default function UserProfileScreen() {
   // follow_request_pending stays the fallback corrector.
   const [followOverlay, setFollowOverlay] = useState<'following' | 'requested' | 'none' | null>(null);
   const [kudosOverlay, setKudosOverlay]   = useState<Record<string, { on: boolean; delta: number }>>({});
+  // RECONCILE ON ARRIVAL (8/1) — see index.tsx's twin comment: fresh rows
+  // contain landed likes; wholesale clear beats per-row matching.
+  useEffect(() => { setKudosOverlay({}); }, [runs]);
   // K1: likers sheet target (my-profile's kudosRun pattern)
   const [kudosSheetRun, setKudosSheetRun] = useState<{ id: string; count: number } | null>(null);
   const pendingIds = usePendingFollows(st_ => st_.ids);

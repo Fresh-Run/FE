@@ -124,11 +124,22 @@ export default function RunPostScreen() {
   const [likeDelta, setLikeDelta] = useState(0);
   const touchedKudos = useRef(false);
   useEffect(() => {
-    if (run?.my_kudos != null && !touchedKudos.current) {
+    if (run?.my_kudos == null) return;
+    if (!touchedKudos.current) {
       setLiked(run.my_kudos);
       setLikeDelta(0); // server count is the authoritative base
+      return;
     }
-  }, [run?.my_kudos]);
+    // RECONCILE ON ARRIVAL (8/1, the "2"-count fix): the touched-guard above
+    // WILL look like protective code — it is, for MID-FLIGHT toggles. But it
+    // also blocked reconciliation forever: once the toggle LANDED, every
+    // refetch (focus SWR at :118) returned a count that already contained
+    // the like, and the surviving +1 delta double-counted it (0→like→refocus
+    // = "2"). Agreement (server my_kudos === local liked) means the action
+    // is in the server count — zero the delta. Disagreement = still
+    // mid-flight — keep it.
+    if (run.my_kudos === liked) setLikeDelta(0);
+  }, [run?.my_kudos, liked]);
   const baseCount = run?.kudos_count ?? (Number(params.kudosCount) || 0);
   const likeCount = Math.max(0, baseCount + likeDelta);
 
@@ -383,13 +394,17 @@ export default function RunPostScreen() {
                 </Pressable>
               )}
 
-              {/* ♥ kudos — own mode: count-only → likers sheet (self-kudos
-                  is a server 400); others: optimistic toggle */}
+              {/* ♥ kudos — ONE GRAMMAR (owner ruling 8/1): ♥ = toggle,
+                  count = sheet, everywhere. Own mode: ♥ DISABLED while the
+                  self-like 400 stands — K2 swaps in the rollback toggle
+                  when her lift lands; the count opens the sheet. */}
               {isOwn ? (
-                <Pressable onPress={() => setLikersOpen(true)} style={({ pressed }) => [st.kudosBtn, pressed && { opacity: 0.8 }]}>
-                  <Icon name="heart-outline" size={18} color={C.sub} />
-                  <Text style={st.kudosTxt}>{likeCount}</Text>
-                </Pressable>
+                <View style={st.kudosBtn}>
+                  <Icon name="heart-outline" size={18} color={C.faint} />
+                  <Pressable onPress={() => setLikersOpen(true)} hitSlop={8} style={({ pressed }) => pressed ? { opacity: 0.6 } : null}>
+                    <Text style={st.kudosTxt}>{likeCount}</Text>
+                  </Pressable>
+                </View>
               ) : kudosOff ? (
                 /* likes_disabled — toggle affordance GONE, but the count
                    opens the sheet (K1 ruling: existing likes stay viewable) */

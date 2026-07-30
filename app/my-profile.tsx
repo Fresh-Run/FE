@@ -106,10 +106,14 @@ function RunCard({ run, name, photoUrl, units, mapLive, onKudos }: {
           no post screen (card tap → activity analysis covers it). */}
       <View style={st.cardFooter}>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <Pressable onPress={onKudos} hitSlop={8} style={({ pressed }) => [st.kudosBtn, pressed && { opacity: 0.6 }]}>
-            <Icon name="heart-outline" size={18} color={C.sub} />
-            <Text style={st.kudosCount}>{run.kudos_count}</Text>
-          </Pressable>
+          {/* ONE GRAMMAR (8/1): ♥ disabled+dimmed (self-like 400 — K2 swaps
+              in the toggle on her lift); the COUNT opens the likers sheet. */}
+          <View style={st.kudosBtn}>
+            <Icon name="heart-outline" size={18} color={C.faint} />
+            <Pressable onPress={onKudos} hitSlop={8} style={({ pressed }) => pressed ? { opacity: 0.6 } : null}>
+              <Text style={st.kudosCount}>{run.kudos_count}</Text>
+            </Pressable>
+          </View>
           {/* 💬 display-only — taps fall through to the card (→ social view) */}
           <View style={[st.kudosBtn, { marginLeft: 14 }]}>
             <Icon name="chatbubble-outline" size={17} color={C.sub} />
