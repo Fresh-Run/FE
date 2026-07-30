@@ -25,10 +25,11 @@ export default function RouteMapScreen() {
   const insets = useSafeAreaInsets();
   const { height: winH } = useWindowDimensions();
   const [payload] = useState(() => takeRouteMap()); // one-shot; survives re-render
-  // v2 THREE-STATE LAYER CYCLE (owner-ruled from the a0cd59e0 walk):
-  // ① clean (default — the original look) → ② labeled → ③ satellite → ①.
-  // Per-visit; resets to ① on re-entry. Sticky pref = cheap follow-up.
-  const [layer, setLayer] = useState<'clean' | 'labeled' | 'satellite'>('clean');
+  // v2 THREE-STATE LAYER CYCLE · v3 REORDER (owner-ruled 2026-08-03):
+  // ① labeled (default — POI/street names showing on open) → ② clean →
+  // ③ satellite → ①. Per-visit; resets to ① labeled on re-entry.
+  // Sticky pref = cheap follow-up.
+  const [layer, setLayer] = useState<'clean' | 'labeled' | 'satellite'>('labeled');
   const { width: winW } = useWindowDimensions();
   const units = useSettings(s2 => s2.settings.units);
   // B7 upgrade decision (owner flag): tapping the hero BEFORE the full track
@@ -89,7 +90,7 @@ export default function RouteMapScreen() {
             labeled=layers (filled), satellite=globe-outline. Icon-only
             (zero keys); a11y hardcoded ko per this slice-7 file. */}
         <Pressable
-          onPress={() => setLayer(l => l === 'clean' ? 'labeled' : l === 'labeled' ? 'satellite' : 'clean')}
+          onPress={() => setLayer(l => l === 'labeled' ? 'clean' : l === 'clean' ? 'satellite' : 'labeled')}
           hitSlop={12}
           style={st.roundBtn}
           accessibilityLabel={layer === 'clean' ? '지도: 기본' : layer === 'labeled' ? '지도: 라벨' : '지도: 위성'}
