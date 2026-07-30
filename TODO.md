@@ -1227,6 +1227,8 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 
 ## 🔼 라이크-시스템 픽스 STAGED — 4246ecb4-acf6-4579-84fc-28828ec0894c (커밋 1fcb3ea) · 해시-타이 MATCH · 플로어 dac0e660 · 워크: 0-라이크 포스트 라이크→1→재진입 여전히 1 (재현) · 피드 라이크→풀-리프레시 1 유지 · 자기 포스트 ♥ 딤+이너트·카운트→시트 (트윈+런포스트) · 타인 ♥ 토글/카운트 시트 불변 · 프로모션 개별 컨펌 대기
 
+## 🔼 루트-맵 뷰어 (토글+POI) STAGED — a0cd59e0-6aef-4f17-9949-92f601256d99 (커밋 d0c29db; 9447e943 대체 — 토글 카고 승계) · 해시-타이 MATCH · 플로어 b8478119 · 워크: 확장 맵 = 거리/상점명 표시 (standard) → 토글 → 위성+라벨+라임 라인 (양 스킴) → 재진입 standard 리셋 · 4도어 상속 · 피드 카드 미니 클린 회귀 · 프로모션 개별 컨펌 대기
+
 ## 🏷️ 루트-맵 POI 라벨 FIX BUILT (미스테이지) — 필드 (오너: 확장 맵 무명 거리)
 - 진단: real-map 내장 MapView가 **showsPointsOfInterest={false} 하드코드** — 트래킹 자유런은 !hasCoursePath (=true, 라벨 표시). 서프레션은 hybrid에도 적용돼 있었음 (토글 모드 양쪽 라벨 킬 — 검증됨).
 - 픽스: showsPoi?: boolean 패스스루 (디폴트 false = 카드 미니의 의도적 클린-썸네일 유지) · route-map만 옵트인 — standard+hybrid 양 모드 라벨. 컨슈머 격리 grep 증명: showsPoi 소비 = route-map 유일 (그 외 전원 디폴트 = 종전 바이트).
