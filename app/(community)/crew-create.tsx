@@ -260,6 +260,7 @@ export default function CrewCreateScreen() {
   }, []));
 
   const [busy, setBusy]       = useState(false);
+  const [footerH, setFooterH] = useState(0); // measured overlay-CTA height (bottom-pad fix)
   const [created, setCreated] = useState<Crew | null>(null);
 
   // 출발지 defaults to the current placeName until the user edits it
@@ -344,7 +345,11 @@ export default function CrewCreateScreen() {
         <View style={{ width: 36 }} />
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 110 }} keyboardShouldPersistTaps="handled">
+      {/* bottom pad = MEASURED footer + breathing (en clip fix 7/31): the
+          old 110 was tuned to the ko one-line challenge summary — an en wrap
+          (or any future copy/date growth) clipped against the overlay CTA.
+          Measuring clears ANY wrap height, forever. 110 = pre-measure frame. */}
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: (footerH || 110) + 24 }} keyboardShouldPersistTaps="handled">
         {/* Identity preview */}
         <View style={st.previewWrap}>
           <View style={[st.previewTile, { backgroundColor: color, shadowColor: color }]}>
@@ -484,7 +489,7 @@ export default function CrewCreateScreen() {
       </ScrollView>
 
       {/* Sticky CTA — gated on name ≥ 2 per design */}
-      <View style={[st.footer, { paddingBottom: Math.max(insets.bottom, 12) + 12 }]}>
+      <View onLayout={e => setFooterH(e.nativeEvent.layout.height)} style={[st.footer, { paddingBottom: Math.max(insets.bottom, 12) + 12 }]}>
         <Pressable
           onPress={submit}
           disabled={!valid || busy}

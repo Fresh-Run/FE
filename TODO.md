@@ -1223,6 +1223,12 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 - Promotion discipline UNCHANGED: every promotion to a tester-facing channel gets its own explicit one-confirm.
 - AMENDMENT (7/30, marker-placement correction): the hold was NEVER a written rule with its own ledger line — it operated as a standing VERBAL instruction that contradicted written constraint ④ ("invites/testers never wait"). Retiring it RESTORES ④ rather than superseding anything; ③ (core-loop scope) was retired separately by the Phase 2 epic itself, and the 36531a0 marker mis-attributed that. Markers corrected in place (③ → Phase-2 attribution · ④ → reaffirmed). **Ledger-hygiene lesson: verbal rules that contradict written constraints are invisible to audit until someone reads both — standing verbal instructions get a ledger line at issuance.**
 
+## 📏 크루-생성 바텀 클리핑 FIX BUILT (미스테이지) — en 랩 클립 (스크린샷 ×2)
+- 진단: 스크롤 패드 110 vs 오버레이 푸터 실높이 ~112 (아일랜드) — ko 1줄에서도 −2px 마진, en 2줄 랩이 ~−19px 클립. **픽스 = 매직 넘버 사망: 푸터 onLayout 실측 + 24px 브리딩** (어떤 랩 높이·카피 성장·세이프에어리어에도 24px 클리어 — 슬라이스 6/7 카피 변경 면역). 양 로케일 데스크: ko/en 동일 24px 클리어 (종전 −2/−19).
+- 시블링: crew-edit 동일 구조·동일 110 — 동일 픽스 동커밋.
+- 인셋 관찰 (파킹된 룰링에 현재 눈): crew-create 루트 = KAV + 베어 insets.top + appBar paddingVertical 10 — **run-save와 동일 +10-클래스 프래질 패턴 확인** (4형제 스윕과 일치; 톱-픽스는 룰링 대기 존치).
+- 스트링-프리 (파리티 934 불변).
+
 ## ✅ 블랭크 네임 픽스 PROMOTED (2026-07-31) — 오너 [01:30] FULL (양 도어·리네임 왕복·무변경 무반응·로우 카피) · 원-컨펌 · ad6e0e27 → production d753fda8-880d-4dd6-807a-f357361f6684 · 프로모션 해시-타이 MATCH (O-N39kEa… 양채널 동일). **롤백 플로어 전진 → d753fda8** (8231fa81 은퇴) — 4948e12 이래 파람리스-도어 블랭크 클로즈.
 
 ## 🔼 블랭크 네임 픽스 STAGED — ad6e0e27-748f-4105-a622-5d0fb3272850 (커밋 e083944) · 해시-타이 MATCH · 플로어 8231fa81 · 워크: 프로필 설정→프로필 편집 = 이름 렌더 (재현 경로) · 탭 도어 회귀 · 리네임 라운드트립 · 무변경 저장 = 무동작 (게이트 레그) · 로우 카피 "이름 · 신체 정보" · 프로모션 개별 컨펌 대기
