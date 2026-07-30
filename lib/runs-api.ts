@@ -1,7 +1,23 @@
 // Run save + feedback — POST /api/runs, POST /api/runs/{id}/feedback.
 // Shapes mirror the backend's RunRequest / RunResponse / FeedbackRequest.
 
+import Constants from 'expo-constants';
+import * as Updates from 'expo-updates';
+
 import { ApiError, apiFetch, apiRequest } from '@/lib/api';
+
+/** RunRequest.app_version (BE additive, ≤64, null ok) — build/OTA forensics
+    for field rows ("stale-bundle vs real-bug" was undetermined without it).
+    Sources are all IN the shipped binaries (expo-application is NOT — a new
+    native module can't ride an OTA): runtimeVersion = binary version under
+    the appVersion policy; buildNumber = native CFBundleVersion; updateId
+    null = embedded (pre-OTA) launch. */
+function appVersionString(): string {
+  const ver = Updates.runtimeVersion ?? Constants.expoConfig?.version ?? '?';
+  const build = Constants.platform?.ios?.buildNumber ?? '?';
+  const ota = Updates.updateId ? `ota-${Updates.updateId.slice(0, 8)}` : 'embedded';
+  return `${ver} (${build}) ${ota}`.slice(0, 64);
+}
 
 /** PB broken by this save — POST /runs response only; first run always []. */
 export type NewRecord = {
@@ -96,6 +112,7 @@ export function saveRun(input: SaveRunInput): Promise<SavedRun> {
     method: 'POST',
     body: {
       route_id: input.routeId ?? null,
+      app_version: appVersionString(),
       distance_km: Math.round(input.distanceKm * 100) / 100,
       duration_sec: input.durationSec,
       avg_pace_sec_per_km: input.avgPaceSecPerKm,
