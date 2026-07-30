@@ -33,6 +33,7 @@ import { endLiveActivity, startLiveActivity, updateLiveActivity } from '@/module
 import type { CrewSessionTag } from '@/store/active-course';
 import { persistActiveRun, type PendingRun } from '@/store/pending-run';
 import { estimateKcal } from '@/store/use-local-profile';
+import { useSettings } from '@/store/use-settings';
 import type { Coordinate } from '@/types';
 
 export type TrackerState = 'idle' | 'countdown' | 'running' | 'paused' | 'ended';
@@ -72,6 +73,17 @@ const MAX_ACCURACY_M      = 25;   // reject fixes with a worse uncertainty radiu
 const MAX_SPEED_MPS       = 7;    // ~2'23"/km — faster is a glitch, not a runner
 const MIN_SEGMENT_M       = 5;    // jitter floor before a segment counts
 const STATIONARY_MPS      = 0.5;  // OS-reported speed below this = standing still
+// ── 자동 일시정지 + consecutive-evidence stationary core (8/2 bundle) ────────
+// Mechanism-(b) lesson (8/2 ledger, her 834/834@3.2m data): a SINGLE
+// sub-0.5 OS-speed reading lies during real movement even on clean GPS —
+// the old single-fix anchor teleport ate real distance at every stop/
+// restart. Evidence is now TIME-BASED and displacement-PRIMARY: ≥5s where
+// displacement stays under the jitter floor AND speed agrees throughout.
+const STILL_EVIDENCE_MS   = 5_000; // agreeing-evidence span before "still"
+const RESUME_SPEED_MPS    = 1.0;   // hysteresis above STATIONARY_MPS
+const RESUME_DISP_M       = 8;     // or clear displacement from the frozen point
+const AUTO_REPAUSE_GRACE_MS = 10_000; // after a MANUAL resume (crosswalk case)
+const START_GRACE_MS      = 10_000;   // countdown-exit can't instantly pause
 export const PACE_WINDOW_MS = 30_000; // rolling window for 현재 페이스
 export const MOVING_MIN_M   = 10;   // window distance to count as "moving"
 
@@ -104,6 +116,10 @@ let accumulatedMs = 0;
 let segmentStart: number | null = null;
 let wallStartedAt = 0; // true wall-clock start (beginRunning) — ③'s HK anchor
 let lastHeading: number | null = null; // T1 nav — last valid course-over-ground
+// stationary-core state
+let pauseSource: 'manual' | 'auto' | null = null;
+let stillRef: { lat: number; lng: number; t: number } | null = null;
+let manualResumeAt = 0;
 let anchor: { lat: number; lng: number; t: number } | null = null;
 let distanceM = 0;
 let path: Coordinate[] = [];      // filtered on-screen track (save + polyline)
@@ -152,11 +168,22 @@ function processFix(loc: Location.LocationObject): void {
     return; // bad fix — ignore
   }
 
-  // Countdown (GPS warm-up) and pause: keep the anchor fresh so the first
-  // running segment doesn't span the gap, but accumulate nothing.
-  if (state === 'countdown' || state === 'paused') {
+  // Countdown (GPS warm-up) and MANUAL pause: keep the anchor fresh so the
+  // first running segment doesn't span the gap, but accumulate nothing —
+  // a manual pause is an intentional gap (café walk must never credit).
+  // AUTO pause: the anchor stays FROZEN at the pause point — one moving fix
+  // resumes AND the pause-point→fix segment credits (the traffic-light
+  // sprint-start loses ~0m; the exact under-credit class the 8/2 core cures).
+  if (state === 'countdown' || (state === 'paused' && pauseSource !== 'auto')) {
     anchor = { ...cur, t };
     return;
+  }
+  if (state === 'paused' && pauseSource === 'auto') {
+    const disp = anchor ? haversineM(anchor, cur) : 0;
+    const moving = (speed != null && speed >= RESUME_SPEED_MPS) || disp > RESUME_DISP_M;
+    if (!moving) return; // still resting — frozen anchor holds
+    stillRef = { ...cur, t };
+    runSession.togglePause('auto'); // auto-resume; fall through so THIS fix credits
   }
   if (state !== 'running') {
     return;
@@ -169,10 +196,22 @@ function processFix(loc: Location.LocationObject): void {
     return;
   }
 
-  // Standing still — OS says so. Refresh the anchor so wander can't build up.
-  if (speed != null && speed >= 0 && speed < STATIONARY_MPS) {
-    anchor = { ...cur, t };
-    return;
+  // Consecutive-evidence stillness (8/2 — replaces the single-fix teleport):
+  // the anchor is FROZEN through stillness; this is the mechanism-(b) CURE.
+  // A misfired slow reading alone changes nothing; ≥5s of displacement+speed
+  // agreement triggers auto-pause (setting-gated). With the setting off, the
+  // jitter floor alone holds the anchor — resume credits from the frozen
+  // point either way, so stops can no longer eat distance.
+  {
+    const slow = speed != null && speed >= 0 && speed < STATIONARY_MPS;
+    if (!stillRef) {
+      stillRef = { ...cur, t };
+    } else if (haversineM(stillRef, cur) > MIN_SEGMENT_M || !slow) {
+      stillRef = { ...cur, t }; // evidence broken — movement or speed disagrees
+    } else if (t - stillRef.t >= STILL_EVIDENCE_MS) {
+      maybeAutoPause(t);
+      if (state !== 'running') return; // paused mid-fix — stop crediting here
+    }
   }
 
   const dM = haversineM(anchor, cur);
@@ -201,6 +240,20 @@ function processFix(loc: Location.LocationObject): void {
   while (paceWindow.length > 1 && paceWindow[0].t < cutoff) {
     paceWindow.shift();
   }
+}
+
+/** Auto-pause trigger — fires from the stillness core after ≥5s evidence.
+    Fire-time setting read (the gate-not-generator idiom); start-grace and
+    manual-resume grace keep it polite. Backgrounded no-fix rests: iOS
+    suppresses callbacks at rest (distanceInterval), so a backgrounded pause
+    may fire on the NEXT callback/wake — elapsed runs a few seconds over in
+    that window (honest limitation, on the ledger). */
+function maybeAutoPause(now: number): void {
+  if (state !== 'running') return;
+  if (!useSettings.getState().settings.run.auto_pause) return;
+  if (wallStartedAt && now - wallStartedAt < START_GRACE_MS) return;
+  if (now - manualResumeAt < AUTO_REPAUSE_GRACE_MS) return;
+  runSession.togglePause('auto');
 }
 
 /** Every delivery context funnels here: gates, then the throttled
@@ -406,13 +459,14 @@ export const runSession = {
     startLiveActivity(segmentStart);
   },
 
-  togglePause(): void {
+  togglePause(source: 'manual' | 'auto' = 'manual'): void {
     if (state === 'running') {
       const now = Date.now();
       if (segmentStart != null) {
         accumulatedMs += now - segmentStart;
         segmentStart = null;
       }
+      pauseSource = source;
       setState('paused');
       // a pause is an interruption-risk moment — persist outside the throttle
       const partial = buildPartial();
@@ -420,10 +474,24 @@ export const runSession = {
       pushLiveActivity(now, true); // ④b: freeze the widget clock exactly here
     } else if (state === 'paused') {
       const now = Date.now();
+      // a MANUAL resume from an auto-pause gets a re-pause grace (crosswalk:
+      // the runner overrode us — don't re-pause them at the same light)
+      if (pauseSource === 'auto' && source === 'manual') manualResumeAt = now;
+      pauseSource = null;
+      stillRef = null;
       segmentStart = now;
       setState('running');
       pushLiveActivity(now, true); // ④b: unfreeze — startedAt absorbs the pause
     }
+  },
+
+  /** Why the session is paused ('auto' | 'manual' | null) — cue/UI branching. */
+  getPauseSource: () => pauseSource,
+
+  /** LA/pause-intent while ALREADY auto-paused: convert to manual (sticky —
+      movement no longer auto-resumes; the runner claimed the pause). */
+  markManualPause(): void {
+    if (state === 'paused' && pauseSource === 'auto') pauseSource = 'manual';
   },
 
   /** Non-destructive preview of the live run — same math as stop(), zero

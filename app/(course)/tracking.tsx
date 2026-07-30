@@ -399,12 +399,25 @@ export default function TrackingScreen() {
     // split's Medium single and countdown-go's Light single.
     if (prev === 'running' && state === 'paused') {
       if (useSettings.getState().settings.run.haptics) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+      // 자동 일시정지 (8/2): never-silent — the AUTO event announces itself
+      // (manual = the runner did it; no cue). Backgrounded: haptic no-ops but
+      // TTS rides the live audio session + the LA flips to paused; voice-off
+      // + backgrounded = LA-visual only (RULED accepted — the lock screen is
+      // where a pocketed runner looks).
+      wasAutoPauseRef.current = runSession.getPauseSource() === 'auto';
+      if (wasAutoPauseRef.current && useSettings.getState().settings.run.voice_cue) {
+        speakCue('자동으로 일시정지했어요', useSettings.getState().settings.audio_coach.rate);
+      }
     }
     if (prev === 'paused' && state === 'running') {
       if (useSettings.getState().settings.run.haptics) {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         setTimeout(() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }, 140);
       }
+      if (wasAutoPauseRef.current && useSettings.getState().settings.run.voice_cue) {
+        speakCue('러닝을 다시 시작해요', useSettings.getState().settings.audio_coach.rate);
+      }
+      wasAutoPauseRef.current = false;
     }
     if (state === 'paused' || state === 'idle') stopSpeech();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -477,6 +490,7 @@ export default function TrackingScreen() {
   // rising-edge + 60s cooldown (the sibling's exact value: vocabulary
   // consistency beats a bespoke number) — run.haptics-gated, fire-time.
   const offBuzzAtRef = useRef(0);
+  const wasAutoPauseRef = useRef(false); // auto-pause cue pairing (pause→resume)
   useEffect(() => {
     const poly = course?.polyline;
     // 8/2 belt: compute in 'paused' too — a mount-while-paused instance now
@@ -696,7 +710,12 @@ export default function TrackingScreen() {
   // context, not render). Ignored unless a run is live (stale-intent guard).
   const laActionRef = useRef<{ pause: () => void; stop: () => void }>({ pause: () => {}, stop: () => {} });
   laActionRef.current = {
-    pause: () => { if (state === 'running' || state === 'paused') togglePause(); },
+    // auto-paused + LA pause intent = CONVERT to manual (sticky — movement
+    // no longer auto-resumes; the runner claimed the pause). Ruled 8/2.
+    pause: () => {
+      if (state === 'paused' && runSession.getPauseSource() === 'auto') { runSession.markManualPause(); return; }
+      if (state === 'running' || state === 'paused') togglePause();
+    },
     stop: () => { if (state === 'running' || state === 'paused') endRun(); },
   };
   useEffect(() => {
