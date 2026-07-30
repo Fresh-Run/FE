@@ -1227,6 +1227,8 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 
 ## 🔼 라이크-시스템 픽스 STAGED — 4246ecb4-acf6-4579-84fc-28828ec0894c (커밋 1fcb3ea) · 해시-타이 MATCH · 플로어 dac0e660 · 워크: 0-라이크 포스트 라이크→1→재진입 여전히 1 (재현) · 피드 라이크→풀-리프레시 1 유지 · 자기 포스트 ♥ 딤+이너트·카운트→시트 (트윈+런포스트) · 타인 ♥ 토글/카운트 시트 불변 · 프로모션 개별 컨펌 대기
 
+## 🔼 루트-맵 v2 STAGED — 6be0f988-5fb5-4b64-b469-9c76d09c96d5 (커밋 9f2ebee; a0cd59e0 대체) · 해시-타이 MATCH · 플로어 b8478119 · 워크: ① 클린 디폴트 (원래 룩) → 탭 사이클 라벨드→위성→클린 + 아이콘 3태 · 투-핑거 회전 → 컴퍼스 바텀-레프트 착석 판정 (워크-튠 레그) · 재진입 ① 리셋 · 피드 미니 클린 · 프로모션 개별 컨펌 대기
+
 ## 🗺️ 루트-맵 v2 BUILT (미스테이지) — 3-스테이트 레이어 사이클 + 컴퍼스 이동 (a0cd59e0 워크 룰링)
 - 사이클: ① 클린 (디폴트 — 원래 룩, showsPoi false) → ② 라벨드 (standard+POI) → ③ 위성 (hybrid+라벨+영상-키 라임) → ①. 퍼-비짓 리셋. 아이콘 = layers-outline → layers (필드) → globe-outline (Ionicons 설치 셋) · a11y ko 상태별.
 - 컴퍼스: compassOffset 시맨틱 네이티브 소스 검증 (AIRMap.m:715 — 디폴트 톱-라이트 프레임 오리진에 델타 가산, iOS/Apple 온리) → 바텀-레프트 도달 가능 (무제약 가산): x=-(winW-69), y=winH-insets.top-insets.bottom-140 (홈 인디케이터 클리어) — 정밀 위치는 워크 튠, 가정 인-코멘트.
