@@ -55,6 +55,9 @@ type Props = {
   marker?: boolean;
   /** Interactive map (slice-2+ surfaces); card mode when false (default). */
   interactive?: boolean;
+  /** route-map terrain toggle (8/1): 'hybrid' = satellite+labels. Undefined
+      = standard — every card-mode consumer unchanged. */
+  mapType?: 'standard' | 'hybrid';
   /** Native blue user-location dot (뛰러 가기 location card + its enlarged
       view). Renders in non-interactive card mode too (the dot is a native
       map layer, not a touch affordance) — but it arrives ASYNC, so cards
@@ -87,7 +90,7 @@ type Props = {
   lineHidden?: boolean;
 };
 
-export function RealMap({ height, borderRadius = 0, polyline, center, marker = false, startPin = false, showsUser = false, interactive = false, cache = true, distanceMarkers = false, units = 'km', officialDistanceKm, lineHidden = false }: Props) {
+export function RealMap({ height, borderRadius = 0, polyline, center, marker = false, startPin = false, showsUser = false, interactive = false, cache = true, distanceMarkers = false, units = 'km', officialDistanceKm, lineHidden = false, mapType }: Props) {
   // 지연 two-tone — keys on the RESOLVED scheme since Phase 5 (manual 다크
   // gets the dark stroke; 시스템 mode behaves as before via the store).
   // Map-theme binding (2026-07-22): the map obeys the APP's scheme picker,
@@ -141,6 +144,7 @@ export function RealMap({ height, borderRadius = 0, polyline, center, marker = f
       pointerEvents={interactive ? 'auto' : 'none'}
     >
       <MapView
+        mapType={mapType}
         ref={mapRef}
         userInterfaceStyle={resolved}
         style={{ flex: 1 }}

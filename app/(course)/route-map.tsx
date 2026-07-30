@@ -25,6 +25,10 @@ export default function RouteMapScreen() {
   const insets = useSafeAreaInsets();
   const { height: winH } = useWindowDimensions();
   const [payload] = useState(() => takeRouteMap()); // one-shot; survives re-render
+  // terrain toggle (owner ask 8/1, OTA v1): standard ⇄ hybrid, PER-VISIT —
+  // a sticky preference is a cheap follow-up if field demand shows. All four
+  // entry doors default to today's standard map.
+  const [mapMode, setMapMode] = useState<'standard' | 'hybrid'>('standard');
   const units = useSettings(s2 => s2.settings.units);
   // B7 upgrade decision (owner flag): tapping the hero BEFORE the full track
   // loads must not freeze this view on the coarse thumb — when the payload
@@ -51,6 +55,7 @@ export default function RouteMapScreen() {
           polyline={line}
           startPin
           interactive
+          mapType={mapMode}
           distanceMarkers={payload?.distanceMarkers}
           units={units}
           officialDistanceKm={payload?.officialDistanceKm}
@@ -74,7 +79,16 @@ export default function RouteMapScreen() {
             <Text style={st.titleTxt} numberOfLines={1}>{payload.title}</Text>
           </View>
         )}
-        <View style={{ width: 40 }} />
+        {/* map-mode toggle — icon-only (zero keys); a11y label hardcoded ko
+            like the rest of this slice-7 file */}
+        <Pressable
+          onPress={() => setMapMode(m => m === 'standard' ? 'hybrid' : 'standard')}
+          hitSlop={12}
+          style={st.roundBtn}
+          accessibilityLabel="지도 유형 전환"
+        >
+          <Icon name={mapMode === 'standard' ? 'layers-outline' : 'map-outline'} size={19} color={C.text} />
+        </Pressable>
       </View>
     </View>
   );
