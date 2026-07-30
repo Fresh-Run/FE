@@ -1231,6 +1231,13 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 
 ## ~~🔼 자동 일시정지 코어 STAGED — 0acdc4e8-3a10-47cb-94d1-1873fdb05044 (커밋 6133de3)~~ SUPERSEDED by 230cf9d6 (동일 카고 + app_version) · 해시-타이 MATCH · 마커 4/4 · 플로어 57f584d1 · **스테이징 ≠ 검증 — 교정-워크 프로토콜이 게이트** (아래 스크립트) · 프로모션 = 워크 통과 후 개별 컨펌
 
+## 🕐 런-카드 타임스탬프 로케일-스테일 FIXED (BUILT 미스테이지) — 컴파일러-캐시드 임퓨어 포매터 클래스 (신규, P2와 구별)
+- 필드 (오너): en→ko 플립 후 홈 런 카드 타임스탬프 en 잔존 ("Yesterday", "Jul 28"). **메커니즘 유죄: React Compiler (app.json experiments.reactCompiler: true)** — RunCard는 useT 앵커로 리렌더되지만 (4a-now 앵커 자체는 작동), 컴파일러가 각 표현식을 **가시 인자에만** 키드 캐시: fmtWhen(run.ran_at)의 내부 getLang() 리드는 비가시 의존 → run.ran_at 불변 → 캐시드 en 스트링 서빙, 옆의 T() 라벨은 플립 (T 아이덴티티가 lang-키드) — 오너 관찰 "타임스탬프만 스테일"과 정확 일치. run-card:39 앵커 코멘트의 "resolves fresh" 주장 AMENDED (프리-컴파일러 추론이었음).
+- **픽스: lang-명시 포매터 시그니처** — fmtDate/fmtAgo/fmtWhen/timeTitle에 `lang: Lang = getLang()` 트레일링 파라미터 (디폴트 = 임퍼러티브 콜러 무변경·이벤트-타임 프레시) + i18n에 useLang()/tIn()/tfIn() 신규 익스포트 · 렌더 사이트는 리액티브 lang을 명시 전달 (컴파일러 추적 의존화).
+- **정션 스윕 (원-메커니즘 원-스윕): 렌더 사이트 30곳/19파일** — fmtAgo 5서피스 전부 (kudos-sheet·notifications·crew-requests·crew-runs·crew-detail) + fmtWhen/fmtDate/timeTitle 렌더 사이트 (run-card ×2·my-profile 트윈 ×2·records 로우 ×3·run-post ×2·activity ×2·run-save ×2·edit-run·share-card·follow-requests·announcements·announcement-detail·course-post·crew-chat ×5) + **index.tsx Greeting** (복합 케이스: 구독 부재 + 헤더 useMemo lang-무의존 + formatDate() 제로-인자 스토어-리드 = 캐시-온-낫씽 — useLang 구독 추가·formatDate(lang)·tfIn 전환). 이벤트-핸들러 사이트 2곳 (activity/run-post setRouteMap 탭-타임) 의도적 무변경 — 임퍼러티브 클래스, 디폴트가 커버.
+- 스트링-프리 (전 키 기존 — grep-증명 NONE missing) · 파리티 934 불변 · 데스크 증명: 동일 인자+lang 플립 → en/ko 출력 분기 4/4.
+- **G 스코프 판정: P2 베어-t 클래스와 구별되는 신규 클래스** — P2 = 구독 부재 (리마운트 자가-치유); 본 클래스 = 구독 존재+리렌더 발생하되 컴파일러 표현식-캐시가 리컴퓨트 차단 (리마운트로만 치유). **G에 추가 차원: 렌더 바디에서 데이터-온리 인자로 불리는 스토어-리딩 함수 전수** — 베어 t('상수키') 렌더 사이트도 동일 리스크 (상수-인자 캐시). errorMessage(e) 컨벤션은 lang/e 양쪽 가시-인자 설계로 태생 면역.
+
 ## 📜 에러-계약 §5 어답션 (8/2 오딧 온-레코드 — **펜딩 그녀 §5 디플로이**, 빌드 없음)
 - 그녀 계약 (API_GUIDE §5행): error_code 준-전면 (미핸들 500 → "server_error" 금주) · 422 detail[]에 type+loc 머신-리더블 페어 · detail[].msg = raw pydantic 영어 **표시 절대 금지** · detail[].input **제거** (프라이버시 트림).
 - 오딧 결과 (8/2): **input 리드 0** (트림 무해) · **msg 구조적 도달 불가** — api.ts 파스가 pydantic 배열을 object 브랜치로 받아 message null → 제네릭 카피 (우연적 정합, 온-레코드) · **노출 클래스 = 스트링-detail / detail.message 버바팀** — ~70 e.message 사이트 (41파일)가 서버 프로즈를 그대로 렌더 (Alert+setError 체인).

@@ -42,7 +42,7 @@ import { Icon } from '@/components/ui';
 import { distUnit, fmtDist, fmtDuration, fmtPaceIn, fmtWhen, paceUnit, timeTitle } from '@/lib/run-format';
 import { MAX_RUN_PHOTOS, reencodeForUpload } from '@/lib/run-photos';
 import { maybeWriteRunToHealth } from '@/lib/health';
-import { t, tf, useT } from '@/lib/i18n';
+import { t, tf, useLang, useT } from '@/lib/i18n';
 import { runSession } from '@/store/run-session';
 import { saveRun, type RunVisibility } from '@/lib/runs-api';
 import { radius as R, spacing as S, type Tokens } from '@/lib/theme';
@@ -75,6 +75,7 @@ const visibilityLabel = (v: RunVisibility) =>
 
 export default function RunSaveScreen() {
   const C = useTokens();
+  const lang = useLang(); // compiler-visible locale for the date/title formatters (2026-08-03 formatter-cache fix)
   const st = useStyles(makeSt);
   const T = useT(); // reactive — a language flip repaints the screen
   const insets = useSafeAreaInsets();
@@ -200,7 +201,7 @@ export default function RunSaveScreen() {
   if (!run) return null;
 
   const endedIso = new Date(run.endedAt).toISOString();
-  const suggestedTitle = timeTitle(endedIso); // time-of-day placeholder
+  const suggestedTitle = timeTitle(endedIso, lang); // time-of-day placeholder
   const tooShort = run.distanceKm < MIN_SAVE_KM;
   const showMap = run.distanceKm >= MAP_HIDE_BELOW_KM && run.path.length >= 2;
 
@@ -357,7 +358,7 @@ export default function RunSaveScreen() {
         {/* ── Date row ── */}
         <View style={st.row}>
           <Icon name="calendar-outline" size={17} color={C.sub} />
-          <Text style={st.rowTxt}>{fmtWhen(endedIso)}</Text>
+          <Text style={st.rowTxt}>{fmtWhen(endedIso, lang)}</Text>
         </View>
         <View style={st.hairline} />
 

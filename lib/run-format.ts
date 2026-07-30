@@ -1,4 +1,12 @@
-import { getLang, t, tf } from '@/lib/i18n';
+import { getLang, tIn, tfIn } from '@/lib/i18n';
+
+/** Locale-branching formatters take an explicit lang so render call sites can
+    pass the reactive value (useLang) — the React Compiler caches expressions
+    on visible args only, so an internal getLang() read is an invisible dep
+    and the cached string survives a language flip (run-card bug, 2026-08-03).
+    The default keeps imperative callers (alerts, share text, cues) fresh at
+    event time with zero churn. */
+export type Lang = 'ko' | 'en';
 
 export function fmtPace(sec: number): string {
   const m = Math.floor(sec / 60);
@@ -46,35 +54,35 @@ export function fmtDuration(sec: number): string {
 // formatter — formats are formatter business, words come from the dicts)
 const MONTHS_EN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-export function fmtDate(isoStr: string): string {
+export function fmtDate(isoStr: string, lang: Lang = getLang()): string {
   const d = new Date(isoStr);
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const yesterday = new Date(today.getTime() - 86_400_000);
   const runDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-  if (runDay.getTime() === today.getTime()) return t('date.today');
-  if (runDay.getTime() === yesterday.getTime()) return t('date.yesterday');
-  return getLang() === 'en'
+  if (runDay.getTime() === today.getTime()) return tIn(lang, 'date.today');
+  if (runDay.getTime() === yesterday.getTime()) return tIn(lang, 'date.yesterday');
+  return lang === 'en'
     ? `${MONTHS_EN[d.getMonth()]} ${d.getDate()}`
     : `${d.getMonth() + 1}월 ${d.getDate()}일`;
 }
 
-export function fmtAgo(isoStr: string): string {
+export function fmtAgo(isoStr: string, lang: Lang = getLang()): string {
   // i18n 4d: locale-aware (fmtDate precedent) — this renders on FIVE
   // surfaces incl. four converted ones; words come from the dicts
   const min = Math.floor((Date.now() - new Date(isoStr).getTime()) / 60_000);
-  if (min < 1) return t('date.justNow');
-  if (min < 60) return tf('date.minAgo', { n: min });
+  if (min < 1) return tIn(lang, 'date.justNow');
+  if (min < 60) return tfIn(lang, 'date.minAgo', { n: min });
   const h = Math.floor(min / 60);
-  if (h < 24) return tf('date.hourAgo', { n: h });
-  return fmtDate(isoStr);
+  if (h < 24) return tfIn(lang, 'date.hourAgo', { n: h });
+  return fmtDate(isoStr, lang);
 }
 
-export function fmtWhen(isoStr: string): string {
+export function fmtWhen(isoStr: string, lang: Lang = getLang()): string {
   const d = new Date(isoStr);
   const hh = String(d.getHours()).padStart(2, '0');
   const mm = String(d.getMinutes()).padStart(2, '0');
-  return `${fmtDate(isoStr)} · ${hh}:${mm}`;
+  return `${fmtDate(isoStr, lang)} · ${hh}:${mm}`;
 }
 
 // ─── Course preview stats (bundle: frCourseStats) ─────────────────────────────
@@ -111,13 +119,13 @@ export function courseStats(item: CourseStatsInput) {
 
 // Canvas verdict 2026-07-07: 야간 owns deep night (canvas renders 야간 at
 // 03:23); 새벽 is the early-dawn slot 04:00–06:59.
-export function timeTitle(isoStr: string): string {
+export function timeTitle(isoStr: string, lang: Lang = getLang()): string {
   const h = new Date(isoStr).getHours();
-  if (h >= 4  && h < 7)  return t('title.dawn');
-  if (h >= 7  && h < 10) return t('title.morning');
-  if (h >= 10 && h < 12) return t('title.forenoon');
-  if (h >= 12 && h < 14) return t('title.lunch');
-  if (h >= 14 && h < 18) return t('title.afternoon');
-  if (h >= 18 && h < 21) return t('title.evening');
-  return t('title.night');
+  if (h >= 4  && h < 7)  return tIn(lang, 'title.dawn');
+  if (h >= 7  && h < 10) return tIn(lang, 'title.morning');
+  if (h >= 10 && h < 12) return tIn(lang, 'title.forenoon');
+  if (h >= 12 && h < 14) return tIn(lang, 'title.lunch');
+  if (h >= 14 && h < 18) return tIn(lang, 'title.afternoon');
+  if (h >= 18 && h < 21) return tIn(lang, 'title.evening');
+  return tIn(lang, 'title.night');
 }

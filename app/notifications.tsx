@@ -45,7 +45,7 @@ import {
 import { fmtAgo } from '@/lib/run-format';
 import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
-import { t as tx, tf, useT, type StringKey } from '@/lib/i18n';
+import { t as tx, tf, useLang, useT, type StringKey } from '@/lib/i18n';
 
 // ─── Type mapping (owner-approved 2026-07-07; no design source) ──────────────
 
@@ -169,6 +169,7 @@ function NotifIcon({ meta, actor, photoUrl }: { meta: Meta; actor: string; photo
 
 function NotifRow({ n, onPress, onDelete }: { n: AppNotification; onPress: () => void; onDelete: () => void }) {
   const T = useT(); // reactive anchor — the long-lived list's row
+  const lang = useLang(); // compiler-visible locale for fmtAgo (2026-08-03 formatter-cache fix)
   const C = useTokens();
   const st = useStyles(makeSt);
   const meta = typeMeta(C)[n.type] ?? fallbackMeta(C);
@@ -208,7 +209,7 @@ function NotifRow({ n, onPress, onDelete }: { n: AppNotification; onPress: () =>
       <View style={{ flex: 1, minWidth: 0 }}>
         <View style={st.rowHead}>
           <Text style={[st.tag, { color: meta.tone }]}>{T(meta.tag as StringKey)}</Text>
-          <Text style={st.ago}>{fmtAgo(n.created_at)}</Text>
+          <Text style={st.ago}>{fmtAgo(n.created_at, lang)}</Text>
         </View>
         <Text style={st.body}>
           {(() => {

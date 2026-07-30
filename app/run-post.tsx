@@ -76,7 +76,7 @@ import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { useRunDetail } from '@/hooks/use-runs';
 import { useSettings } from '@/store/use-settings';
 import { useStore } from '@/store/use-store';
-import { t, tf, useT } from '@/lib/i18n';
+import { t, tf, useLang, useT } from '@/lib/i18n';
 
 const HERO_H = 210;
 
@@ -94,6 +94,7 @@ function StatTile({ label, value, unit }: { label: string; value: string; unit?:
 
 export default function RunPostScreen() {
   const T = useT(); // reactive anchor — stack-mounted beneath 설정
+  const lang = useLang(); // compiler-visible locale for the date/title formatters (2026-08-03 formatter-cache fix)
   const C = useTokens();
   const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
@@ -340,7 +341,7 @@ export default function RunPostScreen() {
               <Avatar name={nickname} size={42} photoUrl={authorPhotoUrl} />
               <View style={{ flex: 1, minWidth: 0 }}>
                 <Text style={st.authorName} numberOfLines={1}>{nickname}</Text>
-                <Text style={st.authorSub}>{fmtWhen(run.ran_at)}</Text>
+                <Text style={st.authorSub}>{fmtWhen(run.ran_at, lang)}</Text>
               </View>
             </Pressable>
 
@@ -367,7 +368,7 @@ export default function RunPostScreen() {
             </View>
 
             <View style={{ paddingHorizontal: S.gutter }}>
-              <Text style={st.title}>{run.title ?? timeTitle(run.ran_at)}</Text>
+              <Text style={st.title}>{run.title ?? timeTitle(run.ran_at, lang)}</Text>
 
               {/* Run stats — canvas-exact tiles (unit-aware) */}
               <View style={st.statsRow}>

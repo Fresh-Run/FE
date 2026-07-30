@@ -9,7 +9,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { KudosSheet } from '@/components/kudos-sheet';
 import { SuggestedRunnersRow, useSuggestedRunners } from '@/components/suggested-runners';
-import { getLang, t, tf, useT } from '@/lib/i18n';
+import { t, tf, tfIn, tIn, useLang, useT } from '@/lib/i18n';
 import { useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
@@ -66,10 +66,10 @@ function verdictColor(C: Tokens, tone: WeatherTone): string {
 
 const DAY_KEYS = ['day.sun', 'day.mon', 'day.tue', 'day.wed', 'day.thu', 'day.fri', 'day.sat'] as const;
 const MONTHS_EN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-function formatDate(): string {
+function formatDate(lang: 'ko' | 'en'): string {
   const d = new Date();
-  const day = t(DAY_KEYS[d.getDay()]);
-  return getLang() === 'en'
+  const day = tIn(lang, DAY_KEYS[d.getDay()]);
+  return lang === 'en'
     ? `${day}, ${MONTHS_EN[d.getMonth()]} ${d.getDate()}`
     : `${day}, ${d.getMonth() + 1}월 ${d.getDate()}일`;
 }
@@ -79,11 +79,17 @@ function formatDate(): string {
 function Greeting({ name, photoUrl, showBellDot, onBell }: { name: string; photoUrl: string | null; showBellDot: boolean; onBell: () => void }) {
   const C = useTokens();
   const gst = useStyles(makeGst);
+  // own lang subscription (2026-08-03 formatter-cache fix): this component
+  // renders under the header useMemo (no lang dep) — without subscribing it
+  // never re-renders on a flip; with it, the memo's element-reference bailout
+  // is irrelevant. lang passed into formatDate/tfIn keeps the compiler's
+  // expression cache locale-keyed.
+  const lang = useLang();
   return (
     <View style={gst.row}>
       <View style={{ minWidth: 0, flex: 1 }}>
-        <RNText style={gst.date}>{formatDate()}</RNText>
-        <RNText style={gst.heading} numberOfLines={1}>{tf('home.greeting', { name })}</RNText>
+        <RNText style={gst.date}>{formatDate(lang)}</RNText>
+        <RNText style={gst.heading} numberOfLines={1}>{tfIn(lang, 'home.greeting', { name })}</RNText>
       </View>
       <View style={gst.actions}>
         <Pressable onPress={onBell} style={[gst.bellBtn, shadows.sm]}>

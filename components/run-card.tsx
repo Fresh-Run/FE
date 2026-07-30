@@ -18,7 +18,7 @@ import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { useRunTrack } from '@/lib/track-cache';
 import type { UserRun } from '@/hooks/use-user-profile';
 import type { useSettings } from '@/store/use-settings';
-import { useT } from '@/lib/i18n';
+import { useLang, useT } from '@/lib/i18n';
 
 // Course affordances (이 코스 달리기 CTA + header bookmark, canvas card B)
 // REMOVED 2026-07-21 — owner step-back ruling; the feature returns
@@ -36,10 +36,15 @@ export function RunCard({ run, units, mapLive, onKudos, kudosOff, onOpen, onAvat
   /** K1: like-count tap → likers sheet (absent = inert count, pre-K1 render) */
   onCountPress?: () => void;
 }) {
-  // reactive anchor (owner ruling 4a-now): subscribes the card to lang —
-  // long-lived FlatList instances repaint on mid-session flips, and the
-  // timeTitle() fallback in this render body resolves fresh on that repaint
+  // reactive anchor (owner ruling 4a-now): subscribes the card to lang so
+  // long-lived FlatList instances repaint on mid-session flips. AMENDED
+  // 2026-08-03: the repaint alone did NOT refresh the date/title formatters —
+  // the React Compiler caches each expression on its visible args, so
+  // fmtWhen(run.ran_at) kept its cached-locale string across flips (field:
+  // home timestamps stuck in en). The reactive `lang` passed into every
+  // locale-branching formatter makes the locale a tracked dependency.
   const T = useT();
+  const lang = useLang();
   const C = useTokens();
   const st = useStyles(makeSt);
   // visual-split ruling: full track when fetched, thumb while loading
@@ -52,7 +57,7 @@ export function RunCard({ run, units, mapLive, onKudos, kudosOff, onOpen, onAvat
         </Pressable>
         <View style={{ flex: 1, minWidth: 0 }}>
           <Text style={st.cardName}>{run.nickname}</Text>
-          <Text style={st.cardDate}>{fmtWhen(run.ran_at)}</Text>
+          <Text style={st.cardDate}>{fmtWhen(run.ran_at, lang)}</Text>
         </View>
       </View>
       {/* polyline_thumb slice: viewable + thumb → real map; off-screen /
@@ -63,7 +68,7 @@ export function RunCard({ run, units, mapLive, onKudos, kudosOff, onOpen, onAvat
         <MiniMap seed={run.run_id} height={200} polyline={cardLine ?? undefined} />
       )}
       <View style={st.cardBody}>
-        <Text style={st.cardTitle}>{run.title ?? timeTitle(run.ran_at)}</Text>
+        <Text style={st.cardTitle}>{run.title ?? timeTitle(run.ran_at, lang)}</Text>
         <View style={st.statsRow}>
           {([
             [fmtDist(run.distance_km, units, 1), distUnit(units), T('runSave.statDist')],

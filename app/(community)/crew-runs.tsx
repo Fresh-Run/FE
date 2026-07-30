@@ -48,7 +48,7 @@ import { shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { useRunTrack } from '@/lib/track-cache';
 import { useSettings } from '@/store/use-settings';
-import { t, tf } from '@/lib/i18n';
+import { t, tf, useLang } from '@/lib/i18n';
 
 function RunCard({ run, units, mapLive, onOpen }: {
   run: CrewRunItem;
@@ -58,6 +58,7 @@ function RunCard({ run, units, mapLive, onOpen }: {
 }) {
   const C = useTokens();
   const st = useStyles(makeSt);
+  const lang = useLang(); // compiler-visible locale for the date/title formatters (2026-08-03 formatter-cache fix)
   // visual-split ruling: full track when fetched, thumb while loading
   const { line: cardLine, pending: linePending } = useRunTrack(mapLive ? run.run_id : null, run.polyline_thumb);
   return (
@@ -78,7 +79,7 @@ function RunCard({ run, units, mapLive, onOpen }: {
                 <Text style={st.sessionChipTxt}>{tf('crw.nJoined', { n: run.session_participant_count })}</Text>
               </View>
             )}
-            <Text style={st.cardDate}>{fmtAgo(run.ran_at)}</Text>
+            <Text style={st.cardDate}>{fmtAgo(run.ran_at, lang)}</Text>
             {run.area ? (
               <>
                 <View style={st.dot} />
@@ -95,7 +96,7 @@ function RunCard({ run, units, mapLive, onOpen }: {
         <MiniMap seed={run.run_id} height={160} polyline={cardLine ?? undefined} />
       )}
       <View style={st.cardBody}>
-        <Text style={st.cardTitle}>{run.title ?? timeTitle(run.ran_at)}</Text>
+        <Text style={st.cardTitle}>{run.title ?? timeTitle(run.ran_at, lang)}</Text>
         <View style={st.statsRow}>
           {([
             [fmtDist(run.distance_km, units, 1), distUnit(units), t('runSave.statDist')],

@@ -22,7 +22,7 @@ import { PaceChart, SplitsTable } from '@/components/run-splits';
 import { Icon } from '@/components/ui';
 // MiniMap fallback now lives inside MediaCarousel (no polyline → seed map)
 import { useRunDetail } from '@/hooks/use-runs';
-import { t, tf, useT } from '@/lib/i18n';
+import { t, tf, useLang, useT } from '@/lib/i18n';
 import { deleteRun } from '@/lib/runs-api';
 import { useRunTrack } from '@/lib/track-cache';
 import { distUnit, fmtDist, fmtDuration, fmtPaceIn, fmtWhen, timeTitle } from '@/lib/run-format';
@@ -65,6 +65,7 @@ const HERO_H = 200;
 
 export default function ActivityScreen() {
   const C = useTokens();
+  const lang = useLang(); // compiler-visible locale for the date/title formatters (2026-08-03 formatter-cache fix)
   const st = useStyles(makeSt);
   const T = useT();
   const insets = useSafeAreaInsets();
@@ -144,8 +145,8 @@ export default function ActivityScreen() {
   const dist  = fmtDist(run.distance_km, units, 2);
   const dur   = fmtDuration(run.duration_sec);
   const pace  = run.avg_pace_sec_per_km != null ? fmtPaceIn(run.avg_pace_sec_per_km, units) : '--';
-  const when  = fmtWhen(run.ran_at);
-  const title = run.title ?? timeTitle(run.ran_at);
+  const when  = fmtWhen(run.ran_at, lang);
+  const title = run.title ?? timeTitle(run.ran_at, lang);
 
   const splits = run.splits ?? [];
   const kcal = lpSaved && lpFields.weightKg > 0

@@ -28,10 +28,11 @@ import { openProfile } from '@/lib/profile-nav';
 import { fmtWhen } from '@/lib/run-format';
 import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
-import { t, tf, useT } from '@/lib/i18n';
+import { t, tf, useLang, useT } from '@/lib/i18n';
 
 export default function FollowRequestsScreen() {
   const T = useT(); // reactive anchor — stack-mounted beneath 설정, repaints on lang flip
+  const lang = useLang(); // compiler-visible locale for the date/title formatters (2026-08-03 formatter-cache fix)
   const C = useTokens();
   const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
@@ -92,7 +93,7 @@ export default function FollowRequestsScreen() {
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <Text style={st.name} numberOfLines={1}>{name}</Text>
                     <Text style={st.sub} numberOfLines={1}>
-                      {fmtWhen(item.followed_at)}{item.is_following ? T('fq.mutual') : ''}
+                      {fmtWhen(item.followed_at, lang)}{item.is_following ? T('fq.mutual') : ''}
                     </Text>
                   </View>
                 </Pressable>

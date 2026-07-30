@@ -30,7 +30,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/ui';
-import { t, useT } from '@/lib/i18n';
+import { t, useLang, useT } from '@/lib/i18n';
 import { timeTitle } from '@/lib/run-format';
 import { MAX_RUN_PHOTOS, reencodeForUpload, uploadRunPhotoToSlot } from '@/lib/run-photos';
 import { updateRun, type RunVisibility } from '@/lib/runs-api';
@@ -41,6 +41,7 @@ import { visibilityOptions } from '@/app/(course)/run-save';
 
 export default function EditRunScreen() {
   const T = useT();
+  const lang = useLang(); // compiler-visible locale for the date/title formatters (2026-08-03 formatter-cache fix)
   const C = useTokens();
   const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
@@ -128,7 +129,7 @@ export default function EditRunScreen() {
     }
   }
 
-  const suggestedTitle = run ? timeTitle(run.ran_at) : '';
+  const suggestedTitle = run ? timeTitle(run.ran_at, lang) : '';
 
   async function save() {
     if (!runId || saving) return;

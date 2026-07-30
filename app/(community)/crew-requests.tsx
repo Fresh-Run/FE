@@ -15,7 +15,7 @@
 import { useFocusEffect } from '@react-navigation/native';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useState } from 'react';
-import { t, tf } from '@/lib/i18n';
+import { t, tf, useLang } from '@/lib/i18n';
 import {
   ActivityIndicator,
   Alert,
@@ -43,6 +43,7 @@ import { useStyles, useTokens } from '@/hooks/use-tokens';
 
 export default function CrewRequestsScreen() {
   const C = useTokens();
+  const lang = useLang(); // compiler-visible locale for fmtAgo (2026-08-03 formatter-cache fix)
   const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
   const { crewId } = useLocalSearchParams<{ crewId: string }>();
@@ -151,7 +152,7 @@ export default function CrewRequestsScreen() {
                   <Avatar name={name} size={44} ring={C.border} ringWidth={1} initialsRatio={0.38} upper />
                   <View style={{ flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 7 }}>
                     <Text style={st.name} numberOfLines={1}>{name}</Text>
-                    <Text style={st.when}>{fmtAgo(item.created_at)}</Text>
+                    <Text style={st.when}>{fmtAgo(item.created_at, lang)}</Text>
                   </View>
                 </Pressable>
                 {busy ? (

@@ -22,12 +22,13 @@ import { openProfile } from '@/lib/profile-nav';
 import { fmtAgo } from '@/lib/run-format';
 import { shadows, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
-import { tf, useT } from '@/lib/i18n';
+import { tf, useLang, useT } from '@/lib/i18n';
 
 export function KudosSheet({ runId, kudosCount, onClose }: {
   runId: string; kudosCount: number; onClose: () => void;
 }) {
   const T = useT(); // reactive anchor — mounts over long-lived screens; tf resolves fresh under the subscribed re-render. Last-parent gate satisfied (my-profile 4b-2 + run-post 4c) — the 4a-now revert restored.
+  const lang = useLang(); // compiler-visible locale for fmtAgo (2026-08-03 formatter-cache fix)
   const C = useTokens();
   const st = useStyles(makeSt);
   const [rows, setRows]       = React.useState<RunKudoser[] | null>(null);
@@ -76,7 +77,7 @@ export function KudosSheet({ runId, kudosCount, onClose }: {
                     <Avatar name={item.nickname} size={44} photoUrl={item.avatar_url} ring={C.border} initialsRatio={0.38} upper />
                     <Text style={st.likerName} numberOfLines={1}>{item.nickname}</Text>
                   </Pressable>
-                  <Text style={st.likerWhen}>{fmtAgo(item.created_at)}</Text>
+                  <Text style={st.likerWhen}>{fmtAgo(item.created_at, lang)}</Text>
                 </View>
               )}
               ItemSeparatorComponent={() => <View style={{ height: 10 }} />}

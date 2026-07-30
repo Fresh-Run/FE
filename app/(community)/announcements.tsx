@@ -24,7 +24,7 @@ import { listAnnouncements, type Announcement } from '@/lib/announcements-api';
 import { fmtWhen } from '@/lib/run-format';
 import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
-import { t, tf } from '@/lib/i18n';
+import { t, tf, useLang } from '@/lib/i18n';
 
 function fmtRunAt(iso: string): string {
   const d = new Date(iso);
@@ -33,6 +33,7 @@ function fmtRunAt(iso: string): string {
 
 export default function AnnouncementsScreen() {
   const C = useTokens();
+  const lang = useLang(); // compiler-visible locale for the date/title formatters (2026-08-03 formatter-cache fix)
   const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
   const { crewId, canManage } = useLocalSearchParams<{ crewId: string; canManage?: string }>();
@@ -94,7 +95,7 @@ export default function AnnouncementsScreen() {
                   ) : null}
                   <Avatar name={item.author_nickname ?? t('ann.leaderFallback')} photoUrl={item.author_avatar_url} size={16} initialsRatio={0.5} />
                   <Text style={st.metaTxt}>
-                    {item.author_nickname ?? t('ann.leaderFallback')} · {fmtWhen(item.created_at)}
+                    {item.author_nickname ?? t('ann.leaderFallback')} · {fmtWhen(item.created_at, lang)}
                     {item.run_at ? tf('ann.going', { n: item.rsvp.going }) : ''}
                   </Text>
                 </View>

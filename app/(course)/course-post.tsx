@@ -45,6 +45,7 @@ import {
   type RouteComment,
 } from '@/lib/routes-api';
 import { fmtWhen } from '@/lib/run-format';
+import { useLang } from '@/lib/i18n';
 import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { setPendingCourse } from '@/store/pending-course';
@@ -72,6 +73,7 @@ function StatTile({ label, value }: { label: string; value: string }) {
 
 export default function CoursePostScreen() {
   const C = useTokens();
+  const lang = useLang(); // compiler-visible locale for the date formatter (2026-08-03 formatter-cache fix)
   const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
   // Handoff read once; the store stays set so re-renders survive
@@ -183,7 +185,7 @@ export default function CoursePostScreen() {
           <Avatar name={route.owner_nickname} size={42} photoUrl={route.owner_avatar_url} />
           <View style={{ flex: 1, minWidth: 0 }}>
             <Text style={st.authorName} numberOfLines={1}>{route.owner_nickname ?? '러너'}</Text>
-            <Text style={st.authorSub}>{fmtWhen(route.created_at)}</Text>
+            <Text style={st.authorSub}>{fmtWhen(route.created_at, lang)}</Text>
           </View>
         </Pressable>
 

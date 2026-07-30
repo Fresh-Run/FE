@@ -43,7 +43,7 @@ import { fmtWhen } from '@/lib/run-format';
 import { supabase } from '@/lib/supabase';
 import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
-import { getLang, t, tf } from '@/lib/i18n';
+import { getLang, t, tf, useLang } from '@/lib/i18n';
 
 const RSVP_OPTS: { value: RsvpStatus; label: string }[] = [
   { value: 'going',     label: 'annd.going' },
@@ -64,6 +64,7 @@ function fmtRunAt(iso: string): string {
 
 export default function AnnouncementDetailScreen() {
   const C = useTokens();
+  const lang = useLang(); // compiler-visible locale for the date/title formatters (2026-08-03 formatter-cache fix)
   const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
   const { crewId, announcementId } = useLocalSearchParams<{ crewId: string; announcementId: string }>();
@@ -191,7 +192,7 @@ export default function AnnouncementDetailScreen() {
           <Text style={st.title}>{ann.title}</Text>
           <View style={st.metaRow}>
             <Avatar name={ann.author_nickname ?? t('ann.leaderFallback')} photoUrl={ann.author_avatar_url} size={20} initialsRatio={0.5} />
-            <Text style={st.meta}>{ann.author_nickname ?? t('ann.leaderFallback')} · {fmtWhen(ann.created_at)}</Text>
+            <Text style={st.meta}>{ann.author_nickname ?? t('ann.leaderFallback')} · {fmtWhen(ann.created_at, lang)}</Text>
           </View>
           <Text style={st.body}>{ann.body}</Text>
 

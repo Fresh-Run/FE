@@ -20,7 +20,7 @@ import { SafeImage } from '@/components/safe-image';
 import { MonthPicker } from '@/components/month-picker';
 import { Icon } from '@/components/ui';
 import { useRuns, type Run } from '@/hooks/use-runs';
-import { t, tf, useT, type StringKey } from '@/lib/i18n';
+import { t, tf, useLang, useT, type StringKey } from '@/lib/i18n';
 import { distUnit, fmtDate, fmtDist, fmtDuration, fmtPaceIn, fmtWhen, timeTitle } from '@/lib/run-format';
 import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
@@ -254,6 +254,7 @@ function MetricPill({ icon, value, color }: { icon: string; value: string; color
 
 function RunRow({ run }: { run: Run }) {
   const C = useTokens();
+  const lang = useLang(); // compiler-visible locale for the date/title formatters (2026-08-03 formatter-cache fix)
   const st = useStyles(makeSt);
   const units = useSettings(s => s.settings.units);
   return (
@@ -275,10 +276,10 @@ function RunRow({ run }: { run: Run }) {
       </View>
       <View style={{ flex: 1, minWidth: 0 }}>
         <View style={st.runRowTop}>
-          <Text style={st.runTitle} numberOfLines={1}>{run.title ?? timeTitle(run.ran_at)}</Text>
-          <Text style={st.runDate}>{fmtDate(run.ran_at)}</Text>
+          <Text style={st.runTitle} numberOfLines={1}>{run.title ?? timeTitle(run.ran_at, lang)}</Text>
+          <Text style={st.runDate}>{fmtDate(run.ran_at, lang)}</Text>
         </View>
-        <Text style={st.runWhen} numberOfLines={1}>{fmtWhen(run.ran_at)}</Text>
+        <Text style={st.runWhen} numberOfLines={1}>{fmtWhen(run.ran_at, lang)}</Text>
         <View style={st.runMetrics}>
           <MetricPill icon="location-outline"    value={`${fmtDist(run.distance_km, units, 2)} ${distUnit(units)}`}                            color={C.accentGrn} />
           <MetricPill icon="time-outline"        value={fmtDuration(run.duration_sec)}                                                         color={C.faint} />

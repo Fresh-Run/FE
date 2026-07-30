@@ -6,7 +6,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import React, { useCallback, useRef, useState } from 'react';
-import { t, tf, type StringKey } from '@/lib/i18n';
+import { t, tf, useLang, type StringKey } from '@/lib/i18n';
 import {
   ActivityIndicator,
   Alert,
@@ -126,6 +126,7 @@ const HERO_H = 220;
 
 export default function CrewDetailScreen() {
   const C = useTokens();
+  const lang = useLang(); // compiler-visible locale for fmtAgo (2026-08-03 formatter-cache fix)
   const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
   const { crewId } = useLocalSearchParams<{ crewId: string }>();
@@ -883,7 +884,7 @@ export default function CrewDetailScreen() {
                               <Text style={st.feedSessionTxt}>{tf('crw.nJoined', { n: run.session_participant_count })}</Text>
                             </View>
                           )}
-                          <Text style={st.feedWhen}>{fmtAgo(run.ran_at)}</Text>
+                          <Text style={st.feedWhen}>{fmtAgo(run.ran_at, lang)}</Text>
                         </View>
                         <View style={st.feedStatsRow}>
                           <Text style={st.feedKm}>{fmtDist(run.distance_km, units, 1)}<Text style={st.feedKmUnit}> {distUnit(units)}</Text></Text>

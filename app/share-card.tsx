@@ -37,7 +37,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { t, tf } from '@/lib/i18n';
+import { t, tf, useLang } from '@/lib/i18n';
 import { Image, Pressable, ScrollView, Share, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Reanimated, { runOnJS, useAnimatedProps, useAnimatedStyle, useSharedValue, type SharedValue } from 'react-native-reanimated';
@@ -356,6 +356,7 @@ function useBgLayer(
 
 export default function ShareCardScreen() {
   const C = useTokens();
+  const lang = useLang(); // compiler-visible locale for the date/title formatters (2026-08-03 formatter-cache fix)
   const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
   const { width: winW, height: winH } = useWindowDimensions();
@@ -504,7 +505,7 @@ export default function ShareCardScreen() {
   // card must match the run-detail hero exactly. Moving pace lives only in
   // the analysis card, under its own label.
   const avgPace = run.avg_pace_sec_per_km;
-  const title = run.title ?? timeTitle(run.ran_at);
+  const title = run.title ?? timeTitle(run.ran_at, lang);
   const rows: [ShareMetricKey, string, string][] = [];
   if (prefs.metrics.dist) rows.push(['dist', `${fmtDist(run.distance_km, units, 2)}${distUnit(units)}`, t('shr.metricDist')]);
   if (prefs.metrics.pace && avgPace != null) rows.push(['pace', `${fmtPaceIn(avgPace, units)}${paceUnit(units)}`, t('shr.metricPace')]);

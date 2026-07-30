@@ -44,6 +44,27 @@ export function useT(): (key: StringKey) => string {
   return useCallback((key: StringKey) => DICTS[lang][key] ?? ko[key], [lang]);
 }
 
+/** Reactive language VALUE — pass it into locale-branching formatters called
+    in render bodies. The React Compiler memoizes each expression on its
+    VISIBLE arguments only: a formatter that reads the store internally gets
+    its result cached across language flips even though the component
+    re-rendered (run-card timestamp bug, 2026-08-03). A lang argument makes
+    the locale a tracked dependency. */
+export function useLang(): 'ko' | 'en' {
+  return useSettings(s => s.settings.lang) === 'en' ? 'en' : 'ko';
+}
+
+/** Lang-explicit lookups for formatter internals (same tables as t/tf). */
+export function tIn(lang: 'ko' | 'en', key: StringKey): string {
+  return DICTS[lang][key] ?? ko[key];
+}
+export function tfIn(lang: 'ko' | 'en', key: StringKey, vars: Record<string, string | number>): string {
+  return Object.entries(vars).reduce(
+    (s, [k, v]) => s.replaceAll(`{${k}}`, String(v)),
+    tIn(lang, key),
+  );
+}
+
 /** Interpolation: fills {name} slots. */
 export function tf(key: StringKey, vars: Record<string, string | number>): string {
   return Object.entries(vars).reduce(

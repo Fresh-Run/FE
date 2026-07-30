@@ -72,7 +72,7 @@ import { supabase } from '@/lib/supabase';
 import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { useSettings } from '@/store/use-settings';
-import { t, tf } from '@/lib/i18n';
+import { t, tf, useLang } from '@/lib/i18n';
 
 const POLL_MS = 20_000; // guide §214: 20~30s while the room is active
 
@@ -94,6 +94,7 @@ function SenderAvatar({ name, photoUrl, onPress }: { name: string; photoUrl: str
 
 export default function CrewChatScreen() {
   const C = useTokens();
+  const lang = useLang(); // compiler-visible locale for the date formatters (2026-08-03 formatter-cache fix)
   const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
   const { crewId, crewName, memberCount, role } = useLocalSearchParams<{
@@ -344,7 +345,7 @@ export default function CrewChatScreen() {
           <Avatar name={null} size={30} initialsRatio={0.4} />
           <View style={st.msgCol}>
             <Text style={st.senderLine}>
-              {t('chat.hiddenUser')} <Text style={st.whenTxt}>· {fmtWhen(m.created_at)}</Text>
+              {t('chat.hiddenUser')} <Text style={st.whenTxt}>· {fmtWhen(m.created_at, lang)}</Text>
             </Text>
             <Pressable
               onLongPress={canModDelete ? () => setSheetFor(m) : undefined}
@@ -379,7 +380,7 @@ export default function CrewChatScreen() {
             <View style={st.sysHead}>
               <Icon name="megaphone-outline" size={13} color={C.accentGrn} />
               <Text style={st.sysTag}>{t('annd.title')}</Text>
-              <Text style={st.sysWhen}>{fmtWhen(m.created_at)}</Text>
+              <Text style={st.sysWhen}>{fmtWhen(m.created_at, lang)}</Text>
             </View>
             <Text style={st.sysTitle} numberOfLines={2}>{title ?? copy}</Text>
             <Text style={st.sysSub}>{m.sender_nickname ?? t('chat.sysAdminFallback')} · {copy}</Text>
@@ -410,7 +411,7 @@ export default function CrewChatScreen() {
           <View style={[st.msgCol, mine && { alignItems: 'flex-end' }]}>
             {!mine && (
               <Text style={st.senderLine}>
-                {name} <Text style={st.whenTxt}>· {fmtWhen(m.created_at)}</Text>
+                {name} <Text style={st.whenTxt}>· {fmtWhen(m.created_at, lang)}</Text>
               </Text>
             )}
             {m.content ? (
@@ -480,7 +481,7 @@ export default function CrewChatScreen() {
         <View style={[st.msgCol, mine && { alignItems: 'flex-end' }]}>
           {!mine && (
             <Text style={st.senderLine}>
-              {name} <Text style={st.whenTxt}>· {fmtWhen(m.created_at)}</Text>
+              {name} <Text style={st.whenTxt}>· {fmtWhen(m.created_at, lang)}</Text>
             </Text>
           )}
           <Pressable
@@ -595,7 +596,7 @@ export default function CrewChatScreen() {
                     <View style={{ flex: 1, minWidth: 0 }}>
                       <Text style={st.shareRowTitle} numberOfLines={1}>{item.title ?? t('chat.runTitleFallback')}</Text>
                       <Text style={st.shareRowSub}>
-                        {fmtWhen(item.ran_at)} · {fmtDist(item.distance_km, units, 2)}{distUnit(units)}
+                        {fmtWhen(item.ran_at, lang)} · {fmtDist(item.distance_km, units, 2)}{distUnit(units)}
                       </Text>
                     </View>
                     {sharingId === item.id

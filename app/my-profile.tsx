@@ -39,7 +39,7 @@ import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { prewarmTracks, useRunTrack } from '@/lib/track-cache';
 import { useSettings } from '@/store/use-settings';
-import { t, tf, useT } from '@/lib/i18n';
+import { t, tf, useLang, useT } from '@/lib/i18n';
 
 // Own-list visibility is never null (legacy rows = 'followers' server-side)
 // key-holding (static-capture rule) — resolved at render inside the card
@@ -54,6 +54,7 @@ const VIS_CAPTION_KEY = {
 function RunCard({ run, name, photoUrl, units, mapLive, onKudos }: {
   run: MyRun; name: string; photoUrl?: string | null; units: ReturnType<typeof useSettings.getState>['settings']['units']; mapLive: boolean; onKudos: () => void }) {
   const T = useT(); // reactive anchor (name-twin card, long-lived FlatList — the 4a-now shared-card treatment)
+  const lang = useLang(); // compiler-visible locale for the date/title formatters (2026-08-03 formatter-cache fix)
   const C = useTokens();
   const st = useStyles(makeSt);
   // visual-split ruling: full track when fetched, thumb while loading
@@ -73,7 +74,7 @@ function RunCard({ run, name, photoUrl, units, mapLive, onKudos }: {
         <Avatar name={name} size={36} photoUrl={photoUrl} ring={C.accent} initialsRatio={0.38} upper />
         <View style={{ flex: 1, minWidth: 0 }}>
           <Text style={st.cardName}>{name}</Text>
-          <Text style={st.cardDate}>{fmtWhen(run.ran_at)}</Text>
+          <Text style={st.cardDate}>{fmtWhen(run.ran_at, lang)}</Text>
         </View>
       </View>
       {/* polyline_thumb slice: viewable + thumb → real map (card-mode, same
@@ -85,7 +86,7 @@ function RunCard({ run, name, photoUrl, units, mapLive, onKudos }: {
         <MiniMap seed={run.id} height={150} polyline={cardLine ?? undefined} />
       )}
       <View style={st.cardBody}>
-        <Text style={st.cardTitle}>{run.title ?? timeTitle(run.ran_at)}</Text>
+        <Text style={st.cardTitle}>{run.title ?? timeTitle(run.ran_at, lang)}</Text>
         <View style={st.statsRow}>
           {([
             [fmtDist(run.distance_km, units, 1), distUnit(units), T('runSave.statDist')],
