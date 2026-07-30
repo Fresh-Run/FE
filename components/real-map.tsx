@@ -97,7 +97,10 @@ export function RealMap({ height, borderRadius = 0, polyline, center, marker = f
   // not the OS — same `resolved` input routeStroke already consumes (unify,
   // not conflict: night-canvas fixtures + courseStroke key on it too).
   const resolved = useScheme(s => s.resolved);
-  const stroke = routeStroke(resolved);
+  // hybrid addendum (8/1): the satellite base is scheme-independent (dark
+  // imagery under any app theme), so the stroke keys to the IMAGERY, not
+  // the theme — hybrid always gets the dark-scheme lime.
+  const stroke = mapType === 'hybrid' ? routeStroke('dark') : routeStroke(resolved);
   const line = polyline && polyline.length >= 2 ? polyline : null;
   const mapRef = useRef<MapView>(null);
 
