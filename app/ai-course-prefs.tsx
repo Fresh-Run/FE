@@ -9,7 +9,7 @@
  * Deviation (owner-approved 2026-07-09): stepper capped at 32 km, not the
  * canvas 42 — backend bound is default_distance_km le=32.2 (422 above it).
  */
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -125,6 +125,11 @@ export default function AiCoursePrefsScreen() {
   const C = useTokens();
   const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
+  // firstRun variant (8/2): the first-generation intercept's presentation —
+  // banner + proceed CTAs; normal entries render exactly as today. Copy
+  // hardcoded ko (slice-6 file), ledger-noted for keying.
+  const { firstRun } = useLocalSearchParams<{ firstRun?: string }>();
+  const isFirstRun = firstRun === '1';
   const ai = useSettings(s => s.settings.ai_course);
   const setAiCourse = useSettings(s => s.setAiCourse);
   const hydrate = useSettings(s => s.hydrate);
@@ -147,6 +152,14 @@ export default function AiCoursePrefsScreen() {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 28 }}>
+        {isFirstRun && (
+          <View style={{ paddingHorizontal: S.gutter, paddingTop: S.sm }}>
+            <View style={st.infoBanner}>
+              <Icon name="flag-outline" size={18} color={C.accentGrn} />
+              <Text style={st.infoTxt}>첫 코스 전에 취향을 알려주세요 — 프로필 탭에서 언제든 바꿀 수 있어요</Text>
+            </View>
+          </View>
+        )}
         {/* Info banner */}
         <View style={{ paddingHorizontal: S.gutter, paddingTop: S.sm }}>
           <View style={st.infoBanner}>
@@ -206,6 +219,18 @@ export default function AiCoursePrefsScreen() {
             onChange={v => save({ avoid_hills: v })}
           />
         </Group>
+        {isFirstRun && (
+          <View style={{ paddingHorizontal: S.gutter, paddingTop: S.lg, gap: 10 }}>
+            {/* two labels, ONE action (ruled): configured vs skipped both
+                proceed — the choice is psychological. Both back to create. */}
+            <Pressable onPress={() => router.back()} style={st.frPrimary}>
+              <Text style={st.frPrimaryTxt}>이대로 생성하러 가기</Text>
+            </Pressable>
+            <Pressable onPress={() => router.back()} style={st.frSkip}>
+              <Text style={st.frSkipTxt}>나중에 — 바로 생성하기</Text>
+            </Pressable>
+          </View>
+        )}
       </ScrollView>
     </View>
   );
@@ -220,6 +245,10 @@ const makeSt = (C: Tokens) => StyleSheet.create({
 
   infoBanner: { flexDirection: 'row', alignItems: 'flex-start', gap: 11, backgroundColor: C.accentDim, borderWidth: 1, borderColor: `${C.accent}33`, borderRadius: R.lg, padding: 14 },
   infoTxt:    { flex: 1, fontSize: 13, lineHeight: 20, color: C.text, letterSpacing: -0.2 },
+  frPrimary:    { height: 50, borderRadius: R.pill, backgroundColor: C.accent, alignItems: 'center', justifyContent: 'center' },
+  frPrimaryTxt: { fontSize: 15, fontWeight: '700', color: C.accentText, letterSpacing: -0.3 },
+  frSkip:       { height: 44, alignItems: 'center', justifyContent: 'center' },
+  frSkipTxt:    { fontSize: 13.5, fontWeight: '600', color: C.faint, letterSpacing: -0.2 },
 
   groupTitle: { fontSize: 11.5, fontWeight: '700', letterSpacing: 0.6, color: C.faint, textTransform: 'uppercase', paddingTop: S.lg, paddingBottom: 8, paddingHorizontal: 4 },
   groupCard:  { backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: R.xl, paddingHorizontal: S.md },

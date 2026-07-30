@@ -13,6 +13,7 @@
  */
 import Slider from '@react-native-community/slider';
 import { LinearGradient } from 'expo-linear-gradient';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { t, tf } from '@/lib/i18n';
@@ -200,6 +201,24 @@ export default function CreateScreen() {
   // funnel-v1 branch carries its own seedKm intake — merge point when it
   // unparks, flagged.)
   const { seedKm: seedParam, auto: autoParam } = useLocalSearchParams<{ seedKm?: string; auto?: string }>();
+  // First-generation prefs onboarding (8/2, recon shape B): the normal
+  // door's FIRST visit detours to ai-course-prefs?firstRun=1 (create stays
+  // mounted beneath — state untouched). Flag is DEVICE-scoped AsyncStorage:
+  // the cross-device edge is accepted here — worst case is one re-prompt on
+  // a new device (cf. the lang-seed ledger entry: that edge's harm came from
+  // WRITING server state; a read-only seen-flag has none). ?auto=1 fast-lane
+  // entries BYPASS and leave the flag UNSET (ruled) — their first normal
+  // entry still gets the intercept.
+  useEffect(() => {
+    if (autoParam === '1') return; // fast lane stays fast — flag stays unset
+    AsyncStorage.getItem('@fr_gen_prefs_seen').then(seen => {
+      if (seen) return;
+      AsyncStorage.setItem('@fr_gen_prefs_seen', '1').catch(() => {});
+      router.push('/ai-course-prefs?firstRun=1' as never);
+    }).catch(() => { /* storage miss — no intercept, defaults are sane */ });
+    // mount-only: autoParam is fixed for this screen instance
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const seedKm = useMemo(() => {
     const { units: u, ai_course } = useSettings.getState().settings;
     // seed lo = the LOOP floor (the form mounts in loop mode; a sub-floor
