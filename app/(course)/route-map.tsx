@@ -25,10 +25,11 @@ export default function RouteMapScreen() {
   const insets = useSafeAreaInsets();
   const { height: winH } = useWindowDimensions();
   const [payload] = useState(() => takeRouteMap()); // one-shot; survives re-render
-  // terrain toggle (owner ask 8/1, OTA v1): standard ⇄ hybrid, PER-VISIT —
-  // a sticky preference is a cheap follow-up if field demand shows. All four
-  // entry doors default to today's standard map.
-  const [mapMode, setMapMode] = useState<'standard' | 'hybrid'>('standard');
+  // v2 THREE-STATE LAYER CYCLE (owner-ruled from the a0cd59e0 walk):
+  // ① clean (default — the original look) → ② labeled → ③ satellite → ①.
+  // Per-visit; resets to ① on re-entry. Sticky pref = cheap follow-up.
+  const [layer, setLayer] = useState<'clean' | 'labeled' | 'satellite'>('clean');
+  const { width: winW } = useWindowDimensions();
   const units = useSettings(s2 => s2.settings.units);
   // B7 upgrade decision (owner flag): tapping the hero BEFORE the full track
   // loads must not freeze this view on the coarse thumb — when the payload
@@ -55,8 +56,12 @@ export default function RouteMapScreen() {
           polyline={line}
           startPin
           interactive
-          mapType={mapMode}
-          showsPoi
+          mapType={layer === 'satellite' ? 'hybrid' : 'standard'}
+          showsPoi={layer !== 'clean'}
+          // compass → bottom-left: DELTA from MapKit's top-right default
+          // (origin ≈ winW−53 right, near-top). x pulls to ~16px from the
+          // left edge; y drops it above the home indicator. Walk tunes.
+          compassOffset={{ x: -(winW - 69), y: winH - insets.top - insets.bottom - 140 }}
           distanceMarkers={payload?.distanceMarkers}
           units={units}
           officialDistanceKm={payload?.officialDistanceKm}
@@ -80,15 +85,16 @@ export default function RouteMapScreen() {
             <Text style={st.titleTxt} numberOfLines={1}>{payload.title}</Text>
           </View>
         )}
-        {/* map-mode toggle — icon-only (zero keys); a11y label hardcoded ko
-            like the rest of this slice-7 file */}
+        {/* layer cycle — icon reflects state: clean=layers-outline,
+            labeled=layers (filled), satellite=globe-outline. Icon-only
+            (zero keys); a11y hardcoded ko per this slice-7 file. */}
         <Pressable
-          onPress={() => setMapMode(m => m === 'standard' ? 'hybrid' : 'standard')}
+          onPress={() => setLayer(l => l === 'clean' ? 'labeled' : l === 'labeled' ? 'satellite' : 'clean')}
           hitSlop={12}
           style={st.roundBtn}
-          accessibilityLabel="지도 유형 전환"
+          accessibilityLabel={layer === 'clean' ? '지도: 기본' : layer === 'labeled' ? '지도: 라벨' : '지도: 위성'}
         >
-          <Icon name={mapMode === 'standard' ? 'layers-outline' : 'map-outline'} size={19} color={C.text} />
+          <Icon name={layer === 'clean' ? 'layers-outline' : layer === 'labeled' ? 'layers' : 'globe-outline'} size={19} color={C.text} />
         </Pressable>
       </View>
     </View>

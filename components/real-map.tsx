@@ -62,6 +62,10 @@ type Props = {
       deliberate clean-thumbnail suppression. route-map opts in; applies to
       standard AND hybrid (the flag suppressed both). */
   showsPoi?: boolean;
+  /** Native compass reposition (route-map v2): DELTA from MapKit's default
+      top-right origin (AIRMap adds it to the frame — verified in source).
+      iOS/Apple only; undefined = native default. */
+  compassOffset?: { x: number; y: number };
   /** Native blue user-location dot (뛰러 가기 location card + its enlarged
       view). Renders in non-interactive card mode too (the dot is a native
       map layer, not a touch affordance) — but it arrives ASYNC, so cards
@@ -94,7 +98,7 @@ type Props = {
   lineHidden?: boolean;
 };
 
-export function RealMap({ height, borderRadius = 0, polyline, center, marker = false, startPin = false, showsUser = false, interactive = false, cache = true, distanceMarkers = false, units = 'km', officialDistanceKm, lineHidden = false, mapType, showsPoi = false }: Props) {
+export function RealMap({ height, borderRadius = 0, polyline, center, marker = false, startPin = false, showsUser = false, interactive = false, cache = true, distanceMarkers = false, units = 'km', officialDistanceKm, lineHidden = false, mapType, showsPoi = false, compassOffset }: Props) {
   // 지연 two-tone — keys on the RESOLVED scheme since Phase 5 (manual 다크
   // gets the dark stroke; 시스템 mode behaves as before via the store).
   // Map-theme binding (2026-07-22): the map obeys the APP's scheme picker,
@@ -164,6 +168,7 @@ export function RealMap({ height, borderRadius = 0, polyline, center, marker = f
         cacheEnabled={cache && !interactive}
         showsUserLocation={showsUser}
         showsPointsOfInterest={showsPoi}
+        compassOffset={compassOffset}
         toolbarEnabled={false}
       >
         {marker && center && !line && (
