@@ -1223,6 +1223,8 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 - Promotion discipline UNCHANGED: every promotion to a tester-facing channel gets its own explicit one-confirm.
 - AMENDMENT (7/30, marker-placement correction): the hold was NEVER a written rule with its own ledger line — it operated as a standing VERBAL instruction that contradicted written constraint ④ ("invites/testers never wait"). Retiring it RESTORES ④ rather than superseding anything; ③ (core-loop scope) was retired separately by the Phase 2 epic itself, and the 36531a0 marker mis-attributed that. Markers corrected in place (③ → Phase-2 attribution · ④ → reaffirmed). **Ledger-hygiene lesson: verbal rules that contradict written constraints are invisible to audit until someone reads both — standing verbal instructions get a ledger line at issuance.**
 
+## ✅ 라이크-시스템 픽스 PROMOTED (2026-08-01) — 오너 [17:45] FULL ("2" 재현 1 정착·피드 리프레시 유지·자기-♥ 딤+카운트 시트·타인 불변) · 원-컨펌 (프로모트 커맨드 1회 인터럽트 → 스탬프 재송신 = 재확인 기록) · 4246ecb4 → production b8478119-5ffd-475d-8d75-283397dc5a23 · 프로모션 해시-타이 MATCH (tw7Ez3yX… 양채널 동일). **롤백 플로어 전진 → b8478119** (dac0e660 은퇴). 원-그래머 전면 + 리컨실-온-어라이벌 라이브 — 가드-블록-리컨실 트랩 인-코드 명기.
+
 ## 🔼 라이크-시스템 픽스 STAGED — 4246ecb4-acf6-4579-84fc-28828ec0894c (커밋 1fcb3ea) · 해시-타이 MATCH · 플로어 dac0e660 · 워크: 0-라이크 포스트 라이크→1→재진입 여전히 1 (재현) · 피드 라이크→풀-리프레시 1 유지 · 자기 포스트 ♥ 딤+이너트·카운트→시트 (트윈+런포스트) · 타인 ♥ 토글/카운트 시트 불변 · 프로모션 개별 컨펌 대기
 
 ## 💗 라이크-시스템 그래머+리컨실 FIX BUILT (미스테이지) — 5피스
