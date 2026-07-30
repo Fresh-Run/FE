@@ -1223,6 +1223,8 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 - Promotion discipline UNCHANGED: every promotion to a tester-facing channel gets its own explicit one-confirm.
 - AMENDMENT (7/30, marker-placement correction): the hold was NEVER a written rule with its own ledger line — it operated as a standing VERBAL instruction that contradicted written constraint ④ ("invites/testers never wait"). Retiring it RESTORES ④ rather than superseding anything; ③ (core-loop scope) was retired separately by the Phase 2 epic itself, and the 36531a0 marker mis-attributed that. Markers corrected in place (③ → Phase-2 attribution · ④ → reaffirmed). **Ledger-hygiene lesson: verbal rules that contradict written constraints are invisible to audit until someone reads both — standing verbal instructions get a ledger line at issuance.**
 
+## 🔼 크루 바텀 클리핑 픽스 STAGED — 453bfb83-8987-4f96-8784-ff6563e6664c (커밋 d74d174) · 해시-타이 MATCH · 플로어 d753fda8 · 워크: en 크루-생성 바텀 스크롤 = 서머리 완전 가시 (버튼 위 여유) · ko 불변 · crew-edit 동일 · 키보드-열림 스크롤 회귀 (KAV) · 프로모션 개별 컨펌 대기
+
 ## 📏 크루-생성 바텀 클리핑 FIX BUILT (미스테이지) — en 랩 클립 (스크린샷 ×2)
 - 진단: 스크롤 패드 110 vs 오버레이 푸터 실높이 ~112 (아일랜드) — ko 1줄에서도 −2px 마진, en 2줄 랩이 ~−19px 클립. **픽스 = 매직 넘버 사망: 푸터 onLayout 실측 + 24px 브리딩** (어떤 랩 높이·카피 성장·세이프에어리어에도 24px 클리어 — 슬라이스 6/7 카피 변경 면역). 양 로케일 데스크: ko/en 동일 24px 클리어 (종전 −2/−19).
 - 시블링: crew-edit 동일 구조·동일 110 — 동일 픽스 동커밋.
