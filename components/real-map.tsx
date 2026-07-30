@@ -58,6 +58,10 @@ type Props = {
   /** route-map terrain toggle (8/1): 'hybrid' = satellite+labels. Undefined
       = standard — every card-mode consumer unchanged. */
   mapType?: 'standard' | 'hybrid';
+  /** POI/store labels (8/1 field fix): default FALSE — the card minis'
+      deliberate clean-thumbnail suppression. route-map opts in; applies to
+      standard AND hybrid (the flag suppressed both). */
+  showsPoi?: boolean;
   /** Native blue user-location dot (뛰러 가기 location card + its enlarged
       view). Renders in non-interactive card mode too (the dot is a native
       map layer, not a touch affordance) — but it arrives ASYNC, so cards
@@ -90,7 +94,7 @@ type Props = {
   lineHidden?: boolean;
 };
 
-export function RealMap({ height, borderRadius = 0, polyline, center, marker = false, startPin = false, showsUser = false, interactive = false, cache = true, distanceMarkers = false, units = 'km', officialDistanceKm, lineHidden = false, mapType }: Props) {
+export function RealMap({ height, borderRadius = 0, polyline, center, marker = false, startPin = false, showsUser = false, interactive = false, cache = true, distanceMarkers = false, units = 'km', officialDistanceKm, lineHidden = false, mapType, showsPoi = false }: Props) {
   // 지연 two-tone — keys on the RESOLVED scheme since Phase 5 (manual 다크
   // gets the dark stroke; 시스템 mode behaves as before via the store).
   // Map-theme binding (2026-07-22): the map obeys the APP's scheme picker,
@@ -159,7 +163,7 @@ export function RealMap({ height, borderRadius = 0, polyline, center, marker = f
         rotateEnabled={interactive}
         cacheEnabled={cache && !interactive}
         showsUserLocation={showsUser}
-        showsPointsOfInterest={false}
+        showsPointsOfInterest={showsPoi}
         toolbarEnabled={false}
       >
         {marker && center && !line && (

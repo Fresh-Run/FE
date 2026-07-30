@@ -56,6 +56,7 @@ export default function RouteMapScreen() {
           startPin
           interactive
           mapType={mapMode}
+          showsPoi
           distanceMarkers={payload?.distanceMarkers}
           units={units}
           officialDistanceKm={payload?.officialDistanceKm}

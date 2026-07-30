@@ -1227,6 +1227,11 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 
 ## 🔼 라이크-시스템 픽스 STAGED — 4246ecb4-acf6-4579-84fc-28828ec0894c (커밋 1fcb3ea) · 해시-타이 MATCH · 플로어 dac0e660 · 워크: 0-라이크 포스트 라이크→1→재진입 여전히 1 (재현) · 피드 라이크→풀-리프레시 1 유지 · 자기 포스트 ♥ 딤+이너트·카운트→시트 (트윈+런포스트) · 타인 ♥ 토글/카운트 시트 불변 · 프로모션 개별 컨펌 대기
 
+## 🏷️ 루트-맵 POI 라벨 FIX BUILT (미스테이지) — 필드 (오너: 확장 맵 무명 거리)
+- 진단: real-map 내장 MapView가 **showsPointsOfInterest={false} 하드코드** — 트래킹 자유런은 !hasCoursePath (=true, 라벨 표시). 서프레션은 hybrid에도 적용돼 있었음 (토글 모드 양쪽 라벨 킬 — 검증됨).
+- 픽스: showsPoi?: boolean 패스스루 (디폴트 false = 카드 미니의 의도적 클린-썸네일 유지) · route-map만 옵트인 — standard+hybrid 양 모드 라벨. 컨슈머 격리 grep 증명: showsPoi 소비 = route-map 유일 (그 외 전원 디폴트 = 종전 바이트).
+- 4도어 (런포스트·활동·생성·프리뷰) 동일 스크린 상속 — 제외 사유 있는 도어 무 (생성/프리뷰도 POI 수혜).
+
 ## 🔼 루트-맵 터레인 토글 STAGED — 9447e943-9f9f-4881-8806-436474798b29 (커밋 e4343a6 — 애든덤 포함: hybrid = dark-스트로크 강제, 영상-키 원칙 인-코멘트) · 해시-타이 MATCH · 플로어 b8478119 · 워크: 런포스트→맵→토글 = 위성+라벨·라임 라인 (양 스킴!) · 재진입 = standard 리셋 · 3도어 디폴트 회귀 · 프로모션 개별 컨펌 대기
 
 ## 🗺️ 루트-맵 터레인 토글 BUILT (미스테이지) — OTA v1 (터레인 리콘 집행)
