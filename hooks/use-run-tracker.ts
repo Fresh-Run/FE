@@ -59,13 +59,23 @@ export function useRunTracker() {
   // grew — so downstream memoization (tracking's drawnPath, the map) sees a
   // real dep change per accepted fix instead of one stable mutated-in-place
   // ref it would cache forever (the same compiler trap as the clock).
-  const [livePath, setLivePath] = useState<readonly Coordinate[]>([]);
+  // MOUNT-WHILE-PAUSED gap (8/2 field, course-run remaining frozen at
+  // FULL): a fresh tracking mount against a paused singleton session used
+  // to render livePath [] — the fill tick below is running-gated, so the
+  // screen showed remaining = full course length + a blank polyline until
+  // resume. Seed from the session at mount; the subscriber refreshes on
+  // every transition (pause/resume/stop) so re-mounts always paint truth.
+  const [livePath, setLivePath] = useState<readonly Coordinate[]>(() => [...runSession.getPath()]);
 
   // Transition mirror + snapshot refresh (pause/resume/stop repaint even
   // though the tick below only runs while 'running').
   useEffect(() => runSession.subscribe(s => {
     setLocalState(s);
     setSnap(readSnap(s));
+    setLivePath(prev => {
+      const p = runSession.getPath();
+      return prev.length === p.length ? prev : [...p];
+    });
   }), []);
 
   // The 500ms tick now CARRIES the data (it used to be an empty re-render

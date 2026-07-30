@@ -479,7 +479,10 @@ export default function TrackingScreen() {
   const offBuzzAtRef = useRef(0);
   useEffect(() => {
     const poly = course?.polyline;
-    if (state !== 'running' || !poly || poly.length < 2) return;
+    // 8/2 belt: compute in 'paused' too — a mount-while-paused instance now
+    // has a seeded livePath (hook fix), and this closes the class from the
+    // screen end: remaining/off-course read truth in both live states.
+    if ((state !== 'running' && state !== 'paused') || !poly || poly.length < 2) return;
     const here = livePath[livePath.length - 1];
     if (!here) return;
     const { segIndex, distM, alongM: am } = nearestOnCourse(poly, here);
