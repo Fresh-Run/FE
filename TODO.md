@@ -1227,7 +1227,9 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 
 ## 🔼 라이크-시스템 픽스 STAGED — 4246ecb4-acf6-4579-84fc-28828ec0894c (커밋 1fcb3ea) · 해시-타이 MATCH · 플로어 dac0e660 · 워크: 0-라이크 포스트 라이크→1→재진입 여전히 1 (재현) · 피드 라이크→풀-리프레시 1 유지 · 자기 포스트 ♥ 딤+이너트·카운트→시트 (트윈+런포스트) · 타인 ♥ 토글/카운트 시트 불변 · 프로모션 개별 컨펌 대기
 
-## 🔼 자동 일시정지 + app_version STAGED — 230cf9d6-77c7-4135-a1e5-69fc017c66c2 (커밋 bb0fb96) · 해시-타이 MATCH (RGpk3lf7…) · 마커 5/5 (app_version·오토-포즈 큐 2·설정 캡션·embedded; localhost×3 = 빌드-4 게이트 컨텍스트-클리어 라이브러리 내부) · 플로어 57f584d1 · **0acdc4e8 대체** (동일 오토-포즈 카고 + app_version 포렌식 승차 — bb0fb96 = 6133de3 + 레저 2 + runs-api 1파일) · **게이트 불변: 교정-워크 프로토콜** (아래 0acdc4e8 엔트리의 워크 스크립트 그대로 유효) + 200m 런이 route_id 필드-스플릿·app_version 첫-플로우 겸검증 · 프로모션 = 워크 통과 후 개별 컨펌
+## 🔼 자동 일시정지 + app_version + 타임스탬프-스테일 픽스 STAGED — 3eda99f3-66dd-47c4-b177-16970b89bd61 (커밋 6ca46a0) · 해시-타이 MATCH (1271qJ9K…) · 캐리드 마커 5/5 (app_version·오토-포즈 큐 2·설정 캡션·staging URL; localhost×3 = 빌드-4 게이트 컨텍스트-클리어) · 타임스탬프 픽스 = 스트링-프리 — 증명은 커밋-타이드 해시 (퍼널-리무벌 선례) · 플로어 57f584d1 · **230cf9d6 대체** (동일 카고 + 컴파일러-캐시 픽스 승차) · **게이트 불변: 교정-워크 프로토콜** (0acdc4e8 엔트리의 워크 스크립트 유효) + 200m 런 = route_id 필드-스플릿·app_version 첫-플로우 + **실내 리프 신규: 설정 en↔ko 플립 → 홈 복귀 (포스-큇 무) = 타임스탬프·그리팅 날짜·카드 타이틀 제자리 플립** · 프로모션 = 워크 통과 후 개별 컨펌
+
+## ~~🔼 자동 일시정지 + app_version STAGED — 230cf9d6 (커밋 bb0fb96)~~ SUPERSEDED by 3eda99f3 (동일 카고 + 타임스탬프-스테일 픽스) · 해시-타이 MATCH (RGpk3lf7…) · 마커 5/5
 
 ## ~~🔼 자동 일시정지 코어 STAGED — 0acdc4e8-3a10-47cb-94d1-1873fdb05044 (커밋 6133de3)~~ SUPERSEDED by 230cf9d6 (동일 카고 + app_version) · 해시-타이 MATCH · 마커 4/4 · 플로어 57f584d1 · **스테이징 ≠ 검증 — 교정-워크 프로토콜이 게이트** (아래 스크립트) · 프로모션 = 워크 통과 후 개별 컨펌
 
