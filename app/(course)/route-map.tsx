@@ -28,7 +28,7 @@ export default function RouteMapScreen() {
   // v2 THREE-STATE LAYER CYCLE · v3 REORDER (owner-ruled 2026-08-03):
   // ① labeled (default — POI/street names showing on open) → ② clean →
   // ③ satellite → ①. Per-visit; resets to ① labeled on re-entry.
-  // Sticky pref = cheap follow-up.
+  // NON-STICKY by ruling (8/3): per-visit reset is the design, not a gap.
   const [layer, setLayer] = useState<'clean' | 'labeled' | 'satellite'>('labeled');
   const { width: winW } = useWindowDimensions();
   const units = useSettings(s2 => s2.settings.units);

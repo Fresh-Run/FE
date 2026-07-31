@@ -1232,6 +1232,12 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 - **롤백 실행 (원-컨펌 ROLL BACK NOW):** 57f584d1 그룹 republish → production 신규 그룹 **3601dfef-3140-4819-9ad8-9534062f8b28** · 서빙 검증: production 매니페스트 = 롤백 그룹 iOS id + 해시 K3AgI3uy… (57f584d1 바이트 정확 일치 — livePath 프로모션 레저의 기록값). **스트레인저는 이제 라스트-노운-굿 수신; 플로어 = 57f584d1 바이트 (서빙 그룹 3601dfef).**
 - **3eda99f3는 스테이징 존속** (오토-포즈+app_version+타임스탬프 픽스, 커밋 6ca46a0) — **교정-워크 = 오늘의 첫 액션 (의무)**; 전 레그 통과 → 신규 스탬프 (실관찰만) + 원-컨펌 → 재프로모션. 실패 레그 발생 시 → 스테이징도 홀드, 코어 재작업. **[대체됨 → 34749a9e 아래 참조 — 동일 카고 + route-map v3; 워크 게이트 동일 적용]**
 
+## ⚖️ 오너 룰링 4건 (8/3 카우치 세트)
+- **① 다이내믹-타입 가드레일: 글로벌 클램프.** 덴스 UI (필·로우·스탯 타일·칩)에 maxFontSizeMultiplier ~1.3 실링; 바디/리딩 텍스트는 자유 스케일. **스윕 빌드 큐드 (언블록)** — 데스크-검증 클래스, 워크 레그 무추가. 6-인스턴스 컨테인먼트 클래스의 글로벌 해소.
+- **② route_saved: 제네릭 폴백 유지.** FE 트리거 부재 — copy-as-route CTA 언파크 시 재방문. 오픈-디시전 종결.
+- **③ route-map 레이어 프리퍼런스: 논-스티키.** 퍼-비짓 labeled 리셋 스탠딩 — "스티키 = 저가 후속" 노트 은퇴 (인-코드 코멘트 동반 정리).
+- **④ 앱 설정 허브: 공식 KILL.** 슬라이스 6은 허브를 빌드하지 않음 — 프로필 탭이 설정의 홈. 7/31 삭제 룰링의 "슬라이스 6이 원하면 재도입" 조건부 사망.
+
 ## ✅ route_id 아크 CLOSED (8/3, 그녀 행 확인) — 덴티스트 버그 (7/24 기원) 엔드-투-엔드 종결
 - 그녀 행: 오너 8/3 실험 런 — **route_id 파퓰레이티드 + app_version '1.0.5 (10) ota-019fb409' 저장 (설계대로)**. 파이프 E2E 증명: 생성 → route_id 컨슘 (2e586e61) → POST /runs → 퍼시스트 → 그녀 테이블.
 - 판정 확정: **포스트-빌드 널 5건 = 스테일 번들** (8/2 송신-경로 오딧의 강한-프라이어 그대로) — 실버그 아님. app_version 포렌식 라이브 — 이 클래스의 미래 판정은 행에서 즉독.
@@ -1306,7 +1312,7 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 ## ⏸️ 마운트-와일-포즈드 livePath 시드 BUILT (미스테이지) — 필드 버그 1 (코스런 잔여거리 풀-리셋)
 - 메커니즘 인-코멘트: 포즈드 싱글턴 세션에 프레시 트래킹 마운트 → livePath [] (필 틱 = running-게이트) → alongM 0 → 잔여 = 풀 코스 길이 + 블랭크 폴리라인; 리줌 자가-교정.
 - 픽스: 훅 — livePath 마운트 시드 useState(() => [...runSession.getPath()]) + 기존 상태-전환 서브스크라이버가 리프레시 (포즈/리줌/스톱 발화 — 재마운트 항상 진실 페인트) · 틱은 running-게이트 유지. 스크린 벨트 — alongM 이펙트 paused에서도 계산 (원-컨디션, 양단 클로즈).
-- 스트링-프리 (파리티 934). 버그 2 (야간-러닝 라벨 클립) = 스크린샷 대기 (기록-로우 다이내믹-타입 후보 — 6번째 컨테인먼트 인스턴스 시 글로벌 가드레일 룰링 강화).
+- 스트링-프리 (파리티 934). 버그 2 (야간-러닝 라벨 클립) = 스크린샷 대기 (기록-로우 다이내믹-타입 후보 — ~~6번째 컨테인먼트 인스턴스 시 글로벌 가드레일 룰링 강화~~ [8/3: 글로벌 클램프 룰드 — 스윕 큐드, 위 룰링 블록]).
 
 ## ✅ 첫-생성 온보딩 PROMOTED (2026-08-02) — 오너 [23:30] FULL (인터셉트·폼 인택트·무재프롬프트·auto 직행·프로필 불변) · 원-컨펌 · 756d3289 → production a0f62589-d105-4a2b-9d8c-dfc75578a4f7 · 프로모션 해시-타이 MATCH (MRzZfyMo… 양채널 동일). **롤백 플로어 전진 → a0f62589** (74539c9c 은퇴) — 테스터 피드백 클로즈: 첫 생성 전 취향 온보딩 라이브 (디바이스-스코프 원-프롬프트 · auto 레인 보존 · 슬라이스-6 키잉 노트).
 
@@ -1373,7 +1379,7 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 ## 🔼 세팅스 트랩 픽스 STAGED — 3c672ff9-a3f4-42d7-93c7-04e8bb3b571e (커밋 d3ece83) · 해시-타이 MATCH · 플로어 c0ec6b3d · 워크: 프로필 설정 = 앱설정 로우 부재 (재현 경로 소멸) · 관리 그룹 회귀 (프로필 편집·차단 관리) · 코스 플로우 fullScreenModal 정상 · 콜드-스타트 홈 랜딩 정상 · 프로모션 개별 컨펌 대기
 
 ## 🧭 세팅스 트랩 픽스 BUILT (미스테이지) — 4피스 + 스윕
-- ① 앱 설정 로우 DELETED (오너 룰링: 프로필 탭과 리던던트 — 슬라이스 6이 원하면 실제 허브를 의도적으로 재도입; 5237b7d "고아" 삭제가 이 라이브 컨슈머를 그리핑 미스 — 인시던트 인-코드 기록) ② app/+not-found.tsx 신설 (브랜디드, nf.* 3키 양 로케일, 원-버튼 → replace('/(tabs)') — 데드-href 클래스 벨트) ③ 루트 스택 initialRouteName="(tabs)" ((course)-퍼스트 폴백 소스-킬) ④ create.tsx X = canGoBack 폴백 (데드-X 벨트).
+- ① 앱 설정 로우 DELETED (오너 룰링: 프로필 탭과 리던던트 — ~~슬라이스 6이 원하면 실제 허브를 의도적으로 재도입~~ [8/3 룰링: 허브 공식 KILL — 프로필 탭 = 설정 홈]; 5237b7d "고아" 삭제가 이 라이브 컨슈머를 그리핑 미스 — 인시던트 인-코드 기록) ② app/+not-found.tsx 신설 (브랜디드, nf.* 3키 양 로케일, 원-버튼 → replace('/(tabs)') — 데드-href 클래스 벨트) ③ 루트 스택 initialRouteName="(tabs)" ((course)-퍼스트 폴백 소스-킬) ④ create.tsx X = canGoBack 폴백 (데드-X 벨트).
 - ⑤ 루트-스트링 스윕 (레슨 집행): 57 참조 경로 vs 59 캐노니컬 루트 — **데드 레퍼런스 0, /settings가 클래스의 유일 멤버였음** (스윕 스크립트 1차 정규화 버그 자체-캐치 후 재실행; 코멘트-스트립 포함).
 - 콜드-스타트/딥링크 데스크 추론: '/' 해석 불변 ((tabs)/index) · 노티 라우팅 = 런타임 push 무영향 · 콜드 딥링크는 이제 (tabs)가 보장된 베이스 (백 플로어 개선) · (course) fullScreenModal 옵션 무접촉 — 디바이스 워크가 확정. 파리티 934/934.
 
@@ -1478,7 +1484,7 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 ## ✅ 슬라이스 5 PROMOTED + 에픽 PARKED (2026-07-31) — 오너 [17:23] FULL (9d4b4b27 완주 + 2값 디프, 본 대로) · 원-컨펌 발화·응답 (지연 노티 포함) · 5a86ce45 → production d69cbfc3-cbeb-4bd5-bf90-146dbc64e613 · 프로모션 해시-타이 MATCH (105gmp_6… 양채널 동일)
 - 라이브: 런-디테일 월드 (정션 2픽스: run-splits 헤더·SSO 칩) · 기록 탭+월간 리포트 (오디널·사전-주도 월 이름) · PB 트라이앵글 · 날씨 상세 (등급 표시맵). **롤백 플로어 전진 → d69cbfc3** (72a1b103 은퇴).
 - 📍 **i18n 에픽 PARKED at the slice-5 seam (오너 스텝-백)**: 슬라이스 1–5 라이브 (927키) · 잔여 = 슬라이스 6 (설정 허브 ~273) · 7 (코스 월드 ~168 + run-format 서울 폴백 + ~~웰컴 헤드라인 서울→전국 라이드~~ **[RETIRED 8/3 — 오너 룰링: 카피 자체가 도시 명명 중단, "서울을"→"오늘을" 빌드됨 (전국 앱 반영); en은 welcome.tsx 슬라이스-8 컨버전 시 "New roads every time — run your today." 제안 온-레코드]** + **홈 날씨 스트립 노트 (8/1): 버딕트 칩 = running_index.label — 그녀 v118부터 서버-사이드 lang-분기 (최고→Excellent 등), 등급은 ko 와이어 고정 + BE 테스트 가드. 스트립 전환 시 칩은 자가-로컬라이즈 — FE 매핑 불요, label 키맵 금지**) · 8 (롱테일 + 언어-캡션 은퇴 제안 + **use-generate-route 에러 바디 키잉 노트 (8/1) [OBSOLETE-PENDING §5 — 8/2 에러-계약 엔트리 참조: error_code+type/loc가 서버-카피 실링 자체를 은퇴시킴]**: 503 route_generation_unavailable en = 그녀 API_GUIDE 라인 버바팀 "Route generation is busy — please try again shortly." (v123) · 502 en 트윈 = 우리 ko 조건-변경 라인 번역 · 브랜칭 무접촉 — 계약 이미 정합) — ~596히트. 리줌 웜스타트: 배치 맵 line-검색 "BATCH MAP", 5-시리즈 리콘 노트, 리액티브-t 스윕 리스트 (run-result 베어-t 포함).
-- 오픈 스레드 (8/1 정정): BE 푸시 kudos 발산 (그녀 컨펌 대기, 불변) · route_saved 빌드 결정 (불변) · **route_id 원-라이너: 게이트 해제 — v116 배포·전 서빙 브랜치 검증, BUILD-READY** · **home.runner: 룰링 완료 — v114 답 도착 (푸시-바디 온리, null은 실제, 클라 폴백 유지) → 20 레이블 사이트 "Runner" 유지 + 알림 액터용 문장-주어 신규 키 1, BUILD-READY**. 양 항목 = 하나의 큐드 빌드의 두 반쪽.
+- 오픈 스레드 (8/1 정정): BE 푸시 kudos 발산 (그녀 컨펌 대기, 불변) · ~~route_saved 빌드 결정~~ [8/3 룰드: 폴백 유지, copy-as-route 언파크 시 재방문] · **route_id 원-라이너: 게이트 해제 — v116 배포·전 서빙 브랜치 검증, BUILD-READY** · **home.runner: 룰링 완료 — v114 답 도착 (푸시-바디 온리, null은 실제, 클라 폴백 유지) → 20 레이블 사이트 "Runner" 유지 + 알림 액터용 문장-주어 신규 키 1, BUILD-READY**. 양 항목 = 하나의 큐드 빌드의 두 반쪽.
 
 ## 🔼 슬라이스 5 그룹 v2 STAGED — 5a86ce45-c343-4301-bb19-1999d98287c6 (9d4b4b27 대체; 커밋 7b3865d — 워크-픽스 2값: Weather 타이틀·personalized 제거, ko 불변) · 해시-타이 MATCH (105gmp_6…) · 마커: 구 2값 0·AI run index 1·ko 내 기준 1 · 프로모션 게이트 대기
 - 내용 = 5a+5b+5c 원-그룹 (정션 2픽스 라이브 결함 포함 · 139키 · 파리티 927/927). 프리플라이트 ✓ (env·tsc·eslint 11파일) · 해시-타이 MATCH (tBPZyPcp…) · 마커 9/9 (양 로케일 스프레드: 조정캡션·오디널·PB축하·날씨tf).
@@ -1508,7 +1514,7 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 - **Fix = her one schema field (id on RouteResponse) + our create.tsx:500 one-liner (id: null → route.id, + GeneratedRoute type). OUR ONE-LINER: READY — ~~GATED ON HER DEPLOY~~ GATE LIFTED 8/1 (v116 배포, 전 서빙 브랜치 검증 — 오너 전달)** (consume-on-arrival, no other FE change).
 - Retro-link of existing null runs = optional her-side data op (polyline-match, the manual forensic generalized).
 
-## ✅ 배치 4 PROMOTED (2026-07-30) — 오너 [16:13] FULL (fef329a4 완주 + 3값 디프-검증, 본 대로) · 원-컨펌 발화·응답 "Confirmed — promote now" (지연 노티 포함 확인) · caad9754 → production 72a1b103-7247-4b9c-8506-cdc24931b0ab · 프로모션 해시-타이 MATCH (dE9dqFBx… 양채널 동일) — 4d 알림 바이링구얼+fmtAgo 5서피스 픽스+하모나이즈(liked)+필드-픽스 라이브. **롤백 플로어 전진 → 72a1b103** (구 플로어 158cb9ab 은퇴). 오픈: BE 푸시 "gave kudos" 발산 (지연 매칭 컨펌 대기) · route_saved 빌드 결정 · 리센터 오피니언드 = 워크 통과로 스탠딩.
+## ✅ 배치 4 PROMOTED (2026-07-30) — 오너 [16:13] FULL (fef329a4 완주 + 3값 디프-검증, 본 대로) · 원-컨펌 발화·응답 "Confirmed — promote now" (지연 노티 포함 확인) · caad9754 → production 72a1b103-7247-4b9c-8506-cdc24931b0ab · 프로모션 해시-타이 MATCH (dE9dqFBx… 양채널 동일) — 4d 알림 바이링구얼+fmtAgo 5서피스 픽스+하모나이즈(liked)+필드-픽스 라이브. **롤백 플로어 전진 → 72a1b103** (구 플로어 158cb9ab 은퇴). 오픈: BE 푸시 "gave kudos" 발산 (지연 매칭 컨펌 대기) · ~~route_saved 빌드 결정~~ [8/3 룰드: 폴백 유지] · 리센터 오피니언드 = 워크 통과로 스탠딩.
 
 ## 🔼 배치 4 v4 STAGED — caad9754-3bb1-475c-9764-c0c48cc62107 (4162eb50 대체; 커밋 9aa5988) · 해시-타이 MATCH (dE9dqFBx…) · 마커: 'Likes, comments and photos are deleted'=1 · 'Kudos, comments'=0 · liked your run=1 (태그 칩은 단어 1개 = 스캔 부적격, 해시-타이+사전 단일-소스로 커버) · kudos→like 스윕 완결: ntf.tagKudos 'Kudos'→'Likes' · rp.delBody · en 값 클린 (잔여 = 키 이름·파일명, 내부명 유지) · 프로모션 게이트 대기
 
@@ -1532,7 +1538,7 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 
 ## 🔼 4d — NOTIFICATIONS + ROUTING + fmtAgo BUILT (49bd8c7+62543db; NOT staged per spec)
 - STEP-1 FINDING: fmtAgo rendered ko on FOUR converted surfaces (crew-detail feed·crew-runs·crew-requests·kudos-sheet) + notifications — shipped defect; the locale branch fixes all five (방금 전/N분 전/N시간 전 ↔ just now/{n}m ago/{n}h ago, fmtDate-precedent dict words).
-- ACTOR-COPY REWRITE: 16 copies → {name}-slot tf templates + a SPLIT RENDERER (template.split('{name}') → before + bold actor + after; ko '{name}님이…' splits to ''+today's bytes — visual unchanged; en reorders freely). crew_invited dynamic = tf partial-fill ({crew} filled, {name} survives for the split — desk-proven). pbCopy 3 branches = CLEAN template mapping (pbOne/pbMany/pbZero — no STOP needed). ~~ALL 16 en templates FLAGGED PENDING HARMONIZATION~~ **HARMONIZED 7/30 vs her 20 push strings**: 5 adopted (kudos/accepted/your-crew ×2/crew-challenge-🎉) · 3 kept per owner ruling ({name} in join_approved · announcement-vocab swap · {crew} fill) · 6 already matching · PB labels → her per-type wording through our {label} template · **GAP: route_saved in her list, absent from typeMeta — renders via fallback ("Something new for you"), tap inert (routing default null); build decision open.**
+- ACTOR-COPY REWRITE: 16 copies → {name}-slot tf templates + a SPLIT RENDERER (template.split('{name}') → before + bold actor + after; ko '{name}님이…' splits to ''+today's bytes — visual unchanged; en reorders freely). crew_invited dynamic = tf partial-fill ({crew} filled, {name} survives for the split — desk-proven). pbCopy 3 branches = CLEAN template mapping (pbOne/pbMany/pbZero — no STOP needed). ~~ALL 16 en templates FLAGGED PENDING HARMONIZATION~~ **HARMONIZED 7/30 vs her 20 push strings**: 5 adopted (kudos/accepted/your-crew ×2/crew-challenge-🎉) · 3 kept per owner ruling ({name} in join_approved · announcement-vocab swap · {crew} fill) · 6 already matching · PB labels → her per-type wording through our {label} template · **GAP: route_saved in her list, absent from typeMeta — renders via fallback ("Something new for you"), tap inert (routing default null); ~~build decision open~~ [8/3 룰드: 폴백 유지 — copy-as-route CTA 언파크 시 재방문].**
 - Sweeps: typeMeta tags+copies·PB_LABEL·TABS → key-holding (PB record_types wire keys untouched) · notif-routing 4 = bare-t alerts + 3 ntfr.* keys · straggler grep caught fallbackMeta's copy (ntf.fallbackCopy) · run-format '서울' = courseStats fallback, SLICE 7's (stated, untouched).
 - Anchors ×2 (screen + NotifRow — the long-lived list's row); tx alias (TABS loop shadows t). Parity 759/759. Export 3HqLhw0v…, template markers 7/7 both tables. Residue: notifications/notif-routing CLEAN.
 - SLICE 4 COMPLETE. Publish plan on owner word (with its own explicit confirm per the hardened rule).
