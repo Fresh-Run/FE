@@ -61,3 +61,89 @@ export function pointAhead(c: Coordinate, headingDeg: number, dM: number): Coord
   };
 }
 
+
+/** 8/3 nav-completion: the sub-polyline from alongM to alongM+spanM — the
+    "next 300m" emphasis band (distanceCrossings interpolation class: exact
+    points cut on the segments, vertices between collected). spanM is
+    FIELD-TUNABLE (walk judges the band length). */
+export function sliceAhead(
+  course: readonly Coordinate[],
+  alongM: number,
+  spanM: number,
+): Coordinate[] {
+  if (course.length < 2) return [];
+  const endM = alongM + spanM;
+  const out: Coordinate[] = [];
+  let cum = 0;
+  for (let i = 0; i < course.length - 1; i++) {
+    const a = course[i], b = course[i + 1];
+    const kx = Math.cos((a.lat * Math.PI) / 180) * M_PER_DEG_LAT;
+    const segLen = Math.hypot((b.lat - a.lat) * M_PER_DEG_LAT, (b.lng - a.lng) * kx);
+    const segStart = cum, segEnd = cum + segLen;
+    if (segEnd >= alongM && segStart <= endM && segLen > 0) {
+      const t0 = Math.max(0, (alongM - segStart) / segLen);
+      const t1 = Math.min(1, (endM - segStart) / segLen);
+      const p0 = { lat: a.lat + (b.lat - a.lat) * t0, lng: a.lng + (b.lng - a.lng) * t0 };
+      const p1 = { lat: a.lat + (b.lat - a.lat) * t1, lng: a.lng + (b.lng - a.lng) * t1 };
+      if (out.length === 0) out.push(p0);
+      out.push(t1 < 1 ? p1 : b);
+      if (segEnd >= endM) break;
+    }
+    cum = segEnd;
+  }
+  return out;
+}
+
+/** 8/3 nav-completion: first geometry-detected turn ahead of alongM.
+    WINDOWED bearing walk — generated routes have dense vertices, so raw
+    per-vertex angles produce phantom turns; bearings are measured over
+    TURN_WINDOW_M spans and successive spans compared. |delta| >= TURN_ANGLE_DEG
+    flags the junction. BOTH constants FIELD-TUNABLE (the walk judges marker
+    honesty — a false "turn" erodes trust faster than a missed one).
+    Geometry can say "turn in 120m"; names/landmarks stay T2. */
+export const TURN_WINDOW_M = 15;
+export const TURN_ANGLE_DEG = 38;
+
+export function nextTurn(
+  course: readonly Coordinate[],
+  alongM: number,
+): { point: Coordinate; distM: number; dir: 'left' | 'right' } | null {
+  if (course.length < 3) return null;
+  // cumulative vertex distances (equirect per segment — house scale truth)
+  const cumAt: number[] = [0];
+  for (let i = 1; i < course.length; i++) {
+    const a = course[i - 1], b = course[i];
+    const kx = Math.cos((a.lat * Math.PI) / 180) * M_PER_DEG_LAT;
+    cumAt.push(cumAt[i - 1] + Math.hypot((b.lat - a.lat) * M_PER_DEG_LAT, (b.lng - a.lng) * kx));
+  }
+  const bearing = (a: Coordinate, b: Coordinate): number => {
+    const kx = Math.cos((a.lat * Math.PI) / 180);
+    return (Math.atan2((b.lng - a.lng) * kx, b.lat - a.lat) * 180) / Math.PI;
+  };
+  // windowed spans starting from the first vertex past alongM
+  let i = cumAt.findIndex(c => c > alongM);
+  if (i < 1) return null;
+  let prevBearing: number | null = null;
+  let spanStart = i - 1;
+  while (i < course.length) {
+    // grow the window to >= TURN_WINDOW_M
+    let j = i;
+    while (j < course.length - 1 && cumAt[j] - cumAt[spanStart] < TURN_WINDOW_M) j++;
+    if (cumAt[j] - cumAt[spanStart] < TURN_WINDOW_M) break; // tail too short
+    const br = bearing(course[spanStart], course[j]);
+    if (prevBearing != null) {
+      const delta = ((br - prevBearing + 540) % 360) - 180;
+      if (Math.abs(delta) >= TURN_ANGLE_DEG) {
+        return {
+          point: course[spanStart],
+          distM: Math.max(0, cumAt[spanStart] - alongM),
+          dir: delta > 0 ? 'right' : 'left',
+        };
+      }
+    }
+    prevBearing = br;
+    spanStart = j;
+    i = j + 1;
+  }
+  return null;
+}

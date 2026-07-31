@@ -14,6 +14,7 @@
  * a run is active. Saving (POST /api/runs) and post-run screens are slice 3.
  */
 import * as Haptics from 'expo-haptics';
+import * as ExpoLocation from 'expo-location';
 import { useKeepAwake } from 'expo-keep-awake';
 import { router, useFocusEffect, useNavigation } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -30,7 +31,7 @@ import {
 } from 'react-native';
 import BottomSheet, { BottomSheetView } from '@gorhom/bottom-sheet';
 import { Gesture, GestureDetector, GestureHandlerRootView, type GestureType } from 'react-native-gesture-handler';
-import MapView, { Polyline } from 'react-native-maps';
+import MapView, { Marker, Polyline } from 'react-native-maps';
 import Reanimated, {
   useAnimatedStyle,
   useSharedValue,
@@ -40,7 +41,7 @@ import Svg, { Circle } from 'react-native-svg';
 
 import { Icon } from '@/components/ui';
 import { SEOUL_FALLBACK, useCurrentLocation } from '@/hooks/use-current-location';
-import { courseLengthM, nearestOnCourse, OFF_COURSE_ENTER_M, OFF_COURSE_EXIT_M, pointAhead } from '@/lib/course-nav';
+import { courseLengthM, nearestOnCourse, nextTurn, OFF_COURSE_ENTER_M, OFF_COURSE_EXIT_M, pointAhead, sliceAhead } from '@/lib/course-nav';
 import { runSession } from '@/store/run-session';
 import { useRunTracker } from '@/hooks/use-run-tracker';
 import { composeFinishCue, composeSplitCue, composeStartCue, speakCue, stopSpeech } from '@/lib/audio-coach';
@@ -66,6 +67,11 @@ const NAV_ALTITUDE_M = 320;   // ↑ from 280 — more forward range at the stee
 const NAV_PITCH_DEG = 57;     // ↑ from 45 — the T-map-class perspective
 const NAV_LOOKAHEAD_M = 180;  // ↑ from 120 — pushes the puck toward the ~22% band
 const NAV_ENTER_MS = 1800;    // overview → follow flight, flown DURING the countdown ("drive pressed")
+// ── 8/3 nav-completion — ALL FIELD-TUNABLE (the walk judges) ──
+const FUSION_SPEED_MPS = 1.0; // below: compass steers heading; above: course-over-ground
+const HEADING_SNAP_DEG = 5;   // compass jitter floor — SNAP threshold chosen over a low-pass
+                              // (no lag, no circular-mean math; sub-5° wobble is invisible at nav zoom)
+const NEXT_BAND_M = 300;      // the emphasized "next stretch" band length
 // T1.7 CLOSE (owner verdict from the field look, 2026-07-26): 320/57/180
 // READS RIGHT — the baseline landed; the tuning panel stripped per the
 // temp-probe doctrine without needing its session.
@@ -533,6 +539,19 @@ export default function TrackingScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [livePath.length, state, course]);
 
+  // 8/3 nav-completion: the emphasized "next stretch" band (alongM →
+  // alongM+NEXT_BAND_M, exact cuts on segments) + the first geometry-detected
+  // turn ahead. Both recompute per alongM update (once per accepted fix —
+  // a full walk over course vertices is trivial at that cadence).
+  const courseNext = useMemo(
+    () => (courseCoords.length > 1 ? sliceAhead(course?.polyline ?? [], alongM, NEXT_BAND_M).map(c => ({ latitude: c.lat, longitude: c.lng })) : []),
+    [courseCoords.length, course, alongM],
+  );
+  const turnAhead = useMemo(
+    () => (courseCoords.length > 1 ? nextTurn(course?.polyline ?? [], alongM) : null),
+    [courseCoords.length, course, alongM],
+  );
+
   // ahead/behind split — behind dims, ahead keeps the full course stroke
   const courseBehind = useMemo(
     () => (courseCoords.length > 1 ? courseCoords.slice(0, nearestSeg + 1) : []),
@@ -542,6 +561,45 @@ export default function TrackingScreen() {
     () => (courseCoords.length > 1 ? courseCoords.slice(nearestSeg) : []),
     [courseCoords, nearestSeg],
   );
+
+  // ── Compass fusion (8/3): COG freezes at rest (iOS sends -1, we keep
+  // last-good) so the map stopped rotating when the runner turned in place.
+  // watchHeadingAsync (expo-location, in-binary) feeds heading BELOW
+  // FUSION_SPEED_MPS; course-over-ground above it — the nav-app convention.
+  // Lifecycle = course runs while running ONLY (battery honesty: no compass
+  // stream on free runs, idle, or pause). Smoothing = HEADING_SNAP_DEG snap.
+  const compassHeadingRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (courseCoords.length < 2 || state !== 'running') return; // course runs only (hasCoursePath declared below)
+    let dead = false;
+    let sub: ExpoLocation.LocationSubscription | null = null;
+    ExpoLocation.watchHeadingAsync((h: ExpoLocation.LocationHeadingObject) => {
+      const deg = h.trueHeading >= 0 ? h.trueHeading : h.magHeading;
+      if (deg == null || deg < 0) return;
+      const prev = compassHeadingRef.current;
+      const delta = prev == null ? 360 : Math.abs(((deg - prev + 540) % 360) - 180);
+      if (delta < HEADING_SNAP_DEG) return; // jitter floor
+      compassHeadingRef.current = deg;
+      // cadence rider (spec ③): while compass is the ACTIVE source (slow/
+      // standing), rotation follows it continuously — heading-only partial
+      // camera animation, suspension-respecting.
+      const sp = runSession.getLastSpeedMps();
+      if ((sp == null || sp < FUSION_SPEED_MPS) && !lastUserPanRef.current) {
+        mapRef.current?.animateCamera({ heading: deg }, { duration: 300 });
+      }
+    }).then((s: ExpoLocation.LocationSubscription) => { if (dead) s.remove(); else sub = s; });
+    return () => { dead = true; sub?.remove(); };
+  }, [courseCoords.length, state]);
+
+  /** The fused nav heading: compass at rest/slow, COG when moving; either
+      alone when the other is absent. */
+  const navHeading = useCallback((): number | null => {
+    const sp = runSession.getLastSpeedMps();
+    const cog = runSession.getLastHeading();
+    const compass = compassHeadingRef.current;
+    if (sp == null || sp < FUSION_SPEED_MPS) return compass ?? cog;
+    return cog ?? compass;
+  }, []);
 
   // Camera follow on path growth (running only, not while user-panned)
   useEffect(() => {
@@ -557,7 +615,7 @@ export default function TrackingScreen() {
       mapRef.current?.animateCamera({ center: last }, { duration: 500 });
       return;
     }
-    const h = runSession.getLastHeading();
+    const h = navHeading(); // fused: compass at rest, COG in motion (8/3)
     const hereC = { lat: last.latitude, lng: last.longitude };
     const center = h != null ? pointAhead(hereC, h, NAV_LOOKAHEAD_M) : hereC;
     mapRef.current?.animateCamera(
@@ -570,7 +628,7 @@ export default function TrackingScreen() {
       { duration: 500 },
     );
      
-  }, [drawnPath.length, state, drawnPath, courseCoords.length]);
+  }, [drawnPath.length, state, drawnPath, courseCoords.length, navHeading]);
 
   // Center on the USER's RESOLVED location (T-B correction ②): the hook's
   // coordinate is Seoul-fallback-initialized (never null), so truthiness
@@ -634,9 +692,29 @@ export default function TrackingScreen() {
     const target = drawnPath.length > 0
       ? drawnPath[drawnPath.length - 1]
       : hereCoord ? { latitude: hereCoord.lat, longitude: hereCoord.lng } : null;
+    if (!target) return;
+    // 8/3: course-run recenter restores the FULL nav posture in ONE animation
+    // (heading + lookahead + pitch + altitude — the follow effect's math).
+    // The old altitude-only snap left a flat top-down frame that the next fix
+    // re-asserted — a visible double-jump. Free-run recenter unchanged.
+    if (hasCoursePath && state === 'running') {
+      const h = navHeading();
+      const hereC = { lat: target.latitude, lng: target.longitude };
+      const center = h != null ? pointAhead(hereC, h, NAV_LOOKAHEAD_M) : hereC;
+      mapRef.current?.animateCamera(
+        {
+          center: { latitude: center.lat, longitude: center.lng },
+          altitude: NAV_ALTITUDE_M,
+          pitch: NAV_PITCH_DEG,
+          ...(h != null ? { heading: h } : {}),
+        },
+        { duration: 400 },
+      );
+      return;
+    }
     // altitude: recenter snaps to the course-follow close view (tester ask) —
     // opinionated reset of any pinched-out zoom, owner walks and rules
-    if (target) mapRef.current?.animateCamera({ center: target, altitude: NAV_ALTITUDE_M }, { duration: 400 });
+    mapRef.current?.animateCamera({ center: target, altitude: NAV_ALTITUDE_M }, { duration: 400 });
   };
 
   // GPS-lost chip: >15s without a raw fix while running. 8/3 ruled interplay:
@@ -824,7 +902,11 @@ export default function TrackingScreen() {
           showsUserLocation
           // T1.6 POI MUTE: course tracking quiets to roads + ribbon; free
           // runs keep today's map (the prop is per-render — not mode-awkward)
-          showsPointsOfInterest={!hasCoursePath}
+          // 8/3 owner ruling (field experience over the 8/1 desk call):
+          // labels ALWAYS on — at nav altitude Apple renders sparse labels,
+          // so the clutter case that motivated course-mode suppression is
+          // minimal; runners want building/store names. No mid-run toggle.
+          showsPointsOfInterest
           showsTraffic={false}
           showsMyLocationButton={false}
           showsCompass={false}
@@ -847,6 +929,23 @@ export default function TrackingScreen() {
               <Polyline coordinates={courseAhead} strokeColor="rgba(12,18,6,0.85)" strokeWidth={14} lineCap="round" lineJoin="round" />
               <Polyline coordinates={courseAhead} strokeColor={routeStroke('dark')} strokeWidth={10} lineCap="round" lineJoin="round" />
             </>
+          )}
+          {/* 8/3: next-stretch emphasis — a white core over the ahead ribbon
+              (nav-app current-leg grammar; no new palette entry). Width and
+              NEXT_BAND_M are field-tunable. */}
+          {courseNext.length > 1 && (
+            <Polyline coordinates={courseNext} strokeColor="#FFFFFF" strokeWidth={5} lineCap="round" lineJoin="round" />
+          )}
+          {/* 8/3: geometry turn marker — VISUAL ONLY (ruled: no TTS until
+              tuning + T2 names; a wrong spoken turn is worse than none).
+              Direction from the bearing delta's sign; distance from alongM. */}
+          {turnAhead && state === 'running' && (
+            <Marker coordinate={{ latitude: turnAhead.point.lat, longitude: turnAhead.point.lng }} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={false}>
+              <View style={st.turnBadge}>
+                <Icon name={turnAhead.dir === 'right' ? 'arrow-redo' : 'arrow-undo'} size={13} color={C.text} />
+                <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.turnTxt}>{Math.round(turnAhead.distM)}m</Text>
+              </View>
+            </Marker>
           )}
           {drawnPath.length > 1 && (
             <Polyline coordinates={drawnPath} strokeColor={C.accent} strokeWidth={5} />
@@ -1068,6 +1167,8 @@ const makeSt = (C: Tokens) => StyleSheet.create({
   recenterBtn:  { width: 40, height: 40, borderRadius: R.pill, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, alignItems: 'center', justifyContent: 'center', ...shadows.sm },
   gpsChip:    { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(0,0,0,0.45)', borderRadius: R.pill, paddingHorizontal: 10, paddingVertical: 5 },
   gpsChipTxt: { fontSize: 11, fontWeight: '700', color: '#fff', letterSpacing: -0.2 },
+  turnBadge:  { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: C.surface, borderWidth: 1.5, borderColor: C.border, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 4, ...shadows.sm },
+  turnTxt:    { fontSize: 11, fontWeight: '800', color: C.text, letterSpacing: -0.2 },
 
   // Course title pill (course mode)
   coursePillWrap: { position: 'absolute', left: 0, right: 0, alignItems: 'center' },

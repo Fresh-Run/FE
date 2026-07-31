@@ -141,6 +141,7 @@ let stillRef: { lat: number; lng: number; t: number } | null = null;
 let manualResumeAt = 0;
 let stillTicker: ReturnType<typeof setInterval> | null = null; // (a) 1s evidence ticker, running only
 let lastRawAccM: number | null = null; // last RAW fix accuracy — silence-lane discriminator
+let lastSpeedMps: number | null = null; // last RAW OS speed — compass-fusion source pick (8/3 nav)
 let anchor: { lat: number; lng: number; t: number } | null = null;
 let distanceM = 0;
 let path: Coordinate[] = [];      // filtered on-screen track (save + polyline)
@@ -207,6 +208,7 @@ function processFix(loc: Location.LocationObject): void {
   const cur = { lat, lng };
   lastFixTs = t; // T-A mirror — before any gate
   lastRawAccM = accuracy ?? null; // silence-lane discriminator — before any gate
+  lastSpeedMps = typeof speed === 'number' && speed >= 0 ? speed : null; // -1 = invalid
 
   // Raw track capture — BEFORE any gate (incl. the accuracy reject below):
   // the server filter must see everything the client filter saw.
@@ -505,6 +507,7 @@ function resetAccumulators(): void {
   lastPersistMs = 0;
   stillRef = null;     // cross-run residue (a stale anchor could pre-age the ticker)
   lastRawAccM = null;
+  lastSpeedMps = null;
 }
 
 // ── Public surface (the hook + the task are the only intended callers) ──────
@@ -642,6 +645,9 @@ export const runSession = {
   isStillnessAccruing,
   /** T1 nav: last valid heading (deg, course-over-ground) — null pre-fix. */
   getLastHeading: () => lastHeading,
+  /** 8/3 nav: last RAW OS speed (m/s; null = invalid/pre-fix) — the compass-
+      fusion source pick reads this, never the gates. */
+  getLastSpeedMps: () => lastSpeedMps,
   /** Single-source rolling pace — the hook renders it, the widget receives it. */
   currentPaceSecPerKm,
 };
