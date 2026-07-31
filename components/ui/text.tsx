@@ -14,6 +14,7 @@ export function Text({
   center,
   style,
   numberOfLines,
+  maxFontSizeMultiplier,
 }: {
   children?: React.ReactNode;
   variant?: Variant;
@@ -23,6 +24,9 @@ export function Text({
   center?: boolean;
   style?: StyleProp<TextStyle>;
   numberOfLines?: number;
+  /** Dynamic-Type clamp passthrough (8/3 ruling) — dense-UI callers cap at
+      DENSE_MAX_FONT_SCALE; reading copy omits it and scales free. */
+  maxFontSizeMultiplier?: number;
 }) {
   const C = useTokens();
   const { typography } = md3; // scheme-neutral legacy layout tokens
@@ -34,6 +38,7 @@ export function Text({
   return (
     <RNText
       numberOfLines={numberOfLines}
+      maxFontSizeMultiplier={maxFontSizeMultiplier}
       style={[
         typography[variant],
         { color: resolvedColor },

@@ -35,7 +35,7 @@ import { RealMap } from '@/components/real-map';
 import { Icon } from '@/components/ui';
 import { useMyPublicProfile, type MyRun } from '@/hooks/use-my-public-profile';
 import { distUnit, fmtDist, fmtDuration, fmtPaceIn, fmtWhen, paceUnit, timeTitle } from '@/lib/run-format';
-import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
+import { radius as R, shadows, spacing as S, type Tokens, DENSE_MAX_FONT_SCALE} from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { prewarmTracks, useRunTrack } from '@/lib/track-cache';
 import { useSettings } from '@/store/use-settings';
@@ -73,8 +73,8 @@ function RunCard({ run, name, photoUrl, units, mapLive, onKudos }: {
       <View style={st.cardHead}>
         <Avatar name={name} size={36} photoUrl={photoUrl} ring={C.accent} initialsRatio={0.38} upper />
         <View style={{ flex: 1, minWidth: 0 }}>
-          <Text style={st.cardName}>{name}</Text>
-          <Text style={st.cardDate}>{fmtWhen(run.ran_at, lang)}</Text>
+          <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.cardName}>{name}</Text>
+          <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.cardDate}>{fmtWhen(run.ran_at, lang)}</Text>
         </View>
       </View>
       {/* polyline_thumb slice: viewable + thumb → real map (card-mode, same
@@ -86,7 +86,7 @@ function RunCard({ run, name, photoUrl, units, mapLive, onKudos }: {
         <MiniMap seed={run.id} height={150} polyline={cardLine ?? undefined} />
       )}
       <View style={st.cardBody}>
-        <Text style={st.cardTitle}>{run.title ?? timeTitle(run.ran_at, lang)}</Text>
+        <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.cardTitle}>{run.title ?? timeTitle(run.ran_at, lang)}</Text>
         <View style={st.statsRow}>
           {([
             [fmtDist(run.distance_km, units, 1), distUnit(units), T('runSave.statDist')],
@@ -94,10 +94,10 @@ function RunCard({ run, name, photoUrl, units, mapLive, onKudos }: {
             [run.avg_pace_sec_per_km != null ? fmtPaceIn(run.avg_pace_sec_per_km, units) : '--', paceUnit(units), T('res.pace')],
           ] as [string, string, string][]).map(([val, unit, label], i) => (
             <View key={i} style={{ gap: 2 }}>
-              <Text style={st.statVal}>
+              <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.statVal}>
                 {val}{unit ? <Text style={st.statUnit}> {unit}</Text> : null}
               </Text>
-              <Text style={st.statLbl}>{label}</Text>
+              <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.statLbl}>{label}</Text>
             </View>
           ))}
         </View>
@@ -112,13 +112,13 @@ function RunCard({ run, name, photoUrl, units, mapLive, onKudos }: {
           <View style={st.kudosBtn}>
             <Icon name="heart-outline" size={18} color={C.faint} />
             <Pressable onPress={onKudos} hitSlop={8} style={({ pressed }) => pressed ? { opacity: 0.6 } : null}>
-              <Text style={st.kudosCount}>{run.kudos_count}</Text>
+              <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.kudosCount}>{run.kudos_count}</Text>
             </Pressable>
           </View>
           {/* 💬 display-only — taps fall through to the card (→ social view) */}
           <View style={[st.kudosBtn, { marginLeft: 14 }]}>
             <Icon name="chatbubble-outline" size={17} color={C.sub} />
-            <Text style={st.kudosCount}>{run.comment_count}</Text>
+            <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.kudosCount}>{run.comment_count}</Text>
           </View>
         </View>
         <Text style={st.visCaption}>{T(VIS_CAPTION_KEY[run.visibility])}</Text>

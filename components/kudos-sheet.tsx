@@ -20,7 +20,7 @@ import { Avatar } from '@/components/avatar';
 import { getRunKudos, type RunKudoser } from '@/lib/kudos-api';
 import { openProfile } from '@/lib/profile-nav';
 import { fmtAgo } from '@/lib/run-format';
-import { shadows, type Tokens } from '@/lib/theme';
+import { shadows, type Tokens, DENSE_MAX_FONT_SCALE} from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { tf, useLang, useT } from '@/lib/i18n';
 
@@ -51,7 +51,7 @@ export function KudosSheet({ runId, kudosCount, onClose }: {
         <View style={st.sheet}>
           <View style={st.sheetHead}>
             <View style={st.grabBar} />
-            <Text style={st.sheetTitle}>{tf('kd.count', { n: kudosCount })}</Text>
+            <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.sheetTitle}>{tf('kd.count', { n: kudosCount })}</Text>
           </View>
           {failed ? (
             <View style={st.sheetState}>
@@ -75,9 +75,9 @@ export function KudosSheet({ runId, kudosCount, onClose }: {
                     style={({ pressed }) => [st.likerBody, pressed && { opacity: 0.7 }]}
                   >
                     <Avatar name={item.nickname} size={44} photoUrl={item.avatar_url} ring={C.border} initialsRatio={0.38} upper />
-                    <Text style={st.likerName} numberOfLines={1}>{item.nickname}</Text>
+                    <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.likerName} numberOfLines={1}>{item.nickname}</Text>
                   </Pressable>
-                  <Text style={st.likerWhen}>{fmtAgo(item.created_at, lang)}</Text>
+                  <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.likerWhen}>{fmtAgo(item.created_at, lang)}</Text>
                 </View>
               )}
               ItemSeparatorComponent={() => <View style={{ height: 10 }} />}

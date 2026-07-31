@@ -49,7 +49,7 @@ import { Icon } from '@/components/ui';
 import { useRunDetail } from '@/hooks/use-runs';
 import { useRunTrack } from '@/lib/track-cache';
 import { distUnit, fmtDist, fmtDuration, fmtPaceIn, paceUnit, timeTitle } from '@/lib/run-format';
-import { routeStroke } from '@/lib/theme';
+import { routeStroke, DENSE_MAX_FONT_SCALE} from '@/lib/theme';
 import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { useSettings } from '@/store/use-settings';
@@ -593,8 +593,8 @@ export default function ShareCardScreen() {
             {rows.map(([k, v, l]) => (
               <GestureDetector key={k} gesture={layerFor[k].gesture}>
                 <Reanimated.View onLayout={layerFor[k].onLayout} style={[st.metricLayer, layerFor[k].style]}>
-                  <Text style={st.statVal} onLayout={layerFor[k].onValueLayout}>{v}</Text>
-                  <Text style={st.statLbl}>{l}</Text>
+                  <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.statVal} onLayout={layerFor[k].onValueLayout}>{v}</Text>
+                  <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.statLbl}>{l}</Text>
                 </Reanimated.View>
               </GestureDetector>
             ))}
@@ -631,30 +631,30 @@ export default function ShareCardScreen() {
           <View style={st.chipRow}>
             {(['1:1', '9:16'] as const).map(f => (
               <Pressable key={f} onPress={() => save({ ...prefs, format: f })} style={[st.chip, prefs.format === f && st.chipOn]}>
-                <Text style={[st.chipTxt, prefs.format === f && st.chipTxtOn]}>{f === '1:1' ? t('shr.fmtSquare') : t('shr.fmtStory')}</Text>
+                <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={[st.chipTxt, prefs.format === f && st.chipTxtOn]}>{f === '1:1' ? t('shr.fmtSquare') : t('shr.fmtStory')}</Text>
               </Pressable>
             ))}
           </View>
-          <Text style={st.groupLbl}>{t('shr.routeStyle')}</Text>
+          <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.groupLbl}>{t('shr.routeStyle')}</Text>
           <View style={st.chipRow}>
             {STROKE_COLORS.map(c => (
               <Pressable key={c} onPress={() => save({ ...prefs, strokeColor: c })} style={[st.colorDot, { backgroundColor: c }, (prefs.strokeColor ?? STROKE_COLORS[0]) === c && st.colorDotOn]} />
             ))}
             {STROKE_WEIGHTS.map(([w, label]) => (
               <Pressable key={w} onPress={() => save({ ...prefs, strokeWeight: w })} style={[st.chip, (prefs.strokeWeight ?? 4.5) === w && st.chipOn]}>
-                <Text style={[st.chipTxt, (prefs.strokeWeight ?? 4.5) === w && st.chipTxtOn]}>{t(label)}</Text>
+                <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={[st.chipTxt, (prefs.strokeWeight ?? 4.5) === w && st.chipTxtOn]}>{t(label)}</Text>
               </Pressable>
             ))}
           </View>
           {bgIsPhoto && (
             <>
-              <Text style={st.groupLbl}>{t('shr.bgPhoto')}</Text>
+              <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.groupLbl}>{t('shr.bgPhoto')}</Text>
               <View style={st.chipRow}>
                 <Pressable onPress={() => setBgAdjustMode(m => !m)} style={[st.chip, bgAdjustMode && st.chipOn]}>
-                  <Text style={[st.chipTxt, bgAdjustMode && st.chipTxtOn]}>{bgAdjustMode ? t('shr.adjustDone') : t('shr.adjustBg')}</Text>
+                  <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={[st.chipTxt, bgAdjustMode && st.chipTxtOn]}>{bgAdjustMode ? t('shr.adjustDone') : t('shr.adjustBg')}</Text>
                 </Pressable>
                 <View style={st.dimSlider}>
-                  <Text style={st.dimLbl}>{tf('shr.dim', { p: Math.round(bgDim * 100) })}</Text>
+                  <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.dimLbl}>{tf('shr.dim', { p: Math.round(bgDim * 100) })}</Text>
                   <Slider
                     style={{ flex: 1 }}
                     minimumValue={0} maximumValue={0.6} step={0.05} value={bgDim}
@@ -665,7 +665,7 @@ export default function ShareCardScreen() {
               </View>
             </>
           )}
-          <Text style={st.groupLbl}>{t('shr.metrics')}</Text>
+          <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.groupLbl}>{t('shr.metrics')}</Text>
           <View style={st.chipRow}>
             {(Object.keys(METRIC_LABELS) as ShareMetricKey[]).map(k => (
               <Pressable
@@ -673,7 +673,7 @@ export default function ShareCardScreen() {
                 onPress={() => save({ ...prefs, metrics: { ...prefs.metrics, [k]: !prefs.metrics[k] } })}
                 style={[st.chip, prefs.metrics[k] && st.chipOn]}
               >
-                <Text style={[st.chipTxt, prefs.metrics[k] && st.chipTxtOn]}>{t(METRIC_LABELS[k])}</Text>
+                <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={[st.chipTxt, prefs.metrics[k] && st.chipTxtOn]}>{t(METRIC_LABELS[k])}</Text>
               </Pressable>
             ))}
           </View>

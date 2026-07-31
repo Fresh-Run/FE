@@ -8,7 +8,7 @@ import {
   ViewStyle,
 } from 'react-native';
 
-import { accentShadow } from '@/lib/theme';
+import { accentShadow, DENSE_MAX_FONT_SCALE } from '@/lib/theme';
 import { useTokens } from '@/hooks/use-tokens';
 import { Icon } from './icon';
 import { Text } from './text';
@@ -78,7 +78,7 @@ export function Button({
       ) : (
         <View style={styles.row}>
           {icon ? <Icon name={icon} size={large ? 22 : 18} color={fg[variant]} /> : null}
-          <Text variant={large ? 'bodyLg' : 'labelLg'} color={fg[variant]}>
+          <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} variant={large ? 'bodyLg' : 'labelLg'} color={fg[variant]}>
             {label}
           </Text>
         </View>

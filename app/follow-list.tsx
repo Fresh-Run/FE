@@ -25,7 +25,7 @@ import { Icon } from '@/components/ui';
 import { useFollowList, type FollowUser } from '@/hooks/use-follow-list';
 import { ApiError, apiFetch, apiRequest } from '@/lib/api';
 import { openProfile } from '@/lib/profile-nav';
-import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
+import { radius as R, shadows, spacing as S, type Tokens, DENSE_MAX_FONT_SCALE} from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { usePendingFollows } from '@/store/pending-follows';
 import { useStore } from '@/store/use-store';
@@ -159,7 +159,7 @@ export default function FollowListScreen() {
           const on = tab === id;
           return (
             <Pressable key={id} onPress={() => setTab(id)} style={st.tabBtn}>
-              <Text style={[st.tabTxt, { color: on ? C.text : C.faint, fontWeight: on ? '700' : '600' }]}>
+              <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={[st.tabTxt, { color: on ? C.text : C.faint, fontWeight: on ? '700' : '600' }]}>
                 {label} {n}
               </Text>
               {on && <View style={st.tabUnderline} />}
@@ -198,20 +198,20 @@ export default function FollowListScreen() {
                   style={({ pressed }) => [st.rowBody, pressed && { opacity: 0.7 }]}
                 >
                   <Avatar name={item.nickname} size={44} photoUrl={item.avatar_url} ring={C.border} ringWidth={1} initialsRatio={0.4} upper />
-                  <Text style={st.rowName} numberOfLines={1}>{item.nickname ?? T('home.runner')}</Text>
+                  <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.rowName} numberOfLines={1}>{item.nickname ?? T('home.runner')}</Text>
                 </Pressable>
                 <Pressable
                   onPress={() => toggle(item)}
                   style={[st.followBtn, fs !== 'none' ? st.followBtnOn : st.followBtnOff]}
                   hitSlop={6}
                 >
-                  <Text style={[st.followTxt, { color: fs !== 'none' ? C.sub : C.accentText }]}>
+                  <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={[st.followTxt, { color: fs !== 'none' ? C.sub : C.accentText }]}>
                     {fs === 'following' ? T('fr.following') : fs === 'requested' ? T('fl.requestedCancel') : T('fr.follow')}
                   </Text>
                 </Pressable>
                 {showRemove && (
                   <Pressable onPress={() => confirmRemove(item)} style={st.removeBtn} hitSlop={6}>
-                    <Text style={st.removeTxt}>{T('fl.remove')}</Text>
+                    <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.removeTxt}>{T('fl.remove')}</Text>
                   </Pressable>
                 )}
               </View>

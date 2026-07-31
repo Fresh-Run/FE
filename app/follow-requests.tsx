@@ -26,7 +26,7 @@ import { Icon } from '@/components/ui';
 import { listFollowRequests, respondFollowRequest, type FollowRequestItem } from '@/lib/profile-api';
 import { openProfile } from '@/lib/profile-nav';
 import { fmtWhen } from '@/lib/run-format';
-import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
+import { radius as R, shadows, spacing as S, type Tokens, DENSE_MAX_FONT_SCALE} from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { t, tf, useLang, useT } from '@/lib/i18n';
 
@@ -91,8 +91,8 @@ export default function FollowRequestsScreen() {
                 >
                   <Avatar name={name} size={42} photoUrl={item.avatar_url} initialsRatio={0.38} />
                   <View style={{ flex: 1, minWidth: 0 }}>
-                    <Text style={st.name} numberOfLines={1}>{name}</Text>
-                    <Text style={st.sub} numberOfLines={1}>
+                    <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.name} numberOfLines={1}>{name}</Text>
+                    <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.sub} numberOfLines={1}>
                       {fmtWhen(item.followed_at, lang)}{item.is_following ? T('fq.mutual') : ''}
                     </Text>
                   </View>
@@ -102,10 +102,10 @@ export default function FollowRequestsScreen() {
                 ) : (
                   <View style={st.actions}>
                     <Pressable onPress={() => respond(item, true)} hitSlop={6} style={({ pressed }) => [st.acceptBtn, pressed && { opacity: 0.85 }]}>
-                      <Text style={st.acceptTxt}>{T('fq.accept')}</Text>
+                      <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.acceptTxt}>{T('fq.accept')}</Text>
                     </Pressable>
                     <Pressable onPress={() => respond(item, false)} hitSlop={6} style={({ pressed }) => [st.rejectBtn, pressed && { opacity: 0.7 }]}>
-                      <Text style={st.rejectTxt}>{T('fq.reject')}</Text>
+                      <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.rejectTxt}>{T('fq.reject')}</Text>
                     </Pressable>
                   </View>
                 )}

@@ -49,7 +49,7 @@ import {
   type GeneratedRoute,
   type Waypoint,
 } from '@/hooks/use-generate-route';
-import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
+import { radius as R, shadows, spacing as S, type Tokens, DENSE_MAX_FONT_SCALE} from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -111,7 +111,7 @@ function Chip({
       style={[st.chip, active && st.chipActive, locked && st.chipLocked]}
     >
       {locked && <Icon name="lock-closed-outline" size={11} color={C.faint} />}
-      <Text style={[st.chipTxt, active ? st.chipTxtActive : locked ? st.chipTxtLocked : undefined]}>
+      <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={[st.chipTxt, active ? st.chipTxtActive : locked ? st.chipTxtLocked : undefined]}>
         {label}
       </Text>
     </Pressable>
@@ -508,7 +508,7 @@ export default function CreateScreen() {
         {/* ── Footer CTAs ────────────────────────────────────────────────── */}
         <View style={[st.resultFooter, { paddingBottom: Math.max(insets.bottom, S.lg) + S.sm }]}>
           <Pressable onPress={handleBackToForm} style={st.secondaryBtn}>
-            <Text style={st.secondaryBtnTxt}>{t('crt.adjust')}</Text>
+            <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.secondaryBtnTxt}>{t('crt.adjust')}</Text>
           </Pressable>
           <Pressable
             // route_id (BE v116): the generated course's stored row id rides
@@ -526,7 +526,7 @@ export default function CreateScreen() {
             style={[st.primaryBtn, { flex: 1 }]}
           >
             <Icon name="play" size={18} color={C.accentText} />
-            <Text style={st.primaryBtnTxt}>{t('crt.start')}</Text>
+            <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.primaryBtnTxt}>{t('crt.start')}</Text>
           </Pressable>
         </View>
       </View>
@@ -796,7 +796,7 @@ export default function CreateScreen() {
             zero extra fetches. */}
         <Pressable onPress={() => router.push('/ai-course-prefs' as any)} style={({ pressed }) => [st.prefsChip, pressed && { opacity: 0.7 }]} hitSlop={6}>
           <Icon name="options-outline" size={14} color={C.sub} />
-          <Text style={st.prefsChipTxt} numberOfLines={1}>
+          <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.prefsChipTxt} numberOfLines={1}>
             {[
               t(TERRAIN_KEY[aiPrefs.terrain]),
               `${fmtDist(aiPrefs.default_distance_km, units, 1).replace(/\.0$/, '')}${distUnit(units)}`,
@@ -811,7 +811,7 @@ export default function CreateScreen() {
           style={({ pressed }) => [st.primaryBtn, oneWay && !endCoord && { backgroundColor: C.surfaceAlt }, { opacity: pressed ? 0.85 : 1 }]}
         >
           <Icon name="sparkles-outline" size={18} color={oneWay && !endCoord ? C.faint : C.accentText} />
-          <Text style={[st.primaryBtnTxt, oneWay && !endCoord && { color: C.faint }]}>
+          <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={[st.primaryBtnTxt, oneWay && !endCoord && { color: C.faint }]}>
             {oneWay && !endCoord ? t('crt.pickEnd') : t('crt.generate')}
           </Text>
         </Pressable>

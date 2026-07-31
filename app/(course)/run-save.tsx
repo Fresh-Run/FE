@@ -45,7 +45,7 @@ import { maybeWriteRunToHealth } from '@/lib/health';
 import { t, tf, useLang, useT } from '@/lib/i18n';
 import { runSession } from '@/store/run-session';
 import { saveRun, type RunVisibility } from '@/lib/runs-api';
-import { radius as R, spacing as S, type Tokens } from '@/lib/theme';
+import { radius as R, spacing as S, type Tokens, DENSE_MAX_FONT_SCALE} from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import {
   clearPendingRun,
@@ -288,7 +288,7 @@ export default function RunSaveScreen() {
         >
           {saving
             ? <ActivityIndicator size="small" color={C.accentText} />
-            : <Text style={[st.savePillTxt, tooShort && { color: C.faint }]}>{T('runSave.save')}</Text>}
+            : <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={[st.savePillTxt, tooShort && { color: C.faint }]}>{T('runSave.save')}</Text>}
         </Pressable>
       </View>
 
@@ -304,11 +304,11 @@ export default function RunSaveScreen() {
               <View style={st.tagRow}>
                 <View style={st.tagIcon}><Icon name="people" size={14} color={C.accentGrn} /></View>
                 <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text style={st.tagTxt} numberOfLines={2}>
+                  <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.tagTxt} numberOfLines={2}>
                     {T('runSave.crewTag.before')}<Text style={st.tagStrong}>{crewSession.crewName}</Text>{T('runSave.crewTag.after')}
                   </Text>
                   {crewSession.announcementTitle ? (
-                    <Text style={st.tagSub} numberOfLines={1}>{tf('runSave.crewMeeting', { title: crewSession.announcementTitle })}</Text>
+                    <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.tagSub} numberOfLines={1}>{tf('runSave.crewMeeting', { title: crewSession.announcementTitle })}</Text>
                   ) : null}
                 </View>
                 <Pressable onPress={() => setTagKept(false)} hitSlop={8} style={st.tagRemove}>
@@ -327,6 +327,7 @@ export default function RunSaveScreen() {
         {/* ── Title hero ── */}
         <View style={{ paddingHorizontal: S.gutter, paddingTop: 8 }}>
           <TextInput
+            maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE}
             value={title}
             onChangeText={v => setTitle(v.slice(0, 30))} // canvas cap (backend allows 60)
             placeholder={suggestedTitle}
@@ -346,9 +347,9 @@ export default function RunSaveScreen() {
             [T('runSave.statPace'), run.avgPaceSecPerKm != null ? fmtPaceIn(run.avgPaceSecPerKm, units) : '--', paceUnit(units), false],
           ] as [string, string, string, boolean][]).map(([label, val, unit, accent], i) => (
             <View key={i} style={st.statCell}>
-              <Text style={st.statLbl}>{label}</Text>
-              <Text style={[st.statVal, accent && { color: C.accentGrn }]}>
-                {val}{unit ? <Text style={st.statUnit}> {unit}</Text> : null}
+              <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.statLbl}>{label}</Text>
+              <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={[st.statVal, accent && { color: C.accentGrn }]}>
+                {val}{unit ? <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.statUnit}> {unit}</Text> : null}
               </Text>
             </View>
           ))}

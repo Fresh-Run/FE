@@ -10,7 +10,7 @@ import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/ui';
-import { type Tokens } from '@/lib/theme';
+import { type Tokens, DENSE_MAX_FONT_SCALE} from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { tf, useT, type StringKey } from '@/lib/i18n';
 
@@ -40,14 +40,14 @@ export function MonthPicker({ visible, year, month, isEnabled, onSelect, onClose
         <Pressable style={st.backdrop} onPress={onClose} />
         <View style={[st.sheet, { paddingBottom: Math.max(insets.bottom, 14) + 12 }]}>
           <View style={st.grabBar} />
-          <Text style={st.title}>{T('mpk.title')}</Text>
+          <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.title}>{T('mpk.title')}</Text>
 
           {/* Year stepper */}
           <View style={st.yearRow}>
             <Pressable onPress={() => setYr(y => y - 1)} hitSlop={6} style={st.yearBtn}>
               <Icon name="chevron-back" size={18} color={C.text} />
             </Pressable>
-            <Text style={st.yearTxt}>{tf('date.yearN', { n: yr })}</Text>
+            <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.yearTxt}>{tf('date.yearN', { n: yr })}</Text>
             <Pressable onPress={() => setYr(y => y + 1)} hitSlop={6} style={st.yearBtn}>
               <Icon name="chevron-forward" size={18} color={C.text} />
             </Pressable>
@@ -68,7 +68,7 @@ export function MonthPicker({ visible, year, month, isEnabled, onSelect, onClose
                     on ? st.cellOn : ok ? st.cellOk : st.cellOff,
                   ]}
                 >
-                  <Text style={[st.cellTxt, { color: on ? C.accentText : ok ? C.text : C.faint }]}>
+                  <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={[st.cellTxt, { color: on ? C.accentText : ok ? C.text : C.faint }]}>
                     {T(('date.m' + mn) as StringKey)}
                   </Text>
                 </Pressable>

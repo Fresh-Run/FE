@@ -21,7 +21,7 @@ import { useProfile, type Profile, type RunStats } from '@/hooks/use-profile';
 import { healthAvailable, requestHealthAuthorization } from '@/lib/health';
 import { distUnit, fmtDist, fmtPaceIn, type Units } from '@/lib/run-format';
 import type { RunSettings } from '@/lib/settings-api';
-import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
+import { radius as R, shadows, spacing as S, type Tokens, DENSE_MAX_FONT_SCALE} from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { useHealth } from '@/store/use-health';
 import { useQuota } from '@/store/use-quota';
@@ -61,14 +61,14 @@ function SettingRow({ icon, iconBg, label, value, badge, danger, locked, onPress
       </View>
       <View style={{ flex: 1, minWidth: 0 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
-          <Text style={[st.settingLabel, danger && { color: C.danger }]}>{label}</Text>
+          <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={[st.settingLabel, danger && { color: C.danger }]}>{label}</Text>
           {badge && (
             <View style={st.badgePill}>
               <Text style={st.badgeTxt}>{badge}</Text>
             </View>
           )}
         </View>
-        {value ? <Text style={st.settingValue}>{value}</Text> : null}
+        {value ? <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.settingValue}>{value}</Text> : null}
       </View>
       {locked
         ? <Icon name="lock-closed-outline" size={17} color={C.faint} />
@@ -85,12 +85,12 @@ function ToggleRow({ label, caption, on, onChange }: { label: string; caption?: 
   return (
     <View style={st.toggleRow}>
       <View style={{ flex: 1, minWidth: 0, gap: 2, paddingRight: 10 }}>
-        <Text style={st.settingLabel}>{label}</Text>
+        <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.settingLabel}>{label}</Text>
         {/* invisible-conditions cure class: armed states announce their real
             requirements (haptics recon 2026-07-23: system-haptic state is
             UNDETECTABLE from JS — expo-haptics has no query API and iOS
             exposes none — so the caption is static, not state-reactive) */}
-        {caption != null && <Text style={st.toggleCaption}>{caption}</Text>}
+        {caption != null && <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.toggleCaption}>{caption}</Text>}
       </View>
       <Toggle on={on} onChange={onChange} />
     </View>
@@ -162,8 +162,8 @@ function IdentityCard({ profile, stats, units, premium, onEdit }: { profile: Pro
       <View style={st.quickStats}>
         {quickStats.map(([value, label], i) => (
           <View key={label} style={[st.quickStatCell, i > 0 && st.quickStatBorder]}>
-            <Text style={st.quickStatVal}>{value}</Text>
-            <Text style={st.quickStatLabel}>{label}</Text>
+            <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.quickStatVal}>{value}</Text>
+            <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.quickStatLabel}>{label}</Text>
           </View>
         ))}
       </View>

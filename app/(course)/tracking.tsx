@@ -53,7 +53,7 @@ import { getPendingRun, refreshPendingRun, setPendingRun } from '@/store/pending
 import { useLocalProfile } from '@/store/use-local-profile';
 import { useSettings } from '@/store/use-settings';
 import { distUnit, fmtDist, fmtPaceIn, paceUnit } from '@/lib/run-format';
-import { accentShadow, radius as R, routeStroke, shadows, spacing as S, type Tokens } from '@/lib/theme';
+import { accentShadow, radius as R, routeStroke, shadows, spacing as S, type Tokens, DENSE_MAX_FONT_SCALE} from '@/lib/theme';
 import { useScheme } from '@/store/use-scheme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 
@@ -889,14 +889,14 @@ export default function TrackingScreen() {
             {gpsLost && (
               <View style={st.gpsChip}>
                 <Icon name="cellular-outline" size={11} color={C.sun} />
-                <Text style={st.gpsChipTxt}>{t('trk.gpsWeak')}</Text>
+                <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.gpsChipTxt}>{t('trk.gpsWeak')}</Text>
               </View>
             )}
             {/* T1: 경로 이탈 banner + re-join hint (course runs only) */}
             {offCourse && (
               <View style={[st.gpsChip, { backgroundColor: 'rgba(180,40,40,0.72)' }]}>
                 <Icon name="navigate-outline" size={11} color="#fff" />
-                <Text style={st.gpsChipTxt}>{tf('trk.offCourse', { m: rejoinM })}</Text>
+                <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.gpsChipTxt}>{tf('trk.offCourse', { m: rejoinM })}</Text>
               </View>
             )}
           </View>
@@ -981,10 +981,10 @@ export default function TrackingScreen() {
                 ] as [string, string, string][]).map(([val, unit, label], i) => (
                   <View key={label} style={[st.metricCol, i > 0 && st.metricColDivider]}>
                     <View style={st.metricValRow}>
-                      <Text style={st.metricVal}>{val}</Text>
-                      {unit ? <Text style={st.metricUnit}>{unit}</Text> : null}
+                      <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.metricVal}>{val}</Text>
+                      {unit ? <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.metricUnit}>{unit}</Text> : null}
                     </View>
-                    <Text style={st.metricLbl}>{label}</Text>
+                    <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.metricLbl}>{label}</Text>
                   </View>
                 ));
               })()}
@@ -998,10 +998,10 @@ export default function TrackingScreen() {
             ] as [string, string, string][]).map(([val, unit, label], i) => (
               <View key={i} style={[st.metricCol, i > 0 && st.metricColDivider]}>
                 <View style={st.metricValRow}>
-                  <Text style={st.metricVal}>{val}</Text>
-                  <Text style={st.metricUnit}>{unit}</Text>
+                  <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.metricVal}>{val}</Text>
+                  <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.metricUnit}>{unit}</Text>
                 </View>
-                <Text style={st.metricLbl}>{label}</Text>
+                <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.metricLbl}>{label}</Text>
               </View>
             ))}
           </View>

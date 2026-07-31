@@ -1232,6 +1232,14 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 - **롤백 실행 (원-컨펌 ROLL BACK NOW):** 57f584d1 그룹 republish → production 신규 그룹 **3601dfef-3140-4819-9ad8-9534062f8b28** · 서빙 검증: production 매니페스트 = 롤백 그룹 iOS id + 해시 K3AgI3uy… (57f584d1 바이트 정확 일치 — livePath 프로모션 레저의 기록값). **스트레인저는 이제 라스트-노운-굿 수신; 플로어 = 57f584d1 바이트 (서빙 그룹 3601dfef).**
 - **3eda99f3는 스테이징 존속** (오토-포즈+app_version+타임스탬프 픽스, 커밋 6ca46a0) — **교정-워크 = 오늘의 첫 액션 (의무)**; 전 레그 통과 → 신규 스탬프 (실관찰만) + 원-컨펌 → 재프로모션. 실패 레그 발생 시 → 스테이징도 홀드, 코어 재작업. **[대체됨 → 34749a9e 아래 참조 — 동일 카고 + route-map v3; 워크 게이트 동일 적용]**
 
+## 🔤 다이내믹-타입 글로벌 클램프 스윕 BUILT (미스테이지) — 룰링 ① 집행
+- 메커니즘: 단일 집행점 부재 (ui/Text variant 컴포넌트 = auth 6파일 온리; 프로덕트 UI ~80파일 = 로우 RN Text) → **퍼-사이트 스윕: lib/theme `DENSE_MAX_FONT_SCALE = 1.3` + 88 사이트 / 17 파일** + ui/Text에 maxFontSizeMultiplier 패스스루 (Button 라벨 탑승; 신규 컴포넌트 발명 무).
+- 덴스 (클램프): 탭 라벨 (fresh-tab-bar 2) · 추천 러너 필 3 · 런-카드 7 + my-profile 트윈 7 · kudos-시트 3 · 먼스-피커 3 · 기록 로우+스탯 6 · 알림 로우 4 (tag/ago/delete/tabLabel) · 프로필 설정 로우 6 · 트래킹 메트릭+칩 8 · run-save 타이틀 존 7 (TextInput 포함) · crew-create 8 · share-card 타일+컨트롤 10 · create 칩+CTA 5 · 팔로우 리스트/리퀘스트 8 · Button 라벨 1.
+- 프리 (무클램프, 경계 명시): 알림 body 문장 · run-save 캡션/메모 컴포저 · 포스트/댓글/메모 콘텐츠 · 모달 리딩 카피 · not-found body · auth 스크린 (ui/Text 프롭 미전달 = 자유 스케일).
+- 웨더 스트립: allowFontScaling=false 아일랜드 기존 그대로 — 무접촉 (프로즌 ≠ 클램프drüber).
+- 6 필드 인스턴스 데스크-매스 (시뮬 불가 — 로컬 빌드/시뮬레이터 부재, 정직 명기; 비주얼 컨펌 = 폰 실내 글랜스): ① 필 = 1.3× + 기존 adjustsFontSizeToFit(0.8) → 순성장 ~1.04× ② 스트립 = 프로즌 ③ crew-create = 1.3× + 실측-푸터 이중 방어 ④ run-save 존 = 스크롤 컨텍스트 + 1.3× ⑤ 기록 로우 = 62px에 19.5pt+14.3pt 스택 적합 (야간러닝 후보 클래스 데스크-클로즈) ⑥ share-card 타일 = onLayout 재측정(정렬) + 1.3×(오버플로) 양축 커버.
+- 스트링-프리 · 파리티 934 불변.
+
 ## ⚖️ 오너 룰링 4건 (8/3 카우치 세트)
 - **① 다이내믹-타입 가드레일: 글로벌 클램프.** 덴스 UI (필·로우·스탯 타일·칩)에 maxFontSizeMultiplier ~1.3 실링; 바디/리딩 텍스트는 자유 스케일. **스윕 빌드 큐드 (언블록)** — 데스크-검증 클래스, 워크 레그 무추가. 6-인스턴스 컨테인먼트 클래스의 글로벌 해소.
 - **② route_saved: 제네릭 폴백 유지.** FE 트리거 부재 — copy-as-route CTA 언파크 시 재방문. 오픈-디시전 종결.

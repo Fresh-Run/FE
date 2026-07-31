@@ -37,7 +37,7 @@ import { createChallenge, dateToKstIsoDay, kstDateStr } from '@/lib/challenges-a
 import { createCrew, CREW_TAG_GROUPS, CREW_TAG_MAX, tagLabel, type Crew, type CrewLevel } from '@/lib/crews-api';
 import { regionName } from '@/lib/korea-regions';
 import { useCurrentLocation } from '@/hooks/use-current-location';
-import { accentShadow, radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
+import { accentShadow, radius as R, shadows, spacing as S, type Tokens, DENSE_MAX_FONT_SCALE} from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { takePendingCrewRegion } from '@/store/pending-crew-region';
 
@@ -85,7 +85,7 @@ export function FieldRow({ label, value, onChange, placeholder, maxLength }: {
   const st = useStyles(makeSt);
   return (
     <View style={st.fieldRow}>
-      <Text style={st.fieldLabel}>{label}</Text>
+      <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.fieldLabel}>{label}</Text>
       <TextInput
         value={value}
         onChangeText={onChange}
@@ -103,7 +103,7 @@ export function Chip({ label, on, onPress }: { label: string; on: boolean; onPre
   const st = useStyles(makeSt);
   return (
     <Pressable onPress={onPress} style={[st.chip, on && st.chipOn]}>
-      <Text style={[st.chipTxt, on && { color: C.accentGrn }]}>{label}</Text>
+      <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={[st.chipTxt, on && { color: C.accentGrn }]}>{label}</Text>
     </Pressable>
   );
 }
@@ -114,8 +114,8 @@ export function SelectRow({ label, sub, selected, onSelect }: { label: string; s
   return (
     <Pressable onPress={onSelect} style={st.selectRow}>
       <View style={{ flex: 1, minWidth: 0 }}>
-        <Text style={st.selectLabel}>{label}</Text>
-        <Text style={st.selectSub}>{sub}</Text>
+        <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.selectLabel}>{label}</Text>
+        <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.selectSub}>{sub}</Text>
       </View>
       <View style={[st.radioOuter, selected && { borderColor: C.accent }]}>
         {selected && <View style={st.radioInner} />}
@@ -139,8 +139,8 @@ export function RegionRow({ sido, sigungu, onPress, onClear }: {
     <Pressable onPress={onPress} style={st.regionRow}>
       <View style={st.areaIcon}><Icon name="map-outline" size={18} color={C.accentGrn} /></View>
       <View style={{ flex: 1, minWidth: 0 }}>
-        <Text style={st.areaLabel}>{t('crw.areaRegion')}</Text>
-        <Text style={[st.regionValue, !sido && { color: C.faint }]} numberOfLines={1}>{label}</Text>
+        <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.areaLabel}>{t('crw.areaRegion')}</Text>
+        <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={[st.regionValue, !sido && { color: C.faint }]} numberOfLines={1}>{label}</Text>
       </View>
       {onClear && sido ? (
         <Pressable onPress={onClear} hitSlop={10} style={st.regionClear} accessibilityLabel={t('crw.areaClear')}>
@@ -389,7 +389,7 @@ export default function CrewCreateScreen() {
           <View style={st.fieldRow}>
             <View style={st.areaIcon}><Icon name="location" size={18} color={C.accentGrn} /></View>
             <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={st.areaLabel}>{t('crw.homeBase')}</Text>
+              <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.areaLabel}>{t('crw.homeBase')}</Text>
               <TextInput
                 value={area}
                 onChangeText={v => { areaTouched.current = true; setArea(v); }}
@@ -402,7 +402,7 @@ export default function CrewCreateScreen() {
           <View style={st.divider} />
           <View style={st.sliderBlock}>
             <View style={st.sliderHead}>
-              <Text style={st.fieldLabel}>{t('crw.radius')}</Text>
+              <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.fieldLabel}>{t('crw.radius')}</Text>
               <Text style={st.sliderValue}>{radiusKm} km</Text>
             </View>
             <Slider

@@ -43,7 +43,7 @@ import {
   type AppNotification,
 } from '@/lib/notifications-api';
 import { fmtAgo } from '@/lib/run-format';
-import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
+import { radius as R, shadows, spacing as S, type Tokens, DENSE_MAX_FONT_SCALE} from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { t as tx, tf, useLang, useT, type StringKey } from '@/lib/i18n';
 
@@ -185,7 +185,7 @@ function NotifRow({ n, onPress, onDelete }: { n: AppNotification; onPress: () =>
       renderRightActions={() => (
         <Pressable onPress={onDelete} style={st.deleteAction}>
           <Icon name="trash-outline" size={19} color="#fff" />
-          <Text style={st.deleteTxt}>{T('common.delete')}</Text>
+          <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.deleteTxt}>{T('common.delete')}</Text>
         </Pressable>
       )}
     >
@@ -208,8 +208,8 @@ function NotifRow({ n, onPress, onDelete }: { n: AppNotification; onPress: () =>
       )}
       <View style={{ flex: 1, minWidth: 0 }}>
         <View style={st.rowHead}>
-          <Text style={[st.tag, { color: meta.tone }]}>{T(meta.tag as StringKey)}</Text>
-          <Text style={st.ago}>{fmtAgo(n.created_at, lang)}</Text>
+          <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={[st.tag, { color: meta.tone }]}>{T(meta.tag as StringKey)}</Text>
+          <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.ago}>{fmtAgo(n.created_at, lang)}</Text>
         </View>
         <Text style={st.body}>
           {(() => {
@@ -312,7 +312,7 @@ export default function NotificationsScreen() {
           const on = tab === t.key;
           return (
             <Pressable key={t.key} onPress={() => setTab(t.key)} hitSlop={6} style={st.tabBtn}>
-              <Text style={[st.tabLabel, on && st.tabLabelOn]}>{T(t.label as StringKey)}</Text>
+              <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={[st.tabLabel, on && st.tabLabelOn]}>{T(t.label as StringKey)}</Text>
               {on && <View style={st.tabUnderline} />}
             </Pressable>
           );

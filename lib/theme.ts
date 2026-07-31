@@ -1,5 +1,11 @@
 import { Platform, type TextStyle, type ViewStyle } from 'react-native';
 
+/** Dynamic-Type global clamp (owner ruling 8/3): dense UI — pills,
+    rows, stat tiles, chips, tab labels, fixed-container buttons — caps at
+    1.3× text scale; body/reading copy scales free (no clamp). Apply as
+    <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE}> per dense site. */
+export const DENSE_MAX_FONT_SCALE = 1.3;
+
 /**
  * FreshRun design tokens — single source of truth.
  *

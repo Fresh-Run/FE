@@ -24,7 +24,7 @@ import { t, useT } from '@/lib/i18n';
 import { ApiError, apiFetch, apiRequest } from '@/lib/api';
 import { getSuggestedUsers, type SuggestedUser } from '@/lib/profile-api';
 import { openProfile } from '@/lib/profile-nav';
-import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
+import { radius as R, shadows, spacing as S, type Tokens, DENSE_MAX_FONT_SCALE} from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { usePendingFollows } from '@/store/pending-follows';
 
@@ -114,7 +114,7 @@ export const SuggestedRunnersRow = React.memo(function SuggestedRunnersRow({ sr 
 
   return (
     <View style={st.wrap}>
-      <Text style={st.title}>{T('fr.title')}</Text>
+      <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.title}>{T('fr.title')}</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingHorizontal: S.gutter }}>
         {sr.rows === null
           ? [0, 1, 2].map(i => (
@@ -128,10 +128,10 @@ export const SuggestedRunnersRow = React.memo(function SuggestedRunnersRow({ sr 
               return (
                 <Pressable key={u.user_id} onPress={() => openProfile(u.user_id, u.nickname)} style={[st.card, shadows.sm]}>
                   <Avatar name={u.nickname} photoUrl={u.avatar_url} size={52} />
-                  <Text style={st.name} numberOfLines={1}>{u.nickname}</Text>
+                  <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.name} numberOfLines={1}>{u.nickname}</Text>
                   <Pressable onPress={() => sr.toggle(u)} hitSlop={6} style={[st.pill, fs !== 'none' ? st.pillOn : st.pillOff]}>
                     {/* one line in ANY locale — shrink, never wrap (the widget-crunch grammar) */}
-                    <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={[st.pillTxt, fs !== 'none' && { color: C.sub }]}>
+                    <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={[st.pillTxt, fs !== 'none' && { color: C.sub }]}>
                       {fs === 'following' ? T('fr.following') : fs === 'requested' ? T('fr.requested') : T('fr.follow')}
                     </Text>
                   </Pressable>

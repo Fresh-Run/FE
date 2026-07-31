@@ -22,7 +22,7 @@ import { Icon } from '@/components/ui';
 import { useRuns, type Run } from '@/hooks/use-runs';
 import { t, tf, useLang, useT, type StringKey } from '@/lib/i18n';
 import { distUnit, fmtDate, fmtDist, fmtDuration, fmtPaceIn, fmtWhen, timeTitle } from '@/lib/run-format';
-import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
+import { radius as R, shadows, spacing as S, type Tokens, DENSE_MAX_FONT_SCALE} from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { getMonthlyStats, type MonthlyStats } from '@/lib/stats-api';
 import { useQuota } from '@/store/use-quota';
@@ -200,11 +200,11 @@ function MonthStats() {
       <View style={st.statRow}>
         {stats.map(([label, value, unit], i) => (
           <View key={label} style={[st.statCell, i > 0 && st.statCellBorder]}>
-            <Text style={st.statVal}>
+            <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.statVal}>
               {value}
-              {unit ? <Text style={st.statUnit}> {unit}</Text> : null}
+              {unit ? <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.statUnit}> {unit}</Text> : null}
             </Text>
-            <Text style={st.statLabel}>{label}</Text>
+            <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.statLabel}>{label}</Text>
           </View>
         ))}
       </View>
@@ -276,10 +276,10 @@ function RunRow({ run }: { run: Run }) {
       </View>
       <View style={{ flex: 1, minWidth: 0 }}>
         <View style={st.runRowTop}>
-          <Text style={st.runTitle} numberOfLines={1}>{run.title ?? timeTitle(run.ran_at, lang)}</Text>
-          <Text style={st.runDate}>{fmtDate(run.ran_at, lang)}</Text>
+          <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.runTitle} numberOfLines={1}>{run.title ?? timeTitle(run.ran_at, lang)}</Text>
+          <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.runDate}>{fmtDate(run.ran_at, lang)}</Text>
         </View>
-        <Text style={st.runWhen} numberOfLines={1}>{fmtWhen(run.ran_at, lang)}</Text>
+        <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.runWhen} numberOfLines={1}>{fmtWhen(run.ran_at, lang)}</Text>
         <View style={st.runMetrics}>
           <MetricPill icon="location-outline"    value={`${fmtDist(run.distance_km, units, 2)} ${distUnit(units)}`}                            color={C.accentGrn} />
           <MetricPill icon="time-outline"        value={fmtDuration(run.duration_sec)}                                                         color={C.faint} />

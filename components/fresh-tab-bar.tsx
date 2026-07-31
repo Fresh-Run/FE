@@ -6,7 +6,7 @@ import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/ui';
-import { accentShadow, shadows, type Tokens } from '@/lib/theme';
+import { accentShadow, shadows, type Tokens, DENSE_MAX_FONT_SCALE} from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { useSettings } from '@/store/use-settings';
 
@@ -91,7 +91,7 @@ export function FreshTabBar({ state, navigation }: BottomTabBarProps) {
                 <View style={[styles.centerCircle, { backgroundColor: C.accent }, accentShadow(C.accent)]}>
                   <Icon name="add" size={26} color={C.accentText} />
                 </View>
-                <Text style={[styles.lbl, { color: C.accentGrn, fontWeight: '700' }]}>
+                <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={[styles.lbl, { color: C.accentGrn, fontWeight: '700' }]}>
                   {T(tab.label)}
                 </Text>
               </Pressable>
@@ -109,7 +109,7 @@ export function FreshTabBar({ state, navigation }: BottomTabBarProps) {
                 size={22}
                 color={iconColor}
               />
-              <Text style={[styles.lbl, { color: iconColor, fontWeight: isFocused ? '700' : '500' }]}>
+              <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={[styles.lbl, { color: iconColor, fontWeight: isFocused ? '700' : '500' }]}>
                 {T(tab.label)}
               </Text>
             </Pressable>
