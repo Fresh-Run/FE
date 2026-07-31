@@ -784,6 +784,27 @@ export default function CreateScreen() {
 
       {/* ── Sticky CTA — gated on a picked 도착지 in one-way mode ────── */}
       <View style={[st.formFooter, { paddingBottom: Math.max(insets.bottom, S.lg) + S.sm }]}>
+        {/* Prefs summary chip (owner-queued 8/3 — 2nd discoverability failure
+            in 2 days: the read-only defaults line lives INSIDE the collapsed
+            고급 설정 accordion, invisible until expanded). Always-visible door
+            at the decisive moment, above the CTA; canvas has no chip idiom
+            here (owner-spec addition; nearest = the accordion's closed-state
+            hint line). CONSTRAINT (hers, ledgered 8/3): preference LABELS
+            only — existing dict labels reused verbatim; nothing may promise
+            flat routes or outcomes. Reactivity: aiPrefs/units are live store
+            subscriptions — returning from the prefs screen repaints with
+            zero extra fetches. */}
+        <Pressable onPress={() => router.push('/ai-course-prefs' as any)} style={({ pressed }) => [st.prefsChip, pressed && { opacity: 0.7 }]} hitSlop={6}>
+          <Icon name="options-outline" size={14} color={C.sub} />
+          <Text style={st.prefsChipTxt} numberOfLines={1}>
+            {[
+              t(TERRAIN_KEY[aiPrefs.terrain]),
+              `${fmtDist(aiPrefs.default_distance_km, units, 1).replace(/\.0$/, '')}${distUnit(units)}`,
+              aiPrefs.scenic ? t('crt.scenic') : (aiPrefs.surface !== 'any' ? t(SURFACE_KEY[aiPrefs.surface]) : null),
+            ].filter(Boolean).join(' · ')}
+          </Text>
+          <Icon name="chevron-forward" size={13} color={C.faint} />
+        </Pressable>
         <Pressable
           onPress={handleGenerate}
           disabled={oneWay && !endCoord}
@@ -876,6 +897,8 @@ const makeSt = (C: Tokens) => StyleSheet.create({
 
   // Form footer
   formFooter: { position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: S.gutter, paddingTop: S.md, backgroundColor: C.bg, borderTopWidth: 1, borderTopColor: C.border },
+  prefsChip:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, alignSelf: 'center', maxWidth: '100%', paddingHorizontal: 12, paddingVertical: 7, borderRadius: R.pill, backgroundColor: C.surfaceAlt, borderWidth: 1, borderColor: C.border, marginBottom: 10 },
+  prefsChipTxt: { fontSize: 12.5, fontWeight: '600', color: C.sub, letterSpacing: -0.2, flexShrink: 1 },
 
   // Shared buttons
   primaryBtn:    { height: 56, borderRadius: R.lg, backgroundColor: C.accent, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9 },
