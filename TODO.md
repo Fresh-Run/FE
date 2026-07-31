@@ -1446,7 +1446,7 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 
 ## ✅ 슬라이스 5 PROMOTED + 에픽 PARKED (2026-07-31) — 오너 [17:23] FULL (9d4b4b27 완주 + 2값 디프, 본 대로) · 원-컨펌 발화·응답 (지연 노티 포함) · 5a86ce45 → production d69cbfc3-cbeb-4bd5-bf90-146dbc64e613 · 프로모션 해시-타이 MATCH (105gmp_6… 양채널 동일)
 - 라이브: 런-디테일 월드 (정션 2픽스: run-splits 헤더·SSO 칩) · 기록 탭+월간 리포트 (오디널·사전-주도 월 이름) · PB 트라이앵글 · 날씨 상세 (등급 표시맵). **롤백 플로어 전진 → d69cbfc3** (72a1b103 은퇴).
-- 📍 **i18n 에픽 PARKED at the slice-5 seam (오너 스텝-백)**: 슬라이스 1–5 라이브 (927키) · 잔여 = 슬라이스 6 (설정 허브 ~273) · 7 (코스 월드 ~168 + run-format 서울 폴백 + 웰컴 헤드라인 서울→전국 라이드 + **홈 날씨 스트립 노트 (8/1): 버딕트 칩 = running_index.label — 그녀 v118부터 서버-사이드 lang-분기 (최고→Excellent 등), 등급은 ko 와이어 고정 + BE 테스트 가드. 스트립 전환 시 칩은 자가-로컬라이즈 — FE 매핑 불요, label 키맵 금지**) · 8 (롱테일 + 언어-캡션 은퇴 제안 + **use-generate-route 에러 바디 키잉 노트 (8/1) [OBSOLETE-PENDING §5 — 8/2 에러-계약 엔트리 참조: error_code+type/loc가 서버-카피 실링 자체를 은퇴시킴]**: 503 route_generation_unavailable en = 그녀 API_GUIDE 라인 버바팀 "Route generation is busy — please try again shortly." (v123) · 502 en 트윈 = 우리 ko 조건-변경 라인 번역 · 브랜칭 무접촉 — 계약 이미 정합) — ~596히트. 리줌 웜스타트: 배치 맵 line-검색 "BATCH MAP", 5-시리즈 리콘 노트, 리액티브-t 스윕 리스트 (run-result 베어-t 포함).
+- 📍 **i18n 에픽 PARKED at the slice-5 seam (오너 스텝-백)**: 슬라이스 1–5 라이브 (927키) · 잔여 = 슬라이스 6 (설정 허브 ~273) · 7 (코스 월드 ~168 + run-format 서울 폴백 + ~~웰컴 헤드라인 서울→전국 라이드~~ **[RETIRED 8/3 — 오너 룰링: 카피 자체가 도시 명명 중단, "서울을"→"오늘을" 빌드됨 (전국 앱 반영); en은 welcome.tsx 슬라이스-8 컨버전 시 "New roads every time — run your today." 제안 온-레코드]** + **홈 날씨 스트립 노트 (8/1): 버딕트 칩 = running_index.label — 그녀 v118부터 서버-사이드 lang-분기 (최고→Excellent 등), 등급은 ko 와이어 고정 + BE 테스트 가드. 스트립 전환 시 칩은 자가-로컬라이즈 — FE 매핑 불요, label 키맵 금지**) · 8 (롱테일 + 언어-캡션 은퇴 제안 + **use-generate-route 에러 바디 키잉 노트 (8/1) [OBSOLETE-PENDING §5 — 8/2 에러-계약 엔트리 참조: error_code+type/loc가 서버-카피 실링 자체를 은퇴시킴]**: 503 route_generation_unavailable en = 그녀 API_GUIDE 라인 버바팀 "Route generation is busy — please try again shortly." (v123) · 502 en 트윈 = 우리 ko 조건-변경 라인 번역 · 브랜칭 무접촉 — 계약 이미 정합) — ~596히트. 리줌 웜스타트: 배치 맵 line-검색 "BATCH MAP", 5-시리즈 리콘 노트, 리액티브-t 스윕 리스트 (run-result 베어-t 포함).
 - 오픈 스레드 (8/1 정정): BE 푸시 kudos 발산 (그녀 컨펌 대기, 불변) · route_saved 빌드 결정 (불변) · **route_id 원-라이너: 게이트 해제 — v116 배포·전 서빙 브랜치 검증, BUILD-READY** · **home.runner: 룰링 완료 — v114 답 도착 (푸시-바디 온리, null은 실제, 클라 폴백 유지) → 20 레이블 사이트 "Runner" 유지 + 알림 액터용 문장-주어 신규 키 1, BUILD-READY**. 양 항목 = 하나의 큐드 빌드의 두 반쪽.
 
 ## 🔼 슬라이스 5 그룹 v2 STAGED — 5a86ce45-c343-4301-bb19-1999d98287c6 (9d4b4b27 대체; 커밋 7b3865d — 워크-픽스 2값: Weather 타이틀·personalized 제거, ko 불변) · 해시-타이 MATCH (105gmp_6…) · 마커: 구 2값 0·AI run index 1·ko 내 기준 1 · 프로모션 게이트 대기
@@ -1496,7 +1496,7 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 
 ## 🔼 필드-픽스 슬라이스 (8c07a73 → 헤드라인 리버트 후속; NOT staged)
 - 스탠딩: 픽스1 톱컷오프 (run-save+edit-run 컨텐트 insets.top+26, run-result 패리티) · 픽스3 리센터 NAV_ALTITUDE_M 스냅 (오피니언드 — 오너 워크 룰링).
-- 픽스2 웰컴 헤드라인 REVERTED (서울 복원): 오너 디퍼럴 — 슬로건 워딩은 전국-리포트와 별개 결정이고 welcome.tsx는 슬라이스-8 i18n 파일이라 그 컨버전에 태워 감 (스탠드얼론 빌드 불요).
+- 픽스2 웰컴 헤드라인 REVERTED (서울 복원): 오너 디퍼럴 — 슬로건 워딩은 전국-리포트와 별개 결정이고 welcome.tsx는 슬라이스-8 i18n 파일이라 그 컨버전에 태워 감 (스탠드얼론 빌드 불요). **[디퍼럴 종료 8/3 — 오너 룰링으로 "오늘을 달리세요" 빌드; 슬라이스-7 라인의 RETIRED 마커 참조]**
 - insets.top<26 스윕 결과 온-레코드: 앱-와이드 이디엄 (~55 스크린) — KAV-루트 4형제 (personal-info·crew-edit·crew-create·crew-chat) 최고위험; 룰링 전 무변경.
 
 ## 🔼 4d — NOTIFICATIONS + ROUTING + fmtAgo BUILT (49bd8c7+62543db; NOT staged per spec)

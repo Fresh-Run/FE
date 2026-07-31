@@ -71,7 +71,7 @@ export default function WelcomeScreen() {
       {/* Headline + subtitle */}
       <View style={styles.copy}>
         <Text variant="headlineXl" weight="700">
-          매번 새로운 길로,{'\n'}서울을 달리세요
+          매번 새로운 길로,{'\n'}오늘을 달리세요
         </Text>
         <Text variant="bodyMd" color="sub" style={styles.subtitle}>
           AI가 거리·경유지에 맞춰 한 번도{'\n'}달려본 적 없는 코스를 만들어 드려요.
