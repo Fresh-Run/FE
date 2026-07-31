@@ -37,6 +37,7 @@ export default function RouteMapScreen() {
   // carries upgradeRunId, fetch the full track and swap it in (silent fail →
   // the thumb stays, honest). key-remount refits the camera on swap.
   const [line, setLine] = useState(payload?.polyline ?? null);
+  const centerMode = !!payload?.center; // 8/3: point-subject lane (바로뛰기)
   useEffect(() => {
     const id = payload?.upgradeRunId;
     if (!id) return;
@@ -69,6 +70,23 @@ export default function RouteMapScreen() {
           cache={false}
           borderRadius={0}
         />
+      ) : centerMode ? (
+        // 8/3 point-subject lane: the 바로뛰기 location card expands HERE now
+        // (was meet-map user-mode, which had no labels and no cycle) — one
+        // viewer, one cycle implementation. Same layer props as the route
+        // lane; blue dot instead of a route.
+        <RealMap
+          height={winH}
+          center={payload!.center}
+          showsUser={payload?.showsUser}
+          marker={!payload?.showsUser}
+          interactive
+          mapType={layer === 'satellite' ? 'hybrid' : 'standard'}
+          showsPoi={layer !== 'clean'}
+          compassOffset={{ x: -(winW - 69), y: winH - insets.top - insets.bottom - 140 }}
+          cache={false}
+          borderRadius={0}
+        />
       ) : (
         <View style={st.empty}>
           <Icon name="map-outline" size={36} color={C.faint} />
@@ -82,7 +100,7 @@ export default function RouteMapScreen() {
         </Pressable>
         {payload && (
           <View style={st.titlePill}>
-            <Icon name="navigate" size={13} color={C.accentGrn} />
+            <Icon name={centerMode ? 'locate' : 'navigate'} size={13} color={C.accentGrn} />
             <Text style={st.titleTxt} numberOfLines={1}>{payload.title}</Text>
           </View>
         )}

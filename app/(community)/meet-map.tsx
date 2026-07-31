@@ -40,7 +40,7 @@ import { Icon } from '@/components/ui';
 import { updateCrew } from '@/lib/crews-api';
 import { accentShadow, radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
-import { t, tf } from '@/lib/i18n';
+import { t } from '@/lib/i18n';
 
 export default function MeetMapScreen() {
   const C = useTokens();
@@ -48,10 +48,10 @@ export default function MeetMapScreen() {
   const insets = useSafeAreaInsets();
   const { height: winH } = useWindowDimensions();
   const params = useLocalSearchParams<{ name?: string; lat: string; lng: string; crewId?: string; canEdit?: string; mode?: string }>();
-  // mode='user' (뛰러 가기 location card): the live blue dot IS the subject —
-  // no red pin, no 지도 앱에서 보기 (external nav to yourself is decoration),
-  // no edit chip. One point-map screen, param-varied (stated: cleaner than a
-  // third screen — route-map stays the ROUTE variant).
+  // mode='user' — DORMANT since 8/3: the 뛰러 가기 location card now expands
+  // into route-map's point-subject lane (owner ask: labels + the layer
+  // cycle; one cycle implementation). The branch stays functional but has
+  // no caller; meet-map remains the crew-pin variant.
   const userMode = params.mode === 'user';
 
   // Display state — seeded from params, updated in place after a save

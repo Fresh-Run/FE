@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTabBarInset } from '@/components/fresh-tab-bar';
 import { MiniMap } from '@/components/mini-map';
 import { RealMap } from '@/components/real-map';
+import { setRouteMap } from '@/store/route-map';
 import { Icon } from '@/components/ui';
 import { useCurrentLocation } from '@/hooks/use-current-location';
 import { useRuns } from '@/hooks/use-runs';
@@ -180,12 +181,14 @@ export default function CreateTabScreen() {
           {locStatus === 'granted' ? (
             // showsUser: the blue you-are-here dot (native layer; cache=false
             // so the async dot isn't frozen out of the snapshot). Tap → the
-            // full in-app map (meet-map user mode) — the last non-tappable
-            // map joins the tap-to-enlarge convention (집결 카드/course heroes).
-            <Pressable onPress={() => router.push({
-              pathname: '/(community)/meet-map' as never,
-              params: { mode: 'user', name: placeName ?? '현재 위치', lat: String(coordinate.lat), lng: String(coordinate.lng) },
-            })}>
+            // CYCLING viewer (8/3 owner ask): route-map's point-subject lane —
+            // opens labeled (POI/store names), cycles labeled→clean→satellite,
+            // same as run-card maps. (Was meet-map user-mode: labels
+            // suppressed, no cycle — rerouted; meet-map keeps the crew pin.)
+            <Pressable onPress={() => {
+              setRouteMap({ title: placeName ?? '현재 위치', center: coordinate, showsUser: true });
+              router.push('/(course)/route-map' as never);
+            }}>
               <RealMap key={`${coordinate.lat},${coordinate.lng}`} height={164} borderRadius={R.xl} center={coordinate} showsUser cache={false} />
             </Pressable>
           ) : (
