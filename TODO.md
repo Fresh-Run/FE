@@ -1244,11 +1244,11 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 - 6 필드 인스턴스 데스크-매스 (시뮬 불가 — 로컬 빌드/시뮬레이터 부재, 정직 명기; 비주얼 컨펌 = 폰 실내 글랜스): ① 필 = 1.3× + 기존 adjustsFontSizeToFit(0.8) → 순성장 ~1.04× ② 스트립 = 프로즌 ③ crew-create = 1.3× + 실측-푸터 이중 방어 ④ run-save 존 = 스크롤 컨텍스트 + 1.3× ⑤ 기록 로우 = 62px에 19.5pt+14.3pt 스택 적합 (야간러닝 후보 클래스 데스크-클로즈) ⑥ share-card 타일 = onLayout 재측정(정렬) + 1.3×(오버플로) 양축 커버.
 - 스트링-프리 · 파리티 934 불변.
 
-## 🚨 리포트-제출 리트라이 COMPLETED (오너, 8/3 프리-워크 — 그녀 진단 커밋 이행): 본계정 로그인 → 타 테스터 런 신고 → 성공 컨펌 표시 "신고가 접수되었어요: 검토 후 필요한 조치를 취할게요" (= 그녀 204). 타깃+워딩 그녀에게 회신 완료 · **그녀 행-컨펌 펜딩** — 원래 "신고 실패" 리포트는 셀프-리포트 400 팬텀으로 클로즈 예상 (transport의 self 400 클래스). **서베이 파일-1 EMPTY.**
+## 🚨 리포트-제출 리트라이 COMPLETED (오너, 8/3 프리-워크 — 그녀 진단 커밋 이행): 본계정 로그인 → 타 테스터 런 신고 → 성공 컨펌 표시 "신고가 접수되었어요: 검토 후 필요한 조치를 취할게요" (= 그녀 204). 타깃+워딩 그녀에게 회신 완료 · ~~그녀 행-컨펌 펜딩~~ **[CLOSED 8/3 저녁 — 행 확인: SeYoon 런 / abuse / pending / 타임스탬프 일치. 원래 "신고 실패" = 셀프-리포트-400 팬텀 확정, 버그 아니었음 — 베타 5번째 팬텀, 예상-클로즈 버바팀 적중. 신고는 설계상 무통보 (SeYoon 무노티) · 그녀 테스트 행 폐기. 우리 쪽 발신 오픈 스레드 = 그녀 보드에 ZERO.]** **서베이 파일-1 EMPTY.**
 
 ## ✉️ 지연 asks 메모 DELIVERED (오너 송신, 8/3 — 올-클로저 정정판): ① §5 = input-트림 안전 통보 + 셰이프 ask 제거 (그녀 1:36AM 답 기반 정정) ② theme 'system' = 컨펌-온리 (설정 큐 도달 시 빌드) ③ 크루 kudos_count = 배포 확인 + 빌드-인텐트. 서베이 파일-1 ② 클로즈.
 
-## 🫀 [빌드-큐] 크루 러닝 ♥ 와이어링 — 그녀 8/3 페이로드 (kudos_count·my_kudos·allow_likes 힌트, K1 시맨틱·배치) 소비: crew-runs 카드 + crew-detail 피드 섹션에 ♥ 토글/카운트→시트, 기존 K1 문법 그대로 (런-카드 스플릿 선례). 메모 ③의 빌드-인텐트 이행분.
+## 🫀 [빌드-큐] 크루 러닝 ♥ 와이어링 — 그녀 8/3 페이로드 (kudos_count·my_kudos·allow_likes 힌트, K1 시맨틱·배치) 소비 **[8/3 저녁: 그녀-사이드 게이트 오픈 확인 — 페이로드 전 크루 피드 아이템에 라이브]**: crew-runs 카드 + crew-detail 피드 섹션에 ♥ 토글/카운트→시트, 기존 K1 문법 그대로 (런-카드 스플릿 선례). 메모 ③의 빌드-인텐트 이행분.
 
 ## 📬 ASC 피드백 인박스 체크 (오너, 8/3 — 첫 기록된 체크): Screenshots 비어 있음 · Crashes 비어 있음 · **외부 베타 전 기간 크래시 리포트 0건.** 서베이 파일-1 아이템 ③ 클로즈 — 이후 체크는 이 라인에 날짜 추가.
 
@@ -1309,7 +1309,7 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 - 그녀 계약 (API_GUIDE §5행): error_code 준-전면 (미핸들 500 → "server_error" 금주) · 422 detail[]에 type+loc 머신-리더블 페어 · detail[].msg = raw pydantic 영어 **표시 절대 금지** · detail[].input **제거** (프라이버시 트림).
 - 오딧 결과 (8/2): **input 리드 0** (트림 무해) · **msg 구조적 도달 불가** — api.ts 파스가 pydantic 배열을 object 브랜치로 받아 message null → 제네릭 카피 (우연적 정합, 온-레코드) · **노출 클래스 = 스트링-detail / detail.message 버바팀** — ~70 e.message 사이트 (41파일)가 서버 프로즈를 그대로 렌더 (Alert+setError 체인).
 - **G (리액티브-t 스윕) 스코프 흡수: errorMessage(e) 컨벤션** — 코드-퍼스트 키드 카피 (알려진 error_code → 키) · 422는 type+loc 조합으로 클라이언트 컴포즈 · 서버 프로즈 무표시. 스윕이 방문하는 동일 파일군 — 번들 비용 최소. **카브-아웃 2**: 프로즌 use-generate-route는 자체 카피 유지 (자체 결정 별도) · 429 쿼터 경로는 기존 정직 클라이언트-컴포즈 카피 유지.
-- ~~**트랜스포트 어답션 (api.ts:111 `detail.error_code ?? detail.error`)은 §5의 정확한 필드 셰이프 확인 후** — 추측 금지, 그녀 배포/문서로 컨펌.~~ **[8/3 셰이프 확정 — 그녀 8/3 1:36AM 메시지 (인-컨버세이션 릴레이, 뒤늦게 레저; verbal-rules 클래스 인스턴스): error_code는 TOP-LEVEL, detail의 시블링, 센트럴-핸들러 프로모티드. 예: 422 → {"detail":[…],"error_code":"validation_error"} · 신규 500 → {"detail":"<fixed>","error_code":"server_error"}. 트랜스포트 라인 확정: `body.error_code ?? body.detail?.error` (톱-레벨 프라이머리, 레거시 폴백). G-스윕의 트랜스포트 어답션은 셰이프-언게이트 — 스윕 자체의 게이트는 그녀 §5 배포 아나운스 단독.]**
+- ~~**트랜스포트 어답션 (api.ts:111 `detail.error_code ?? detail.error`)은 §5의 정확한 필드 셰이프 확인 후** — 추측 금지, 그녀 배포/문서로 컨펌.~~ **[8/3 셰이프 확정 — 그녀 8/3 1:36AM 메시지 (인-컨버세이션 릴레이, 뒤늦게 레저; verbal-rules 클래스 인스턴스): error_code는 TOP-LEVEL, detail의 시블링, 센트럴-핸들러 프로모티드. 예: 422 → {"detail":[…],"error_code":"validation_error"} · 신규 500 → {"detail":"<fixed>","error_code":"server_error"}. 트랜스포트 라인 확정: `body.error_code ?? body.detail?.error` — **[8/3 저녁 샤프닝 (그녀 계약 뉘앙스): body.error_code가 유일한 보장 위치; detail.error는 내부 셰이프로 와이어 비출현 가능 — 폴백은 톨러런스용 비계약 (프라이머리 리드가 계약을 짊어짐).]** ~~스윕 자체의 게이트는 그녀 §5 배포 아나운스 단독.~~ **[8/3 저녁: §5 DEPLOYED (7/31, 스모크-검증 · input 트림 프로드 라이브) — G 완전 언게이트: errorMessage(e) 컨벤션 + ~70-사이트 e.message 스윕 + 트랜스포트 어답션, 나우-빌더블.]**]**
 - 해외 디스크리미네이터 (use-feed 400+지오메트리): 프로즈-프리 — **현행 계약-세이프**. 코드+지오메트리 타이트닝은 코드 안정화 시 옵션; **지오메트리 절은 어느 경우든 유지** (제네릭 bad_request 단독으론 "해외" 판별 불가).
 - 무효화 마커: 슬라이스-8 에러-바디 키잉 노트 + e.message-스테이-ko 클래스 노트 → 양쪽 인라인 [OBSOLETE-PENDING §5] (§5 랜딩 시 이 엔트리가 대체).
 
