@@ -80,6 +80,25 @@ const STATIONARY_MPS      = 0.5;  // OS-reported speed below this = standing sti
 // restart. Evidence is now TIME-BASED and displacement-PRIMARY: ≥5s where
 // displacement stays under the jitter floor AND speed agrees throughout.
 const STILL_EVIDENCE_MS   = 5_000; // agreeing-evidence span before "still"
+// ── v2 rework (8/3 field: 서빙고로 canyon walk FAILED — pause 20-30s late).
+// Root: the evidence tracker was FIX-DRIVEN and both fix supplies die exactly
+// at a stop — the accuracy gate discarded canyon fixes wholesale, and
+// distanceInterval suppresses callbacks at rest. Two additions, detection
+// only (frozen anchor / resume / state machine untouched):
+//  (a) timer-driven stillness — a 1s ticker treats fix-SILENCE as evidence
+//      (distanceInterval semantics: no callbacks ≈ no movement), gated on a
+//      healthy-recent last fix so a signal that died mid-stride lands in the
+//      GPS-lost lane instead (never auto-pause on a dead signal);
+//  (b) evidence-only gated fixes — >MAX_ACCURACY_M fixes stay banned from
+//      the odometer but feed the stillness tracker (error-circle-scaled
+//      displacement tolerance). The canyon lesson: the gate that protects
+//      distance must not blind the pause detector.
+// Field calibration: the pre-rework in-comment honest-limit said "a few
+// seconds over"; the 8/3 walk measured 20-30s. The ticker exists to make
+// detection ~5-8s everywhere, canyons included.
+const STILL_TICK_MS       = 1_000;  // (a) evidence ticker cadence
+const SILENCE_TRUST_MS    = 60_000; // silence older than this = presumed GPS
+                                    // death, not stillness — chip's lane
 const RESUME_SPEED_MPS    = 1.0;   // hysteresis above STATIONARY_MPS
 const RESUME_DISP_M       = 8;     // or clear displacement from the frozen point
 const AUTO_REPAUSE_GRACE_MS = 10_000; // after a MANUAL resume (crosswalk case)
@@ -120,6 +139,8 @@ let lastHeading: number | null = null; // T1 nav — last valid course-over-grou
 let pauseSource: 'manual' | 'auto' | null = null;
 let stillRef: { lat: number; lng: number; t: number } | null = null;
 let manualResumeAt = 0;
+let stillTicker: ReturnType<typeof setInterval> | null = null; // (a) 1s evidence ticker, running only
+let lastRawAccM: number | null = null; // last RAW fix accuracy — silence-lane discriminator
 let anchor: { lat: number; lng: number; t: number } | null = null;
 let distanceM = 0;
 let path: Coordinate[] = [];      // filtered on-screen track (save + polyline)
@@ -136,7 +157,41 @@ const listeners = new Set<(s: TrackerState) => void>();
 function setState(next: TrackerState): void {
   if (state === next) return;
   state = next;
+  // (a) evidence ticker rides the state machine: alive only while running.
+  if (next === 'running') {
+    if (!stillTicker) stillTicker = setInterval(stillTick, STILL_TICK_MS);
+  } else if (stillTicker) {
+    clearInterval(stillTicker);
+    stillTicker = null;
+  }
   listeners.forEach(fn => fn(next));
+}
+
+/** (a) timer-driven stillness (8/3 rework): while running, fix-SILENCE lets
+    the evidence clock keep counting — under distanceInterval semantics no
+    callbacks ≈ no movement, which is exactly when the fix-driven paths go
+    blind. Disambiguation from GPS loss, ruled: a HEALTHY-recent last fix
+    (≤MAX_ACCURACY_M, within SILENCE_TRUST_MS) reads as stillness; a
+    degraded-or-stale one is the GPS-lost lane — never pause someone whose
+    signal died mid-stride. Flowing fixes are handled by the fix paths; this
+    firing alongside them is idempotent (maybeAutoPause re-checks state). */
+function stillTick(): void {
+  if (state !== 'running') return;
+  if (!stillRef) return; // no evidence anchor yet
+  const now = Date.now();
+  if (now - stillRef.t < STILL_EVIDENCE_MS) return;
+  if (lastRawAccM == null || lastRawAccM > MAX_ACCURACY_M) return; // degraded → GPS-lost lane
+  if (now - lastFixTs > SILENCE_TRUST_MS) return; // stale → presumed signal death
+  maybeAutoPause(now);
+}
+
+/** Chip interplay (8/3, ruled): while stillness evidence is accumulating in
+    the healthy-recent lane, the GPS-lost chip SUPPRESSES — stationary
+    detection preempts it; the chip fires only for degraded-and-stale. */
+function isStillnessAccruing(): boolean {
+  if (state !== 'running' || !stillRef) return false;
+  if (lastRawAccM == null || lastRawAccM > MAX_ACCURACY_M) return false;
+  return Date.now() - lastFixTs <= SILENCE_TRUST_MS;
 }
 
 // ── The ONE fix pipeline (moved VERBATIM from use-run-tracker's onFix; refs
@@ -151,6 +206,7 @@ function processFix(loc: Location.LocationObject): void {
   const t = loc.timestamp;
   const cur = { lat, lng };
   lastFixTs = t; // T-A mirror — before any gate
+  lastRawAccM = accuracy ?? null; // silence-lane discriminator — before any gate
 
   // Raw track capture — BEFORE any gate (incl. the accuracy reject below):
   // the server filter must see everything the client filter saw.
@@ -165,7 +221,23 @@ function processFix(loc: Location.LocationObject): void {
   }
 
   if (accuracy == null || accuracy > MAX_ACCURACY_M) {
-    return; // bad fix — ignore
+    // (b) evidence-only consumption (8/3 canyon lesson): a degraded fix can't
+    // credit distance, but its displacement is still stillness EVIDENCE when
+    // read against its own error circle — a 40m-accuracy fix showing 8m of
+    // displacement is consistent with standing still. Tolerance scales with
+    // the reported accuracy; a clearly-moving OS speed still breaks evidence.
+    // The odometer/anchor/path remain untouched on this branch.
+    if (state === 'running' && accuracy != null) {
+      const tol = Math.max(MIN_SEGMENT_M, accuracy);
+      if (!stillRef) {
+        stillRef = { ...cur, t };
+      } else if (haversineM(stillRef, cur) > tol || (speed != null && speed >= RESUME_SPEED_MPS)) {
+        stillRef = { ...cur, t };
+      } else if (t - stillRef.t >= STILL_EVIDENCE_MS) {
+        maybeAutoPause(t);
+      }
+    }
+    return; // bad fix — still banned from the odometer
   }
 
   // Countdown (GPS warm-up) and MANUAL pause: keep the anchor fresh so the
@@ -244,10 +316,12 @@ function processFix(loc: Location.LocationObject): void {
 
 /** Auto-pause trigger — fires from the stillness core after ≥5s evidence.
     Fire-time setting read (the gate-not-generator idiom); start-grace and
-    manual-resume grace keep it polite. Backgrounded no-fix rests: iOS
-    suppresses callbacks at rest (distanceInterval), so a backgrounded pause
-    may fire on the NEXT callback/wake — elapsed runs a few seconds over in
-    that window (honest limitation, on the ledger). */
+    manual-resume grace keep it polite. FIELD CALIBRATION (8/3): the old
+    honest-limit here claimed no-fix rests overran "a few seconds" — the
+    서빙고로 canyon walk measured 20-30s (accuracy gate + callback
+    suppression starved the fix-driven tracker). The stillTick ticker (a) +
+    evidence-only gated fixes (b) exist to make detection ~5-8s everywhere,
+    canyons included. */
 function maybeAutoPause(now: number): void {
   if (state !== 'running') return;
   if (!useSettings.getState().settings.run.auto_pause) return;
@@ -429,6 +503,8 @@ function resetAccumulators(): void {
   paceWindow = [];
   lastFixTs = 0;
   lastPersistMs = 0;
+  stillRef = null;     // cross-run residue (a stale anchor could pre-age the ticker)
+  lastRawAccM = null;
 }
 
 // ── Public surface (the hook + the task are the only intended callers) ──────
@@ -547,6 +623,7 @@ export const runSession = {
       this normally runs on 'ended'/'idle'; the disk copy is NOT touched — by
       then it holds the final run and belongs to the save flow. */
   teardown(): void {
+    if (stillTicker) { clearInterval(stillTicker); stillTicker = null; } // defensive — setState exit normally clears it
     stopUpdates();
     endLiveActivity(); // defensive — idempotent; a dead session must never
                        // leave a live lock-screen card behind
@@ -561,6 +638,8 @@ export const runSession = {
   getPath: () => path as readonly Coordinate[],
   getPaceWindow: () => paceWindow as readonly { t: number; cumM: number }[],
   getLastFixTs: () => lastFixTs,
+  /** 8/3 chip-suppression: stillness evidence accruing in the healthy lane. */
+  isStillnessAccruing,
   /** T1 nav: last valid heading (deg, course-over-ground) — null pre-fix. */
   getLastHeading: () => lastHeading,
   /** Single-source rolling pace — the hook renders it, the widget receives it. */

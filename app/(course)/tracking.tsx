@@ -336,7 +336,7 @@ export default function TrackingScreen() {
   useEffect(() => { useLocalProfile.getState().hydrate(); }, []);
   const {
     state, countdownValue, elapsedSec, distanceKm, paceSecPerKm, moving, kcal,
-    start, togglePause, snapshot, livePath, lastFixAgeSec,
+    start, togglePause, snapshot, livePath, lastFixAgeSec, stillnessAccruing,
   } = useRunTracker();
 
   // ── 오디오 코치 v1 (premium, LOCAL cues — owner scope 2026-07-14) ─────────
@@ -399,6 +399,13 @@ export default function TrackingScreen() {
     // split's Medium single and countdown-go's Light single.
     if (prev === 'running' && state === 'paused') {
       if (useSettings.getState().settings.run.haptics) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+      // Cut any in-flight split cue FIRST (a pause silences the coach). This
+      // call used to sit at the effect TAIL — where it executed AFTER the
+      // auto-pause cue below and killed it in the same pass (Speech.stop
+      // cancels queued utterances). Convicted on the 8/3 canyon walk: the
+      // pause fired with no voice. Order is the fix; the tail now handles
+      // 'idle' only.
+      stopSpeech();
       // 자동 일시정지 (8/2): never-silent — the AUTO event announces itself
       // (manual = the runner did it; no cue). Backgrounded: haptic no-ops but
       // TTS rides the live audio session + the LA flips to paused; voice-off
@@ -419,7 +426,7 @@ export default function TrackingScreen() {
       }
       wasAutoPauseRef.current = false;
     }
-    if (state === 'paused' || state === 'idle') stopSpeech();
+    if (state === 'idle') stopSpeech(); // paused handled in-branch (order-sensitive — see above)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state]);
   useEffect(() => () => { stopSpeech(); deactivateRunAudioSession(); }, []); // unmount safety
@@ -458,8 +465,10 @@ export default function TrackingScreen() {
   // ── T-A: real map (consumer of the tracker's read-only surface ONLY) ──
   const { coordinate: hereCoord, status: locStatus } = useCurrentLocation();
   const mapRef = useRef<MapView>(null);
-  // Follow-camera suspension: any user pan pauses following for 8s; the
-  // re-center button ends the suspension immediately.
+  // Follow-camera suspension (v2, her 8/3 tester relay): any user gesture
+  // pauses following INDEFINITELY — the 8s timeout WAS the defect (adjusted
+  // views snapped back mid-inspection). The existing re-center button is the
+  // only way back to follow; no new UI.
   const lastUserPanRef = useRef(0);
   const recenterShownRef = useRef(false);
   const [recenterVisible, setRecenterVisible] = useState(false);
@@ -511,6 +520,13 @@ export default function TrackingScreen() {
           offBuzzAtRef.current = now;
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
         }
+        // Off-route voice (owner + tester convergent ask 8/3): ONE line per
+        // departure episode — this rising edge IS the banner's appearance
+        // edge (enter/exit hysteresis debounces flapping); voice_cue-gated
+        // like every cue. Hardcoded ko — slice-6/8 keying note.
+        if (useSettings.getState().settings.run.voice_cue) {
+          speakCue('경로를 벗어났어요', useSettings.getState().settings.audio_coach.rate);
+        }
       }
       return next;
     });
@@ -530,7 +546,7 @@ export default function TrackingScreen() {
   // Camera follow on path growth (running only, not while user-panned)
   useEffect(() => {
     if (state !== 'running' || drawnPath.length === 0) return;
-    if (Date.now() - lastUserPanRef.current < 8000) return;
+    if (lastUserPanRef.current) return; // user-adjusted view sticks until recenter
     // T1.5: full NAV POSTURE on COURSE runs — street altitude + pitch +
     // heading-up + forward-offset center (runner low, road ahead majority).
     // Heading null (pre-fix/at rest) → posture without rotation/lookahead.
@@ -623,10 +639,11 @@ export default function TrackingScreen() {
     if (target) mapRef.current?.animateCamera({ center: target, altitude: NAV_ALTITUDE_M }, { duration: 400 });
   };
 
-  // GPS-lost chip: >15s without a raw fix while running. Honest caveat
-  // (walk-verifiable): distanceInterval suppresses fixes at rest, so a long
-  // mid-run standstill can also light it — quiet copy on purpose.
-  const gpsLost = state === 'running' && lastFixAgeSec != null && lastFixAgeSec > 15;
+  // GPS-lost chip: >15s without a raw fix while running. 8/3 ruled interplay:
+  // stillness detection PREEMPTS the chip — while evidence accrues in the
+  // healthy-recent lane the chip suppresses (the old "standstill lights it"
+  // caveat was the canyon walk's flicker); it fires only degraded-and-stale.
+  const gpsLost = state === 'running' && lastFixAgeSec != null && lastFixAgeSec > 15 && !stillnessAccruing;
   // GPS-weak warning buzz (vocabulary expansion 2026-07-23): the chip's
   // honesty delivered to the pocket. RE-FIRE POLICY: rising-edge only (the
   // effect fires when gpsLost flips true) + a 60s cooldown floor — a
@@ -801,7 +818,7 @@ export default function TrackingScreen() {
           onMapReady={fitCourse}
           onLayout={fitCourse}
           onPanDrag={onUserPan}
-          // T1.5 zoom agency: pinch-zoom joins the 8s suspension (onPanDrag
+          // T1.5 zoom agency: pinch-zoom joins the indefinite suspension (onPanDrag
           // misses two-finger gestures); recenter resumes follow instantly
           onRegionChangeComplete={(_r, d) => { if (d?.isGesture && state === 'running') onUserPan(); }}
           showsUserLocation

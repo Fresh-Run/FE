@@ -32,6 +32,8 @@ type TrackerSnap = {
   moving: boolean;
   kcal: number | null;
   lastFixAgeSec: number | null;
+  /** 8/3 chip-suppression: stillness evidence accruing (healthy lane). */
+  stillnessAccruing: boolean;
 };
 
 /** ALL singleton reads live here — called outside render only. */
@@ -48,6 +50,7 @@ function readSnap(st: TrackerState): TrackerSnap {
     moving,
     kcal: estimateKcal(distanceKm), // MET×weight — null without saved weight
     lastFixAgeSec: lastFixTs ? Math.floor((now - lastFixTs) / 1000) : null,
+    stillnessAccruing: runSession.isStillnessAccruing(),
   };
 }
 
@@ -162,5 +165,8 @@ export function useRunTracker() {
         Note: distanceInterval suppresses callbacks while standing still, so
         age also grows at rest — render the GPS-lost chip only while running. */
     lastFixAgeSec: snap.lastFixAgeSec,
+    /** 8/3 ruled: stillness detection preempts the GPS-lost chip — suppress
+        the chip while this is true (healthy-recent lane accruing evidence). */
+    stillnessAccruing: snap.stillnessAccruing,
   };
 }
