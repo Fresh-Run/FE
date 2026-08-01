@@ -76,6 +76,10 @@ function RunCard({ run, name, photoUrl, units, mapLive, onKudos }: {
         <View style={{ flex: 1, minWidth: 0 }}>
           <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.cardName}>{name}</Text>
           <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.cardDate}>{fmtWhen(run.ran_at, lang)}</Text>
+          {/* 8/5 crew banner — twin grammar matching the shared RunCard */}
+          {run.crew_name ? (
+            <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.cardCrew} numberOfLines={1}>{tf('rc.withCrew', { name: run.crew_name })}</Text>
+          ) : null}
         </View>
       </View>
       {/* polyline_thumb slice: viewable + thumb → real map (card-mode, same
@@ -299,6 +303,7 @@ const makeSt = (C: Tokens) => StyleSheet.create({
   cardHead:  { flexDirection: 'row', alignItems: 'center', gap: 9, paddingVertical: 11, paddingHorizontal: 14 },
   cardName:  { fontSize: 14, fontWeight: '700', color: C.text, letterSpacing: -0.3 },
   cardDate:  { fontSize: 11.5, color: C.faint, letterSpacing: -0.2, marginTop: 1 },
+  cardCrew:  { fontSize: 11, fontWeight: '600', color: C.accentGrn, letterSpacing: -0.2, marginTop: 2 },
   cardBody:  { paddingTop: 12, paddingBottom: 14, paddingHorizontal: 14 },
   cardTitle: { fontSize: 15.5, fontWeight: '700', color: C.text, letterSpacing: -0.4, marginBottom: 9 },
   statsRow:  { flexDirection: 'row', gap: 18 },

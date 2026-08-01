@@ -1273,6 +1273,11 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 - **배너 클라 3반쪽**: ① K1 카드 (셰어드 RunCard) — crew_name 논-널 시 "{name}과 함께" 라인 (그린, 세션-배지 티어; null = 무, 인-코멘트 그녀 룰) · 타입 crew_name 전파 (FeedRunExtras·UserRun·Run) ② 러닝 저장 — 태그 로우에 "피드에 크루 표시" 체크 (디폴트 ON), POST show_crew 명시 송신 ③ edit-run — 크루-태그 런 온리 동일 토글, PATCH show_crew. **시드 갭 (프로브 8/5): 단건이 show_crew 미서빙 → edit 토글 ON 시드 (계약 디폴트) — 그녀 원-라인 ask 온-레코드: own 단건에 show_crew.**
 - 신규 키 2 (rc.withCrew·runSave.showCrew) ko+en — 파리티 904/904 MATCH. K1 crew_name 라이브 프로브 확인 (해윙크루 등 실값).
 
+## 🔤 배너 서피스+카피 어멘드 BUILT (미스테이지 — 673ff718 대체 예정; 오너 글랜스 8/5: 항목 2-5 PASSED)
+- **카피 룰링**: rc.withCrew = "With {name}" **양 로케일** — 조사 콜 사이트 제거, josaWaGwa 익스포트 존치 (당일 은퇴 인-코멘트, 미래 조사 수요용). 딕셔너리 밸류 동일 → 스트링-테이블 디덥 ×1 (바이트-스캔 정합).
+- **프로필 서피스 프로브**: ⓐ 내 프로필 = ② 개인 리드 crew_name 라이브 → MyRun 타입 + 트윈 렌더 (셰어드 카드 문법 매칭) ⓑ **user-profile 아이템 = 풀 크루 필드 서빙 확인 + 게이팅 일관 실증** (지연 세션 런 fbfe1e56: 그녀 퍼블릭 리스트와 K1 피드 양쪽 null 동일 — 타 런은 배너; 게이트 균일) → UserRun 타입 기추가 + 셰어드 RunCard = **구조상 자동 렌더 (제로 추가 코드)**. her-ask 불요.
+- 재검: With {name} ×1 (디덥) · {josa} 템플릿 사망 · 토글 존치.
+
 ## 🔼 세션 폴더 v3 + 크루 배너 STAGED — 673ff718-8de8-415a-b705-f6673147e53d (커밋 44cc7a4) · 해시-타이 MATCH (NWiB5qaq…) · 바이트 재검: {josa} 템플릿 탑재·구 고정-과 rc.withCrew 사망 (과 함께 4→3, 잔여 = 타 템플릿)·토글·show_crew ×1 · **c39f54db 대체** (+ B3 배너 클라 3반쪽 + fmtDateAbs + 조사 픽스) · 프로덕션 = 95364a92 불변 · **게이트: 실내 글랜스 — 홈 피드 "해윙크루와 함께" 라인 (조사 정확) · 크루-태그 저장 체크박스 · edit-run 토글 · 폴더 앱솔루트 날짜 · 세션 스크린 내비** · 프로모션 = 실관찰 스탬프 + 원-컨펌
 
 ## ~~🔼 세션 폴더 v3 STAGED — c39f54db (커밋 061c5ef)~~ SUPERSEDED by 673ff718 (+ 배너 클라) · 해시-타이 MATCH (LEYCfm5A…) · 마커 체크 (crew-session 라우트·폴더 폴백·캐리드) · **500ee060 대체** (날짜 타이틀 + 루트-스크린 뷰, 모달 삭제) · 프로덕션 = 95364a92 불변 · **게이트: 실내 글랜스 — 폴더 "청라동 · 8월 2일" → 세션 스크린 → 카드 탭 → run-post → 백 = 폴더 → 백 = 크루 피드 (연타 클린)** · 프로모션 = 실관찰 스탬프 + 원-컨펌

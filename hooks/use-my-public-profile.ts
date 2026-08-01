@@ -24,6 +24,8 @@ export type MyPublicProfile = {
 };
 
 export type MyRun = {
+  /** 8/5 크루 배너 (그녀 ② 개인 리드) — null = 무배너, 이유 추론 금지 */
+  crew_name?: string | null;
   id: string;
   ran_at: string;
   title: string | null;

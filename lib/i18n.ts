@@ -73,9 +73,10 @@ export function tf(key: StringKey, vars: Record<string, string | number>): strin
   );
 }
 
-/** ko 와/과 josa (8/5 banner amend): final-consonant (받침) check on the
-    last Hangul syllable — 받침 있음 → 과, 없음 → 와. Non-Hangul finals
-    (latin/digits) default to 와 (the common editorial convention). */
+/** ko 와/과 josa — RETIRED same-day by the 8/5 copy ruling (rc.withCrew =
+    "With {name}" both locales); kept exported for future particle needs
+    (받침 check: final Hangul syllable, 받침 있음 → 과, 없음 → 와;
+    non-Hangul finals default 와). */
 export function josaWaGwa(word: string): '와' | '과' {
   const ch = word.charCodeAt(word.length - 1);
   if (ch >= 0xac00 && ch <= 0xd7a3) return (ch - 0xac00) % 28 === 0 ? '와' : '과';
