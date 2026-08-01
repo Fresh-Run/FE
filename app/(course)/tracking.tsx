@@ -1089,21 +1089,39 @@ export default function TrackingScreen() {
               })()}
             </View>
           )}
-          <View style={st.metricsRow}>
-            {([
-              [fmtDist(distanceKm, units, 2), distUnit(units), t('trk.dist')],
-              [paceDisplay,                   paceUnit(units), t('trk.pace')],
-              [kcal != null ? String(kcal) : '—', 'kcal',      t('trk.kcal')],
-            ] as [string, string, string][]).map(([val, unit, label], i) => (
-              <View key={i} style={[st.metricCol, i > 0 && st.metricColDivider]}>
-                <View style={st.metricValRow}>
-                  <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.metricVal}>{val}</Text>
-                  <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.metricUnit}>{unit}</Text>
-                </View>
-                <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.metricLbl}>{label}</Text>
+          {/* 8/4 평균 페이스 (tester ask): 2×2 grid — a 4-col row can't hold
+              two pace values + units at the 1.3 clamp (desk math: ~88pt val
+              row vs ~87pt col). 현재 페이스 keeps its slot beside 거리;
+              평균 joins kcal below. Convention (8/1 ruling): TOTAL-time pace
+              — elapsedSec/distanceKm, the session clock (pauses excluded),
+              SAME floor+rounding as the save path so the last displayed
+              평균 equals the saved avg exactly. Floor 0.05km field-tunable. */}
+          {(() => {
+            const liveAvgPace = distanceKm >= 0.05 && elapsedSec > 0 ? Math.round(elapsedSec / distanceKm) : null;
+            const rows: [string, string, string][][] = [
+              [
+                [fmtDist(distanceKm, units, 2), distUnit(units), t('trk.dist')],
+                [paceDisplay,                   paceUnit(units), t('trk.pace')],
+              ],
+              [
+                [liveAvgPace != null ? fmtPaceIn(liveAvgPace, units) : "--'--\"", paceUnit(units), t('res.avgPace')],
+                [kcal != null ? String(kcal) : '—', 'kcal', t('trk.kcal')],
+              ],
+            ];
+            return rows.map((row, r) => (
+              <View key={r} style={[st.metricsRow, r > 0 && { marginTop: 14 }]}>
+                {row.map(([val, unit, label], i) => (
+                  <View key={i} style={[st.metricCol, i > 0 && st.metricColDivider]}>
+                    <View style={st.metricValRow}>
+                      <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.metricVal}>{val}</Text>
+                      <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.metricUnit}>{unit}</Text>
+                    </View>
+                    <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.metricLbl}>{label}</Text>
+                  </View>
+                ))}
               </View>
-            ))}
-          </View>
+            ));
+          })()}
 
           {/* AI audio coach — static card, canned message (no real audio yet) */}
           <View style={[st.coachCard, shadows.sm]}>
