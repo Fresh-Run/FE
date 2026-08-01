@@ -720,7 +720,7 @@ export const ko = {
   'rpt.other': '기타',
   'rp.commentFailT': '댓글 실패',
   'rp.commentFailB': '댓글을 게시하지 못했어요. 잠시 후 다시 시도해 주세요.',
-  'rc.withCrew': '{name}과 함께',
+  'rc.withCrew': '{name}{josa} 함께',
   'runSave.showCrew': '피드에 크루 표시',
   'rp.viewReplies': '답글 {n}개 보기',
   'rp.hideReplies': '답글 숨기기',
