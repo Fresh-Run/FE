@@ -1259,6 +1259,12 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 
 ## 🫀 [빌드-큐] 크루 러닝 ♥ 와이어링 — 그녀 8/3 페이로드 (kudos_count·my_kudos·allow_likes 힌트, K1 시맨틱·배치) 소비 **[8/3 저녁: 그녀-사이드 게이트 오픈 확인 — 페이로드 전 크루 피드 아이템에 라이브]**: crew-runs 카드 + crew-detail 피드 섹션에 ♥ 토글/카운트→시트, 기존 K1 문법 그대로 (런-카드 스플릿 선례). 메모 ③의 빌드-인텐트 이행분.
 
+## 📝 소개(bio) 캡처 BUILT (미스테이지) — 리콘 버딕트 (a) 집행: 서버+디스플레이 기존, 캡처 단독 신설 (FE-온리, 지연 무의존)
+- profile-api updateProfile += bio (서버 캡 500 기수용) · personal-info 소개 멀티라인 (이름 아래): **어답트-원스 = getMyProfile 서버 시드 + originalBioRef + bioDirtyRef 이중 게이트** — 시드-페치 실패 + 무타이핑 = PATCH 절대 무 (널-클로버 방지 벨트), 저장 = dirty && changed 온리, ''→null (아바타 널-리무벌 문법) · **클라 캡 150 + 라이브 카운터** (150 도달 = 레드 + slice 하드-스톱; 서버 500 백스톱) · 인풋 = 컴포저 클래스 자유 스케일, 카운터 = 덴스 클램프.
+- profile-settings 로우 카피 "이름 · 소개 · 신체 정보" 복원 — **8/2 트림의 복원 조건 발화** (인-코멘트 기록) · **룰드: my-profile 바이오 라인 로케이션-핀 아이콘 사망** (user-profile 플레인 스타일 채택, 헤더 코멘트 갱신, bioRow 스타일 제거) · **룰드: 온보딩 바이오 스텝 무** (프릭션 — 프로필-완성률 데이터에서 재방문).
+- 신규 ko 하드코드 2 (플레이스홀더·소개 라벨) — 슬라이스-6 키잉 노트 (personal-info 파일). 데스크 증명: 세이브-게이트 진리표 6/6.
+- 검증 = 실내 라운드트립: 소개 작성 → 내 프로필 표시 → 타인 프로필 표시 → 수정 → 클리어 = null 클린.
+
 ## 🧭 코스-내비 완성 BUILT (미스테이지) — 리콘 3갭 + 300m 밴드 + 턴 마커 + POI 룰링 (전량 OTA)
 - **① 컴퍼스 퓨전**: watchHeadingAsync (expo-location 인-바이너리) — FUSION_SPEED_MPS 1.0 미만 = 컴퍼스, 이상 = COG (내비-앱 컨벤션). 스무딩 = **HEADING_SNAP_DEG 5 스냅 선택** (로우-패스 대비 무지연·서큘러-민 무필요; 내비 줌에서 5° 미만 워블 비가시) — 필드-튜너블 명기. 라이프사이클 = 코스런 러닝 중 온리 (배터리 정직: 프리런/아이들/포즈 무스트림). run-session getLastSpeedMps 미러 신설 (리드-온리 애디티브).
 - **② 리센터-투-내비**: hasCoursePath+running 리센터 = 풀 내비 포스처 원-애니메이션 (heading+pointAhead+pitch+altitude — 팔로우 이펙트 수학 재사용, 더블-점프 사망). 프리런 리센터 불변.

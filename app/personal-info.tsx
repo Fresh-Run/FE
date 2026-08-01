@@ -37,8 +37,8 @@ import { fetchBodyMassKg } from '@/lib/health';
 import { useHealth } from '@/store/use-health';
 import { uploadAvatar } from '@/lib/avatar-api';
 import { avatarBg } from '@/lib/fr-hash';
-import { updateNickname, updateProfile } from '@/lib/profile-api';
-import { accentShadow, radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
+import { getMyProfile, updateNickname, updateProfile } from '@/lib/profile-api';
+import { accentShadow, radius as R, shadows, spacing as S, type Tokens, DENSE_MAX_FONT_SCALE} from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { useLocalProfile, type Gender } from '@/store/use-local-profile';
 import { useStore } from '@/store/use-store';
@@ -143,6 +143,25 @@ export default function PersonalInfoScreen() {
     setName(displayName);
   }, [displayName, params.nickname]);
   const [nameError, setNameError] = useState<string | null>(null);
+
+  // 소개 (8/4 — recon verdict (a): server+display existed, capture didn't).
+  // Adopt-once from the SERVER (bio lives in no store): originalBioRef =
+  // the effective seed, bioDirtyRef = the user actually typed. The save
+  // gate needs BOTH dirty AND changed — if the seed fetch failed and the
+  // field is untouched, saving must never null-clobber an existing bio.
+  const BIO_MAX = 150; // client cap — server backstop is 500
+  const [bio, setBio] = useState('');
+  const originalBioRef = useRef<string | null>(null);
+  const bioDirtyRef = useRef(false);
+  const bioAdoptedRef = useRef(false);
+  useEffect(() => {
+    getMyProfile().then(p => {
+      if (bioAdoptedRef.current) return;
+      bioAdoptedRef.current = true;
+      originalBioRef.current = p.bio;
+      if (!bioDirtyRef.current) setBio(p.bio ?? '');
+    }).catch(() => { /* silent — the dirty-gate protects the unsaved value */ });
+  }, []);
   const [birthYear, setBirthYear] = useState(local.birthYear);
   const [weightKg, setWeightKg]   = useState(local.weightKg);
   // ③: the 건강 pull affordance shows only after the 설정 opt-in
@@ -289,6 +308,14 @@ export default function PersonalInfoScreen() {
         await updateNickname(trimmed);
         setDisplayName(trimmed); // greeting/comments use the store name
       }
+      // 소개 → server (only when TYPED and CHANGED; '' normalizes to null —
+      // the avatar null-as-removal grammar). originalBioRef advances on
+      // success so a second 저장 doesn't re-PATCH.
+      const normalizedBio = bio.trim() ? bio.trim() : null;
+      if (bioDirtyRef.current && normalizedBio !== originalBioRef.current) {
+        await updateProfile({ bio: normalizedBio });
+        originalBioRef.current = normalizedBio;
+      }
       // 출생 연도/체중/키/성별 → SERVER (S2 swap) + per-user cache; throws
       // on failure so the 저장 실패 path below stays honest
       await useLocalProfile.getState().save({ birthYear, weightKg, heightCm, gender });
@@ -353,6 +380,24 @@ export default function PersonalInfoScreen() {
         {/* ── 기본 정보 ── */}
         <Group title="기본 정보">
           <FieldRow label="이름" value={name} onChange={v => { setName(v); setNameError(null); }} placeholder="이름" error={nameError} />
+          {/* 소개 — multiline + live counter. Input scales FREE (composer
+              class per the 8/3 clamp ruling); the counter is dense. ko
+              placeholder hardcoded — slice-6 census note. */}
+          <View style={st.bioBlock}>
+            <Text style={st.fieldLabel}>소개</Text>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <TextInput
+                value={bio}
+                onChangeText={v => { bioDirtyRef.current = true; setBio(v.slice(0, BIO_MAX)); }}
+                placeholder="나를 소개하는 한두 줄 (선택)"
+                placeholderTextColor={C.faint}
+                multiline
+                maxLength={BIO_MAX}
+                style={st.bioInput}
+              />
+              <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={[st.bioCount, bio.length >= BIO_MAX && { color: C.danger }]}>{bio.length}/{BIO_MAX}</Text>
+            </View>
+          </View>
           <FieldRow label="이메일" value={email} editable={false} />
           <FieldRow
             label="출생 연도"
@@ -494,6 +539,9 @@ const makeSt = (C: Tokens) => StyleSheet.create({
   fieldLabel: { width: 76, fontSize: 14, fontWeight: '600', letterSpacing: -0.3, color: C.sub },
   fieldInput: { fontSize: 15, fontWeight: '600', letterSpacing: -0.3, color: C.text, paddingVertical: 10 },
   fieldError: { fontSize: 12, color: C.danger, letterSpacing: -0.2, marginTop: -6, paddingBottom: 8 },
+  bioBlock: { flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 12, gap: 12 },
+  bioInput: { fontSize: 15, color: C.text, letterSpacing: -0.3, minHeight: 44, maxHeight: 110, textAlignVertical: 'top', paddingTop: 0 },
+  bioCount: { fontSize: 11, color: C.faint, letterSpacing: -0.1, alignSelf: 'flex-end', marginTop: 2 },
 
   selectRow:  { flexDirection: 'row', alignItems: 'center', paddingVertical: 13 },
   radioOuter: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: C.border, alignItems: 'center', justifyContent: 'center' },

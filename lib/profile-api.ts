@@ -76,6 +76,8 @@ export function updateProfile(input: {
   weight_kg?: number | null;
   height_cm?: number | null;
   avatar_url?: string | null;
+  /** 소개 (8/4 capture slice) — server cap 500; client enforces 150. null clears. */
+  bio?: string | null;
   visibility?: ProfileVisibility;
   follow_approval?: boolean;
 }, timeoutMs?: number): Promise<ProfileResponse> {

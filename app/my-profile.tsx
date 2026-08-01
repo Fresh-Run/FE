@@ -5,7 +5,8 @@
  * gear → profileSettings; the 설정 hub keeps its door inside that screen).
  *
  * Approved interim honesty (backend gaps, TODO'd):
- *  - location row shows `bio` when present (no location field on profiles);
+ *  - bio shows under the name when present (plain line — the location-pin
+ *    interim died with the 8/4 capture slice);
  *  - section = "내 러닝" + real total ("공개 N개" reframing is its own item);
  *  - run cards are reduced feed-style: no per-run area/tags — title falls
  *    back to timeTitle(ran_at);
@@ -165,12 +166,9 @@ export default function MyProfileScreen() {
         <Avatar name={profile.nickname} size={76} photoUrl={profile.avatarUrl} ring={C.accent} initialsRatio={0.38} upper />
         <View style={{ flex: 1, minWidth: 0 }}>
           <Text style={st.name} numberOfLines={1}>{profile.nickname}</Text>
-          {profile.bio ? (
-            <View style={st.bioRow}>
-              <Icon name="location-outline" size={14} color={C.faint} />
-              <Text style={st.bioTxt} numberOfLines={1}>{profile.bio}</Text>
-            </View>
-          ) : null}
+          {/* 8/4 ruled: plain bio line (user-profile style) — the location
+              pin misread beside real prose once capture shipped */}
+          {profile.bio ? <Text style={[st.bioTxt, { marginTop: 5 }]} numberOfLines={1}>{profile.bio}</Text> : null}
         </View>
       </View>
 
@@ -279,7 +277,6 @@ const makeSt = (C: Tokens) => StyleSheet.create({
 
   identity: { flexDirection: 'row', alignItems: 'center', gap: 16, paddingHorizontal: S.gutter, paddingTop: 20 },
   name:     { fontSize: 22, fontWeight: '700', letterSpacing: -0.6, color: C.text },
-  bioRow:   { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 5 },
   bioTxt:   { fontSize: 13.5, color: C.sub, letterSpacing: -0.2 },
 
   countsRow:  { flexDirection: 'row', gap: 22, paddingHorizontal: S.gutter, paddingTop: 16 },

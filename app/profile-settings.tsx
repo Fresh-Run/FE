@@ -238,7 +238,7 @@ export default function ProfileSettingsScreen() {
           {/* param seed (7/31): the paramless push shipped a blank name field
               since 4948e12 (personal-info seeds from params only) — both doors
               now pass nickname; the screen's own store fallback is the belt. */}
-          <NavRow icon="person-outline" label="프로필 편집" value="이름 · 신체 정보" onPress={() => router.push({ pathname: '/personal-info' as any, params: displayName ? { nickname: displayName } : undefined })} />
+          <NavRow icon="person-outline" label="프로필 편집" value="이름 · 소개 · 신체 정보" /* 8/2 트림의 복원 조건 발화 — 소개 필드 8/4 도입 */ onPress={() => router.push({ pathname: '/personal-info' as any, params: displayName ? { nickname: displayName } : undefined })} />
           {/* 앱 설정 row DELETED (owner ruling 7/31): its href pointed at
               app/settings.tsx, deleted in 5237b7d as an "orphan" WITH this
               live consumer — the unmatched→코스설정 trap. Contents live in
