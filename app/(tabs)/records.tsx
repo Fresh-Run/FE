@@ -279,7 +279,19 @@ function RunRow({ run }: { run: Run }) {
           <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.runTitle} numberOfLines={1}>{run.title ?? timeTitle(run.ran_at, lang)}</Text>
           <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.runDate}>{fmtDate(run.ran_at, lang)}</Text>
         </View>
-        <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.runWhen} numberOfLines={1}>{fmtWhen(run.ran_at, lang)}</Text>
+        {/* 8/6 crew badge (her ② fields; null-safe by her all-null non-crew
+            symmetry — nothing renders on non-crew runs). Interim 62px shape:
+            glyph + name truncating BEFORE the date; the real treatment stays
+            with the row-redesign docket. */}
+        {run.crew_name ? (
+          <View style={st.runWhenRow}>
+            <Icon name="people" size={10} color={C.accentGrn} />
+            <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={[st.runWhen, { color: C.accentGrn, flexShrink: 1 }]} numberOfLines={1}>{run.crew_name}</Text>
+            <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.runWhen}>{fmtWhen(run.ran_at, lang)}</Text>
+          </View>
+        ) : (
+          <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.runWhen} numberOfLines={1}>{fmtWhen(run.ran_at, lang)}</Text>
+        )}
         <View style={st.runMetrics}>
           <MetricPill icon="location-outline"    value={`${fmtDist(run.distance_km, units, 2)} ${distUnit(units)}`}                            color={C.accentGrn} />
           <MetricPill icon="time-outline"        value={fmtDuration(run.duration_sec)}                                                         color={C.faint} />
@@ -451,6 +463,7 @@ const makeSt = (C: Tokens) => StyleSheet.create({
   runTitle:  { flex: 1, fontSize: 15, fontWeight: '700', letterSpacing: -0.4, color: C.text },
   runDate:   { fontSize: 11.5, color: C.faint, flexShrink: 0 },
   runWhen:   { fontSize: 12, color: C.faint, letterSpacing: -0.2, marginTop: 2 },
+  runWhenRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   runMetrics:{ flexDirection: 'row', alignItems: 'center', gap: 13, marginTop: 8 },
   metricTxt: { fontSize: 13, fontWeight: '700', letterSpacing: -0.2 },
 

@@ -708,6 +708,8 @@ export const en: Record<keyof typeof ko, string> = {
   'rpt.other': 'Other',
   'rp.commentFailT': 'Comment failed',
   'rp.commentFailB': 'Could not post the comment. Please try again shortly.',
+  'act.crewSession': 'Crew session',
+  'shr.crewToggle': 'Show crew',
   'rc.withCrew': 'With {name}', // no josa slot — en needs none; the extra var is a no-op
   'runSave.showCrew': 'Show crew on feed',
   'rp.viewReplies': 'View replies ({n})',

@@ -26,7 +26,7 @@ import { t, tf, useLang, useT } from '@/lib/i18n';
 import { deleteRun } from '@/lib/runs-api';
 import { useRunTrack } from '@/lib/track-cache';
 import { distUnit, fmtDist, fmtDuration, fmtPaceIn, fmtWhen, timeTitle } from '@/lib/run-format';
-import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
+import { radius as R, shadows, spacing as S, type Tokens, DENSE_MAX_FONT_SCALE} from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { KCAL_PER_KG_KM, useLocalProfile } from '@/store/use-local-profile';
 import { useSettings } from '@/store/use-settings';
@@ -237,6 +237,13 @@ export default function ActivityScreen() {
 
           {/* Title */}
           <Text style={st.titleTxt}>{title}</Text>
+          {/* 8/6 crew line (her ② single-read; count verbatim never computed;
+              null → no line by all-null symmetry) */}
+          {run.crew_name ? (
+            <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.crewLine} numberOfLines={1}>
+              {run.crew_name} · {T('act.crewSession')}{run.session_participant_count != null ? ` · ${tf('crw.nJoined', { n: run.session_participant_count })}` : ''}
+            </Text>
+          ) : null}
 
           {/* Stat grid 2×2 (canvas FrActivityDetail) */}
           <View style={st.tileRow}>
@@ -380,6 +387,7 @@ const makeSt = (C: Tokens) => StyleSheet.create({
   greenDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: C.accentGrn },
   whenTxt:  { fontSize: 12.5, fontWeight: '600', color: C.sub, letterSpacing: -0.2 },
   titleTxt: { fontSize: 23, fontWeight: '700', letterSpacing: -0.7, color: C.text, marginTop: S.sm },
+  crewLine: { fontSize: 12.5, fontWeight: '600', color: C.accentGrn, letterSpacing: -0.2, marginTop: 4 },
 
   // Stat tiles
   tileRow:   { flexDirection: 'row', gap: 10, marginTop: S.lg },

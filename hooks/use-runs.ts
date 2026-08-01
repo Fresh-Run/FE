@@ -27,6 +27,8 @@ export type Run = {
   crew_id?: string | null;
   crew_name?: string | null;
   session_key?: string | null;
+  /** 단건 온리 (그녀 ②) — 서버-글로벌, 버바팀 리드, 클라 계산 금지 */
+  session_participant_count?: number | null;
   id: string;
   ran_at: string;
   distance_km: number;

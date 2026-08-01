@@ -494,6 +494,14 @@ export default function ShareCardScreen() {
   const bgLayer = useBgLayer(canvasW, canvasH, bgStored, bgAdjustMode && bgIsPhoto, persistBg);
   const bgDim = bgStored?.dim ?? 0;
 
+  // 8/6 crew line (her mock amendment, DEFAULT OFF verbatim): per-visit
+  // local state; rendered only when the run carries session fields; ON →
+  // a static small-tier line above the wordmark (the mock's date-line
+  // typography tier — the card has no date layer, so the crew line is the
+  // tier's first occupant). Nothing else on her canvas moves. Hook sits
+  // ABOVE the early return (rules-of-hooks).
+  const [showCrewLine, setShowCrewLine] = useState(false);
+
   if (!run) return <View style={st.root} />;
 
   // ── metric values — the ruled three. 시간 = SINGLE 총 시간 (owner lean
@@ -599,6 +607,12 @@ export default function ShareCardScreen() {
               </GestureDetector>
             ))}
 
+            {/* 8/6 crew line (mock amendment; date-tier typography) */}
+            {showCrewLine && run.crew_name ? (
+              <Text style={st.crewLine} pointerEvents="none" numberOfLines={1}>
+                {run.crew_name}{run.session_participant_count != null ? ` · ${tf('crw.nJoined', { n: run.session_participant_count })}` : ''}
+              </Text>
+            ) : null}
             {/* permanent wordmark (re-ruling) — subtle corner, both formats */}
             <Text style={st.wordmark} pointerEvents="none">FreshRun</Text>
           </View>
@@ -676,6 +690,14 @@ export default function ShareCardScreen() {
                 <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={[st.chipTxt, prefs.metrics[k] && st.chipTxtOn]}>{t(METRIC_LABELS[k])}</Text>
               </Pressable>
             ))}
+            {run.crew_name ? (
+              <Pressable
+                onPress={() => setShowCrewLine(v => !v)}
+                style={[st.chip, showCrewLine && st.chipOn]}
+              >
+                <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={[st.chipTxt, showCrewLine && st.chipTxtOn]}>{t('shr.crewToggle')}</Text>
+              </Pressable>
+            ) : null}
           </View>
         </View>
 
@@ -713,6 +735,7 @@ const makeSt = (C: Tokens) => StyleSheet.create({
   statVal:    { fontSize: 21, fontWeight: '800', color: '#fff', letterSpacing: -0.6, fontVariant: ['tabular-nums'], textShadowColor: 'rgba(0,0,0,0.55)', textShadowRadius: 5 },
   statLbl:    { fontSize: 11, fontWeight: '600', color: 'rgba(255,255,255,0.75)', letterSpacing: -0.2, textShadowColor: 'rgba(0,0,0,0.55)', textShadowRadius: 4 },
   wordmark:   { position: 'absolute', right: 14, bottom: 12, fontSize: 12, fontWeight: '800', letterSpacing: -0.3, color: 'rgba(255,255,255,0.82)', textShadowColor: 'rgba(0,0,0,0.5)', textShadowRadius: 4 },
+  crewLine: { position: 'absolute', left: 14, bottom: 34, fontSize: 12, fontWeight: '600', color: 'rgba(255,255,255,0.85)', letterSpacing: -0.2, maxWidth: '70%' },
 
   bgRow:    { gap: 8, paddingHorizontal: S.gutter, paddingTop: 14 },
   bgSwatch:  { width: 46, height: 46, borderRadius: 12, overflow: 'hidden', borderWidth: 2, borderColor: 'transparent' },
