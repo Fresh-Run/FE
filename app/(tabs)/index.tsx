@@ -40,7 +40,6 @@ import { getUnreadCount } from '@/lib/notifications-api';
 import { openProfile } from '@/lib/profile-nav';
 import { type FeedRun } from '@/lib/feed-api';
 import { kudosRun, unkudosRun } from '@/lib/run-social-api';
-import { fmtDist } from '@/lib/run-format';
 import { shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { useQuota } from '@/store/use-quota';
@@ -204,12 +203,13 @@ const makeWst = (C: Tokens) => StyleSheet.create({
 
 // ─── Feed tabs ────────────────────────────────────────────────────────────────
 
-function FeedTabs({ tab, setTab, radiusKm }: { tab: string; setTab: (v: string) => void; radiusKm: number }) {
+function FeedTabs({ tab, setTab }: { tab: string; setTab: (v: string) => void }) {
   const C = useTokens();
   const ftt = useStyles(makeFtt);
-  // The label tracks the LIVE radius (10, or 20 after the one retry)
-  const units = useSettings(s => s.settings.units);
-  const radiusLabel = units === 'mi' ? `내 위치 ${fmtDist(radiusKm, 'mi', 1)}mi 이내` : `내 위치 ${radiusKm}km 이내`;
+  // 8/4 nationwide: the radius claim died with the machine — the label
+  // states the scope (hardcoded ko, slice-7 file — census note). Content
+  // stays 20km-bounded until her scope=all deploy (expected, ledgered).
+  const radiusLabel = '전국의 러너들';
   return (
     <View style={ftt.row}>
       <View style={ftt.seg}>
@@ -445,22 +445,17 @@ export default function HomeScreen() {
 
   const feed = useFeed();
   const { coordinate, status: locStatus } = useCurrentLocation();
-  // ── 전체 discovery (2026-07-16): RUNS via GET /feed/nearby ────────────────
-  // Radius machine (owner R2): 10 → ONE 20km retry → terminal; pull-to-
-  // refresh RESETS to 10 and re-acquires a fresh fix. Tab-switch keeps state.
-  const [radiusKm, setRadiusKm]   = useState(10);
-  const [retried, setRetried]     = useState(false);
+  // ── 전체 discovery (2026-07-16 → 8/4 NATIONWIDE): GET /feed/nearby with
+  // scope=all + offset pagination. The R2 radius machine (10 → one 20km
+  // retry) retired 8/4 — removed with all its consumers in this diff.
   const [freshCoord, setFreshCoord] = useState<Coordinate | null>(null);
   const [nearbyKey, setNearbyKey] = useState(0); // explicit refetch (error retry / refresh)
-  const units = useSettings(s => s.settings.units);
+  const units = useSettings(s => s.settings.units); // RunCard stat formatting
   // Seoul-fallback class: never query "nearby" with the synchronous fallback
   const effCoord = freshCoord ?? coordinate;
-  const nearby = useNearbyFeed(tab === '전체' && locStatus === 'granted' ? effCoord : null, radiusKm, nearbyKey);
+  const nearby = useNearbyFeed(tab === '전체' && locStatus === 'granted' ? effCoord : null, nearbyKey);
 
-  const retryWider = useCallback(() => { setRetried(true); setRadiusKm(20); }, []);
   const refreshNearby = useCallback(async () => {
-    setRadiusKm(10);
-    setRetried(false);
     try {
       const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
       setFreshCoord({ lat: pos.coords.latitude, lng: pos.coords.longitude });
@@ -543,10 +538,10 @@ export default function HomeScreen() {
         <WeatherStrip onPress={() => router.push('/weather-detail')} />
       </View>
       <View style={{ paddingTop: 22, paddingBottom: 14, paddingHorizontal: S.gutter }}>
-        <FeedTabs tab={tab} setTab={setTab} radiusKm={radiusKm} />
+        <FeedTabs tab={tab} setTab={setTab} />
       </View>
     </View>
-  ), [insets.top, name, photoUrl, unread, tab, radiusKm]);
+  ), [insets.top, name, photoUrl, unread, tab]);
 
   return (
     <View style={{ flex: 1, backgroundColor: C.bg }}>
@@ -576,7 +571,7 @@ export default function HomeScreen() {
             tintColor={C.faint}
           />
         }
-        onEndReached={tab === '친구' ? feed.loadMore : undefined}
+        onEndReached={tab === '친구' ? feed.loadMore : nearby.loadMore}
         onEndReachedThreshold={0.4}
         contentContainerStyle={{ paddingBottom: tabBarInset }}
         ItemSeparatorComponent={() => <View style={{ height: 16 }} />}
@@ -629,15 +624,13 @@ export default function HomeScreen() {
                   ? <ListState icon="location-outline" title="위치 권한이 필요해요" sub="주변 러너들의 러닝을 보려면 위치 접근을 허용해 주세요." btn="설정 열기" onBtn={() => Linking.openSettings()} />
                   : !nearby.fetched
                     ? <View style={lst.wrap}><ActivityIndicator size="large" color={C.accent} /></View>
-                    : !retried
-                      // genuine empty @10km — ONE wider retry (server clamps at 20)
-                      ? <ListState icon="walk-outline" title="주변에 러닝이 없어요" sub="반경 10km 안에 공개된 러닝이 아직 없어요." btn="반경 20km로 넓혀 보기" onBtn={retryWider} />
-                      // terminal — refresh is the escape (owner R1)
-                      : <ListState icon="walk-outline" title="반경 20km 안에도 아직 없어요" sub="당겨서 새로고침할 수 있어요" />
+                    // 8/4 nationwide: one honest empty state (the 10→20
+                    // wider-retry pair died with the radius machine)
+                    : <ListState icon="walk-outline" title="아직 공개된 러닝이 없어요" sub="당겨서 새로고침할 수 있어요" />
         }
         ListFooterComponent={
           <View>
-            {feed.loadingMore && tab === '친구' && (
+            {((tab === '친구' && feed.loadingMore) || (tab === '전체' && nearby.loadingMore)) && (
               <ActivityIndicator size="small" color={C.faint} style={{ paddingVertical: 14 }} />
             )}
             <View style={{ paddingHorizontal: S.gutter, paddingTop: 26, paddingBottom: 26 }}>

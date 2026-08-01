@@ -89,9 +89,12 @@ export function useFeed() {
   return { items, loading, refreshing, loadingMore, error, refresh, loadMore };
 }
 
-// ─── useNearbyFeed — 전체 discovery tab (GET /feed/nearby), radius-machined ──
-// Pass null coord to defer (tab unopened / permission not granted). radiusKm
-// is caller-owned state (10 → one 20 retry → terminal; refresh resets to 10).
+// ─── useNearbyFeed — 전체 discovery tab (GET /feed/nearby), NATIONWIDE ──────
+// 8/4: scope=all + offset pagination (the follow-list pattern) — the radius
+// machine (10 → one 20 retry) retired WITH ITS CALLER STATE (removed, not
+// dormant: a single-file state machine whose every consumer is in this diff;
+// the 5237b7d orphan class was cross-file route strings — inapplicable).
+// Pass null coord to defer (tab unopened / permission not granted).
 // Replaced useNearbyRoutes 2026-07-16 (전체 discovery slice) — course cards
 // left 전체; /routes/nearby lost its only consumer and retired with it.
 
@@ -103,14 +106,21 @@ const KOREA_BBOX = { latMin: 33, latMax: 39, lngMin: 124, lngMax: 132 };
 const outsideKorea = (c: Coordinate) =>
   c.lat < KOREA_BBOX.latMin || c.lat > KOREA_BBOX.latMax || c.lng < KOREA_BBOX.lngMin || c.lng > KOREA_BBOX.lngMax;
 
-export function useNearbyFeed(coord: Coordinate | null, radiusKm: number, refreshKey = 0) {
+const NEARBY_PAGE = 20;
+
+export function useNearbyFeed(coord: Coordinate | null, refreshKey = 0) {
   const [items, setItems]     = useState<NearbyRun[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
   const [error, setError]     = useState<string | null>(null);
   const [fetched, setFetched] = useState(false); // distinguishes "not asked" from "[] answered"
+  const inFlightRef = useRef(false);
   // Abroad: her 400 + our coords demonstrably outside the bbox → the
   // Korea-only state (no retry — retrying cannot succeed). Prose-free
   // discriminator: status + geometry, never the English detail string.
+  // 8/4 nationwide: coords STILL sent (scope=all widens the filter, not the
+  // input contract) — this chain is undisturbed by design.
   const [koreaOnly, setKoreaOnly] = useState(false);
 
   useEffect(() => {
@@ -119,8 +129,8 @@ export function useNearbyFeed(coord: Coordinate | null, radiusKm: number, refres
     setLoading(true);
     setError(null);
     setKoreaOnly(false);
-    getNearbyFeed(coord.lat, coord.lng, radiusKm)
-      .then(rows => { if (!cancelled) { setItems(rows); setFetched(true); } })
+    getNearbyFeed(coord.lat, coord.lng, NEARBY_PAGE, 0)
+      .then(rows => { if (!cancelled) { setItems(rows); setFetched(true); setHasMore(rows.length === NEARBY_PAGE); } })
       .catch((e: unknown) => {
         if (cancelled) return;
         // koreaOnly rides WITH error (the render chain enters on error, then
@@ -130,7 +140,26 @@ export function useNearbyFeed(coord: Coordinate | null, radiusKm: number, refres
       })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [coord, radiusKm, refreshKey]);
+  }, [coord, refreshKey]);
 
-  return { items, loading, error, fetched, koreaOnly };
+  // follow-list pattern verbatim: offset = loaded count, in-flight ref,
+  // id dedup, short batch (< PAGE) = end, tail failures silent (next
+  // onEndReached retries).
+  const loadMore = useCallback(() => {
+    if (!coord || inFlightRef.current || !hasMore || loading) return;
+    inFlightRef.current = true;
+    setLoadingMore(true);
+    getNearbyFeed(coord.lat, coord.lng, NEARBY_PAGE, items.length)
+      .then(rows => {
+        setHasMore(rows.length === NEARBY_PAGE);
+        setItems(prev => {
+          const seen = new Set(prev.map(r => r.run_id));
+          return [...prev, ...rows.filter(r => !seen.has(r.run_id))];
+        });
+      })
+      .catch(() => { /* silent — next onEndReached retries */ })
+      .finally(() => { inFlightRef.current = false; setLoadingMore(false); });
+  }, [coord, hasMore, loading, items.length]);
+
+  return { items, loading, loadingMore, hasMore, loadMore, error, fetched, koreaOnly };
 }

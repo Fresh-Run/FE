@@ -43,8 +43,14 @@ export type ActivityRun = UserRun & FeedRunExtras & { visibility: string | null 
 /** Either lane's row — the home screen renders both with one RunCard path. */
 export type FeedRun = NearbyRun | ActivityRun;
 
-export function getNearbyFeed(lat: number, lng: number, radiusKm: number): Promise<NearbyRun[]> {
-  return apiFetch<NearbyRun[]>(`/api/feed/nearby?lat=${lat}&lng=${lng}&radius_km=${radiusKm}`);
+/** 8/4 nationwide (owner ruling; her scope contract on record, deploy ~this
+    weekend): scope=all opens the 전체 tab to every public run in Korea.
+    radius_km=20 rides ALONGSIDE as the pre-deploy floor — her current server
+    ignores the unknown scope param and clamps radius at 20, so the tab stays
+    20km-bounded until her deploy flips it nationwide (zero coordination).
+    limit/offset were already live server-side (≤100/offset) — consumed now. */
+export function getNearbyFeed(lat: number, lng: number, limit: number, offset: number): Promise<NearbyRun[]> {
+  return apiFetch<NearbyRun[]>(`/api/feed/nearby?lat=${lat}&lng=${lng}&scope=all&radius_km=20&limit=${limit}&offset=${offset}`);
 }
 
 export function getActivityFeed(offset = 0, limit = 20): Promise<ActivityRun[]> {
