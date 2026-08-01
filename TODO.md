@@ -1273,7 +1273,9 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 - **배너 클라 3반쪽**: ① K1 카드 (셰어드 RunCard) — crew_name 논-널 시 "{name}과 함께" 라인 (그린, 세션-배지 티어; null = 무, 인-코멘트 그녀 룰) · 타입 crew_name 전파 (FeedRunExtras·UserRun·Run) ② 러닝 저장 — 태그 로우에 "피드에 크루 표시" 체크 (디폴트 ON), POST show_crew 명시 송신 ③ edit-run — 크루-태그 런 온리 동일 토글, PATCH show_crew. **시드 갭 (프로브 8/5): 단건이 show_crew 미서빙 → edit 토글 ON 시드 (계약 디폴트) — 그녀 원-라인 ask 온-레코드: own 단건에 show_crew.**
 - 신규 키 2 (rc.withCrew·runSave.showCrew) ko+en — 파리티 904/904 MATCH. K1 crew_name 라이브 프로브 확인 (해윙크루 등 실값).
 
-## 🔼 세션 폴더 v3 STAGED — c39f54db-3c7a-4eaf-b9dd-748ed6e22f02 (커밋 061c5ef) · 해시-타이 MATCH (LEYCfm5A…) · 마커 체크 (crew-session 라우트·폴더 폴백·캐리드) · **500ee060 대체** (날짜 타이틀 + 루트-스크린 뷰, 모달 삭제) · 프로덕션 = 95364a92 불변 · **게이트: 실내 글랜스 — 폴더 "청라동 · 8월 2일" → 세션 스크린 → 카드 탭 → run-post → 백 = 폴더 → 백 = 크루 피드 (연타 클린)** · 프로모션 = 실관찰 스탬프 + 원-컨펌
+## 🔼 세션 폴더 v3 + 크루 배너 STAGED — 673ff718-8de8-415a-b705-f6673147e53d (커밋 44cc7a4) · 해시-타이 MATCH (NWiB5qaq…) · 바이트 재검: {josa} 템플릿 탑재·구 고정-과 rc.withCrew 사망 (과 함께 4→3, 잔여 = 타 템플릿)·토글·show_crew ×1 · **c39f54db 대체** (+ B3 배너 클라 3반쪽 + fmtDateAbs + 조사 픽스) · 프로덕션 = 95364a92 불변 · **게이트: 실내 글랜스 — 홈 피드 "해윙크루와 함께" 라인 (조사 정확) · 크루-태그 저장 체크박스 · edit-run 토글 · 폴더 앱솔루트 날짜 · 세션 스크린 내비** · 프로모션 = 실관찰 스탬프 + 원-컨펌
+
+## ~~🔼 세션 폴더 v3 STAGED — c39f54db (커밋 061c5ef)~~ SUPERSEDED by 673ff718 (+ 배너 클라) · 해시-타이 MATCH (LEYCfm5A…) · 마커 체크 (crew-session 라우트·폴더 폴백·캐리드) · **500ee060 대체** (날짜 타이틀 + 루트-스크린 뷰, 모달 삭제) · 프로덕션 = 95364a92 불변 · **게이트: 실내 글랜스 — 폴더 "청라동 · 8월 2일" → 세션 스크린 → 카드 탭 → run-post → 백 = 폴더 → 백 = 크루 피드 (연타 클린)** · 프로모션 = 실관찰 스탬프 + 원-컨펌
 
 ## ~~🔼 세션 폴더 v2 STAGED — 500ee060 (커밋 38be097)~~ SUPERSEDED by c39f54db (v3)
 
