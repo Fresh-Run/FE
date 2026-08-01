@@ -708,6 +708,8 @@ export const en: Record<keyof typeof ko, string> = {
   'rpt.other': 'Other',
   'rp.commentFailT': 'Comment failed',
   'rp.commentFailB': 'Could not post the comment. Please try again shortly.',
+  'rc.withCrew': 'With {name}',
+  'runSave.showCrew': 'Show crew on feed',
   'rp.viewReplies': 'View replies ({n})',
   'rp.hideReplies': 'Hide replies',
   'rp.replyBtn': 'Reply',

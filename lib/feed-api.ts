@@ -26,6 +26,7 @@ type FeedRunExtras = {
   allow_comments?: boolean | null;
   is_crew_session?: boolean;
   route_id?: string | null;
+  crew_name?: string | null; // 8/5 배너 (show_crew 게이트)
   /** Linked course's summary — non-null ONLY for PUBLIC courses (server
       filters private ones out). NO CLIENT CONSUMER since the 2026-07-21
       owner step-back (feed course affordances removed; the CTA-gate logic

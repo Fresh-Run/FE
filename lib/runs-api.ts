@@ -74,6 +74,10 @@ export type SaveRunInput = {
       grouping). Untagged run omits both. */
   crewId?: string | null;
   announcementId?: string | null;
+  /** 8/5 crew banner (her contract): default ON — omit = ON server-side;
+      sent explicitly so the toggle's OFF is honored. Private crews never
+      banner regardless (server hard gate). */
+  showCrew?: boolean;
 };
 
 // Contract hard cap: >5,000 points → 422. Uniform stride keeps the shape
@@ -96,7 +100,7 @@ export const NEGATIVE_TAGS = ['오르막많음', '신호등많음', '노면나�
     must be {run_id}/-prefixed (422 otherwise); order = display order. */
 export function updateRun(
   runId: string,
-  patch: { title?: string; visibility?: RunVisibility; notes?: string | null; photos?: string[] },
+  patch: { title?: string; visibility?: RunVisibility; notes?: string | null; photos?: string[]; show_crew?: boolean },
 ): Promise<void> {
   return apiFetch<void>(`/api/runs/${runId}`, { method: 'PATCH', body: patch });
 }
@@ -125,6 +129,7 @@ export function saveRun(input: SaveRunInput): Promise<SavedRun> {
       // L1 정기런 태그 — omitted entirely when untagged (untagged = normal run)
       ...(input.crewId ? { crew_id: input.crewId } : {}),
       ...(input.announcementId ? { announcement_id: input.announcementId } : {}),
+      ...(input.showCrew != null ? { show_crew: input.showCrew } : {}),
     },
   });
 }

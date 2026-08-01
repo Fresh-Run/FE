@@ -99,6 +99,10 @@ export default function RunSaveScreen() {
   // sticks). Removed → crew_id/announcement_id omitted → saves as a normal run.
   const crewSession = run?.crewSession;
   const [tagKept, setTagKept] = useState(true);
+  // 8/5 crew banner (her contract DEFAULT ON; private crews = server hard
+  // gate regardless): the toggle rides the tag row — untagged runs never
+  // see it. Sent explicitly on POST so OFF is honored.
+  const [showCrew, setShowCrew] = useState(true);
 
   // run.area send-rider (S-batch #3, guide §96): reverse-geocode the run's
   // START point via the existing Apple path — district = subLocality =
@@ -223,7 +227,7 @@ export default function RunSaveScreen() {
         gpsTrack: run.gpsTrack,
         // L1 정기런 tag — only when kept (× removed → normal run)
         ...(crewSession && tagKept
-          ? { crewId: crewSession.crewId, announcementId: crewSession.announcementId }
+          ? { crewId: crewSession.crewId, announcementId: crewSession.announcementId, showCrew }
           : {}),
       });
       savedOnceRef.current = true;
@@ -315,6 +319,12 @@ export default function RunSaveScreen() {
                   <Icon name="close" size={15} color={C.faint} />
                 </Pressable>
               </View>
+            ) : null}
+            {tagKept ? (
+              <Pressable onPress={() => setShowCrew(v => !v)} style={st.showCrewRow} hitSlop={6}>
+                <Icon name={showCrew ? 'checkbox' : 'square-outline'} size={17} color={showCrew ? C.accentGrn : C.faint} />
+                <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.showCrewTxt}>{T('runSave.showCrew')}</Text>
+              </Pressable>
             ) : (
               <Pressable onPress={() => setTagKept(true)} style={st.tagRemovedRow}>
                 <Text style={st.tagRemovedTxt}>{T('runSave.tagRemoved')}</Text>
@@ -516,6 +526,8 @@ const makeSt = (C: Tokens) => StyleSheet.create({
   tagStrong:    { fontWeight: '800', color: C.text },
   tagSub:       { fontSize: 11.5, color: C.accentGrn, letterSpacing: -0.2, marginTop: 2, fontWeight: '600' },
   tagRemove:    { width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  showCrewRow: { flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: 8, paddingLeft: 2 },
+  showCrewTxt: { fontSize: 12.5, fontWeight: '600', color: C.sub, letterSpacing: -0.2 },
   tagRemovedRow:{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 10, paddingHorizontal: 4 },
   tagRemovedTxt:{ fontSize: 12.5, color: C.faint, letterSpacing: -0.2 },
   tagUndo:      { fontSize: 12.5, fontWeight: '700', color: C.accentGrn, letterSpacing: -0.2 },

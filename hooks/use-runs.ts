@@ -23,6 +23,10 @@ export type RunSplit = {
 };
 
 export type Run = {
+  /** 8/5 그녀 ② 필드 (개인 리드 라이브): 크루-태그 런의 배지/토글 소스 */
+  crew_id?: string | null;
+  crew_name?: string | null;
+  session_key?: string | null;
   id: string;
   ran_at: string;
   distance_km: number;

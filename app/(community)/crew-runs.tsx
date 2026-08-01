@@ -45,7 +45,7 @@ import { KudosSheet } from '@/components/kudos-sheet';
 import { ApiError, apiFetch } from '@/lib/api';
 import { getCrewRuns, groupCrewSessions, CREW_FEED_PAGE, type CrewRunItem } from '@/lib/crews-api';
 import { openProfile } from '@/lib/profile-nav';
-import { distUnit, fmtAgo, fmtDate, fmtDist, fmtDuration, fmtPaceIn, paceUnit, timeTitle } from '@/lib/run-format';
+import { distUnit, fmtAgo, fmtDateAbs, fmtDist, fmtDuration, fmtPaceIn, paceUnit, timeTitle } from '@/lib/run-format';
 import { shadows, spacing as S, type Tokens, DENSE_MAX_FONT_SCALE } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { useRunTrack } from '@/lib/track-cache';
@@ -201,7 +201,7 @@ export default function CrewRunsScreen() {
       area-null → date-only. tod.* keys stay in the dicts (parity paid),
       dropped from composition. */
   const sessionTitle = useCallback((anchor: CrewRunItem): string => {
-    const when = fmtDate(anchor.ran_at, lang);
+    const when = fmtDateAbs(anchor.ran_at, lang); // absolute — a folder name can't age (8/5 fix)
     return anchor.area ? `${anchor.area} · ${when}` : when;
   }, [lang]);
   const myUid = useStore(s => s.session?.user.id);

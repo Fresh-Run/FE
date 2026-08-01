@@ -54,6 +54,16 @@ export function fmtDuration(sec: number): string {
 // formatter — formats are formatter business, words come from the dicts)
 const MONTHS_EN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
+/** Absolute month-day — NO 오늘/어제 relatives. Extracted 8/5 (session-
+    folder fix): a folder name can't age out of truth. fmtDate delegates
+    its tail here; existing callers unchanged. */
+export function fmtDateAbs(isoStr: string, lang: Lang = getLang()): string {
+  const d = new Date(isoStr);
+  return lang === 'en'
+    ? `${MONTHS_EN[d.getMonth()]} ${d.getDate()}`
+    : `${d.getMonth() + 1}월 ${d.getDate()}일`;
+}
+
 export function fmtDate(isoStr: string, lang: Lang = getLang()): string {
   const d = new Date(isoStr);
   const now = new Date();
@@ -62,9 +72,7 @@ export function fmtDate(isoStr: string, lang: Lang = getLang()): string {
   const runDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
   if (runDay.getTime() === today.getTime()) return tIn(lang, 'date.today');
   if (runDay.getTime() === yesterday.getTime()) return tIn(lang, 'date.yesterday');
-  return lang === 'en'
-    ? `${MONTHS_EN[d.getMonth()]} ${d.getDate()}`
-    : `${d.getMonth() + 1}월 ${d.getDate()}일`;
+  return fmtDateAbs(isoStr, lang);
 }
 
 export function fmtAgo(isoStr: string, lang: Lang = getLang()): string {

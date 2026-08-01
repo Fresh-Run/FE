@@ -50,6 +50,8 @@ export type UserRun = {
   run_id: string;
   user_id: string;
   nickname: string;
+  /** 8/5 크루 배너 (K1 피드 캐스트 공유) — null/absent = 무배너, 이유 추론 금지 */
+  crew_name?: string | null;
   avatar_url: string | null; // served (probed 2026-07-13, avatar sweep)
   ran_at: string;
   title: string | null;

@@ -51,6 +51,12 @@ export default function EditRunScreen() {
   const [title, setTitle]           = useState('');
   const [notes, setNotes]           = useState('');
   const [visibility, setVisibility] = useState<RunVisibility>('public');
+  // 8/5 crew banner toggle — rendered only when the run IS crew-tagged
+  // (detail's crew_id, her ② fields). SEED GAP, ledgered: the detail does
+  // NOT serve show_crew (probed 8/5) — seeded ON (the contract default);
+  // a user who saved OFF sees ON here until her one-line additive lands
+  // (her-ask on the ledger). PATCH sends it only when the row rendered.
+  const [showCrew, setShowCrew] = useState(true);
   const [seeded, setSeeded]         = useState(false);
   const [saving, setSaving]         = useState(false);
 
@@ -159,6 +165,7 @@ export default function EditRunScreen() {
         // Same promise as run-save: empty title → the suggestion IS the title
         title: (title.trim() || suggestedTitle).slice(0, 60),
         visibility,
+        ...(run?.crew_id ? { show_crew: showCrew } : {}),
         notes: notes.trim() || null,
         ...(finalPaths ? { photos: finalPaths } : {}),
       });
@@ -256,6 +263,16 @@ export default function EditRunScreen() {
             </View>
           </View>
 
+          {/* 크루 배너 토글 (8/5) — 크루-태그 런 온리 */}
+          {run?.crew_id ? (
+            <View style={{ paddingHorizontal: S.gutter, paddingTop: 18 }}>
+              <Pressable onPress={() => setShowCrew(v => !v)} style={st.showCrewRow} hitSlop={6}>
+                <Icon name={showCrew ? 'checkbox' : 'square-outline'} size={17} color={showCrew ? C.accentGrn : C.faint} />
+                <Text style={st.showCrewTxt}>{T('runSave.showCrew')}{run.crew_name ? ` (${run.crew_name})` : ''}</Text>
+              </Pressable>
+            </View>
+          ) : null}
+
           {/* 공개 범위 — the run-save 3-way picker, inline */}
           <View style={{ paddingHorizontal: S.gutter, paddingTop: 22 }}>
             <Text style={st.fieldLabel}>{T('runSave.visibility')}</Text>
@@ -321,6 +338,8 @@ const makeSt = (C: Tokens) => StyleSheet.create({
   visRow:   { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 13 },
   visLabel: { fontSize: 14.5, fontWeight: '700', color: C.text, letterSpacing: -0.3 },
   visSub:   { fontSize: 12, color: C.faint, letterSpacing: -0.2, marginTop: 2 },
+  showCrewRow: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  showCrewTxt: { fontSize: 13, fontWeight: '600', color: C.sub, letterSpacing: -0.2 },
   radioOuter: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: C.border, alignItems: 'center', justifyContent: 'center' },
   radioInner: { width: 12, height: 12, borderRadius: 6, backgroundColor: C.accent },
 

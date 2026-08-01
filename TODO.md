@@ -1267,6 +1267,12 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 - **UX 넛지 (그녀 라이더)**: 공지 컴포저 일정-토글 직하 "공지로 시작한 크루 러닝은 피드에 하나의 세션으로 묶여요" — 결정의 순간 배치.
 - 신규 ko 하드코드 3 (배지 2 + 넛지 1) — 슬라이스-6 키잉 노트. [+정리: announcement-compose 기사용 tf 임포트 제거]
 
+## 🏳️ B3 RESOLVED + 크루 배너 클라이언트 BUILT (미스테이지) + 폴더 날짜 픽스
+- **B3 해소 (레저)**: 오너 룰 = OFF; 그녀 계약은 룰링 도착 전 **디폴트 ON + 프라이빗-크루 하드 게이트** (프라이빗 크루 = 플래그 무관 무배너, 크루-레벨 프라이버시 서버 강제)로 락+배포. **해소: 그녀 ON 존속 [오너 비준 펜딩 — 워드 도착 시 기록]** — 게이트가 OFF 논거 중화 (퍼블릭-크루 멤버십은 멤버 리스트로 이미 공개) + ON = 디스커버리. 계약 버바팀: show_crew bool POST/PATCH (생략 = ON) · K1 아이템 crew_name (string|null) · **null = 무배너, 이유 추론 절대 금지** · 기존 런 = ON.
+- **폴더 날짜 픽스**: fmtDateAbs 신설 (fmtDate의 앱솔루트 테일 추출 — 기존 콜러 무변경, fmtDate가 위임) — 폴더 타이틀 = 무조건 앱솔루트 ("청라동 · 8월 1일"; 폴더명은 노화 불가) · fmtAgo 서브 = 상대 유지.
+- **배너 클라 3반쪽**: ① K1 카드 (셰어드 RunCard) — crew_name 논-널 시 "{name}과 함께" 라인 (그린, 세션-배지 티어; null = 무, 인-코멘트 그녀 룰) · 타입 crew_name 전파 (FeedRunExtras·UserRun·Run) ② 러닝 저장 — 태그 로우에 "피드에 크루 표시" 체크 (디폴트 ON), POST show_crew 명시 송신 ③ edit-run — 크루-태그 런 온리 동일 토글, PATCH show_crew. **시드 갭 (프로브 8/5): 단건이 show_crew 미서빙 → edit 토글 ON 시드 (계약 디폴트) — 그녀 원-라인 ask 온-레코드: own 단건에 show_crew.**
+- 신규 키 2 (rc.withCrew·runSave.showCrew) ko+en — 파리티 904/904 MATCH. K1 crew_name 라이브 프로브 확인 (해윙크루 등 실값).
+
 ## 🔼 세션 폴더 v3 STAGED — c39f54db-3c7a-4eaf-b9dd-748ed6e22f02 (커밋 061c5ef) · 해시-타이 MATCH (LEYCfm5A…) · 마커 체크 (crew-session 라우트·폴더 폴백·캐리드) · **500ee060 대체** (날짜 타이틀 + 루트-스크린 뷰, 모달 삭제) · 프로덕션 = 95364a92 불변 · **게이트: 실내 글랜스 — 폴더 "청라동 · 8월 2일" → 세션 스크린 → 카드 탭 → run-post → 백 = 폴더 → 백 = 크루 피드 (연타 클린)** · 프로모션 = 실관찰 스탬프 + 원-컨펌
 
 ## ~~🔼 세션 폴더 v2 STAGED — 500ee060 (커밋 38be097)~~ SUPERSEDED by c39f54db (v3)

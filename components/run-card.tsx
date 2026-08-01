@@ -18,7 +18,7 @@ import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { useRunTrack } from '@/lib/track-cache';
 import type { UserRun } from '@/hooks/use-user-profile';
 import type { useSettings } from '@/store/use-settings';
-import { useLang, useT } from '@/lib/i18n';
+import { tf, useLang, useT } from '@/lib/i18n';
 
 // Course affordances (이 코스 달리기 CTA + header bookmark, canvas card B)
 // REMOVED 2026-07-21 — owner step-back ruling; the feature returns
@@ -58,6 +58,12 @@ export function RunCard({ run, units, mapLive, onKudos, kudosOff, onOpen, onAvat
         <View style={{ flex: 1, minWidth: 0 }}>
           <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.cardName}>{run.nickname}</Text>
           <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.cardDate}>{fmtWhen(run.ran_at, lang)}</Text>
+          {/* 8/5 crew banner (her contract, deployed): crew_name non-null =
+              the runner chose to show it (show_crew gate + private-crew hard
+              gate, both server-side). null = NOTHING — never infer why. */}
+          {run.crew_name ? (
+            <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.cardCrew} numberOfLines={1}>{tf('rc.withCrew', { name: run.crew_name })}</Text>
+          ) : null}
         </View>
       </View>
       {/* polyline_thumb slice: viewable + thumb → real map; off-screen /
@@ -129,6 +135,7 @@ const makeSt = (C: Tokens) => StyleSheet.create({
   cardHead:  { flexDirection: 'row', alignItems: 'center', gap: 9, paddingVertical: 11, paddingHorizontal: 14 },
   cardName:  { fontSize: 14, fontWeight: '700', color: C.text, letterSpacing: -0.3 },
   cardDate:  { fontSize: 11.5, color: C.faint, letterSpacing: -0.2, marginTop: 1 },
+  cardCrew:  { fontSize: 11, fontWeight: '600', color: C.accentGrn, letterSpacing: -0.2, marginTop: 2 },
   cardBody:  { paddingTop: 12, paddingBottom: 14, paddingHorizontal: 14 },
   cardTitle: { fontSize: 15.5, fontWeight: '700', color: C.text, letterSpacing: -0.4, marginBottom: 9 },
   statsRow:  { flexDirection: 'row', gap: 18 },
