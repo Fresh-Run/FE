@@ -1098,14 +1098,16 @@ export default function TrackingScreen() {
               평균 equals the saved avg exactly. Floor 0.05km field-tunable. */}
           {(() => {
             const liveAvgPace = distanceKm >= 0.05 && elapsedSec > 0 ? Math.round(elapsedSec / distanceKm) : null;
+            // 8/4 reorder (owner-ruled after the grid glance): quantities on
+            // top, the two paces adjacent for direct comparison.
             const rows: [string, string, string][][] = [
               [
                 [fmtDist(distanceKm, units, 2), distUnit(units), t('trk.dist')],
-                [paceDisplay,                   paceUnit(units), t('trk.pace')],
+                [kcal != null ? String(kcal) : '—', 'kcal', t('trk.kcal')],
               ],
               [
+                [paceDisplay,                   paceUnit(units), t('trk.pace')],
                 [liveAvgPace != null ? fmtPaceIn(liveAvgPace, units) : "--'--\"", paceUnit(units), t('res.avgPace')],
-                [kcal != null ? String(kcal) : '—', 'kcal', t('trk.kcal')],
               ],
             ];
             return rows.map((row, r) => (
