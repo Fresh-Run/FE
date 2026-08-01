@@ -123,6 +123,8 @@ export const en: Record<keyof typeof ko, string> = {
   'terrain.hill': 'Hill training',
   'day.sun': 'Sunday', 'day.mon': 'Monday', 'day.tue': 'Tuesday', 'day.wed': 'Wednesday',
   'day.thu': 'Thursday', 'day.fri': 'Friday', 'day.sat': 'Saturday',
+  'tod.dawn': 'dawn', 'tod.morning': 'morning', 'tod.forenoon': 'late morning', 'tod.lunch': 'noon',
+  'tod.afternoon': 'afternoon', 'tod.evening': 'evening', 'tod.night': 'night',
   'auth.noAccount': 'No account yet?',
   'auth.hasAccount': 'Already have an account?',
   'onb.nickSub': "Set the nickname you'll use in the app.\nYou can change it anytime.",

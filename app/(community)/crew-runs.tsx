@@ -52,7 +52,7 @@ import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { useRunTrack } from '@/lib/track-cache';
 import { useSettings } from '@/store/use-settings';
 import { useStore } from '@/store/use-store';
-import { t, tf, useLang } from '@/lib/i18n';
+import { t, tf, tIn, useLang } from '@/lib/i18n';
 
 function RunCard({ run, units, mapLive, onOpen, isMine, kudosOff, onKudos, onCountPress }: {
   run: CrewRunItem;
@@ -192,6 +192,43 @@ export default function CrewRunsScreen() {
   // grouping — no leader/admin action exists or is needed (their "if
   // automatic = best", answered).
   const [openSessionKey, setOpenSessionKey] = useState<string | null>(null);
+  // ── 8/5 tap-through fix. MECHANISM (confirmed): RN Modal is a NATIVE
+  // overlay outside the navigation tree — router.push from inside it mounts
+  // run-post into the stack BENEATH the modal (invisible), every tap stacks
+  // another, and closing the modal reveals them all at once. FIX = the
+  // personal-info chooser pattern (ledgered 지연-bug-② precedent): close
+  // the modal FIRST, run the push ONCE on the Modal's real onDismiss (the
+  // iOS dismissal-complete callback — rAF/InteractionManager fire mid-
+  // dismiss and iOS can reject the presentation), with a 700ms fallback
+  // timer for the onDismiss flakiness history; the ref-null makes whichever
+  // fires first the only run. The pending ref doubles as the IN-FLIGHT
+  // GUARD: while a nav is pending, further taps no-op — no duplicates. */
+  const pendingNavRef = useRef<(() => void) | null>(null);
+  function runPendingNav() {
+    const a = pendingNavRef.current;
+    pendingNavRef.current = null;
+    a?.();
+  }
+  function navFromSession(action: () => void) {
+    if (pendingNavRef.current) return; // in-flight guard — rapid taps no-op
+    pendingNavRef.current = action;
+    setOpenSessionKey(null);
+    setTimeout(runPendingNav, 700);
+  }
+
+  /** 8/5 owner-ruled folder title: "{area} · {요일} {시간대}" — day.* keys +
+      the new bare tod.* vocabulary (title.* carries the 러닝 suffix — wrong
+      register for "토요일 밤"); area-null → date-only. timeTitle's hour
+      boundaries mirrored. */
+  const sessionTitle = useCallback((anchor: CrewRunItem): string => {
+    const d = new Date(anchor.ran_at);
+    const DAY = ['day.sun', 'day.mon', 'day.tue', 'day.wed', 'day.thu', 'day.fri', 'day.sat'] as const;
+    const h = d.getHours();
+    const tod = h >= 4 && h < 7 ? 'tod.dawn' : h < 10 ? 'tod.morning' : h < 12 ? 'tod.forenoon'
+      : h < 14 ? 'tod.lunch' : h < 18 ? 'tod.afternoon' : h < 21 ? 'tod.evening' : 'tod.night';
+    const when = `${tIn(lang, DAY[d.getDay()])} ${tIn(lang, tod)}`;
+    return anchor.area ? `${anchor.area} · ${when}` : when;
+  }, [lang]);
   const myUid = useStore(s => s.session?.user.id);
 
   function toggleKudos(run: CrewRunItem) {
@@ -305,6 +342,10 @@ export default function CrewRunsScreen() {
             if (g.sessionKey) {
               const a = g.anchor;
               const isAnn = g.sessionKey.startsWith('a:');
+              // 8/5 anatomy (owner-ruled): green badge slot = "N명 참여"
+              // (participation IS the badge) · title = auto-composed
+              // area·day·time-of-day · a: gets a small 공지 marker only
+              // (c: needs no label — the date-title says it) · fmtAgo sub.
               return (
                 <Pressable onPress={() => setOpenSessionKey(g.sessionKey)} style={({ pressed }) => [st.folderCard, shadows.sm, pressed && { opacity: 0.85 }]}>
                   <View style={st.folderThumb}>
@@ -314,12 +355,17 @@ export default function CrewRunsScreen() {
                   </View>
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <View style={st.folderHeadRow}>
-                      <Icon name={isAnn ? 'megaphone-outline' : 'people'} size={12} color={C.accentGrn} />
-                      <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.folderBadgeTxt}>{isAnn ? '공지 러닝' : '함께 달림'}</Text>
+                      <Icon name="people" size={12} color={C.accentGrn} />
+                      <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.folderBadgeTxt}>
+                        {a.session_participant_count != null ? tf('crw.nJoined', { n: a.session_participant_count }) : '함께 달린 기록'}
+                      </Text>
+                      {isAnn && (
+                        <View style={st.annMarker}>
+                          <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.annMarkerTxt}>공지</Text>
+                        </View>
+                      )}
                     </View>
-                    <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.folderTitle} numberOfLines={1}>
-                      {a.session_participant_count != null ? tf('crw.nJoined', { n: a.session_participant_count }) : '함께 달린 기록'}
-                    </Text>
+                    <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.folderTitle} numberOfLines={1}>{sessionTitle(a)}</Text>
                     <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.folderDate}>{fmtAgo(a.ran_at, lang)}</Text>
                   </View>
                   <Icon name="chevron-forward" size={18} color={C.faint} />
@@ -354,7 +400,7 @@ export default function CrewRunsScreen() {
       )}
       {/* ── 세션 뷰 (폴더 탭 타깃): 전 참여자 풀 카드, K1 전 문법 —
              derives LIVE from rows (later pages absorb into the open view) */}
-      <Modal visible={openSessionKey != null} animationType="slide" onRequestClose={() => setOpenSessionKey(null)}>
+      <Modal visible={openSessionKey != null} animationType="slide" onRequestClose={() => setOpenSessionKey(null)} onDismiss={runPendingNav}>
         <View style={[st.root, { paddingTop: insets.top }]}>
           {(() => {
             if (!openSessionKey) return null;
@@ -382,7 +428,7 @@ export default function CrewRunsScreen() {
                         run={shown}
                         units={units}
                         mapLive
-                        onOpen={() => openRun(item)}
+                        onOpen={() => navFromSession(() => openRun(item))}
                         isMine={item.user_id === myUid}
                         kudosOff={item.allow_likes === false || kudosOff403.has(item.run_id)}
                         onKudos={() => toggleKudos(item)}
@@ -448,6 +494,8 @@ const makeSt = (C: Tokens) => StyleSheet.create({
   folderThumb:   { width: 64, height: 64, borderRadius: 14, overflow: 'hidden', flexShrink: 0 },
   folderHeadRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   folderBadgeTxt:{ fontSize: 11, fontWeight: '700', color: C.accentGrn, letterSpacing: -0.2 },
+  annMarker:     { marginLeft: 4, paddingHorizontal: 5, paddingVertical: 1, borderRadius: 6, backgroundColor: C.surfaceAlt, borderWidth: 1, borderColor: C.border },
+  annMarkerTxt:  { fontSize: 9.5, fontWeight: '700', color: C.sub, letterSpacing: -0.1 },
   folderTitle:   { fontSize: 14.5, fontWeight: '700', color: C.text, letterSpacing: -0.3, marginTop: 2 },
   folderDate:    { fontSize: 11.5, color: C.faint, letterSpacing: -0.2, marginTop: 2 },
   footCount: { fontSize: 13, fontWeight: '600', color: C.sub, letterSpacing: -0.2 },

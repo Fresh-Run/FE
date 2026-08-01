@@ -135,6 +135,8 @@ export const ko = {
   'terrain.hill': '언덕 훈련',
   'day.sun': '일요일', 'day.mon': '월요일', 'day.tue': '화요일', 'day.wed': '수요일',
   'day.thu': '목요일', 'day.fri': '금요일', 'day.sat': '토요일',
+  'tod.dawn': '새벽', 'tod.morning': '아침', 'tod.forenoon': '오전', 'tod.lunch': '점심',
+  'tod.afternoon': '오후', 'tod.evening': '저녁', 'tod.night': '밤',
   'auth.noAccount': '계정이 없으신가요?',
   'auth.hasAccount': '이미 계정이 있으신가요?',
   'onb.nickSub': '앱에서 사용할 닉네임을 설정해 주세요.\n나중에 언제든지 변경할 수 있습니다.',
