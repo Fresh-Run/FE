@@ -41,20 +41,28 @@ import { Avatar } from '@/components/avatar';
 import { MiniMap } from '@/components/mini-map';
 import { RealMap } from '@/components/real-map';
 import { Icon } from '@/components/ui';
+import { KudosSheet } from '@/components/kudos-sheet';
+import { ApiError, apiFetch } from '@/lib/api';
 import { getCrewRuns, CREW_FEED_PAGE, type CrewRunItem } from '@/lib/crews-api';
 import { openProfile } from '@/lib/profile-nav';
 import { distUnit, fmtAgo, fmtDist, fmtDuration, fmtPaceIn, paceUnit, timeTitle } from '@/lib/run-format';
-import { shadows, spacing as S, type Tokens } from '@/lib/theme';
+import { shadows, spacing as S, type Tokens, DENSE_MAX_FONT_SCALE } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { useRunTrack } from '@/lib/track-cache';
 import { useSettings } from '@/store/use-settings';
+import { useStore } from '@/store/use-store';
 import { t, tf, useLang } from '@/lib/i18n';
 
-function RunCard({ run, units, mapLive, onOpen }: {
+function RunCard({ run, units, mapLive, onOpen, isMine, kudosOff, onKudos, onCountPress }: {
   run: CrewRunItem;
   units: ReturnType<typeof useSettings.getState>['settings']['units'];
   mapLive: boolean;
   onOpen: () => void;
+  /** K1 wiring (8/5, her payload live): own rows = dimmed ♥ + count→sheet */
+  isMine: boolean;
+  kudosOff: boolean;
+  onKudos: () => void;
+  onCountPress: () => void;
 }) {
   const C = useTokens();
   const st = useStyles(makeSt);
@@ -110,10 +118,28 @@ function RunCard({ run, units, mapLive, onOpen }: {
           ))}
         </View>
       </View>
-      {/* 💬 count-only (no kudos_count in the payload) — whole card → run-post */}
+      {/* K1 grammar (8/5 crew-♥ wiring — the memo promise): ♥ toggles /
+          count opens the sheet, home-feed rules verbatim incl. the 44pt
+          asymmetric slop geometry; own rows = dimmed inert ♥ (self-like 400,
+          K2 restores); allow_likes === false = read-only heart. 💬 stays
+          display-only (card tap → run-post). */}
       <View style={st.cardFooter}>
-        <Icon name="chatbubble-outline" size={17} color={C.sub} />
-        <Text style={st.footCount}>{run.comment_count}</Text>
+        <View style={st.kudosCluster}>
+          {isMine || kudosOff ? (
+            <Icon name="heart-outline" size={18} color={isMine ? C.faint : C.sub} />
+          ) : (
+            <Pressable onPress={onKudos} hitSlop={{ top: 13, bottom: 13, left: 13, right: 2 }} style={({ pressed }) => pressed ? { opacity: 0.6 } : null}>
+              <Icon name={run.my_kudos ? 'heart' : 'heart-outline'} size={18} color={run.my_kudos ? C.danger : C.sub} />
+            </Pressable>
+          )}
+          <Pressable onPress={onCountPress} hitSlop={{ top: 8, bottom: 8, left: 0, right: 8 }} style={({ pressed }) => pressed ? { opacity: 0.6 } : null}>
+            <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={[st.footCount, !isMine && !kudosOff && run.my_kudos && { color: C.danger }]}>{run.kudos_count}</Text>
+          </Pressable>
+        </View>
+        <View style={[st.kudosCluster, { marginLeft: 14 }]}>
+          <Icon name="chatbubble-outline" size={17} color={C.sub} />
+          <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.footCount}>{run.comment_count}</Text>
+        </View>
       </View>
     </Pressable>
   );
@@ -127,6 +153,26 @@ export default function CrewRunsScreen() {
   const units = useSettings(s => s.settings.units);
 
   const [rows, setRows]     = useState<CrewRunItem[] | null>(null);
+  // K1 kudos machinery (user-profile pattern verbatim): optimistic overlay,
+  // wholesale clear on data arrival, per-run 403 race net, likers sheet door
+  const [kudosOv, setKudosOv] = useState<Record<string, { on: boolean; delta: number }>>({});
+  const [kudosOff403, setKudosOff403] = useState<Set<string>>(new Set());
+  const [kudosSheetRun, setKudosSheetRun] = useState<{ id: string; count: number } | null>(null);
+  const myUid = useStore(s => s.session?.user.id);
+
+  function toggleKudos(run: CrewRunItem) {
+    if (kudosOff403.has(run.run_id)) return;
+    const cur = kudosOv[run.run_id]?.on ?? run.my_kudos;
+    const next = !cur;
+    setKudosOv(p => ({ ...p, [run.run_id]: { on: next, delta: (next ? 1 : 0) - (run.my_kudos ? 1 : 0) } }));
+    apiFetch<void>(`/api/runs/${run.run_id}/kudos`, { method: next ? 'POST' : 'DELETE' })
+      .catch((e: unknown) => {
+        setKudosOv(p => ({ ...p, [run.run_id]: { on: run.my_kudos, delta: 0 } }));
+        if (e instanceof ApiError && e.code === 'likes_disabled') {
+          setKudosOff403(p => new Set(p).add(run.run_id)); // per-run race net
+        }
+      });
+  }
   const [loadingMore, setLoadingMore] = useState(false);
   const [reachedEnd, setReachedEnd]   = useState(false);
   const [error, setError]   = useState(false);
@@ -145,7 +191,7 @@ export default function CrewRunsScreen() {
     if (!crewId) return;
     setError(false);
     getCrewRuns(crewId, 0)
-      .then(list => { setRows(list); setReachedEnd(list.length < CREW_FEED_PAGE); })
+      .then(list => { setRows(list); setKudosOv({}); setReachedEnd(list.length < CREW_FEED_PAGE); })
       .catch(() => { setRows([]); setError(true); });
   }, [crewId]);
   useFocusEffect(useCallback(() => { load(); }, [load]));
@@ -214,9 +260,22 @@ export default function CrewRunsScreen() {
         <FlatList
           data={rows}
           keyExtractor={r => r.run_id}
-          renderItem={({ item }) => (
-            <RunCard run={item} units={units} mapLive={liveIds.has(item.run_id)} onOpen={() => openRun(item)} />
-          )}
+          renderItem={({ item }) => {
+            const ov = kudosOv[item.run_id];
+            const shown = ov ? { ...item, my_kudos: ov.on, kudos_count: item.kudos_count + ov.delta } : item;
+            return (
+              <RunCard
+                run={shown}
+                units={units}
+                mapLive={liveIds.has(item.run_id)}
+                onOpen={() => openRun(item)}
+                isMine={item.user_id === myUid}
+                kudosOff={item.allow_likes === false || kudosOff403.has(item.run_id)}
+                onKudos={() => toggleKudos(item)}
+                onCountPress={() => setKudosSheetRun({ id: shown.run_id, count: shown.kudos_count })}
+              />
+            );
+          }}
           viewabilityConfig={viewabilityConfig}
           onViewableItemsChanged={onViewableItemsChanged}
           ItemSeparatorComponent={() => <View style={{ height: 14 }} />}
@@ -226,6 +285,9 @@ export default function CrewRunsScreen() {
           ListFooterComponent={loadingMore ? <ActivityIndicator style={{ marginTop: 16 }} color={C.faint} /> : null}
           showsVerticalScrollIndicator={false}
         />
+      )}
+      {kudosSheetRun && (
+        <KudosSheet runId={kudosSheetRun.id} kudosCount={kudosSheetRun.count} onClose={() => setKudosSheetRun(null)} />
       )}
     </View>
   );
@@ -262,6 +324,7 @@ const makeSt = (C: Tokens) => StyleSheet.create({
   statUnit:  { fontSize: 11, fontWeight: '600', color: C.faint },
   statLbl:   { fontSize: 11, color: C.faint, letterSpacing: -0.2 },
 
-  cardFooter:{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingTop: 8, paddingBottom: 13, marginTop: 6, borderTopWidth: 1, borderTopColor: C.border },
+  cardFooter:{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingTop: 8, paddingBottom: 13, marginTop: 6, borderTopWidth: 1, borderTopColor: C.border },
+  kudosCluster: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   footCount: { fontSize: 13, fontWeight: '600', color: C.sub, letterSpacing: -0.2 },
 });

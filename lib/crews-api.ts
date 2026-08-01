@@ -350,8 +350,9 @@ export type CrewRankingEntry = {
 // Pagination = limit&offset (활동 피드와 동형, chat before= 커서 아님).
 // 엣지 ⓑ (probed): 잠금 프로필 멤버의 run도 카드로 뜨고, 탭 → 상세 200
 //   (프로필/히스토리는 잠겨도 "서피스에 보이는 카드는 상세까지").
-// ⚠️ payload에 kudos_count/my_kudos 없음 (활동 피드와 달리) — 카드는 kudos
-//   미표시, 상세(run-post)가 kudos를 직접 fetch. comment_count는 있음.
+// kudos_count/my_kudos: 그녀 8/3 배포로 합류 (K1 시맨틱·배치 — 8/5 프로브:
+//   {kudos_count, my_kudos, allow_likes} 전 로우 라이브) — 크루-♥ 와이어링
+//   슬라이스가 소비. comment_count 종전 그대로.
 // L1 크루 러닝 세션 태깅 (BE 09d7af0, guide §217 — probed live 2026-07-13):
 //   is_crew_session=true → "정기런" 배지 + session_participant_count("N명 참여",
 //   같은 세션 distinct 참여자). 참여자 수 = 참석 집계(verified 무관·수동 러닝도
@@ -374,6 +375,8 @@ export type CrewRunItem = {
   comment_count: number;
   /** pre-render feed-hint flags (BE 4fd5b66): true=on, false=off, null=locked/unknown */
   allow_likes: boolean | null;
+  kudos_count: number;
+  my_kudos: boolean;
   allow_comments: boolean | null;
   /** L1 정기런 태그 (BE 09d7af0): true → "정기런" 배지; false = 일반 러닝 */
   is_crew_session: boolean;

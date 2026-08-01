@@ -892,6 +892,16 @@ export default function CrewDetailScreen() {
                           {run.avg_pace_sec_per_km != null && (
                             <Text style={st.feedStat}>{fmtPaceIn(run.avg_pace_sec_per_km, units)}{paceUnit(units)}</Text>
                           )}
+                          {/* 8/5 crew-♥: COUNT-ONLY on the 48px preview rows —
+                              stated divergence from the full K1 grammar (a
+                              toggle doesn't fit the compact row; tap → run-post
+                              carries the interaction; crew-runs = full grammar). */}
+                          {run.kudos_count > 0 && (
+                            <View style={st.feedKudos}>
+                              <Icon name="heart" size={10} color={C.danger} />
+                              <Text style={st.feedStat}>{run.kudos_count}</Text>
+                            </View>
+                          )}
                         </View>
                       </View>
                     </Pressable>
@@ -1028,6 +1038,7 @@ const makeSt = (C: Tokens) => StyleSheet.create({
   feedSessionTxt:  { fontSize: 9.5, fontWeight: '800', color: C.accentGrn, letterSpacing: -0.2 },
   feedWhen:     { fontSize: 11.5, color: C.faint, flexShrink: 0, marginLeft: 'auto' },
   feedStatsRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 6 },
+  feedKudos:    { flexDirection: 'row', alignItems: 'center', gap: 3 },
   feedKm:       { fontSize: 13, fontWeight: '700', color: C.accentGrn, letterSpacing: -0.2, fontVariant: ['tabular-nums'] },
   feedKmUnit:   { fontSize: 10, color: C.faint, fontWeight: '600' },
   feedStat:     { fontSize: 12.5, fontWeight: '600', color: C.sub, letterSpacing: -0.2, fontVariant: ['tabular-nums'] },
