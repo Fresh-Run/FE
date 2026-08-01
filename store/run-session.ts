@@ -111,7 +111,17 @@ const SILENCE_TRUST_MS    = 60_000; // silence older than this = presumed GPS
 // gap) before firing — covers the rare abrupt stop whose final fix was
 // mid-stride (worst-case pause latency 15s, stated). Both FIELD-TUNABLE.
 const WALK_SUPPRESS_MPS   = 0.35;   // last-fix speed at/above = still walking
-const SILENCE_SLOW_MS     = 15_000; // slow-lane silence floor (fast-final-fix stops)
+const SILENCE_SLOW_MS     = 15_000; // walking-band silence floor (slow-walk protection)
+// ── v4 three-lane refine (8/5 owner field ruling: the abrupt stop from full
+// stride felt ~15s — too long; his sweetspot 5-6s = the calibration datum).
+// A RUNNING-speed final fix changes what silence means: at run cadence
+// (~2-3s between fixes at distanceInterval 5m) 6s of silence ≈ 2-3 missed
+// fixes = probable abrupt stop. A walker CANNOT reach this lane by
+// construction — walking fixes carry 0.35-1.0 m/s and land in the 15s lane;
+// their 6-10s natural gaps never meet a ≥1.0 final fix. All three constants
+// FIELD-TUNABLE.
+const RUN_SPEED_MPS       = 1.0;    // last-fix speed above = running stride
+const SILENCE_RUN_MS      = 6_000;  // run-lane silence floor (owner sweetspot)
 const RESUME_SPEED_MPS    = 1.0;   // hysteresis above STATIONARY_MPS
 const RESUME_DISP_M       = 8;     // or clear displacement from the frozen point
 const AUTO_REPAUSE_GRACE_MS = 10_000; // after a MANUAL resume (crosswalk case)
@@ -193,15 +203,18 @@ function stillTick(): void {
   if (state !== 'running') return;
   if (!stillRef) return; // no evidence anchor yet
   const now = Date.now();
-  if (now - stillRef.t < STILL_EVIDENCE_MS) return;
   if (lastRawAccM == null || lastRawAccM > MAX_ACCURACY_M) return; // degraded → GPS-lost lane
   if (now - lastFixTs > SILENCE_TRUST_MS) return; // stale → presumed signal death
-  // 8/5 slow-walk guard: a last fix that spoke movement means this silence
-  // is probably just a slow gait's natural gap — hold the fast lane and
-  // require SILENCE_SLOW_MS instead. Slow/invalid last speed (the real-stop
-  // signature) keeps the 5s lane.
-  const lastSpokeMovement = lastSpeedMps != null && lastSpeedMps >= WALK_SUPPRESS_MPS;
-  if (lastSpokeMovement && now - stillRef.t < SILENCE_SLOW_MS) return;
+  // v4 THREE-LANE silence floor, keyed on the FINAL fix's speed:
+  //  < 0.35 (or invalid)  → 5s  — the real-stop signature, fast lane
+  //  0.35–1.0 (walking)   → 15s — the ambiguous band; why slow walks never misfire
+  //  > 1.0 (running)      → 6s  — silence at run cadence is already anomalous
+  const sp = lastSpeedMps;
+  const silenceFloor =
+    sp == null || sp < WALK_SUPPRESS_MPS ? STILL_EVIDENCE_MS
+    : sp > RUN_SPEED_MPS ? SILENCE_RUN_MS
+    : SILENCE_SLOW_MS;
+  if (now - stillRef.t < silenceFloor) return;
   maybeAutoPause(now);
 }
 
