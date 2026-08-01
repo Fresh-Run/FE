@@ -848,7 +848,7 @@ export default function CrewDetailScreen() {
               <Text style={st.sectionTitle}>{t('crw.sFeed')}</Text>
               {feedPreview.length > 0 && (
                 <Pressable
-                  onPress={() => router.push({ pathname: '/(community)/crew-runs' as never, params: { crewId: crew.id } })}
+                  onPress={() => router.push({ pathname: '/(community)/crew-runs' as never, params: { crewId: crew.id, crewName: crew.name } })}
                   hitSlop={8}
                 >
                   <Text style={st.annMoreTxt}>{t('crw.viewAll')}</Text>

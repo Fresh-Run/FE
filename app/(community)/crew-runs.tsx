@@ -30,6 +30,7 @@ import React, { useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  Modal,
   Pressable,
   StyleSheet,
   Text,
@@ -172,7 +173,8 @@ export default function CrewRunsScreen() {
   const C = useTokens();
   const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
-  const { crewId } = useLocalSearchParams<{ crewId: string }>();
+  const { crewId, crewName } = useLocalSearchParams<{ crewId: string; crewName?: string }>();
+  const lang = useLang(); // folder-card date (screen scope — the card component has its own)
   const units = useSettings(s => s.settings.units);
 
   const [rows, setRows]     = useState<CrewRunItem[] | null>(null);
@@ -181,6 +183,15 @@ export default function CrewRunsScreen() {
   const [kudosOv, setKudosOv] = useState<Record<string, { on: boolean; delta: number }>>({});
   const [kudosOff403, setKudosOff403] = useState<Set<string>>(new Set());
   const [kudosSheetRun, setKudosSheetRun] = useState<{ id: string; count: number } | null>(null);
+  // 세션 폴더 뷰 (8/5 리워크, 오너+지연 조인트): the open session's KEY only —
+  // members derive LIVE from `rows` while the view is open, so later-page
+  // participants absorb INTO the open view by the same re-derivation. A
+  // MODAL (not a route screen) for exactly that: no data handoff, and the
+  // screen's K1 machinery (overlay/toggle/403 net/sheet) serves the cards
+  // inside directly. AUTOMATIC by construction: session_key alone drives
+  // grouping — no leader/admin action exists or is needed (their "if
+  // automatic = best", answered).
+  const [openSessionKey, setOpenSessionKey] = useState<string | null>(null);
   const myUid = useStore(s => s.session?.user.id);
 
   function toggleKudos(run: CrewRunItem) {
@@ -286,13 +297,35 @@ export default function CrewRunsScreen() {
           data={groupCrewSessions(rows)}
           keyExtractor={g => g.sessionKey ?? g.anchor.run_id}
           renderItem={({ item: g }) => {
-            // ANCHOR-RUN v1 (stated choices, alternatives ledgered): the
-            // card IS the anchor's card — its media, its runner identity
-            // (earliest runner's name + the server-global N명 참여 chip:
-            // cheapest honest form; stacked avatars = later), its ♥
-            // toggle/count (per-participant kudos live behind the tap),
-            // and tap → the ANCHOR's run-post (inline expansion = the
-            // ledgered alternative).
+            // 8/5 REWORK (owner+지연 joint): a session group renders as a
+            // FOLDER ENTRY — visually distinct, no kudos/comment footer
+            // (those live on the runs inside); tap opens the session view
+            // with EVERY participant's full card. The anchor's route mini
+            // is the folder's FACE (a preview, not an identity claim).
+            if (g.sessionKey) {
+              const a = g.anchor;
+              const isAnn = g.sessionKey.startsWith('a:');
+              return (
+                <Pressable onPress={() => setOpenSessionKey(g.sessionKey)} style={({ pressed }) => [st.folderCard, shadows.sm, pressed && { opacity: 0.85 }]}>
+                  <View style={st.folderThumb}>
+                    {a.polyline_thumb && a.polyline_thumb.length >= 2
+                      ? <MiniMap seed={a.run_id} height={64} borderRadius={14} polyline={a.polyline_thumb} />
+                      : <MiniMap seed={a.run_id} height={64} borderRadius={14} />}
+                  </View>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <View style={st.folderHeadRow}>
+                      <Icon name={isAnn ? 'megaphone-outline' : 'people'} size={12} color={C.accentGrn} />
+                      <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.folderBadgeTxt}>{isAnn ? '공지 러닝' : '함께 달림'}</Text>
+                    </View>
+                    <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.folderTitle} numberOfLines={1}>
+                      {a.session_participant_count != null ? tf('crw.nJoined', { n: a.session_participant_count }) : '함께 달린 기록'}
+                    </Text>
+                    <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.folderDate}>{fmtAgo(a.ran_at, lang)}</Text>
+                  </View>
+                  <Icon name="chevron-forward" size={18} color={C.faint} />
+                </Pressable>
+              );
+            }
             const item = g.anchor;
             const ov = kudosOv[item.run_id];
             const shown = ov ? { ...item, my_kudos: ov.on, kudos_count: item.kudos_count + ov.delta } : item;
@@ -300,7 +333,7 @@ export default function CrewRunsScreen() {
               <RunCard
                 run={shown}
                 units={units}
-                mapLive={liveIds.has(g.sessionKey ?? item.run_id)}
+                mapLive={liveIds.has(item.run_id)}
                 onOpen={() => openRun(item)}
                 isMine={item.user_id === myUid}
                 kudosOff={item.allow_likes === false || kudosOff403.has(item.run_id)}
@@ -319,7 +352,59 @@ export default function CrewRunsScreen() {
           showsVerticalScrollIndicator={false}
         />
       )}
-      {kudosSheetRun && (
+      {/* ── 세션 뷰 (폴더 탭 타깃): 전 참여자 풀 카드, K1 전 문법 —
+             derives LIVE from rows (later pages absorb into the open view) */}
+      <Modal visible={openSessionKey != null} animationType="slide" onRequestClose={() => setOpenSessionKey(null)}>
+        <View style={[st.root, { paddingTop: insets.top }]}>
+          {(() => {
+            if (!openSessionKey) return null;
+            const members = (rows ?? []).filter(r => r.session_key === openSessionKey);
+            const anchor = members[0];
+            const isAnn = openSessionKey.startsWith('a:');
+            const title = `${crewName ? `${crewName} · ` : ''}${isAnn ? '공지 러닝' : '함께 달림'}${anchor?.session_participant_count != null ? ` · ${tf('crw.nJoined', { n: anchor.session_participant_count })}` : ''}`;
+            return (
+              <>
+                <View style={st.appBar}>
+                  <Pressable onPress={() => setOpenSessionKey(null)} hitSlop={12} style={st.backBtn}>
+                    <Icon name="arrow-back" size={20} color={C.text} />
+                  </Pressable>
+                  <Text style={st.appBarTitle} numberOfLines={1}>{title}</Text>
+                  <View style={{ width: 36 }} />
+                </View>
+                <FlatList
+                  data={members}
+                  keyExtractor={r => r.run_id}
+                  renderItem={({ item }) => {
+                    const ov = kudosOv[item.run_id];
+                    const shown = ov ? { ...item, my_kudos: ov.on, kudos_count: item.kudos_count + ov.delta } : item;
+                    return (
+                      <RunCard
+                        run={shown}
+                        units={units}
+                        mapLive
+                        onOpen={() => openRun(item)}
+                        isMine={item.user_id === myUid}
+                        kudosOff={item.allow_likes === false || kudosOff403.has(item.run_id)}
+                        onKudos={() => toggleKudos(item)}
+                        onCountPress={() => setKudosSheetRun({ id: shown.run_id, count: shown.kudos_count })}
+                      />
+                    );
+                  }}
+                  ItemSeparatorComponent={() => <View style={{ height: 14 }} />}
+                  contentContainerStyle={{ padding: S.gutter, paddingBottom: 40 }}
+                  showsVerticalScrollIndicator={false}
+                />
+              </>
+            );
+          })()}
+          {/* the likers sheet must ALSO render inside the modal (iOS modal
+              sits above the screen's own overlay layer) */}
+          {kudosSheetRun && openSessionKey != null && (
+            <KudosSheet runId={kudosSheetRun.id} kudosCount={kudosSheetRun.count} onClose={() => setKudosSheetRun(null)} />
+          )}
+        </View>
+      </Modal>
+      {kudosSheetRun && openSessionKey == null && (
         <KudosSheet runId={kudosSheetRun.id} kudosCount={kudosSheetRun.count} onClose={() => setKudosSheetRun(null)} />
       )}
     </View>
@@ -359,5 +444,11 @@ const makeSt = (C: Tokens) => StyleSheet.create({
 
   cardFooter:{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingTop: 8, paddingBottom: 13, marginTop: 6, borderTopWidth: 1, borderTopColor: C.border },
   kudosCluster: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  folderCard:    { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 18, padding: 12 },
+  folderThumb:   { width: 64, height: 64, borderRadius: 14, overflow: 'hidden', flexShrink: 0 },
+  folderHeadRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  folderBadgeTxt:{ fontSize: 11, fontWeight: '700', color: C.accentGrn, letterSpacing: -0.2 },
+  folderTitle:   { fontSize: 14.5, fontWeight: '700', color: C.text, letterSpacing: -0.3, marginTop: 2 },
+  folderDate:    { fontSize: 11.5, color: C.faint, letterSpacing: -0.2, marginTop: 2 },
   footCount: { fontSize: 13, fontWeight: '600', color: C.sub, letterSpacing: -0.2 },
 });
