@@ -869,9 +869,18 @@ export default function CrewDetailScreen() {
                     {i > 0 && <View style={st.divider} />}
                     <Pressable onPress={() => openCrewRun(run)} style={({ pressed }) => [st.feedRow, pressed && { opacity: 0.7 }]}>
                       <View style={st.feedThumb}>
-                        {run.polyline_thumb && run.polyline_thumb.length >= 2
-                          ? <RealMap height={48} borderRadius={13} polyline={run.polyline_thumb} />
-                          : <MiniMap seed={run.run_id} height={48} borderRadius={13} />}
+                        {/* 8/5 REWORK — the Korea map lived HERE. Root cause:
+                            RealMap's fixed 24px onMapReady edgePadding is
+                            DEGENERATE at 48px (24+24 ≥ the frame) → MapKit
+                            fits the coords into non-positive space → extreme
+                            zoom-out, snapshotted by cacheEnabled. Fix: the
+                            기록-card cascade — photo first (SafeImage), else
+                            the route-shaped MiniMap SVG (no MapKit at this
+                            size = the degenerate-fit class dead), else seed. */}
+                        <SafeImage uri={run.photo_thumb} style={st.feedThumbImg}
+                          fallback={run.polyline_thumb && run.polyline_thumb.length >= 2
+                            ? <MiniMap seed={run.run_id} height={48} borderRadius={13} polyline={run.polyline_thumb} />
+                            : <MiniMap seed={run.run_id} height={48} borderRadius={13} />} />
                       </View>
                       <View style={{ flex: 1, minWidth: 0 }}>
                         <View style={st.feedHeadRow}>
@@ -1032,6 +1041,7 @@ const makeSt = (C: Tokens) => StyleSheet.create({
   feedList:     { backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: R.xl, overflow: 'hidden' },
   feedRow:      { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12 },
   feedThumb:    { width: 48, height: 48, borderRadius: 13, overflow: 'hidden', flexShrink: 0 },
+  feedThumbImg: { width: 48, height: 48, borderRadius: 13 }, // signed URL — direct, never cached (계약)
   feedHeadRow:  { flexDirection: 'row', alignItems: 'center', gap: 6 },
   feedName:     { flexShrink: 1, fontSize: 13.5, fontWeight: '700', color: C.text, letterSpacing: -0.3 },
   feedSessionChip: { backgroundColor: C.accentDim, borderRadius: 5, paddingHorizontal: 5, paddingVertical: 1.5, flexShrink: 0 },
