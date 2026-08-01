@@ -62,12 +62,19 @@ const AnimatedCircle = Reanimated.createAnimatedComponent(Circle);
 // ─── Prefs (persisted metric selection — v1 local; settings.share later) ─────
 
 export type ShareMetricKey = 'dist' | 'pace' | 'time';
+/** 8/6 free-layer JOIN: the crew line rides the metric-layer machinery under
+    its own key — same hook, same guides, same persistence. Records below
+    widen to this; `metrics` stays ShareMetricKey (crew toggles are per-visit
+    state, her mock-amendment default-OFF, never persisted). */
+type ShareLayerKey = ShareMetricKey | 'crew';
 type MetricPlacement = { x: number; y: number; s: number }; // x/y = canvas fractions, s = scale
 type SharePrefs = {
   metrics: Record<ShareMetricKey, boolean>;
   format: '1:1' | '9:16';
-  /** v2 free-placement — absent keys fall to the default stack (merge-safe) */
-  placements?: Partial<Record<ShareMetricKey, MetricPlacement>>;
+  /** v2 free-placement — absent keys fall to the default stack (merge-safe).
+      Incl. 'crew' (8/6): PLACEMENT persists like the metrics' — the layer
+      convention matched — while the crew TOGGLES stay per-visit OFF. */
+  placements?: Partial<Record<ShareLayerKey, MetricPlacement>>;
   /** v2.1 — route stroke styling (global taste, like metric selection) */
   strokeColor?: string;
   strokeWeight?: number;
@@ -94,10 +101,13 @@ const BG_ADJUST_CAP = 20;
 const STROKE_COLORS = ['#74E827', '#FFFFFF', '#FFC24B', '#5AC8FA', '#FF6B81'];
 const STROKE_WEIGHTS = [[3, 'shr.thin'], [4.5, 'shr.normal'], [6, 'shr.thick']] as const; // keys — render-time
 // default stack ≈ the old bottom-left block (canvas fractions)
-const DEFAULT_PLACEMENT: Record<ShareMetricKey, MetricPlacement> = {
+const DEFAULT_PLACEMENT: Record<ShareLayerKey, MetricPlacement> = {
   dist: { x: 0.06, y: 0.60, s: 1 },
   pace: { x: 0.06, y: 0.73, s: 1 },
   time: { x: 0.06, y: 0.86, s: 1 },
+  // 8/6: where the static crew line sat (left 14 / bottom ~34 → fractions);
+  // small tier comes from crewTxt's own 12pt, not from s
+  crew: { x: 0.05, y: 0.88, s: 1 },
 };
 
 // ─── Backgrounds — dark-fixture house family (night-canvas precedent) ─────────
@@ -156,7 +166,7 @@ type LayerGeom = {
   vw: SharedValue<number>;
 };
 type GuideCtx = {
-  geoms: Partial<Record<ShareMetricKey, LayerGeom>>; // registered at hook mount
+  geoms: Partial<Record<ShareLayerKey, LayerGeom>>; // registered at hook mount
   guideX: SharedValue<number>; // px of the vertical guide line; -1 = hidden
   guideY: SharedValue<number>; // px of the horizontal guide line; -1 = hidden
 };
@@ -171,16 +181,17 @@ function snapTick() {
 }
 
 // ─── Free-placed metric layer (v2) — drag + pinch, NO rotation ───────────────
-// One hook instance per metric (fixed count of 3 — hooks stay unconditional).
+// One hook instance per layer key (fixed count of 4 since the 8/6 crew join —
+// hooks stay unconditional; toggles hide the RENDER, never the hook).
 // Position lives in shared values (px), persists as canvas FRACTIONS on
 // gesture end; canvas-dim changes (format flip) re-derive px from fractions.
 
 function useMetricLayer(
-  key: ShareMetricKey,
+  key: ShareLayerKey,
   canvasW: number,
   canvasH: number,
   stored: MetricPlacement | undefined,
-  persist: (key: ShareMetricKey, p: MetricPlacement) => void,
+  persist: (key: ShareLayerKey, p: MetricPlacement) => void,
   guides: GuideCtx,
   enabled = true,
 ) {
@@ -217,7 +228,7 @@ function useMetricLayer(
       rawY.value = ty.value;
       runOnJS(persist)(key, { x: tx.value / canvasW, y: ty.value / canvasH, s: sc.value });
     };
-    const siblings = (['dist', 'pace', 'time'] as ShareMetricKey[]).filter(k2 => k2 !== key);
+    const siblings = (['dist', 'pace', 'time', 'crew'] as ShareLayerKey[]).filter(k2 => k2 !== key);
     return Gesture.Simultaneous(
       Gesture.Pan().enabled(enabled)
         .onStart(() => {
@@ -454,9 +465,9 @@ export default function ShareCardScreen() {
   const startDotProps = useAnimatedProps(() => ({ r: 5 / sc.value, strokeWidth: 3 / sc.value }));
   const endDotProps = useAnimatedProps(() => ({ r: 5.5 / sc.value, strokeWidth: 2 / sc.value }));
 
-  // v2 free-placed metric layers — fixed three (hooks unconditional; the
+  // v2 free-placed layers — fixed four incl. crew (hooks unconditional; the
   // toggle hides the RENDER, never the hook)
-  const persistPlacement = useMemo(() => (key: ShareMetricKey, p: MetricPlacement) => {
+  const persistPlacement = useMemo(() => (key: ShareLayerKey, p: MetricPlacement) => {
     setPrefs(prev => {
       const next = { ...prev, placements: { ...(prev.placements ?? {}), [key]: p } };
       AsyncStorage.setItem(PREFS_KEY, JSON.stringify(next)).catch(() => {});
@@ -472,7 +483,8 @@ export default function ShareCardScreen() {
   const distLayer = useMetricLayer('dist', canvasW, canvasH, prefs.placements?.dist, persistPlacement, guideCtx, !bgAdjustMode);
   const paceLayer = useMetricLayer('pace', canvasW, canvasH, prefs.placements?.pace, persistPlacement, guideCtx, !bgAdjustMode);
   const timeLayer = useMetricLayer('time', canvasW, canvasH, prefs.placements?.time, persistPlacement, guideCtx, !bgAdjustMode);
-  const layerFor = { dist: distLayer, pace: paceLayer, time: timeLayer } as const;
+  const crewLayer = useMetricLayer('crew', canvasW, canvasH, prefs.placements?.crew, persistPlacement, guideCtx, !bgAdjustMode);
+  const layerFor = { dist: distLayer, pace: paceLayer, time: timeLayer, crew: crewLayer } as const;
 
   // ── v2.1 per-run background adjust (photos only) ────────────────────────────
   const bgStored = runId ? prefs.bgAdjust?.[runId] : undefined;
@@ -494,13 +506,15 @@ export default function ShareCardScreen() {
   const bgLayer = useBgLayer(canvasW, canvasH, bgStored, bgAdjustMode && bgIsPhoto, persistBg);
   const bgDim = bgStored?.dim ?? 0;
 
-  // 8/6 crew line (her mock amendment, DEFAULT OFF verbatim): per-visit
-  // local state; rendered only when the run carries session fields; ON →
-  // a static small-tier line above the wordmark (the mock's date-line
-  // typography tier — the card has no date layer, so the crew line is the
-  // tier's first occupant). Nothing else on her canvas moves. Hook sits
-  // ABOVE the early return (rules-of-hooks).
-  const [showCrewLine, setShowCrewLine] = useState(false);
+  // 8/6 crew toggles (split ruling): 크루명 + 참여인원, BOTH per-visit
+  // default OFF (her mock amendment — the one deliberate divergence from
+  // the metrics' persisted toggles). Semantic: count renders only when the
+  // name is ON — the count chip itself hides while the name is OFF (and
+  // when the run carries no count). The line is a free LAYER (crewLayer
+  // above); its PLACEMENT persists like the metrics' — convention matched.
+  // Hooks sit ABOVE the early return (rules-of-hooks).
+  const [showCrewName, setShowCrewName] = useState(false);
+  const [showCrewCount, setShowCrewCount] = useState(false);
 
   if (!run) return <View style={st.root} />;
 
@@ -607,11 +621,17 @@ export default function ShareCardScreen() {
               </GestureDetector>
             ))}
 
-            {/* 8/6 crew line (mock amendment; date-tier typography) */}
-            {showCrewLine && run.crew_name ? (
-              <Text style={st.crewLine} pointerEvents="none" numberOfLines={1}>
-                {run.crew_name}{run.session_participant_count != null ? ` · ${tf('crw.nJoined', { n: run.session_participant_count })}` : ''}
-              </Text>
+            {/* 8/6 crew line — a free layer on the metric machinery (drag/
+                pinch/guides/export identical); date-tier ink. Single Text =
+                its own value sub-box (vw ≡ w — snap math degenerates cleanly). */}
+            {showCrewName && run.crew_name ? (
+              <GestureDetector gesture={layerFor.crew.gesture}>
+                <Reanimated.View onLayout={layerFor.crew.onLayout} style={[st.crewLayer, layerFor.crew.style]}>
+                  <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.crewTxt} onLayout={layerFor.crew.onValueLayout} numberOfLines={1}>
+                    {run.crew_name}{showCrewCount && run.session_participant_count != null ? ` · ${tf('crw.nJoined', { n: run.session_participant_count })}` : ''}
+                  </Text>
+                </Reanimated.View>
+              </GestureDetector>
             ) : null}
             {/* permanent wordmark (re-ruling) — subtle corner, both formats */}
             <Text style={st.wordmark} pointerEvents="none">FreshRun</Text>
@@ -692,10 +712,20 @@ export default function ShareCardScreen() {
             ))}
             {run.crew_name ? (
               <Pressable
-                onPress={() => setShowCrewLine(v => !v)}
-                style={[st.chip, showCrewLine && st.chipOn]}
+                onPress={() => setShowCrewName(v => !v)}
+                style={[st.chip, showCrewName && st.chipOn]}
               >
-                <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={[st.chipTxt, showCrewLine && st.chipTxtOn]}>{t('shr.crewToggle')}</Text>
+                <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={[st.chipTxt, showCrewName && st.chipTxtOn]}>{t('shr.crewToggle')}</Text>
+              </Pressable>
+            ) : null}
+            {/* count chip exists only while the name is ON (count-requires-
+                name semantic) and the run actually carries a count */}
+            {run.crew_name && showCrewName && run.session_participant_count != null ? (
+              <Pressable
+                onPress={() => setShowCrewCount(v => !v)}
+                style={[st.chip, showCrewCount && st.chipOn]}
+              >
+                <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={[st.chipTxt, showCrewCount && st.chipTxtOn]}>{t('shr.crewCount')}</Text>
               </Pressable>
             ) : null}
           </View>
@@ -735,7 +765,13 @@ const makeSt = (C: Tokens) => StyleSheet.create({
   statVal:    { fontSize: 21, fontWeight: '800', color: '#fff', letterSpacing: -0.6, fontVariant: ['tabular-nums'], textShadowColor: 'rgba(0,0,0,0.55)', textShadowRadius: 5 },
   statLbl:    { fontSize: 11, fontWeight: '600', color: 'rgba(255,255,255,0.75)', letterSpacing: -0.2, textShadowColor: 'rgba(0,0,0,0.55)', textShadowRadius: 4 },
   wordmark:   { position: 'absolute', right: 14, bottom: 12, fontSize: 12, fontWeight: '800', letterSpacing: -0.3, color: 'rgba(255,255,255,0.82)', textShadowColor: 'rgba(0,0,0,0.5)', textShadowRadius: 4 },
-  crewLine: { position: 'absolute', left: 14, bottom: 34, fontSize: 12, fontWeight: '600', color: 'rgba(255,255,255,0.85)', letterSpacing: -0.2, maxWidth: '70%' },
+  // 8/6 free-layer join: box anchored at 0,0 like metricLayer (transform
+  // positions it); ink keeps the static line's date-tier typography + the
+  // metric family's text shadow (free placement can land on bright photo
+  // areas the fixed bottom-left corner never met). maxWidth dropped — the
+  // layer is measured/pinchable like its siblings.
+  crewLayer: { position: 'absolute', left: 0, top: 0 },
+  crewTxt: { fontSize: 12, fontWeight: '600', color: 'rgba(255,255,255,0.85)', letterSpacing: -0.2, textShadowColor: 'rgba(0,0,0,0.55)', textShadowRadius: 4 },
 
   bgRow:    { gap: 8, paddingHorizontal: S.gutter, paddingTop: 14 },
   bgSwatch:  { width: 46, height: 46, borderRadius: 12, overflow: 'hidden', borderWidth: 2, borderColor: 'transparent' },

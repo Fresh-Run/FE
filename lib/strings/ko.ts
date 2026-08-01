@@ -721,7 +721,8 @@ export const ko = {
   'rp.commentFailT': '댓글 실패',
   'rp.commentFailB': '댓글을 게시하지 못했어요. 잠시 후 다시 시도해 주세요.',
   'act.crewSession': '크루 세션',
-  'shr.crewToggle': '크루 표시',
+  'shr.crewToggle': '크루명',  // 8/6 스플릿 — 단일 '크루 표시' 칩이 크루명/참여인원 둘로
+  'shr.crewCount': '참여인원',
   'rc.withCrew': 'With {name}',  // 8/5 오너 카피 룰링 — 양 로케일 동일 (조사 이슈 해소)
   'runSave.showCrew': '피드에 크루 표시',
   'rp.viewReplies': '답글 {n}개 보기',
