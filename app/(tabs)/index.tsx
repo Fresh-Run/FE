@@ -206,10 +206,11 @@ const makeWst = (C: Tokens) => StyleSheet.create({
 function FeedTabs({ tab, setTab }: { tab: string; setTab: (v: string) => void }) {
   const C = useTokens();
   const ftt = useStyles(makeFtt);
-  // 8/4 nationwide: the radius claim died with the machine — the label
-  // states the scope (hardcoded ko, slice-7 file — census note). Content
-  // stays 20km-bounded until her scope=all deploy (expected, ledgered).
-  const radiusLabel = '전국의 러너들';
+  // 8/4 global (amended same-day: 전국 was FALSE — her scope=all includes
+  // overseas runs, the SeYoon-NY example): scope-neutral label (hardcoded
+  // ko, slice-7 file — census note). Content stays 20km-bounded until her
+  // deploy (expected, ledgered).
+  const radiusLabel = '모든 러너';
   return (
     <View style={ftt.row}>
       <View style={ftt.seg}>
