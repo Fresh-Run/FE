@@ -30,7 +30,6 @@ import React, { useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
-  Modal,
   Pressable,
   StyleSheet,
   Text,
@@ -46,15 +45,15 @@ import { KudosSheet } from '@/components/kudos-sheet';
 import { ApiError, apiFetch } from '@/lib/api';
 import { getCrewRuns, groupCrewSessions, CREW_FEED_PAGE, type CrewRunItem } from '@/lib/crews-api';
 import { openProfile } from '@/lib/profile-nav';
-import { distUnit, fmtAgo, fmtDist, fmtDuration, fmtPaceIn, paceUnit, timeTitle } from '@/lib/run-format';
+import { distUnit, fmtAgo, fmtDate, fmtDist, fmtDuration, fmtPaceIn, paceUnit, timeTitle } from '@/lib/run-format';
 import { shadows, spacing as S, type Tokens, DENSE_MAX_FONT_SCALE } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { useRunTrack } from '@/lib/track-cache';
 import { useSettings } from '@/store/use-settings';
 import { useStore } from '@/store/use-store';
-import { t, tf, tIn, useLang } from '@/lib/i18n';
+import { t, tf, useLang } from '@/lib/i18n';
 
-function RunCard({ run, units, mapLive, onOpen, isMine, kudosOff, onKudos, onCountPress }: {
+export function RunCard({ run, units, mapLive, onOpen, isMine, kudosOff, onKudos, onCountPress }: {
   run: CrewRunItem;
   units: ReturnType<typeof useSettings.getState>['settings']['units'];
   mapLive: boolean;
@@ -191,42 +190,18 @@ export default function CrewRunsScreen() {
   // inside directly. AUTOMATIC by construction: session_key alone drives
   // grouping — no leader/admin action exists or is needed (their "if
   // automatic = best", answered).
-  const [openSessionKey, setOpenSessionKey] = useState<string | null>(null);
-  // ── 8/5 tap-through fix. MECHANISM (confirmed): RN Modal is a NATIVE
-  // overlay outside the navigation tree — router.push from inside it mounts
-  // run-post into the stack BENEATH the modal (invisible), every tap stacks
-  // another, and closing the modal reveals them all at once. FIX = the
-  // personal-info chooser pattern (ledgered 지연-bug-② precedent): close
-  // the modal FIRST, run the push ONCE on the Modal's real onDismiss (the
-  // iOS dismissal-complete callback — rAF/InteractionManager fire mid-
-  // dismiss and iOS can reject the presentation), with a 700ms fallback
-  // timer for the onDismiss flakiness history; the ref-null makes whichever
-  // fires first the only run. The pending ref doubles as the IN-FLIGHT
-  // GUARD: while a nav is pending, further taps no-op — no duplicates. */
-  const pendingNavRef = useRef<(() => void) | null>(null);
-  function runPendingNav() {
-    const a = pendingNavRef.current;
-    pendingNavRef.current = null;
-    a?.();
-  }
-  function navFromSession(action: () => void) {
-    if (pendingNavRef.current) return; // in-flight guard — rapid taps no-op
-    pendingNavRef.current = action;
-    setOpenSessionKey(null);
-    setTimeout(runPendingNav, 700);
-  }
+  // v3: the session view is a ROUTE SCREEN (/crew-session) — the modal and
+  // its onDismiss+pending-ref machinery are DELETED: the route stack kills
+  // the tap-through bug class by construction (pushes present normally).
 
-  /** 8/5 owner-ruled folder title: "{area} · {요일} {시간대}" — day.* keys +
-      the new bare tod.* vocabulary (title.* carries the 러닝 suffix — wrong
-      register for "토요일 밤"); area-null → date-only. timeTitle's hour
-      boundaries mirrored. */
+  /** v3 owner-ruled folder title: "{area} · {date}" via fmtDate's app-wide
+      locale convention (compiler-safe lang param) — ko "8월 2일"/"오늘",
+      en "Aug 2"/"Today"; NOT a literal M/D/YY (the convention exists
+      app-wide; a bespoke numeric shape would be the app's only one).
+      area-null → date-only. tod.* keys stay in the dicts (parity paid),
+      dropped from composition. */
   const sessionTitle = useCallback((anchor: CrewRunItem): string => {
-    const d = new Date(anchor.ran_at);
-    const DAY = ['day.sun', 'day.mon', 'day.tue', 'day.wed', 'day.thu', 'day.fri', 'day.sat'] as const;
-    const h = d.getHours();
-    const tod = h >= 4 && h < 7 ? 'tod.dawn' : h < 10 ? 'tod.morning' : h < 12 ? 'tod.forenoon'
-      : h < 14 ? 'tod.lunch' : h < 18 ? 'tod.afternoon' : h < 21 ? 'tod.evening' : 'tod.night';
-    const when = `${tIn(lang, DAY[d.getDay()])} ${tIn(lang, tod)}`;
+    const when = fmtDate(anchor.ran_at, lang);
     return anchor.area ? `${anchor.area} · ${when}` : when;
   }, [lang]);
   const myUid = useStore(s => s.session?.user.id);
@@ -347,7 +322,10 @@ export default function CrewRunsScreen() {
               // area·day·time-of-day · a: gets a small 공지 marker only
               // (c: needs no label — the date-title says it) · fmtAgo sub.
               return (
-                <Pressable onPress={() => setOpenSessionKey(g.sessionKey)} style={({ pressed }) => [st.folderCard, shadows.sm, pressed && { opacity: 0.85 }]}>
+                <Pressable
+                  onPress={() => router.push({ pathname: '/(community)/crew-session' as never, params: { crewId: crewId!, sessionKey: g.sessionKey!, crewName: crewName ?? '' } })}
+                  style={({ pressed }) => [st.folderCard, shadows.sm, pressed && { opacity: 0.85 }]}
+                >
                   <View style={st.folderThumb}>
                     {a.polyline_thumb && a.polyline_thumb.length >= 2
                       ? <MiniMap seed={a.run_id} height={64} borderRadius={14} polyline={a.polyline_thumb} />
@@ -398,59 +376,7 @@ export default function CrewRunsScreen() {
           showsVerticalScrollIndicator={false}
         />
       )}
-      {/* ── 세션 뷰 (폴더 탭 타깃): 전 참여자 풀 카드, K1 전 문법 —
-             derives LIVE from rows (later pages absorb into the open view) */}
-      <Modal visible={openSessionKey != null} animationType="slide" onRequestClose={() => setOpenSessionKey(null)} onDismiss={runPendingNav}>
-        <View style={[st.root, { paddingTop: insets.top }]}>
-          {(() => {
-            if (!openSessionKey) return null;
-            const members = (rows ?? []).filter(r => r.session_key === openSessionKey);
-            const anchor = members[0];
-            const isAnn = openSessionKey.startsWith('a:');
-            const title = `${crewName ? `${crewName} · ` : ''}${isAnn ? '공지 러닝' : '함께 달림'}${anchor?.session_participant_count != null ? ` · ${tf('crw.nJoined', { n: anchor.session_participant_count })}` : ''}`;
-            return (
-              <>
-                <View style={st.appBar}>
-                  <Pressable onPress={() => setOpenSessionKey(null)} hitSlop={12} style={st.backBtn}>
-                    <Icon name="arrow-back" size={20} color={C.text} />
-                  </Pressable>
-                  <Text style={st.appBarTitle} numberOfLines={1}>{title}</Text>
-                  <View style={{ width: 36 }} />
-                </View>
-                <FlatList
-                  data={members}
-                  keyExtractor={r => r.run_id}
-                  renderItem={({ item }) => {
-                    const ov = kudosOv[item.run_id];
-                    const shown = ov ? { ...item, my_kudos: ov.on, kudos_count: item.kudos_count + ov.delta } : item;
-                    return (
-                      <RunCard
-                        run={shown}
-                        units={units}
-                        mapLive
-                        onOpen={() => navFromSession(() => openRun(item))}
-                        isMine={item.user_id === myUid}
-                        kudosOff={item.allow_likes === false || kudosOff403.has(item.run_id)}
-                        onKudos={() => toggleKudos(item)}
-                        onCountPress={() => setKudosSheetRun({ id: shown.run_id, count: shown.kudos_count })}
-                      />
-                    );
-                  }}
-                  ItemSeparatorComponent={() => <View style={{ height: 14 }} />}
-                  contentContainerStyle={{ padding: S.gutter, paddingBottom: 40 }}
-                  showsVerticalScrollIndicator={false}
-                />
-              </>
-            );
-          })()}
-          {/* the likers sheet must ALSO render inside the modal (iOS modal
-              sits above the screen's own overlay layer) */}
-          {kudosSheetRun && openSessionKey != null && (
-            <KudosSheet runId={kudosSheetRun.id} kudosCount={kudosSheetRun.count} onClose={() => setKudosSheetRun(null)} />
-          )}
-        </View>
-      </Modal>
-      {kudosSheetRun && openSessionKey == null && (
+      {kudosSheetRun && (
         <KudosSheet runId={kudosSheetRun.id} kudosCount={kudosSheetRun.count} onClose={() => setKudosSheetRun(null)} />
       )}
     </View>
