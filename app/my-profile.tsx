@@ -112,7 +112,10 @@ function RunCard({ run, name, photoUrl, units, mapLive, onKudos }: {
               in the toggle on her lift); the COUNT opens the likers sheet. */}
           <View style={st.kudosBtn}>
             <Icon name="heart-outline" size={18} color={C.faint} />
-            <Pressable onPress={onKudos} hitSlop={8} style={({ pressed }) => pressed ? { opacity: 0.6 } : null}>
+            {/* 8/4 tap-geometry: left slop 0 — the count's zone stops at the
+                (inert) heart's edge; the 44pt ♥ template lands with K2's
+                toggle restore. */}
+            <Pressable onPress={onKudos} hitSlop={{ top: 8, bottom: 8, left: 0, right: 8 }} style={({ pressed }) => pressed ? { opacity: 0.6 } : null}>
               <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.kudosCount}>{run.kudos_count}</Text>
             </Pressable>
           </View>

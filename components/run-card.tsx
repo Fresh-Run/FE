@@ -92,14 +92,18 @@ export function RunCard({ run, units, mapLive, onKudos, kudosOff, onOpen, onAvat
           {kudosOff ? (
             <Icon name="heart-outline" size={18} color={C.sub} />
           ) : (
-            <Pressable onPress={onKudos} hitSlop={8} style={({ pressed }) => pressed ? { opacity: 0.6 } : null}>
+            // 8/4 tap-geometry: ♥ grows to 44pt vertical (18+13+13) and the
+            // zones are provably disjoint — ♥ right slop 2 + count left slop
+            // 0 < the 6pt gap. The old symmetric 8s overlapped 10pt and the
+            // count (later sibling) stole the heart's right edge.
+            <Pressable onPress={onKudos} hitSlop={{ top: 13, bottom: 13, left: 13, right: 2 }} style={({ pressed }) => pressed ? { opacity: 0.6 } : null}>
               <Icon name={run.my_kudos ? 'heart' : 'heart-outline'} size={18} color={run.my_kudos ? C.danger : C.sub} />
             </Pressable>
           )}
           <Pressable
             onPress={onCountPress}
             disabled={!onCountPress}
-            hitSlop={8}
+            hitSlop={{ top: 8, bottom: 8, left: 0, right: 8 }}
             style={({ pressed }) => pressed && !!onCountPress ? { opacity: 0.6 } : null}
           >
             <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={[st.kudosCount, !kudosOff && run.my_kudos && { color: C.danger }]}>{run.kudos_count}</Text>

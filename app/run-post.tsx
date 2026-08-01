@@ -71,7 +71,7 @@ import {
   paceUnit,
   timeTitle,
 } from '@/lib/run-format';
-import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
+import { radius as R, shadows, spacing as S, type Tokens, DENSE_MAX_FONT_SCALE} from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { useRunDetail } from '@/hooks/use-runs';
 import { useSettings } from '@/store/use-settings';
@@ -399,32 +399,42 @@ export default function RunPostScreen() {
                   count = sheet, everywhere. Own mode: ♥ DISABLED while the
                   self-like 400 stands — K2 swaps in the rollback toggle
                   when her lift lands; the count opens the sheet. */}
-              {isOwn ? (
-                <View style={st.kudosBtn}>
-                  <Icon name="heart-outline" size={18} color={C.faint} />
-                  <Pressable onPress={() => setLikersOpen(true)} hitSlop={8} style={({ pressed }) => pressed ? { opacity: 0.6 } : null}>
-                    <Text style={st.kudosTxt}>{likeCount}</Text>
-                  </Pressable>
-                </View>
-              ) : kudosOff ? (
-                /* likes_disabled — toggle affordance GONE, but the count
-                   opens the sheet (K1 ruling: existing likes stay viewable) */
+              {/* 8/4 grammar (owner-ruled): the BAR is the button — tap
+                  anywhere on it = like/unlike (the old inner islands left
+                  ~90% of a button-dressed bar dead). The SHEET moved to its
+                  own deliberate row below; the count inside the bar is
+                  display-only. Own-mode: the button costume dies — no bar
+                  (nothing to like; K2 restores a real toggle bar here on her
+                  self-like 400-lift; the sheet row stays either way). */}
+              {isOwn ? null : kudosOff ? (
+                /* likes_disabled — read-only bar (no toggle); sheet row below */
                 <View style={st.kudosBtn}>
                   <Icon name="heart-outline" size={18} color={C.sub} />
-                  <Pressable onPress={() => setLikersOpen(true)} hitSlop={8} style={({ pressed }) => pressed ? { opacity: 0.6 } : null}>
-                    <Text style={st.kudosTxt}>{likeCount}</Text>
-                  </Pressable>
+                  <Text style={st.kudosTxt}>{likeCount}</Text>
                 </View>
               ) : (
-                /* K1 split: ♥ toggles, the COUNT opens the likers sheet */
-                <View style={[st.kudosBtn, liked && st.kudosBtnActive]}>
-                  <Pressable onPress={toggleKudos} hitSlop={8} style={({ pressed }) => pressed ? { opacity: 0.8 } : null}>
-                    <Icon name={liked ? 'heart' : 'heart-outline'} size={18} color={liked ? C.danger : C.sub} />
-                  </Pressable>
-                  <Pressable onPress={() => setLikersOpen(true)} hitSlop={8} style={({ pressed }) => pressed ? { opacity: 0.6 } : null}>
-                    <Text style={[st.kudosTxt, liked && { color: C.danger }]}>{likeCount}</Text>
-                  </Pressable>
-                </View>
+                <Pressable
+                  onPress={toggleKudos}
+                  style={({ pressed }) => [st.kudosBtn, liked && st.kudosBtnActive, pressed && { opacity: 0.8 }]}
+                >
+                  <Icon name={liked ? 'heart' : 'heart-outline'} size={18} color={liked ? C.danger : C.sub} />
+                  <Text style={[st.kudosTxt, liked && { color: C.danger }]}>{likeCount}</Text>
+                </Pressable>
+              )}
+
+              {/* 8/4: the dedicated likers-sheet door — ≥44pt row, renders
+                  only with likes to show (zero-count = NOTHING, ruled-this-
+                  build: an empty-state line about your own likes reads as
+                  begging; the row appears with the first like). ko hardcoded
+                  — census note. */}
+              {likeCount > 0 && (
+                <Pressable
+                  onPress={() => setLikersOpen(true)}
+                  style={({ pressed }) => [st.likersRow, pressed && { opacity: 0.6 }]}
+                >
+                  <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.likersRowTxt}>좋아요 {likeCount}개</Text>
+                  <Icon name="chevron-forward" size={13} color={C.faint} />
+                </Pressable>
               )}
 
               {/* Comments */}
@@ -661,6 +671,8 @@ const makeSt = (C: Tokens) => StyleSheet.create({
   kudosBtn:       { height: 46, borderRadius: R.md, borderWidth: 1, borderColor: C.border, backgroundColor: C.surface, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, marginTop: 12 },
   kudosBtnActive: { borderColor: C.danger, backgroundColor: C.danger + '14' },
   kudosTxt:       { fontSize: 13.5, fontWeight: '700', color: C.sub, letterSpacing: -0.2 },
+  likersRow:      { flexDirection: 'row', alignItems: 'center', gap: 3, alignSelf: 'flex-start', minHeight: 44, marginTop: 2 },
+  likersRowTxt:   { fontSize: 13, fontWeight: '600', color: C.sub, letterSpacing: -0.2 },
 
   commentsHead:  { fontSize: 13.5, fontWeight: '700', color: C.text, letterSpacing: -0.3, marginTop: 22, marginBottom: 10 },
   commentsEmpty: { fontSize: 13, color: C.faint, letterSpacing: -0.2, paddingVertical: 8 },

@@ -1223,7 +1223,7 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 - Promotion discipline UNCHANGED: every promotion to a tester-facing channel gets its own explicit one-confirm.
 - AMENDMENT (7/30, marker-placement correction): the hold was NEVER a written rule with its own ledger line — it operated as a standing VERBAL instruction that contradicted written constraint ④ ("invites/testers never wait"). Retiring it RESTORES ④ rather than superseding anything; ③ (core-loop scope) was retired separately by the Phase 2 epic itself, and the 36531a0 marker mis-attributed that. Markers corrected in place (③ → Phase-2 attribution · ④ → reaffirmed). **Ledger-hygiene lesson: verbal rules that contradict written constraints are invisible to audit until someone reads both — standing verbal instructions get a ledger line at issuance.**
 
-## ✅ 라이크-시스템 픽스 PROMOTED (2026-08-01) — 오너 [17:45] FULL ("2" 재현 1 정착·피드 리프레시 유지·자기-♥ 딤+카운트 시트·타인 불변) · 원-컨펌 (프로모트 커맨드 1회 인터럽트 → 스탬프 재송신 = 재확인 기록) · 4246ecb4 → production b8478119-5ffd-475d-8d75-283397dc5a23 · 프로모션 해시-타이 MATCH (tw7Ez3yX… 양채널 동일). **롤백 플로어 전진 → b8478119** (dac0e660 은퇴). 원-그래머 전면 + 리컨실-온-어라이벌 라이브 — 가드-블록-리컨실 트랩 인-코드 명기.
+## ✅ 라이크-시스템 픽스 PROMOTED (2026-08-01) — 오너 [17:45] FULL ("2" 재현 1 정착·피드 리프레시 유지·자기-♥ 딤+카운트 시트·타인 불변) · 원-컨펌 (프로모트 커맨드 1회 인터럽트 → 스탬프 재송신 = 재확인 기록) · 4246ecb4 → production b8478119-5ffd-475d-8d75-283397dc5a23 · 프로모션 해시-타이 MATCH (tw7Ez3yX… 양채널 동일). **롤백 플로어 전진 → b8478119** (dac0e660 은퇴). 원-그래머 전면 + 리컨실-온-어라이벌 라이브 — 가드-블록-리컨실 트랩 인-코드 명기. **[8/4 AMEND: run-post에서 시트 도어 = 전용 "좋아요 N개" 로우 (카운트 아님) — 바가 버튼 그 자체가 됨 (탭 전면 = 토글); 카드 서피스는 원-그래머 불변 (♥=토글, 카운트=시트) + 슬롭 분리.]**
 
 ## 🔼 라이크-시스템 픽스 STAGED — 4246ecb4-acf6-4579-84fc-28828ec0894c (커밋 1fcb3ea) · 해시-타이 MATCH · 플로어 dac0e660 · 워크: 0-라이크 포스트 라이크→1→재진입 여전히 1 (재현) · 피드 라이크→풀-리프레시 1 유지 · 자기 포스트 ♥ 딤+이너트·카운트→시트 (트윈+런포스트) · 타인 ♥ 토글/카운트 시트 불변 · 프로모션 개별 컨펌 대기
 
@@ -1261,6 +1261,12 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 
 ## 🔼 v2 풀-스택 + 내비 + 소개 캡처 STAGED — 5d7d8497-7f39-4930-9bf0-e7c5f37e1fb6 (커밋 b9a7966) · 해시-타이 MATCH (7HslRrcN…) · 마커 7/7 (소개 플레이스홀더·로우 카피 신규 + 캐리드 5) · **7a9af8d6 대체** (+ 소개 캡처) · 프로덕션 = 3601dfef 불변 · **게이트 (오토-포즈 코어는 [Stop test] 기통과-캐리): 내비 건틀릿 (코스런 6항목) · 토글 OFF 레그 · ~~실내 글랜스 5종~~** · 프로모션 = 실관찰 스탬프 + 원-컨펌
 - **[GLANCE RECORD [시각], 오너-워크] 실내 5글랜스 전체 PASSED — 최종 스탬프의 기수행 레그로 기록**: 소개 왕복 정상 (작성 → 내 프로필 표시 → 수정/삭제 클린) · 프렙스 칩 왕복 정상 · 맥스-텍스트 6서피스 무파열 (클램프 스윕 필드 확인) · 바로뛰기 카드 → 라벨+블루닷+사이클 정상 · 잔여 글랜스 (route-map 라벨 디폴트·웰컴 "오늘을") 정상. **잔여 게이트 = 아웃도어 온리: 내비 건틀릿 (코스런 6항목) + 토글 OFF 레그.** 승격 무 — 잔여 완료 시 스탬프 + 원-컨펌.
+
+## 💗 라이크-탭 지오메트리 + run-post 그래머 BUILT (미스테이지 — **넥스트 그룹**: 5d7d8497 아웃도어 게이트 선승격, 이 빌드는 그 후 스테이징)
+- **① 카드 슬롭 맵 (포인트)**: run-card ♥ = 18×18 + {t13,b13,l13,r2} → **33w×44h 유효** · 카운트 = {t8,b8,l0,r8} → 좌측 슬롭 0. 갭 6 > ♥우2+카운트좌0 = **존 비중첩 증명** (구 대칭 8+8은 10pt 중첩, 하트 우변 2pt를 카운트가 절취 — 후위 시블링 승리로 시트 오발). 레이아웃 시프트 0. my-profile 트윈 = 카운트 좌슬롭 0 (♥는 이너트 자체-카드 — 44pt 템플릿은 K2 토글 복원 시 적용, 인-코멘트).
+- **② run-post 타인-모드**: 46pt 바 전면 = toggleKudos (버튼 복장 그대로 버튼화) · 바 내 카운트 = 디스플레이-온리 · **시트 = 신규 전용 로우 "좋아요 N개" + 셰브런** (minHeight 44, 커멘트 상단, likeCount>0 온리) · kudosOff = 읽기-전용 바 + 시트 로우 존속.
+- **③ run-post 자기-모드**: 버튼 복장 사망 — 바 무렌더, 시트 로우가 유일 라이크 UI. **제로-카운트 = 무 (룰-초이스: 자기 글 라이크 빈-상태 라인은 구걸-톤 — 첫 라이크에 로우 출현).** 인-코멘트: K2 400-리프트 시 실토글 바 복원, 시트 로우 존속.
+- 신규 ko 하드코드 1 (좋아요 N개 로우 — 컴포즈드 스트링, 유니크 바이트-마커 무: 증명 = 커밋-타이드 해시) — 슬라이스-6 키잉 노트. 검증 = 실내: 카드 하트 연타 오발 무 · run-post 바 탭 = 라이크 · 로우 탭 = 시트 · 자기 글 = 로우 온리.
 
 ## 📝 소개(bio) 캡처 BUILT (STAGED 위 5d7d8497) — 리콘 버딕트 (a) 집행: 서버+디스플레이 기존, 캡처 단독 신설 (FE-온리, 지연 무의존)
 - profile-api updateProfile += bio (서버 캡 500 기수용) · personal-info 소개 멀티라인 (이름 아래): **어답트-원스 = getMyProfile 서버 시드 + originalBioRef + bioDirtyRef 이중 게이트** — 시드-페치 실패 + 무타이핑 = PATCH 절대 무 (널-클로버 방지 벨트), 저장 = dirty && changed 온리, ''→null (아바타 널-리무벌 문법) · **클라 캡 150 + 라이브 카운터** (150 도달 = 레드 + slice 하드-스톱; 서버 500 백스톱) · 인풋 = 컴포저 클래스 자유 스케일, 카운터 = 덴스 클램프.
