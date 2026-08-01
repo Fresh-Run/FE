@@ -407,7 +407,14 @@ function pushLiveActivity(now: number, force = false): void {
     startedAtMs: now - elapsedMsNow(),
     pausedAtMs: state === 'paused' ? now : null,
     distanceM: Math.round(distanceM),
-    paceSecPerKm: currentPaceSecPerKm(now),
+    // 8/4 owner ruling: the banner shows 평균 페이스 (total-time) — the run
+    // screen's exact math/clock/floor/rounding, so banner = run screen 평균
+    // = saved value, always. Avg persists through stops where the 30s window
+    // nulls — the better lock-screen face. Swift's generic "페이스" label
+    // reads honestly; build 11 sharpens it to 평균 페이스 (batch ledgered).
+    paceSecPerKm: distanceM >= 50 && elapsedMsNow() > 0
+      ? Math.round((elapsedMsNow() / 1000) / (distanceM / 1000))
+      : null,
     kcal: kcal == null ? null : Math.round(kcal),
     route: downsampleRoute(path),
   });
