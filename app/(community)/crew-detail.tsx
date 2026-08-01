@@ -37,7 +37,7 @@ import { Avatar } from '@/components/avatar';
 import { listAnnouncements, type Announcement } from '@/lib/announcements-api';
 import { getCurrentChallenge, type Challenge } from '@/lib/challenges-api';
 import { getUnread } from '@/lib/chat-api';
-import { getCrewRanking, getCrewRuns, listJoinRequests, uploadCrewImage, type CrewRankingEntry, type CrewRunItem } from '@/lib/crews-api';
+import { getCrewRanking, getCrewRuns, groupCrewSessions, listJoinRequests, uploadCrewImage, type CrewRankingEntry, type CrewRunItem } from '@/lib/crews-api';
 import { distUnit, fmtAgo, fmtDist, fmtDuration, fmtPaceIn, paceUnit } from '@/lib/run-format';
 import { accentShadow, radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
@@ -864,7 +864,9 @@ export default function CrewDetailScreen() {
               </View>
             ) : (
               <View style={[st.feedList, shadows.sm]}>
-                {feedPreview.map((run, i) => (
+                {/* 세션-콜랩스: 프리뷰도 그룹 디둡 (한 세션 = 한 로우, 앵커
+                    렌더) — 48px 로우엔 배지 생략 (스페이스; 풀 카드가 배지 보유) */}
+                {groupCrewSessions(feedPreview).map(g => g.anchor).map((run, i) => (
                   <React.Fragment key={run.run_id}>
                     {i > 0 && <View style={st.divider} />}
                     <Pressable onPress={() => openCrewRun(run)} style={({ pressed }) => [st.feedRow, pressed && { opacity: 0.7 }]}>

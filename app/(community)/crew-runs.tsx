@@ -43,7 +43,7 @@ import { RealMap } from '@/components/real-map';
 import { Icon } from '@/components/ui';
 import { KudosSheet } from '@/components/kudos-sheet';
 import { ApiError, apiFetch } from '@/lib/api';
-import { getCrewRuns, CREW_FEED_PAGE, type CrewRunItem } from '@/lib/crews-api';
+import { getCrewRuns, groupCrewSessions, CREW_FEED_PAGE, type CrewRunItem } from '@/lib/crews-api';
 import { openProfile } from '@/lib/profile-nav';
 import { distUnit, fmtAgo, fmtDist, fmtDuration, fmtPaceIn, paceUnit, timeTitle } from '@/lib/run-format';
 import { shadows, spacing as S, type Tokens, DENSE_MAX_FONT_SCALE } from '@/lib/theme';
@@ -81,6 +81,20 @@ function RunCard({ run, units, mapLive, onOpen, isMine, kudosOff, onKudos, onCou
             {/* Every card here is a 정기런 (session_only feed), so the word is
                 noise — the participant count is what's informative. Chip keyed
                 on the count; no count → no chip. */}
+            {/* 세션-콜랩스 배지 (her prefix semantics): a: = 공지 러닝
+                (announcement-anchored, the clean split) · c: = 함께 달림
+                (same-day ad-hoc bucket). ko hardcoded ×2 — census note. */}
+            {run.session_key?.startsWith('a:') ? (
+              <View style={st.sessionChip}>
+                <Icon name="megaphone-outline" size={10} color={C.accentGrn} />
+                <Text style={st.sessionChipTxt}>공지 러닝</Text>
+              </View>
+            ) : run.session_key?.startsWith('c:') ? (
+              <View style={st.sessionChip}>
+                <Icon name="people" size={10} color={C.accentGrn} />
+                <Text style={st.sessionChipTxt}>함께 달림</Text>
+              </View>
+            ) : null}
             {run.session_participant_count != null && (
               <View style={st.sessionChip}>
                 <Icon name="people" size={10} color={C.accentGrn} />
@@ -267,16 +281,26 @@ export default function CrewRunsScreen() {
         </View>
       ) : (
         <FlatList
-          data={rows}
-          keyExtractor={r => r.run_id}
-          renderItem={({ item }) => {
+          // session-collapse: groups derived per pass from the flat rows
+          // (the replies derivation pattern) — later pages absorb free
+          data={groupCrewSessions(rows)}
+          keyExtractor={g => g.sessionKey ?? g.anchor.run_id}
+          renderItem={({ item: g }) => {
+            // ANCHOR-RUN v1 (stated choices, alternatives ledgered): the
+            // card IS the anchor's card — its media, its runner identity
+            // (earliest runner's name + the server-global N명 참여 chip:
+            // cheapest honest form; stacked avatars = later), its ♥
+            // toggle/count (per-participant kudos live behind the tap),
+            // and tap → the ANCHOR's run-post (inline expansion = the
+            // ledgered alternative).
+            const item = g.anchor;
             const ov = kudosOv[item.run_id];
             const shown = ov ? { ...item, my_kudos: ov.on, kudos_count: item.kudos_count + ov.delta } : item;
             return (
               <RunCard
                 run={shown}
                 units={units}
-                mapLive={liveIds.has(item.run_id)}
+                mapLive={liveIds.has(g.sessionKey ?? item.run_id)}
                 onOpen={() => openRun(item)}
                 isMine={item.user_id === myUid}
                 kudosOff={item.allow_likes === false || kudosOff403.has(item.run_id)}

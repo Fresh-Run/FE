@@ -382,6 +382,10 @@ export type CrewRunItem = {
   is_crew_session: boolean;
   /** 같은 세션 참여자 수 ("N명 참여"); null = 미태그 run */
   session_participant_count: number | null;
+  /** 세션-콜랩스 (그녀 8/5 계약, LIVE): 세션 런 = 실키, 그 외 null.
+      프리픽스 a:{id} = 공지 기반 (정밀) · c:{crewId}:{date} = 동일-일
+      애드혹 버킷. 키 공유 로우는 카드 하나로 흡수. */
+  session_key: string | null;
 };
 
 export const CREW_FEED_PAGE = 20;
@@ -392,6 +396,34 @@ export const CREW_FEED_PAGE = 20;
     than an honest empty state. `session_only=true` is hard-coded (probed staging:
     omit=full feed, true=tagged only, empty → [] 200); no caller wants the
     firehose, so there's no arg to pass wrong. */
+/** Session-collapse grouping (derivation-over-state, the replies pattern):
+    rows sharing a non-null session_key become ONE group anchored on the
+    EARLIEST run (its media/identity lead the card); the group sits at the
+    first-seen row's position (server order preserved — "absorb, never
+    spawn"). Null keys never group (trivially null-safe: the null branch
+    pushes an individual group). Later pages absorb by construction — the
+    caller re-derives from the full flat array on every append.
+    participant count is read VERBATIM off the anchor (server-global). */
+export type CrewRunGroup = { anchor: CrewRunItem; sessionKey: string | null; groupSize: number };
+export function groupCrewSessions(rows: CrewRunItem[]): CrewRunGroup[] {
+  const out: CrewRunGroup[] = [];
+  const byKey = new Map<string, number>();
+  for (const r of rows) {
+    const k = r.session_key;
+    if (!k) { out.push({ anchor: r, sessionKey: null, groupSize: 1 }); continue; }
+    const idx = byKey.get(k);
+    if (idx == null) {
+      byKey.set(k, out.length);
+      out.push({ anchor: r, sessionKey: k, groupSize: 1 });
+    } else {
+      const g = out[idx];
+      g.groupSize += 1;
+      if (r.ran_at < g.anchor.ran_at) g.anchor = r; // earliest leads
+    }
+  }
+  return out;
+}
+
 export function getCrewRuns(crewId: string, offset = 0, limit = CREW_FEED_PAGE): Promise<CrewRunItem[]> {
   return apiFetch<CrewRunItem[]>(`/api/crews/${crewId}/runs?limit=${limit}&offset=${offset}&session_only=true`);
 }

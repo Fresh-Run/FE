@@ -38,7 +38,7 @@ import {
 } from '@/lib/announcements-api';
 import { radius as R, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
-import { t, tf } from '@/lib/i18n';
+import { t } from '@/lib/i18n';
 
 function partsFromIso(iso: string | null): { date: string; time: string } {
   if (!iso) return { date: '', time: '' };
@@ -194,6 +194,15 @@ export default function AnnouncementComposeScreen() {
               <Text style={st.scheduleToggleSub}>{t('annc.schedSub')}</Text>
             </View>
           </Pressable>
+          {/* 세션-콜랩스 넛지 (그녀 8/5 계약의 UX 라이더): 공지-기반 스타트가
+              대형 크루 동일-일의 클린 스플릿 — 크루장을 공지 시작으로 유도.
+              일정 토글 직하 배치 (결정의 순간). ko 하드코드 — census note. */}
+          {scheduled && (
+            <View style={st.sessionNudge}>
+              <Icon name="people-outline" size={12} color={C.accentGrn} />
+              <Text style={st.sessionNudgeTxt}>공지로 시작한 크루 러닝은 피드에 하나의 세션으로 묶여요</Text>
+            </View>
+          )}
 
           {scheduled && (
             <View style={st.scheduleFields}>
@@ -261,6 +270,8 @@ const makeSt = (C: Tokens) => StyleSheet.create({
   scheduleToggle:    { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 16 },
   scheduleToggleTxt: { fontSize: 14.5, fontWeight: '700', color: C.text, letterSpacing: -0.3 },
   scheduleToggleSub: { fontSize: 12, color: C.faint, letterSpacing: -0.2, marginTop: 2 },
+  sessionNudge:    { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8, paddingHorizontal: 2 },
+  sessionNudgeTxt: { flex: 1, fontSize: 11.5, color: C.sub, letterSpacing: -0.2, lineHeight: 15 },
 
   scheduleFields: { gap: 10 },
   fieldRow:    { flexDirection: 'row', alignItems: 'center', gap: 12 },
