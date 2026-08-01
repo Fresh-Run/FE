@@ -18,6 +18,9 @@ export type RunComment = {
   avatar_url: string | null; // BE 5009cbe (avatar wire-up)
   content: string;
   created_at: string;
+  /** 답글 (her 8/4 additive, contract LOCKED): null = top-level; one-level
+      enforced server-side (reply-to-reply → 422 reply_depth_exceeded). */
+  parent_comment_id: string | null;
 };
 
 export type RunTrack = {
@@ -28,8 +31,10 @@ export type RunTrack = {
   point_count_kept: number | null;
 };
 
-export function getRunComments(runId: string): Promise<RunComment[]> {
-  return apiFetch<RunComment[]>(`/api/runs/${runId}/comments`);
+/** Flat list + parent refs (contract): limit/offset live server-side —
+    consumed since the reply slice (page-1-only died with the thread hazard). */
+export function getRunComments(runId: string, limit = 20, offset = 0): Promise<RunComment[]> {
+  return apiFetch<RunComment[]>(`/api/runs/${runId}/comments?limit=${limit}&offset=${offset}`);
 }
 
 /** Own comments only (server-enforced; others' → 404). */
@@ -37,10 +42,10 @@ export function deleteRunComment(runId: string, commentId: string): Promise<void
   return apiFetch<void>(`/api/runs/${runId}/comments/${commentId}`, { method: 'DELETE' });
 }
 
-export function postRunComment(runId: string, content: string): Promise<RunComment> {
+export function postRunComment(runId: string, content: string, parentCommentId: string | null = null): Promise<RunComment> {
   return apiFetch<RunComment>(`/api/runs/${runId}/comments`, {
     method: 'POST',
-    body: { content },
+    body: { content, ...(parentCommentId ? { parent_comment_id: parentCommentId } : {}) },
   });
 }
 

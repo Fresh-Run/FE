@@ -104,11 +104,17 @@ export async function apiRequest<T>(path: string, opts: ApiOptions = {}, _retrie
     let detail: Record<string, unknown> | null = null;
     try {
       const body = await res.json();
+      // §5 (deployed 7/31, shape confirmed 8/3): body.error_code is the ONLY
+      // guaranteed location — top-level, sibling of detail. detail.error is
+      // internal shape kept as a non-contractual tolerance fallback. Pulled
+      // forward from G's transport adoption by the reply slice (its two new
+      // codes ride top-level); G's wholesale errorMessage(e) stays G's.
+      if (typeof body?.error_code === 'string') code = body.error_code;
       if (typeof body?.detail === 'string') {
         message = body.detail;
       } else if (body?.detail && typeof body.detail === 'object') {
         detail = body.detail as Record<string, unknown>;
-        code = typeof body.detail.error === 'string' ? body.detail.error : null;
+        code = code ?? (typeof body.detail.error === 'string' ? body.detail.error : null);
         message = typeof body.detail.message === 'string' ? body.detail.message : null;
       }
     } catch { /* non-JSON error body */ }

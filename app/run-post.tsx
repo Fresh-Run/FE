@@ -26,7 +26,7 @@
  */
 import { useFocusEffect } from '@react-navigation/native';
 import { router, useLocalSearchParams } from 'expo-router';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -77,6 +77,8 @@ import { useRunDetail } from '@/hooks/use-runs';
 import { useSettings } from '@/store/use-settings';
 import { useStore } from '@/store/use-store';
 import { t, tf, useLang, useT } from '@/lib/i18n';
+
+const COMMENT_PAGE = 20; // reply-slice pagination (follow-list pattern)
 
 const HERO_H = 210;
 
@@ -202,19 +204,82 @@ export default function RunPostScreen() {
       });
   }
 
-  // Comments
+  // Comments — reply slice (8/5, contract LOCKED de578c5 · design c471366):
+  // flat fetch + parent refs, paginated (the must-ride: an unpaginated flat
+  // list renders silently-childless threads when children land off-page).
   const [comments, setComments]   = useState<RunComment[] | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [draft, setDraft]         = useState('');
   const [posting, setPosting]     = useState(false);
+  const [cmHasMore, setCmHasMore] = useState(false);
+  const [cmLoadingMore, setCmLoadingMore] = useState(false);
+  const cmInFlightRef = useRef(false);
+  // threading UI state: expanded parents + the composer's reply target
+  const [expanded, setExpanded]   = useState<Set<string>>(new Set());
+  const [replyTo, setReplyTo]     = useState<{ parentId: string; nickname: string } | null>(null);
+  // count = server truth (includes replies, contract) + local post/delete
+  // deltas; drift self-corrects on next mount's fresh detail
+  const [countDelta, setCountDelta] = useState(0);
   useEffect(() => {
     if (!params.runId) return;
     let cancelled = false;
-    getRunComments(params.runId)
-      .then(rows => { if (!cancelled) setComments(rows); })
+    getRunComments(params.runId, COMMENT_PAGE, 0)
+      .then(rows => { if (!cancelled) { setComments(rows); setCmHasMore(rows.length === COMMENT_PAGE); } })
       .catch(() => { if (!cancelled) { setComments([]); setLoadError(true); } });
     return () => { cancelled = true; };
   }, [params.runId]);
+
+  // follow-list pattern: offset = loaded count · in-flight ref · id dedup ·
+  // short batch = end · silent tail retry. ScrollView surface → the trigger
+  // is an explicit 댓글 더 보기 button (stated deviation from onEndReached).
+  const loadMoreComments = useCallback(() => {
+    if (!params.runId || cmInFlightRef.current || !cmHasMore) return;
+    cmInFlightRef.current = true;
+    setCmLoadingMore(true);
+    getRunComments(params.runId, COMMENT_PAGE, comments?.length ?? 0)
+      .then(rows => {
+        setCmHasMore(rows.length === COMMENT_PAGE);
+        setComments(prev => {
+          const seen = new Set((prev ?? []).map(c => c.id));
+          return [...(prev ?? []), ...rows.filter(c => !seen.has(c.id))];
+        });
+      })
+      .catch(() => { /* silent — the button retries */ })
+      .finally(() => { cmInFlightRef.current = false; setCmLoadingMore(false); });
+  }, [params.runId, cmHasMore, comments?.length]);
+
+  // Grouping — derived WHOLLY from the flat array each pass: parents keep
+  // served order; children sort ascending under their parent. An orphan
+  // (child whose parent hasn't paged in) is held IMPLICITLY — it renders
+  // nothing now and attaches the moment a later page delivers its parent,
+  // because this derivation re-runs on every append. No separate pool state.
+  const grouped = useMemo(() => {
+    const list = comments ?? [];
+    const parents: RunComment[] = [];
+    const children = new Map<string, RunComment[]>();
+    const parentIds = new Set(list.filter(c => !c.parent_comment_id).map(c => c.id));
+    for (const c of list) {
+      if (!c.parent_comment_id) parents.push(c);
+      else if (parentIds.has(c.parent_comment_id)) {
+        const arr = children.get(c.parent_comment_id) ?? [];
+        arr.push(c);
+        children.set(c.parent_comment_id, arr);
+      }
+    }
+    for (const arr of children.values()) arr.sort((a, b) => a.created_at.localeCompare(b.created_at));
+    return { parents, children };
+  }, [comments]);
+
+  /** 답글 on EVERY row (ruling ③): a reply's 답글 targets its PARENT thread
+      with the "@{nickname} " plain-text prefill (that case only). */
+  function startReply(cm: RunComment) {
+    const parentId = cm.parent_comment_id ?? cm.id;
+    setReplyTo({ parentId, nickname: cm.nickname ?? '' });
+    if (cm.parent_comment_id) {
+      const prefix = `@${cm.nickname ?? ''} `;
+      setDraft(d => d.startsWith(prefix) ? d : prefix + d);
+    }
+  }
 
   // v1.5 피드 설정 강제 — HIDE-first (owner ruling): the allow_* flags don't
   // ride 타인 payloads yet (probed — 지연 ask ledgered), so the structured
@@ -257,12 +322,23 @@ export default function RunPostScreen() {
     if (!content || posting || !run) return;
     setPosting(true);
     try {
-      const created = await postRunComment(run.id, content);
+      const created = await postRunComment(run.id, content, replyTo?.parentId ?? null);
       setComments(prev => [...(prev ?? []), created]);
+      setCountDelta(d => d + 1);
+      if (replyTo) setExpanded(prev => new Set(prev).add(replyTo.parentId)); // the new reply is visible
+      setReplyTo(null);
       setDraft('');
     } catch (e: unknown) {
       if (e instanceof ApiError && e.code === 'comments_disabled') {
         setCommentsOff403(true); // silent race net
+      } else if (e instanceof ApiError && e.code === 'comment_parent_invalid') {
+        // her CASCADE raced our reply — the thread is gone; drop reply mode
+        setReplyTo(null);
+        Alert.alert(t('rp.commentFailT'), t('rp.replyParentGone'));
+      } else if (e instanceof ApiError && e.code === 'reply_depth_exceeded') {
+        // unreachable by our UI construction — honest copy anyway
+        setReplyTo(null);
+        Alert.alert(t('rp.commentFailT'), t('rp.replyDepth'));
       } else {
         Alert.alert(t('rp.commentFailT'), t('rp.commentFailB'));
       }
@@ -277,7 +353,9 @@ export default function RunPostScreen() {
   const ownPhotoUrl = useStore(s => s.photoUrl);
   const authorPhotoUrl = isOwn ? ownPhotoUrl : (params.avatarUrl || null);
   const myUid = useStore(s => s.session?.user.id);
-  const commentCount = comments?.length ?? run?.comment_count ?? 0;
+  // server count INCLUDES replies (contract) — read verbatim + local delta;
+  // pre-detail fallback = loaded length (entry edge only)
+  const commentCount = (run?.comment_count != null ? run.comment_count : (comments?.length ?? 0)) + countDelta;
 
   // Own-comment delete (S-batch #2): long-press an own row → destructive
   // confirm → DELETE → local filter (counts derive from comments.length)
@@ -288,7 +366,15 @@ export default function RunPostScreen() {
         text: t('common.delete'), style: 'destructive',
         onPress: () => {
           deleteRunComment(params.runId!, cm.id)
-            .then(() => setComments(prev => (prev ?? []).filter(c => c.id !== cm.id)))
+            .then(() => {
+              // CASCADE mirror (contract: DB-level) — a parent takes its
+              // loaded children with it locally; delta = 1 + LOADED children
+              // (unloaded ones drift the count until the next mount's fresh
+              // detail — chosen over a refetch round-trip, stated).
+              const groupSize = 1 + (cm.parent_comment_id ? 0 : (grouped.children.get(cm.id)?.length ?? 0));
+              setComments(prev => (prev ?? []).filter(c => c.id !== cm.id && c.parent_comment_id !== cm.id));
+              setCountDelta(d => d - groupSize);
+            })
             .catch(() => Alert.alert(t('annd.delFailT'), t('runSave.saveFailBody')));
         },
       },
@@ -445,32 +531,69 @@ export default function RunPostScreen() {
                 <Text style={st.commentsEmpty}>{loadError ? T('rp.cmLoadFail') : T('rp.cmEmpty')}</Text>
               ) : (
                 <View style={{ gap: 14, paddingBottom: 8 }}>
-                  {comments.map(cm => (
-                    <Pressable
-                      key={cm.id}
-                      style={st.commentRow}
-                      // Own rows only: long-press → destructive confirm
-                      onLongPress={cm.user_id === myUid ? () => confirmDeleteComment(cm) : undefined}
-                      delayLongPress={400}
-                    >
-                      <Pressable onPress={() => openProfile(cm.user_id, cm.nickname)} hitSlop={6}>
-                        <Avatar name={cm.nickname} size={30} photoUrl={cm.avatar_url} />
-                      </Pressable>
-                      <View style={{ flex: 1, minWidth: 0 }}>
-                        {/* 8/5 timestamps: created_at was in the payload all
-                            along — render-only (kudos-sheet likerWhen grammar,
-                            lang-param compiler-safe). Time sits OUTSIDE the
-                            profile Pressable — the tap target stays honest. */}
-                        <View style={st.commentHead}>
-                          <Pressable onPress={() => openProfile(cm.user_id, cm.nickname)} hitSlop={4}>
-                            <Text style={st.commentAuthor}>{cm.nickname ?? T('home.runner')}</Text>
-                          </Pressable>
-                          <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.commentWhen}>{fmtAgo(cm.created_at, lang)}</Text>
+                  {/* Instagram-pattern threading (c471366): parents in served
+                      order · replies COLLAPSED under a per-parent expander ·
+                      답글 on every row (a reply's targets its parent). */}
+                  {grouped.parents.map(cm => {
+                    const kids = grouped.children.get(cm.id) ?? [];
+                    const open = expanded.has(cm.id);
+                    const row = (c: RunComment, child: boolean) => (
+                      <Pressable
+                        key={c.id}
+                        style={[st.commentRow, child && st.commentRowChild]}
+                        // Own rows only: long-press → destructive confirm
+                        onLongPress={c.user_id === myUid ? () => confirmDeleteComment(c) : undefined}
+                        delayLongPress={400}
+                      >
+                        <Pressable onPress={() => openProfile(c.user_id, c.nickname)} hitSlop={6}>
+                          <Avatar name={c.nickname} size={child ? 24 : 30} photoUrl={c.avatar_url} />
+                        </Pressable>
+                        <View style={{ flex: 1, minWidth: 0 }}>
+                          <View style={st.commentHead}>
+                            <Pressable onPress={() => openProfile(c.user_id, c.nickname)} hitSlop={4}>
+                              <Text style={st.commentAuthor}>{c.nickname ?? T('home.runner')}</Text>
+                            </Pressable>
+                            <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.commentWhen}>{fmtAgo(c.created_at, lang)}</Text>
+                          </View>
+                          <Text style={st.commentBody}>{c.content}</Text>
+                          {!commentsOff && (
+                            <Pressable onPress={() => startReply(c)} hitSlop={{ top: 6, bottom: 8, left: 8, right: 8 }} style={{ alignSelf: 'flex-start' }}>
+                              <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.replyBtnTxt}>{T('rp.replyBtn')}</Text>
+                            </Pressable>
+                          )}
                         </View>
-                        <Text style={st.commentBody}>{cm.content}</Text>
+                      </Pressable>
+                    );
+                    return (
+                      <View key={cm.id} style={{ gap: 10 }}>
+                        {row(cm, false)}
+                        {kids.length > 0 && (
+                          <Pressable
+                            onPress={() => setExpanded(prev => {
+                              const next = new Set(prev);
+                              if (next.has(cm.id)) next.delete(cm.id); else next.add(cm.id);
+                              return next;
+                            })}
+                            hitSlop={8}
+                            style={st.replyExpander}
+                          >
+                            <View style={st.replyExpanderRule} />
+                            <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.replyExpanderTxt}>
+                              {open ? T('rp.hideReplies') : tf('rp.viewReplies', { n: kids.length })}
+                            </Text>
+                          </Pressable>
+                        )}
+                        {open && kids.map(k => row(k, true))}
                       </View>
+                    );
+                  })}
+                  {cmHasMore && (
+                    <Pressable onPress={loadMoreComments} disabled={cmLoadingMore} style={st.moreCmBtn}>
+                      {cmLoadingMore
+                        ? <ActivityIndicator size="small" color={C.faint} />
+                        : <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.moreCmTxt}>{T('rp.moreComments')}</Text>}
                     </Pressable>
-                  ))}
+                  )}
                 </View>
               )}
             </View>
@@ -488,7 +611,20 @@ export default function RunPostScreen() {
               <Text style={st.commentsOffTxt}>{T('rp.commentsOff')}</Text>
             </View>
           ) : (
-            <View style={[st.composer, { paddingBottom: Math.max(insets.bottom, S.sm) + 6 }]}>
+            <View style={st.composerWrap}>
+              {/* reply-mode chip (ruling ④): × cancels back to normal mode,
+                  the typed draft survives */}
+              {replyTo && (
+                <View style={st.replyChip}>
+                  <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.replyChipTxt} numberOfLines={1}>
+                    {tf('rp.replyingTo', { name: replyTo.nickname || T('home.runner') })}
+                  </Text>
+                  <Pressable onPress={() => setReplyTo(null)} hitSlop={8}>
+                    <Icon name="close" size={13} color={C.faint} />
+                  </Pressable>
+                </View>
+              )}
+              <View style={[st.composer, { borderTopWidth: 0, paddingBottom: Math.max(insets.bottom, S.sm) + 6 }]}>
               <TextInput
                 value={draft}
                 onChangeText={setDraft}
@@ -507,6 +643,7 @@ export default function RunPostScreen() {
                   ? <ActivityIndicator size="small" color={C.accentText} />
                   : <Text style={[st.sendTxt, !draft.trim() && { color: C.faint }]}>{T('rp.post')}</Text>}
               </Pressable>
+              </View>
             </View>
           )}
         </>
@@ -686,6 +823,16 @@ const makeSt = (C: Tokens) => StyleSheet.create({
   commentRow:    { flexDirection: 'row', gap: 9 },
   commentAuthor: { fontSize: 12.5, fontWeight: '700', color: C.text, letterSpacing: -0.2 },
   commentHead:   { flexDirection: 'row', alignItems: 'baseline', gap: 6 },
+  commentRowChild:   { marginLeft: 39 }, // avatar 30 + gap 9 — one-level indent
+  replyBtnTxt:       { fontSize: 11.5, fontWeight: '700', color: C.faint, letterSpacing: -0.1, marginTop: 3 },
+  replyExpander:     { flexDirection: 'row', alignItems: 'center', gap: 8, marginLeft: 39 },
+  replyExpanderRule: { width: 24, height: 1, backgroundColor: C.border },
+  replyExpanderTxt:  { fontSize: 12, fontWeight: '700', color: C.sub, letterSpacing: -0.2 },
+  moreCmBtn:         { alignSelf: 'center', paddingVertical: 10, paddingHorizontal: 20 },
+  moreCmTxt:         { fontSize: 12.5, fontWeight: '700', color: C.sub, letterSpacing: -0.2 },
+  composerWrap:      { borderTopWidth: 1, borderTopColor: C.border, backgroundColor: C.surface },
+  replyChip:         { flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-start', marginTop: 8, marginHorizontal: S.gutter, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999, backgroundColor: C.surfaceAlt, borderWidth: 1, borderColor: C.border, maxWidth: '80%' },
+  replyChipTxt:      { flexShrink: 1, fontSize: 12, fontWeight: '600', color: C.sub, letterSpacing: -0.2 },
   commentWhen:   { fontSize: 11, color: C.faint, letterSpacing: -0.1 },
   commentBody:   { fontSize: 13.5, color: C.sub, letterSpacing: -0.2, lineHeight: 19, marginTop: 2 },
 
