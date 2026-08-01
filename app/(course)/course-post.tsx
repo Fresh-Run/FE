@@ -44,9 +44,9 @@ import {
   unlikeRoute,
   type RouteComment,
 } from '@/lib/routes-api';
-import { fmtWhen } from '@/lib/run-format';
+import { fmtAgo, fmtWhen } from '@/lib/run-format';
 import { useLang } from '@/lib/i18n';
-import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
+import { radius as R, shadows, spacing as S, type Tokens, DENSE_MAX_FONT_SCALE} from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { setPendingCourse } from '@/store/pending-course';
 import { getPendingPost } from '@/store/pending-post';
@@ -236,9 +236,14 @@ export default function CoursePostScreen() {
                     <Avatar name={cm.nickname} size={30} photoUrl={cm.avatar_url} />
                   </Pressable>
                   <View style={{ flex: 1, minWidth: 0 }}>
-                    <Pressable onPress={() => openProfile(cm.user_id, cm.nickname)} hitSlop={4}>
-                      <Text style={st.commentAuthor}>{cm.nickname ?? '러너'}</Text>
-                    </Pressable>
+                    {/* 8/5 timestamp parity with run-post (payload had it —
+                        baseline-after-nickname, time outside the tap target) */}
+                    <View style={st.commentHead}>
+                      <Pressable onPress={() => openProfile(cm.user_id, cm.nickname)} hitSlop={4}>
+                        <Text style={st.commentAuthor}>{cm.nickname ?? '러너'}</Text>
+                      </Pressable>
+                      <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.commentWhen}>{fmtAgo(cm.created_at, lang)}</Text>
+                    </View>
                     <Text style={st.commentBody}>{cm.content}</Text>
                   </View>
                 </Pressable>
@@ -306,6 +311,8 @@ const makeSt = (C: Tokens) => StyleSheet.create({
   commentsEmpty: { fontSize: 13, color: C.faint, letterSpacing: -0.2, paddingVertical: 8 },
   commentRow:    { flexDirection: 'row', gap: 9 },
   commentAuthor: { fontSize: 12.5, fontWeight: '700', color: C.text, letterSpacing: -0.2 },
+  commentHead:   { flexDirection: 'row', alignItems: 'baseline', gap: 6 },
+  commentWhen:   { fontSize: 11, color: C.faint, letterSpacing: -0.1 },
   commentBody:   { fontSize: 13.5, color: C.sub, letterSpacing: -0.2, lineHeight: 19, marginTop: 2 },
 
   composer:        { flexDirection: 'row', alignItems: 'flex-end', gap: 9, paddingHorizontal: S.gutter, paddingTop: 10, borderTopWidth: 1, borderTopColor: C.border, backgroundColor: C.surface },

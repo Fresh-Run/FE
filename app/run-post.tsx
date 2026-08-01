@@ -67,7 +67,7 @@ import {
   fmtDist,
   fmtDuration,
   fmtPaceIn,
-  fmtWhen,
+  fmtAgo, fmtWhen,
   paceUnit,
   timeTitle,
 } from '@/lib/run-format';
@@ -457,9 +457,16 @@ export default function RunPostScreen() {
                         <Avatar name={cm.nickname} size={30} photoUrl={cm.avatar_url} />
                       </Pressable>
                       <View style={{ flex: 1, minWidth: 0 }}>
-                        <Pressable onPress={() => openProfile(cm.user_id, cm.nickname)} hitSlop={4}>
-                          <Text style={st.commentAuthor}>{cm.nickname ?? T('home.runner')}</Text>
-                        </Pressable>
+                        {/* 8/5 timestamps: created_at was in the payload all
+                            along — render-only (kudos-sheet likerWhen grammar,
+                            lang-param compiler-safe). Time sits OUTSIDE the
+                            profile Pressable — the tap target stays honest. */}
+                        <View style={st.commentHead}>
+                          <Pressable onPress={() => openProfile(cm.user_id, cm.nickname)} hitSlop={4}>
+                            <Text style={st.commentAuthor}>{cm.nickname ?? T('home.runner')}</Text>
+                          </Pressable>
+                          <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.commentWhen}>{fmtAgo(cm.created_at, lang)}</Text>
+                        </View>
                         <Text style={st.commentBody}>{cm.content}</Text>
                       </View>
                     </Pressable>
@@ -678,6 +685,8 @@ const makeSt = (C: Tokens) => StyleSheet.create({
   commentsEmpty: { fontSize: 13, color: C.faint, letterSpacing: -0.2, paddingVertical: 8 },
   commentRow:    { flexDirection: 'row', gap: 9 },
   commentAuthor: { fontSize: 12.5, fontWeight: '700', color: C.text, letterSpacing: -0.2 },
+  commentHead:   { flexDirection: 'row', alignItems: 'baseline', gap: 6 },
+  commentWhen:   { fontSize: 11, color: C.faint, letterSpacing: -0.1 },
   commentBody:   { fontSize: 13.5, color: C.sub, letterSpacing: -0.2, lineHeight: 19, marginTop: 2 },
 
   composer:        { flexDirection: 'row', alignItems: 'flex-end', gap: 9, paddingHorizontal: S.gutter, paddingTop: 10, borderTopWidth: 1, borderTopColor: C.border, backgroundColor: C.surface },
