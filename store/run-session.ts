@@ -99,6 +99,19 @@ const STILL_EVIDENCE_MS   = 5_000; // agreeing-evidence span before "still"
 const STILL_TICK_MS       = 1_000;  // (a) evidence ticker cadence
 const SILENCE_TRUST_MS    = 60_000; // silence older than this = presumed GPS
                                     // death, not stillness — chip's lane
+// ── 8/5 slow-walk false-fire fix (field: auto-pause kicked in mid-walk at
+// slow gait). Math: distanceInterval 5m at walking speed v gives natural
+// fix gaps of 5/v seconds — 0.8 m/s → 6.3s, 0.5 m/s → 10s — ALL past the
+// 5s evidence span, so the silence ticker read every slow-walk gap as
+// stillness. Guard = the lastSpeedMps mirror (speed-guard option, chosen
+// over a longer threshold: a real stop's final fix reads slow/invalid, so
+// true stops KEEP the fast 5s lane — no latency trade for the common case).
+// Dual lane: last fix spoke movement (≥ WALK_SUPPRESS_MPS) → silence must
+// exceed SILENCE_SLOW_MS (> 5/0.35 ≈ 14.3s, the slowest guarded gait's
+// gap) before firing — covers the rare abrupt stop whose final fix was
+// mid-stride (worst-case pause latency 15s, stated). Both FIELD-TUNABLE.
+const WALK_SUPPRESS_MPS   = 0.35;   // last-fix speed at/above = still walking
+const SILENCE_SLOW_MS     = 15_000; // slow-lane silence floor (fast-final-fix stops)
 const RESUME_SPEED_MPS    = 1.0;   // hysteresis above STATIONARY_MPS
 const RESUME_DISP_M       = 8;     // or clear displacement from the frozen point
 const AUTO_REPAUSE_GRACE_MS = 10_000; // after a MANUAL resume (crosswalk case)
@@ -183,6 +196,12 @@ function stillTick(): void {
   if (now - stillRef.t < STILL_EVIDENCE_MS) return;
   if (lastRawAccM == null || lastRawAccM > MAX_ACCURACY_M) return; // degraded → GPS-lost lane
   if (now - lastFixTs > SILENCE_TRUST_MS) return; // stale → presumed signal death
+  // 8/5 slow-walk guard: a last fix that spoke movement means this silence
+  // is probably just a slow gait's natural gap — hold the fast lane and
+  // require SILENCE_SLOW_MS instead. Slow/invalid last speed (the real-stop
+  // signature) keeps the 5s lane.
+  const lastSpokeMovement = lastSpeedMps != null && lastSpeedMps >= WALK_SUPPRESS_MPS;
+  if (lastSpokeMovement && now - stillRef.t < SILENCE_SLOW_MS) return;
   maybeAutoPause(now);
 }
 
@@ -231,9 +250,14 @@ function processFix(loc: Location.LocationObject): void {
     // The odometer/anchor/path remain untouched on this branch.
     if (state === 'running' && accuracy != null) {
       const tol = Math.max(MIN_SEGMENT_M, accuracy);
+      // 8/5: the evidence-break speed drops RESUME(1.0) → WALK_SUPPRESS(0.35)
+      // — a slow canyon walker (0.5-0.8 m/s inside the error circle) now
+      // breaks evidence instead of accruing it. Stricter reset = safer
+      // against false pause; true canyon stops keep near-zero speeds and
+      // still accrue (the 8/3 [Stop test] (b)-path pass preserved).
       if (!stillRef) {
         stillRef = { ...cur, t };
-      } else if (haversineM(stillRef, cur) > tol || (speed != null && speed >= RESUME_SPEED_MPS)) {
+      } else if (haversineM(stillRef, cur) > tol || (speed != null && speed >= WALK_SUPPRESS_MPS)) {
         stillRef = { ...cur, t };
       } else if (t - stillRef.t >= STILL_EVIDENCE_MS) {
         maybeAutoPause(t);
