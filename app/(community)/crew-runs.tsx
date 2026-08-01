@@ -38,6 +38,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/avatar';
+import { SafeImage } from '@/components/safe-image';
 import { MiniMap } from '@/components/mini-map';
 import { RealMap } from '@/components/real-map';
 import { Icon } from '@/components/ui';
@@ -98,11 +99,21 @@ function RunCard({ run, units, mapLive, onOpen, isMine, kudosOff, onKudos, onCou
           </View>
         </View>
       </View>
-      {mapLive && ((cardLine && cardLine.length >= 2) || linePending) ? (
-        <RealMap height={160} polyline={cardLine ?? run.polyline_thumb} lineHidden={linePending} />
-      ) : (
-        <MiniMap seed={run.run_id} height={160} polyline={cardLine ?? undefined} />
-      )}
+      {/* 8/5 media fix (owner field finding): PHOTO first (기록-카드 logic,
+          photo > map priority, SafeImage precedent) → route line → seed art.
+          KOREA-MAP ROOT CAUSE, ledgered: the old branch let `linePending`
+          ALONE reach RealMap — a thumb-less run handed RealMap a null
+          polyline, which fell to its center-mode Seoul default region = the
+          bare zoomed-out map. Geometry is now required to enter RealMap. */}
+      <SafeImage uri={run.photo_thumb} style={st.mediaPhoto}
+        fallback={(() => {
+          const line = (cardLine && cardLine.length >= 2) ? cardLine
+            : (run.polyline_thumb && run.polyline_thumb.length >= 2) ? run.polyline_thumb : null;
+          if (!line) return <MiniMap seed={run.run_id} height={160} />; // trackless — seed art (기록 parity)
+          return mapLive
+            ? <RealMap height={160} polyline={line} lineHidden={linePending && line !== cardLine} />
+            : <MiniMap seed={run.run_id} height={160} polyline={line} />;
+        })()} />
       <View style={st.cardBody}>
         <Text style={st.cardTitle}>{run.title ?? timeTitle(run.ran_at, lang)}</Text>
         <View style={st.statsRow}>
@@ -326,5 +337,6 @@ const makeSt = (C: Tokens) => StyleSheet.create({
 
   cardFooter:{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingTop: 8, paddingBottom: 13, marginTop: 6, borderTopWidth: 1, borderTopColor: C.border },
   kudosCluster: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  mediaPhoto:   { width: '100%', height: 160 }, // signed URL — used directly, never cached (계약)
   footCount: { fontSize: 13, fontWeight: '600', color: C.sub, letterSpacing: -0.2 },
 });

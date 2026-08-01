@@ -369,7 +369,7 @@ export type CrewRunItem = {
   avg_pace_sec_per_km: number | null;
   route_id: string | null;
   area: string | null;
-  photo_thumb: string | null;   // PATH (signed 1h) — never render raw; card uses map
+  photo_thumb: string | null;   // signed URL (1h) — 8/5 media fix: card renders it FIRST (photo > map, 기록 parity); never cached
   polyline_thumb: { lat: number; lng: number }[] | null;
   route_summary: string | null;
   comment_count: number;
