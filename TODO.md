@@ -980,7 +980,7 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 **Triage verdict (probes + BE read, world restored 4/4):** 지연's "새 게시글 안 뜸" decomposed into (1) 친구 rendered the COURSE feed (GET /feed) while her v2 activity feed (GET /feed/activities — followed + own runs, docstring says it was built for this) sat unconsumed; (2) 전체 was WORKING AS DESIGNED — a private ACCOUNT's public run is visible to nobody in nearby (followers contract-excluded, strangers privacy-excluded via visible_owners), and the seed world is mostly private accounts (test1/test2/demo2/demo3; only demo1/4/5 public). Positive control: public-account fresh run instant at position 0 for an eligible non-follower. NO SERVER BUG. **지연 relay: seed-world privacy made 전체 look broken — flip test1/test2 public or demo with demo1/4/5; product question queued: should private-account public runs surface in 전체 at all?**
 **Shipped:** 친구 repointed to GET /feed/activities (contract probed: 23-key parity with nearby, own private runs included at position 0, offset/limit) — ONE RunCard path both tabs (kudos overlay, run-post open, openProfile self-routes own cards). Course path deleted from home (~200 lines: FeedCard, courseDisplay, like/save overlays, runCourse). S-rider: silent focus refetch (no spinner; busyRef mount guard; skips when paginated past page 1 — pull stays the deep-scroll path; countRef written in an effect, React-Compiler-safe). Dead exports DELETED per ruling (getFeed, getBookmarkedRouteIds, FEED_PAGE_SIZE) with pointer comments — **GET /feed and /routes/bookmarked remain LIVE server-side; our wrappers died, her endpoints didn't** (저장된 코스 keeps its full-row consumer in bookmarks-api).
 **RIDER (a) — standing design question for 지연 BEFORE EXTERNAL:** shipped RunCard vs canvas home-cards.jsx card B delta — canvas carries a bookmark button + area·ago header line ours lacks (one-card rule kept the user-profile extraction verbatim). Rule on convergence or bless the delta.
-~~**RIDER (b) — own-kudos affordance inconsistency, harmonize POST-BETA:** feed + run-post own cards keep the kudos toggle ACTIVE (server allows self-kudos); profile surfaces render count-only. One grammar should win.~~ **[CLOSED 8/8 — resolved-by-reality: the K2 restore made ♥=toggle the one grammar everywhere (FOUR CLOSES ②).]**
+~~**RIDER (b) — own-kudos affordance inconsistency, harmonize POST-BETA:** feed + run-post own cards keep the kudos toggle ACTIVE (server allows self-kudos); profile surfaces render count-only. One grammar should win.~~ **[CLOSED 8/3 — resolved-by-reality: the K2 restore made ♥=toggle the one grammar everywhere (FOUR CLOSES ②).]**
 
 **DEVIATION RULING (owner, 2026-07-17, ONE-TIME): b7ca600 → production BEFORE on-device.** Mechanism ledgered: the TestFlight install OVERWROTE the dev build — same bundle ID, one binary per device; **standing arrangement going forward: one dev device + one TF device.** Owner justification on record: 2-person internal audience, JS-only slice, contract-probed + hash-tied byte-scan green pre-publish, rollback = republish prior group (proven path). The [HH:MM] gates the VERIFIED ledger entry this time, not the publish. Rollback target if the 6-step TF script fails: production group `6d12c6d1-2605-45dd-898b-0e860c510f06` (the env-fix OTA). NOT a precedent — the verify-before-publish loop resumes next slice.
 
@@ -1261,46 +1261,53 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 
 ## 🧩 크루 세션-콜랩스 BUILT (STAGED 위 32cb5f1d) — 계약 집행 (앵커-런 v1)
 - **그룹핑 (crews-api groupCrewSessions)**: 파생-오버-스테이트 (답글 패턴) — 논-널 키 공유 = 원 그룹, **앵커 = 최조기 런** (미디어/아이덴티티 리드), 그룹 위치 = 첫-등장 로우 (서버 순서 보존 = "흡수, 무스폰") · 널 = 개별 (트리비얼 널-세이프: 널 분기가 개별 그룹 푸시) · 후속 페이지 = 재파생으로 자동 흡수. 데스크 증명 3/3 (흡수·최조기 앵커·널-세이프).
-- **카드 폼 (초이스 명기)**: 앵커 카드 그대로 — 미디어 = 신선한 스플릿 문법 (루트맵 온리) · ~~아이덴티티 = 최조기 러너 · 탭 = 앵커 run-post (익스팬션 대안 레저드) · K1 = 앵커 (그룹-쿠도스 질문 레저드)~~ **[RESOLVED 8/5 — 폴더 리워크가 양 질문 해소: 폴더 엔트리 (무 쿠도스/아이덴티티 클레임) + 세션 뷰 (전 참여자 풀 카드, 각자 K1) — 아래 리워크 엔트리 참조]**.
+- **카드 폼 (초이스 명기)**: 앵커 카드 그대로 — 미디어 = 신선한 스플릿 문법 (루트맵 온리) · ~~아이덴티티 = 최조기 러너 · 탭 = 앵커 run-post (익스팬션 대안 레저드) · K1 = 앵커 (그룹-쿠도스 질문 레저드)~~ **[RESOLVED 8/1 — 폴더 리워크가 양 질문 해소: 폴더 엔트리 (무 쿠도스/아이덴티티 클레임) + 세션 뷰 (전 참여자 풀 카드, 각자 K1) — 아래 리워크 엔트리 참조]**.
 - **배지 (프리픽스 시맨틱)**: a: = "공지 러닝" (메가폰) · c: = "함께 달림" (피플) — 기존 세션 칩 옆, 풀 카드 온리 (48px 프리뷰 = 디둡만, 배지 생략 — 스페이스, 명기).
 - **crew-detail 프리뷰**: 동일 파생으로 디둡 (한 세션 = 한 로우).
 - **UX 넛지 (그녀 라이더)**: 공지 컴포저 일정-토글 직하 "공지로 시작한 크루 러닝은 피드에 하나의 세션으로 묶여요" — 결정의 순간 배치.
 - 신규 ko 하드코드 3 (배지 2 + 넛지 1) — 슬라이스-6 키잉 노트. [+정리: announcement-compose 기사용 tf 임포트 제거]
 
 ## 🏳️ B3 RESOLVED + 크루 배너 클라이언트 BUILT (미스테이지) + 폴더 날짜 픽스
-- **B3 해소 (레저)**: 오너 룰 = OFF; 그녀 계약은 룰링 도착 전 **디폴트 ON + 프라이빗-크루 하드 게이트** (프라이빗 크루 = 플래그 무관 무배너, 크루-레벨 프라이버시 서버 강제)로 락+배포. **해소: 그녀 ON 존속 [RATIFIED 8/8 — 오너 비준 도착, FOUR CLOSES 엔트리: 정직성 게이트가 OFF 포스처 서빙 → ON + 셰이프 룰 = 확정]** — 게이트가 OFF 논거 중화 (퍼블릭-크루 멤버십은 멤버 리스트로 이미 공개) + ON = 디스커버리. 계약 버바팀: show_crew bool POST/PATCH (생략 = ON) · K1 아이템 crew_name (string|null) · **null = 무배너, 이유 추론 절대 금지** · 기존 런 = ON.
+- **B3 해소 (레저)**: 오너 룰 = OFF; 그녀 계약은 룰링 도착 전 **디폴트 ON + 프라이빗-크루 하드 게이트** (프라이빗 크루 = 플래그 무관 무배너, 크루-레벨 프라이버시 서버 강제)로 락+배포. **해소: 그녀 ON 존속 [RATIFIED 8/3 — 오너 비준 도착, FOUR CLOSES 엔트리: 정직성 게이트가 OFF 포스처 서빙 → ON + 셰이프 룰 = 확정]** — 게이트가 OFF 논거 중화 (퍼블릭-크루 멤버십은 멤버 리스트로 이미 공개) + ON = 디스커버리. 계약 버바팀: show_crew bool POST/PATCH (생략 = ON) · K1 아이템 crew_name (string|null) · **null = 무배너, 이유 추론 절대 금지** · 기존 런 = ON.
 - **폴더 날짜 픽스**: fmtDateAbs 신설 (fmtDate의 앱솔루트 테일 추출 — 기존 콜러 무변경, fmtDate가 위임) — 폴더 타이틀 = 무조건 앱솔루트 ("청라동 · 8월 1일"; 폴더명은 노화 불가) · fmtAgo 서브 = 상대 유지.
-- **배너 클라 3반쪽**: ① K1 카드 (셰어드 RunCard) — crew_name 논-널 시 "{name}과 함께" 라인 (그린, 세션-배지 티어; null = 무, 인-코멘트 그녀 룰) · 타입 crew_name 전파 (FeedRunExtras·UserRun·Run) ② 러닝 저장 — 태그 로우에 "피드에 크루 표시" 체크 (디폴트 ON), POST show_crew 명시 송신 ③ edit-run — 크루-태그 런 온리 동일 토글, PATCH show_crew. **시드 갭 (프로브 8/5): 단건이 show_crew 미서빙 → edit 토글 ON 시드 (계약 디폴트) — 그녀 원-라인 ask 온-레코드: own 단건에 show_crew.**
+- **배너 클라 3반쪽**: ① K1 카드 (셰어드 RunCard) — crew_name 논-널 시 "{name}과 함께" 라인 (그린, 세션-배지 티어; null = 무, 인-코멘트 그녀 룰) · 타입 crew_name 전파 (FeedRunExtras·UserRun·Run) ② 러닝 저장 — 태그 로우에 "피드에 크루 표시" 체크 (디폴트 ON), POST show_crew 명시 송신 ③ edit-run — 크루-태그 런 온리 동일 토글, PATCH show_crew. **시드 갭 (프로브 8/2): 단건이 show_crew 미서빙 → edit 토글 ON 시드 (계약 디폴트) — 그녀 원-라인 ask 온-레코드: own 단건에 show_crew.**
 - 신규 키 2 (rc.withCrew·runSave.showCrew) ko+en — 파리티 904/904 MATCH. K1 crew_name 라이브 프로브 확인 (해윙크루 등 실값).
 
-## 🔤 배너 서피스+카피 어멘드 BUILT (미스테이지 — 673ff718 대체 예정; 오너 글랜스 8/5: 항목 2-5 PASSED)
+## 🔤 배너 서피스+카피 어멘드 BUILT (미스테이지 — 673ff718 대체 예정; 오너 글랜스 8/2: 항목 2-5 PASSED)
 - **카피 룰링**: rc.withCrew = "With {name}" **양 로케일** — 조사 콜 사이트 제거, josaWaGwa 익스포트 존치 (당일 은퇴 인-코멘트, 미래 조사 수요용). 딕셔너리 밸류 동일 → 스트링-테이블 디덥 ×1 (바이트-스캔 정합).
 - **프로필 서피스 프로브**: ⓐ 내 프로필 = ② 개인 리드 crew_name 라이브 → MyRun 타입 + 트윈 렌더 (셰어드 카드 문법 매칭) ⓑ **user-profile 아이템 = 풀 크루 필드 서빙 확인 + 게이팅 일관 실증** (지연 세션 런 fbfe1e56: 그녀 퍼블릭 리스트와 K1 피드 양쪽 null 동일 — 타 런은 배너; 게이트 균일) → UserRun 타입 기추가 + 셰어드 RunCard = **구조상 자동 렌더 (제로 추가 코드)**. her-ask 불요.
 - 재검: With {name} ×1 (디덥) · {josa} 템플릿 사망 · 토글 존치.
 
-## ✅ 셰어 크루 토글 스플릿 + 프리-레이어 조인 PROMOTED (2026-08-07) — 오너 [01:45] FULL 실관찰 · 원-컨펌
+## ✅ 셰어 크루 토글 스플릿 + 프리-레이어 조인 PROMOTED (2026-08-02) — 오너 [01:45] FULL 실관찰 · 원-컨펌
 - [01:45] 관찰: 칩 분리+종속 (카운트-requires-네임) · 드래그/스냅/핀치 · 퍼-비짓 OFF + 위치 기억 (스플릿 시맨틱 필드 확인) · 익스포트 — 전부 정상.
 - def1115f → production **f5352b62-be2a-4fe3-aaae-4adb9078d535** · 프로모션 해시-타이 MATCH (brXH5bSS… 양채널 동일). **롤백 플로어 전진 → f5352b62** (1109b0ea 은퇴).
 - **[01:45] 동반 발견 (기승격 코드, 오너 지정: 즉시 픽스 대상): 러닝 저장 "피드에 크루 표시" OFF 저장 시 미반영 — 배너 항상 ON. 프라이버시 인접.** → 하단 리콘 엔트리.
 
-## 🚨 show_crew OFF 미반영 (오너 필드 발견 8/7 [01:45]) — RECON 완료, 컨빅션: **타인-뷰 게이트는 건재 · 증상 = 오너-뷰 A-룰 렌더** + 인접 클라 홀 2건
+## 🚨 show_crew OFF 미반영 (오너 필드 발견 8/2 [01:45]) — RECON 완료, 컨빅션: **타인-뷰 게이트는 건재 · 증상 = 오너-뷰 A-룰 렌더** + 인접 클라 홀 2건
 - **라이브 프로브 (프로브크루 생성→소멸, 런 4건 세이브→204 전삭, 월드 복원 완결)**: OFF 런·ON 런·2-참여 세션 버킷 구성, 3뷰어(오너/크루멤버/팔로워) 교차 리드.
 - **① 서버 게이트 = 작동 실증 (프라이버시 리크 아님)**: activities 피드 — ON 런 crew_name '프로브크루' 서빙 · OFF 런 2건 null. **show_crew 영속+차별화 확정.** nearby도 실세계 크루런 배너 확인 (해윙크루).
 - **② 증상 메커니즘 (컨빅션)**: 퍼스널 리드 (GET /runs 리스트·단건)는 **A-룰로 crew_name 무조건 서빙** (OFF 런에서 실측) + 단건 show_crew: null (그녀 시드 갭 존속) → 클라 배너/배지는 crew_name 존재로 렌더 → **오너 자신의 화면 (기록·활동 상세·내 프로필 트윈)에선 토글과 무관하게 항상 표시** — "미반영"으로 관찰됨. 타인에겐 안 보임. 오너-뷰 정직성 결함, 리크 무.
 - **③ 동반 컨빅션 (진짜 프라이버시-인접, 클라 레인)**: ⓐ **edit-run 강제-리셋 홀** — showCrew useState(true) 블라인드 시드 (단건이 플래그 미서빙) + 크루 런이면 매 저장 PATCH show_crew 동봉 → **OFF로 저장한 런의 무관 편집 (제목 수정 등)이 침묵으로 ON 복귀 = 실제 재공개**. ⓑ run-result 세이프티-넷 save가 showCrew 미동봉 (크래시-복구 레인 = 서버 디폴트 ON).
-- **④ 그녀-레인 발견**: user-profile 엔드포인트 (/users/{id}/runs)는 타인 리드에서 crew_name **항상 null** (ON 런·크루메이트 뷰어에도) — 배너가 유저 프로필 서피스에 못 뜸; 8/5 "풀 크루 필드 서빙 확인"은 과독이었음 (그녀 세션 런 null만 관찰됨). + 기존 원-라이너 (own 리드에 show_crew 서빙) 중요도 상승 — 오너-뷰 정직성 픽스의 전제.
-- **픽스 플랜 (오너 워드 대기)**: [클라, 즉시] ⓐ edit-run 더티-플래그 — 토글을 유저가 건드린 경우에만 PATCH에 show_crew 동봉 (강제-리셋 사멸) ⓑ run-result 넷 save에 pending-run의 showCrew 스레드. [그녀 원-라인 ask 승격] own 리드 show_crew 서빙 → 클라 오너-뷰 배너를 플래그로 게이트 (완전한 정직성). [그녀 FYI] user-profile crew_name 서빙 부재. **[8/7 오너 빌드 워드 → 하단 BUILT 엔트리]**
+- **④ 그녀-레인 발견**: user-profile 엔드포인트 (/users/{id}/runs)는 타인 리드에서 crew_name **항상 null** (ON 런·크루메이트 뷰어에도) — 배너가 유저 프로필 서피스에 못 뜸; 8/2 "풀 크루 필드 서빙 확인"은 과독이었음 (그녀 세션 런 null만 관찰됨). + 기존 원-라이너 (own 리드에 show_crew 서빙) 중요도 상승 — 오너-뷰 정직성 픽스의 전제.
+- **픽스 플랜 (오너 워드 대기)**: [클라, 즉시] ⓐ edit-run 더티-플래그 — 토글을 유저가 건드린 경우에만 PATCH에 show_crew 동봉 (강제-리셋 사멸) ⓑ run-result 넷 save에 pending-run의 showCrew 스레드. [그녀 원-라인 ask 승격] own 리드 show_crew 서빙 → 클라 오너-뷰 배너를 플래그로 게이트 (완전한 정직성). [그녀 FYI] user-profile crew_name 서빙 부재. **[8/2 오너 빌드 워드 → 하단 BUILT 엔트리]**
 
-## ✅ K2 셀프-쿠도스 리스토어 PROMOTED (2026-08-08) — 오너 [00:30] FULL 실관찰 · 원-컨펌 · **팬텀 #7 종결 (오너 워드)**
+## ✅ K2 셀프-쿠도스 리스토어 PROMOTED (2026-08-03) — 오너 [00:30] FULL 실관찰 · 원-컨펌 · **팬텀 #7 종결 (오너 워드)**
 - [00:30] 관찰: 런포스트 바 토글 + 시트 셀프 행 · 내 프로필 라이브 ♥ · 크루 피드 토글 · 홈 피드 정상 — 4서피스 전부.
 - a7599217 → production **ab4f20f3-18b6-4b9d-a172-0bb7cfacce13** · 프로모션 해시-타이 MATCH (J0E2-ihy… 양채널 동일). **롤백 플로어 전진 → ab4f20f3** (ec964840 은퇴).
-- K2 아크 전체 클로즈: 서버 스위치 (그녀 7/30 v120) → 릴레이 (8/5) → 프로브 204 (8/8) → 3사이트 복원 → 프로모션. 잔여 오너-워드 빌드: 정직성 게이트 (그녀 (a) 컨펌 — show_crew 개인-리스트 서빙 기관측) · 엘리베이션 차트 · G 스윕.
+- K2 아크 전체 클로즈: 서버 스위치 (그녀 7/30 v120) → 릴레이 (8/1) → 프로브 204 (8/3) → 3사이트 복원 → 프로모션. 잔여 오너-워드 빌드: 정직성 게이트 (그녀 (a) 컨펌 — show_crew 개인-리스트 서빙 기관측) · 엘리베이션 차트 · G 스윕.
 
 ## ~~🔼 (구) STAGED — a7599217 (커밋 4c9e337)~~ PROMOTED 위 참조 · 해시-타이 MATCH (J0E2-ihy… — 퍼블리시-타임 dist 기준; 수동-export 비결정성 잔존 온-레코드) · 마커: /kudos ×1·likes_disabled ×1 (스트링-프리)
 
-## 🔼 엘리베이션 차트 STAGED — 6adba50d (커밋 abb006a) · 해시-타이 MATCH (e6f7MyN6… — 체크포인트 커밋-타이드 동일) · 마커 재검 · **폼 룰링: 제안대로 ACCEPTED (오너 8/8)** · **신규 그룹 (프로덕션 = 0c0a59f0 플로어 불변)** · **게이트: 오너 자기 필드 런 (8/5 이후 기록분 = alt 보유 자연 픽스처) — ① 활동 상세: 고도 섹션 (필드-에어리어·min/max 레이블·총 상승/하강 그럴듯한 수치 — 절대치보단 개연성) ② run-post 동일 섹션 ③ 구 런 (프리-8/5) = 섹션 완전 부재 (무엠티-스테이트) ④ en 플립 = Elevation/Ascent/Descent** · 프로모션 = 실관찰 스탬프 + 원-컨펌
+## 📅 레저 데이트 정정 (오너 하이진 워드, 실제 8/3) — 어드바이저 데이트-드리프트 스윕
+- **정정 54건 적용**: 8/5–8/8 라벨 → 커밋-타임스탬프 앵커 실날짜. 매핑: "8/5" 라벨 = 실 **8/1 밤** (그녀 트리아지/목 어멘드먼트/③알트 릴레이 21:47–23:54, 크루-♥·v4·답글 프로모션 포함) 또는 실 **8/2 새벽** (폴더 v3·B3·배너) · "8/6"–"8/7" = 실 **8/2** · "8/8" = 실 **8/3**. 이벤트 순서 무변 (오너 확인) — 캘린더 라벨만 시정.
+- **오너 스테이트 범위 (8/2–8/3) 밖 2건 명기**: 8/1-밤 커밋들 (21:47–23:54) — 커밋 타임스탬프 증거로 8/1 기입; 오너가 8/2로 간주 시 원-라인 정정.
+- **레인지 밖 플래그 (무수정, 워드 대기)**: "8/4" 라벨 엔트리들 (크루 미디어 "오너 필드 8/4"·답글 계약 "그녀 8/4"·"오너 8/4 재명확") — 커밋 앵커상 실 8/1 개연 동일-드리프트 클래스이나 오너 지정 범위(8/5–8/8) 밖 → 워드 시 동일 스윕.
+- **인-코드 코멘트 잔존 (무수정, 명기)**: 세션 중 작성된 코드 코멘트의 8/5–8/8 일자 (K2 RESTORED 8/8·8/7 리콘·8/6 크루 배지 등 ~20사이트) — 스트링-프리 (주석), 번들 무영향; 스윕은 별도 워드 (코드 처닝 대비 가치 판단 오너 몫).
+- 라티오 토큰 (마커 8/8·시뮬 8/8·Gate 8/8·en 8/8·빌드넘버 8/7/5/4/3) 무접촉 검증.
 
-## ⛰️ 엘리베이션-프로파일 차트 BUILT (STAGED 위 6adba50d — 오너 빌드 워드 8/8, 폼 ACCEPTED)
+## 🔼 엘리베이션 차트 STAGED — 6adba50d (커밋 abb006a) · 해시-타이 MATCH (e6f7MyN6… — 체크포인트 커밋-타이드 동일) · 마커 재검 · **폼 룰링: 제안대로 ACCEPTED (오너 8/3)** · **신규 그룹 (프로덕션 = 0c0a59f0 플로어 불변)** · **게이트: 오너 자기 필드 런 (8/1 이후 기록분 = alt 보유 자연 픽스처) — ① 활동 상세: 고도 섹션 (필드-에어리어·min/max 레이블·총 상승/하강 그럴듯한 수치 — 절대치보단 개연성) ② run-post 동일 섹션 ③ 구 런 (프리-8/1) = 섹션 완전 부재 (무엠티-스테이트) ④ en 플립 = Elevation/Ascent/Descent** · 프로모션 = 실관찰 스탬프 + 원-컨펌
+
+## ⛰️ 엘리베이션-프로파일 차트 BUILT (STAGED 위 6adba50d — 오너 빌드 워드 8/3, 폼 ACCEPTED)
 - **라이브 프로브**: alt 라운드트립 실증 — 프로브 런 gps_track alt 송신 → 서빙 폴리라인 alt 값 존속 (0.1m 라운드; 구 런 = 전 포인트 alt:null — 그녀 "키 생략" 계약이 실와이어에선 null-서빙, null-스킵이 양쪽 커버) · **코스 루트 폴리라인 = lat/lng 온리 (프로브)** → course-post 제외, 명기 · 트랙 엔드포인트의 server elev_gain_m 존재 온-레코드 (미소비 — 클라 히스테리시스 수치와 상이 가능, 라벨 충돌 없음).
 - **데이터 티어 (lib/elevation.ts, 상수 전부 필드-튜너블)**: 올-널/부재 → 무렌더 (무엠티-스테이트) · 내부 갭 ≤5pt = 거리-선형 보간 (서버-심플리파이드 라인에서 ~수백 m) · >5pt 갭 = 브리지 + **커버리지 플로어 70%** 미달 = 무렌더 · 풀 시리즈 → 차트.
 - **스무딩+히스테리시스 (데스크-컨빅션 포함)**: 라인 = 센터드 무빙 애버리지 윈도 5 · 총 상승/하강 = **스무디드 시리즈 위 히스테리시스 2.5m 래칫** — 로-시리즈 히스테리시스는 ±2m 톱니 (포인트-투-포인트 4m 스윙)에 붕괴 (데스크 실증: 200/196m 팬텀) → 스무딩-퍼스트로 4/4 통과 (톱니 0/0 · 점진 +20m→18 · 30업다운 노이즈→27/26 · 랜덤 지터 0/0).
@@ -1309,14 +1316,14 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 - **타입 플러밍**: TrackPoint = Coordinate & {alt?} — RunTrack·track-cache 와이드닝 (맵 컨슈머 무접촉, 공변) · 스테일 "elevation parked" 코멘트 2사이트 갱신 (run-splits 헤더·activity).
 - 신규 키 3 (elv.title/gain/loss) — **파리티 929/929** · tsc 0 · eslint 0 · 커밋-타이드 export 해시 e6f7MyN6….
 
-## ✅ G 컨벤션+스윕+라이더 PROMOTED (2026-08-08) — 오너 [01:25] FULL 실관찰 · 원-컨펌
+## ✅ G 컨벤션+스윕+라이더 PROMOTED (2026-08-03) — 오너 [01:25] FULL 실관찰 · 원-컨펌
 - [01:25] 관찰: 비행기모드 에러 = 키드 카피 **양 언어** · 나 배지 + 링 표시 · 정상 플로우 무변화.
 - 11ca86fa → production **0c0a59f0-6754-457b-9444-e21260c7b1fb** · 프로모션 해시-타이 MATCH (PFJppn4k… 양채널 동일). **롤백 플로어 전진 → 0c0a59f0** (1e4c630e 은퇴).
 - **G 아크 클로즈** (8/2 감사 → §5 배포 → 컨벤션+67사이트 스윕 → 프로모션): 서버 프로즈 렌더 = 앱 전체 사멸 (카브-아웃 2 명시 잔존). 잔여 오너-워드 빌드: 엘리베이션 차트. 플래그드 (i18n 6-8 리줌 대상): community.tsx 베어-t 22 (탭, 고위험) · crew-detail.tsx 30 (푸시드, 저위험).
 
 ## ~~🔼 (구) G STAGED — 11ca86fa (커밋 b1f3750)~~ PROMOTED 위 참조 · 해시-타이 MATCH (PFJppn4k… — 체크포인트 커밋-타이드 동일) · 마커 재검 (ko UTF-16·em-dash en UTF-16·err.* 키)
 
-## 🧯 G: 에러-카피 컨벤션 + 스윕 + 라이더 2종 BUILT (STAGED 위 11ca86fa — 오너 빌드 워드 8/8)
+## 🧯 G: 에러-카피 컨벤션 + 스윕 + 라이더 2종 BUILT (STAGED 위 11ca86fa — 오너 빌드 워드 8/3)
 - **① 컨벤션 (lib/error-copy.ts)**: errorMessage(e) — 서버 프로즈 절대 무반환. ⑴ 알려진 error_code → 키드 카피 (**맵 15코드**: 프로덕트 10 [already_member·already_requested·rsvp_closed·crew_owner·demo_account·likes_disabled·comments_disabled·follow_request_pending·route_generation_failed·route_generation_unavailable] + 제네럴 [server_error·bad_request] + 답글 2 [comment_parent_invalid→rp.replyParentGone·reply_depth_exceeded→rp.replyDepth — 기존 키 재사용, run-post 사이트-캐치는 존속]) ⑵ 422/validation_error → detail[0] type+loc 컴포즈 (missing/string_too_long/extra_forbidden 3종 키드 템플릿; 필드 = loc 테일 버바팀 — 퍼-필드 레이블 맵 부재, 룰링의 "else the field key" 분기 명기; msg 절대 무렌더) ⑶ 스테이터스 버킷 (network/timeout/5xx/4xx 키드 제네릭; 미지 코드 = 버킷, 프로즈 무). **가이드 §347 미지 코드 (crew_not_found 등) = 버킷 폴백으로 커버** — 맵 확장은 후속. 컴파일러-세이프 인-코멘트 (이벤트-타임 콜, e 단일 입력) + **errorMessageIn(lang, e) 렌더-바디 변형** (fmtDate lang-파라미터 패턴).
 - **② 스윕: 67사이트/39파일** (감사 ~70/41 대비: 실측 68, 카브-아웃 1파일 제외 = 67 집행) — 66 기계 치환 (`e instanceof Error ? e.message : 폴백` 균일 셰이프) + onboarding-name 수동 1 (tx 로컬 앨리어스가 정규식 회피). **카브-아웃 존중**: use-generate-route (스윕 리스트 자체에 부재 — 프로즌 확인) · store/use-quota **전체 무접촉** (429 쿼터 e.message = 트랜스포트-컴포즈 정직 카피 — errorMessage가 오히려 플래튼했을 것).
 - **③ 리액티브-t 라이더**: use-comments — setError(리졸브드) 2사이트 → **raw error 저장 + errorMessageIn(useLang(), e) 렌더-리졸브 계약**. **데드-코드 발견 (온-레코드)**: useRouteComments 컨슈머 ZERO — course-post가 자체 머시너리 (불리언 loadError, 기-렌더-키드). 훅은 미래 컨슈머 대비 전환 완료; 7/28 레저드 인스턴스 = 고아였음 (스테일-독스 클래스 추가 사례).
@@ -1325,23 +1332,23 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 - **바이트-스캔 독트린 추가**: en 스트링에 em-dash (—) 포함 시 Hermes가 전체를 UTF-16 저장 — ASCII 스캔 0 (Route generation is busy로 실증; ko-온리 규칙의 en 확장).
 - 신규 키 19 (err.* 18 + ks.me) — **파리티 926/926** · tsc 0 · eslint 0 에러 (기존 _layout 경고 1 무접촉 프리-이그지스팅) · 컨벤션 데스크-증명 9/9 (§5 셰이프) · 커밋-타이드 export 해시 PFJppn4k….
 
-## 🧹 FOUR CLOSES (오너 워드 8/8, 원-커밋 — 어드바이저리 서베이 후속)
+## 🧹 FOUR CLOSES (오너 워드 8/3, 원-커밋 — 어드바이저리 서베이 후속)
 - **① B3 RATIFIED**: 오너 비준 — 그녀 ON 디폴트 존속 확정, 펜딩 브래킷 클로즈. 근거 온-레코드: 정직성 게이트가 OFF 포스처를 완전 서빙 → ON + 셰이프 룰 = 확정 디자인. (원 엔트리 브래킷 갱신.)
-- **② 라이더-(b) own-kudos 하모나이즈 CLOSE**: 리졸브드-바이-리얼리티 — K2 리스토어 (8/8)가 ♥=토글 원-그래머를 전면 성립 (피드·run-post·프로필·크루 전부). 스테일-독스 테이크. 셰어-카드 거버넌스 FYI = **옵셔널-스탠딩** (러너스-메모 동승 미확인 — 송신 확인 도착 시 sent로 갱신).
+- **② 라이더-(b) own-kudos 하모나이즈 CLOSE**: 리졸브드-바이-리얼리티 — K2 리스토어 (8/3)가 ♥=토글 원-그래머를 전면 성립 (피드·run-post·프로필·크루 전부). 스테일-독스 테이크. 셰어-카드 거버넌스 FYI = **옵셔널-스탠딩** (러너스-메모 동승 미확인 — 송신 확인 도착 시 sent로 갱신).
 - **③ 햅틱스 고아 STRIKE**: 레저드 프리-게이트 햅틱 슬라이스 (카운트다운-고 Light + 스플릿-크로싱 버즈, 에러-레인 후속 슬롯) — **슈퍼시디드로 스트라이크**. 필드 피드백이 요청하면 신규 컨텍스트의 신규 아이템으로 복귀 (원 엔트리에 스트라이크 노트).
 - **④ kudos-시트 셀프-로우 폴리시 QUEUED**: 나 배지 + 액센트 링 (캔버스 변형, K2가 전제 성립) — **다음 스테이지드 그룹의 S 라이더로 큐**.
 
-## ✅ 정직성 게이트 + 트윈 미러 + tagKept PROMOTED (2026-08-08) — 오너 [01:00] FULL 실관찰 · 원-컨펌
+## ✅ 정직성 게이트 + 트윈 미러 + tagKept PROMOTED (2026-08-03) — 오너 [01:00] FULL 실관찰 · 원-컨펌
 - [01:00] 관찰: OFF 런 — 피드 카드 + 내 프로필 트윈 배너 숨김 · 기록·상세 유지 (**셰이프 룰 필드 확인**) · 수정 체크박스 실플래그 · ON 런 정상.
 - 9d17a831 → production **1e4c630e-2f4d-4120-ace2-206a5d13e586** · 프로모션 해시-타이 MATCH (SgzlWKUl… 양채널 동일). **롤백 플로어 전진 → 1e4c630e** (ab4f20f3 은퇴).
-- **show_crew 아크 전체 클로즈** (8/7 [01:45] 발견 → 리콘 → 홀 2건 → 그녀 (a)+(b) → 정직성 게이트 + 셰이프 룰 + tagKept): 발견부터 클로즈까지 프로덕션 5플로어. 셰이프-베이스 룰 = 스탠딩 (프로필-셰이프 미러 / 레코드-셰이프 상시-인지 — 신규 서피스 분류 시 참조).
-- 잔여 오너-워드 빌드: 엘리베이션 차트 · G 스윕 (+ kudos-시트 셀프-로우 = 다음 그룹 S 라이더). 외부: ~~B3 비준 워드~~ [RATIFIED 8/8] · 월요일 (랜드마크·횡단보도).
+- **show_crew 아크 전체 클로즈** (8/2 [01:45] 발견 → 리콘 → 홀 2건 → 그녀 (a)+(b) → 정직성 게이트 + 셰이프 룰 + tagKept): 발견부터 클로즈까지 프로덕션 5플로어. 셰이프-베이스 룰 = 스탠딩 (프로필-셰이프 미러 / 레코드-셰이프 상시-인지 — 신규 서피스 분류 시 참조).
+- 잔여 오너-워드 빌드: 엘리베이션 차트 · G 스윕 (+ kudos-시트 셀프-로우 = 다음 그룹 S 라이더). 외부: ~~B3 비준 워드~~ [RATIFIED 8/3] · 월요일 (랜드마크·횡단보도).
 
 ## ~~🔼 (구) 정직성 게이트 어멘드 STAGED — 9d17a831 (커밋 82d6d61)~~ PROMOTED 위 참조 · 해시-타이 MATCH (SgzlWKUl…) · 67a56f46 대체분
 
 ## ~~🔼 (구) 정직성 게이트 + tagKept STAGED — 67a56f46 (커밋 9464ce5)~~ SUPERSEDED by 9d17a831 (트윈 미러 어멘드) · 해시-타이 MATCH (_82EommA…)
 
-## 🪞 오너-뷰 정직성 게이트 + tagKept 라이더 BUILT (STAGED 위 67a56f46 — 오너 빌드 워드 8/8, 그녀 (a)+(b) 배포 컨펌 후행)
+## 🪞 오너-뷰 정직성 게이트 + tagKept 라이더 BUILT (STAGED 위 67a56f46 — 오너 빌드 워드 8/3, 그녀 (a)+(b) 배포 컨펌 후행)
 - **프로브 재검 (라이브, 프로브크루2 생성→소멸, ON/OFF 런 2건, 월드 복원 204×3)**: own 리스트+단건 = **show_crew 실불리언** (OFF 런에 False — 시드 갭 사망 증서) · 타인 로우 = show_crew null 고정 ((a) 오너-온리) + crew_name (b) 게이트 차별화 (ON 서빙/OFF 널) 재확인.
 - **서피스 테이블 (룰링 적용 as built)**: 퍼블릭-컨텍스트 own 카드 (셰어드 run-card — 홈/전체 피드·유저-프로필 캐스트) = **게이트** · 기록 배지 = 언게이트 (프라이빗 레코드, why 인-코멘트) · 활동 상세 = 언게이트 (동일) · **내 프로필 트윈 = 언게이트 [저지먼트 콜, 체크포인트-스테이트]**: 비공개 런을 가시성 캡션과 함께 나열하는 레코드-키핑 문법 = 기록 패밀리, 스트레인저 미러 아님.
 - **프레디킷 (정확 문구)**: `run.crew_name && run.show_crew !== false` — 타인 로우는 null → 통과 (기존 서버-게이트 로직 그대로) · own 로우만 실불리언이 게이트. 크루메이트 뉘앙스 인-코멘트 (그녀 (b) 인-크루 티어: OFF 런도 크루메이트에겐 배너 — 미러는 스트레인저 뷰 반영).
@@ -1350,7 +1357,7 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 - **tagKept 라이더**: PendingDraft += tagKept (디폴트 true, EMPTY_DRAFT 머지 = 구 디스크 카피 세이프) · run-save 시드 initialDraft.tagKept + **양 전이 퍼시스트 (× 제거 AND 언두)** · run-result 넷 save 조건 `crewSession && draft.tagKept` — 제거된 태그는 크래시를 관통해 제거 유지.
 - 스트링-프리 (파리티 907 불변) · tsc 0 · eslint 0 · 커밋-타이드 export 해시 WBYcQ0K4… (show_crew ×1·tagKept ×1 디덥).
 
-## 💚 K2 셀프-쿠도스 리스토어 BUILT (STAGED 위 a7599217 — 오너 RECON+BUILD 워드 8/8)
+## 💚 K2 셀프-쿠도스 리스토어 BUILT (STAGED 위 a7599217 — 오너 RECON+BUILD 워드 8/3)
 - **① 프로브 판정: 204 — 팬텀 확정.** test1 자기-런에 클라 정확 엔드포인트 (POST /api/runs/{id}/kudos) → **204** · 리드백 my_kudos:true + count 셀프 포함 · 재-POST 204 (멱등) · DELETE 204 → 클린 리버트 (④ 시맨틱 = 어디서나와 동일, 라운드-트립 실증). 월드 복원 완결 (count 0 복귀).
 - **② 컨빅션 오리진 (팬텀 클래스 7번째 — 스테일-독스 변형)**: 셀프-쿠도스 400은 **2026-07-07 라이브 프로브로 실증된 진실이었음** (레저 원문: "probed, ledger 2026-07-07") — 어섬드 아님. v120 (7/30)이 스위치를 열었고, 프로브드-진실이 만료-체크 없이 3주 생존 → **리얼-덴-리프티드**: 컨빅션은 정직했고, 스테일화가 팬텀을 만듦 (5번째 셀프-리포트-400과 동족 — 서버 정책 변경이 클라 확신을 무효화하는 클래스; 프로브에 유효기한 없음이 교훈).
 - **③ 리스토어 3사이트 (K2 그렙 = 정확히 리스토어 대상 전부, 스윕 컨펌)**: ⓐ run-post 자기-모드 — `isOwn ? null` 사망, 실토글 바 복귀 (kudosOff 캐스케이드 존속: likes_disabled 읽기-전용 분기 그대로) · 좋아요 N개 시트 로우 존속 ⓑ my-profile 트윈 — 이너트 딤 ♥ → 44pt 템플릿 라이브 토글 ({t13,b13,l13,r2} + 카운트 좌슬롭 0 존 비중첩) · **MyRun += my_kudos·allow_likes (개인 리스트 서빙 프로브 확인)** · K1 머시너리 신규 인스턴스 (kudosOv 옵티미스틱 + 프레시-로우 홀세일 클리어 + 퍼-런 403 넷 — crew-runs 패턴 버바팀) · 카운트→시트 존속 ⓒ crew-runs 익스포티드 RunCard — `isMine` 딤 분기 삭제, **prop 자체 제거** (crew-session 포함 양 콜러 + 고아 myUid/useStore 정리) — crew-session은 컴포넌트 공유로 자동 수혜.
@@ -1359,20 +1366,20 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 - **윈드폴 (스코프 외, 온-레코드)**: 개인 리스트 로우가 **show_crew 키 서빙 중** (프로브 중 발견) — 그녀 (a) 스테이징 도착 신호; 정직성 게이트 빌드는 그녀 컨펌 도착 시 별도 슬라이스 (스코프-크립 회피).
 - 스트링-프리 (파리티 907 불변) · tsc 0 · eslint 0 · 커밋-타이드 export 해시 ZXPChMsM… (/kudos 와이어 패스 ×1 디덥).
 
-## 📜 그녀 (a)+(b) 수락 — 크루-필드 서빙 계약 확장 (오너 릴레이 8/8, 당일 배포 예정)
+## 📜 그녀 (a)+(b) 수락 — 크루-필드 서빙 계약 확장 (오너 릴레이 8/3, 당일 배포 예정)
 - **(a) show_crew = 오너-온리 서빙** (타인 = null 고정) — 그녀 추론-공격 내로잉: true+null 이원 노출은 **프라이빗-크루 존재를 역추론 가능** (never-infer 룰의 백도어) → 오너에게만 실값. **오너-뷰 정직성 게이트 빌드 = 그녀 배포 컨펌("스테이징 반영됨")에 언블록** — 인-코멘트 포인터 3사이트 (run-card 풀 노트·기록 배지·활동 상세) 그대로 빌드 타깃.
-- **(b) 통합 크루-필드 룰 (전 런-서빙 서피스)**: 오너 → 전 필드 + 플래그 · 크루메이트 → 크루 필드 (인-크루 컨텍스트) · 스트레인저 → **퍼블릭 크루 AND 옵트-인**일 때만 (② 계약의 스트레인저 측 타이트닝 — OFF 포스처 정합). **user-profile 배너 = 크루메이트 + 옵트-인 런에서 그녀 배포부로 작동 개시** (8/7 리콘의 서빙-부재 발견이 이 룰로 해소).
+- **(b) 통합 크루-필드 룰 (전 런-서빙 서피스)**: 오너 → 전 필드 + 플래그 · 크루메이트 → 크루 필드 (인-크루 컨텍스트) · 스트레인저 → **퍼블릭 크루 AND 옵트-인**일 때만 (② 계약의 스트레인저 측 타이트닝 — OFF 포스처 정합). **user-profile 배너 = 크루메이트 + 옵트-인 런에서 그녀 배포부로 작동 개시** (8/2 리콘의 서빙-부재 발견이 이 룰로 해소).
 - 게이트: 그녀 "스테이징 반영됨" 도착 → (a) 정직성 게이트 빌드 발화 (오너 빌드 워드 불요? — 아니, 스탠딩 루프 유지: 리콘-확인 후 체크포인트) · (b)는 서버-사이드 온리, 클라 무접촉 (기존 crew_name 렌더가 자동 수혜).
 
-## ✅ show_crew 홀 2건 PROMOTED (2026-08-08) — 오너 [00:10] FULL 실관찰 (크로스-어카운트) · 원-컨펌
+## ✅ show_crew 홀 2건 PROMOTED (2026-08-03) — 오너 [00:10] FULL 실관찰 (크로스-어카운트) · 원-컨펌
 - [00:10] 관찰: OFF 저장 → test1 피드 배너 사라짐 (**라이트 패스 라이브 확인** — 게이트 차별화의 필드 재현) · 타이틀만 수정 → 저장 → test1 배너 여전히 무 (**포스-리셋 사망 실증**) · 편집 화면 체크박스 ON 표시 = 알려진 시드 갭 (그녀 원-라이너 대기, 온-레코드).
 - 9c850baa → production **ec964840-1d5b-4e7a-aa7d-a80be19693c8** · 프로모션 해시-타이 MATCH (MoQKw74O… 양채널 동일). **롤백 플로어 전진 → ec964840** (f5352b62 은퇴).
-- 오픈: ~~오너-뷰 정직성 게이트 (그녀 원-라이너 = 전제, ask 승격됨) · user-profile crew_name 서빙 부재 FYI~~ **[8/8 해소 — 그녀 (a)+(b) 수락, 상단 엔트리: (a)가 원-라이너 초과 이행 (오너-온리 내로잉), (b)가 FYI를 통합 룰로 해소]** · tagKept 넷-스레드 시블링 갭 (노트드).
+- 오픈: ~~오너-뷰 정직성 게이트 (그녀 원-라이너 = 전제, ask 승격됨) · user-profile crew_name 서빙 부재 FYI~~ **[8/3 해소 — 그녀 (a)+(b) 수락, 상단 엔트리: (a)가 원-라이너 초과 이행 (오너-온리 내로잉), (b)가 FYI를 통합 룰로 해소]** · tagKept 넷-스레드 시블링 갭 (노트드).
 
 ## ~~🔼 (구) STAGED — 9c850baa (커밋 5c0c4dc)~~ PROMOTED 위 참조 · 해시-타이 MATCH (MoQKw74O… — 체크포인트의 커밋-타이드 해시와 동일: --source-maps가 퍼블리시-패리티 재료였음 확정, 전 사이클 편차 클래스 클로즈) · 마커: show_crew ×1·showCrew ×2 (스트링-프리 슬라이스)
 
-## 🔧 show_crew 홀 2건 BUILT (STAGED 위 9c850baa — 오너 빌드 워드 8/7)
-- **① edit-run 더티-게이트 (강제-리셋 사멸)**: showCrewTouchedRef (bio originalRef 문법의 터치 변형) — 토글 onPress가 마크, PATCH는 `crew_id && touched`일 때만 show_crew 동봉 · 언터치 = 필드 부재 = 서버 저장값 보존. 킬한 노출 경로 인-코멘트 (8/7 일자: 제목 수정 → 블라인드 ON이 저장 OFF 위에 덮임 = 재공개).
+## 🔧 show_crew 홀 2건 BUILT (STAGED 위 9c850baa — 오너 빌드 워드 8/2)
+- **① edit-run 더티-게이트 (강제-리셋 사멸)**: showCrewTouchedRef (bio originalRef 문법의 터치 변형) — 토글 onPress가 마크, PATCH는 `crew_id && touched`일 때만 show_crew 동봉 · 언터치 = 필드 부재 = 서버 저장값 보존. 킬한 노출 경로 인-코멘트 (8/2 일자: 제목 수정 → 블라인드 ON이 저장 OFF 위에 덮임 = 재공개).
 - **② 세이프티-넷 스레드**: **유실 지점 확정 — showCrew가 run-save 스크린-로컬 useState에만 존재, PendingDraft (크래시-생존 스토어) 미탑승** → 컴포즈 킬 = 선택 소멸, 넷 save 필드 생략 = 서버 디폴트 ON. 픽스 = PendingDraft += showCrew (디폴트 true = 계약 디폴트; 구 디스크 카피 = EMPTY_DRAFT 머지로 true 복구, merge-safe) · run-save 시드 = initialDraft.showCrew + 토글마다 updatePendingDraft (title/memo 문법 버바팀 — 리커버리도 복원) · run-result 넷 save가 draft에서 리드해 동봉.
 - **③ 오너-뷰 정직성 게이트 = 미빌드 (그녀 전제)**: 렌더 3사이트 (run-card·기록 배지·활동 상세) 무접촉, her-ask 포인터 인-코멘트 (run-card 풀 노트 + 2사이트 단축 참조).
 - 노트드-낫-빌트: 넷 save의 tagKept 미스레드 (태그 × 제거 후 크래시 = 넷이 재태깅) — 시블링 갭, 스펙 외, 온-레코드.
@@ -1380,19 +1387,19 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 
 ## ~~🔼 (구) STAGED — def1115f (커밋 53985e8)~~ PROMOTED 위 참조 · 해시-타이 MATCH (brXH5bSS… — 퍼블리시-타임 dist 기준; 프리-퍼블리시 수동 export는 소스맵 방출 차이로 상이 해시, 서빙 바이트 재스캔으로 마커 재증명) · 마커: 크루명·참여인원·Crew name·Participants 각 ×1 신규 (구 칩 밸류 사망 — 잔여 '크루 표시'/'Show crew' = runSave 키 서브스트링 귀속) · CDN 로우-애셋 403 온-레코드 (서빙 검증 = 매니페스트-해시 vs 로컬-dist 유지)
 
-## 🧲 셰어 크루 라인: 토글 스플릿 + 프리-레이어 조인 BUILT (STAGED 위 def1115f — 오너 룰 8/6)
+## 🧲 셰어 크루 라인: 토글 스플릿 + 프리-레이어 조인 BUILT (STAGED 위 def1115f — 오너 룰 8/2)
 - **① 토글 스플릿**: 단일 '크루 표시' 칩 → **크루명 + 참여인원** 2칩, 양쪽 퍼-비짓 디폴트 OFF (목 어멘드먼트 존속) · **시맨틱 = 카운트-requires-네임 (룰 버바팀)**: 참여인원 칩은 크루명 ON **그리고** 단건 count 논-널일 때만 렌더 (하이드 — 데드-칩 무) · 카드 라인 컴포즈 = "{crew_name}" 또는 "{crew_name} · N명 참여" · 비짓 내 카운트 상태는 네임 재-ON 시 존속 (칩 독립성 = 메트릭 문법).
 - **② 프리-레이어 조인 (조인, 포크 무)**: `ShareLayerKey = ShareMetricKey | 'crew'` — useMetricLayer **4번째 무조건 훅 인스턴스** (`layerFor.crew`) · 스마트-가이드 geoms 등록 + 시블링 스냅 타깃 합류 (양방향: 크루가 메트릭에 스냅, 메트릭이 크루에 스냅) · 익스포트 = 캔버스 ref 내부 렌더 → view-shot 자동 캡처 (파이프라인 무변경) · **디폴트 배치 = 구 스태틱 라인 자리** ({x:0.05, y:0.88, s:1} — left 14/bottom ~34의 프랙션 근사; 소형 티어 = crewTxt 12pt 자체, s 아님) · 스태틱 st.crewLine 삭제 · 잉크 = 구 라인 타이포 + 메트릭 패밀리 텍스트 섀도 (자유 배치 = 밝은 포토 영역 착지 가능, 명기 디비에이션).
 - **컨벤션 리포트 (스펙 "report if theirs differs and match" 조항 집행)**: 메트릭 레이어 실제 컨벤션 = **배치 퍼시스트** (@fr_share_prefs placements, 캔버스 프랙션 — 토글 상태도 퍼시스트) → 스펙의 퍼-비짓 가정과 상이. **매치: 크루 배치 퍼시스트 (placements.crew — 재-ON = 저장 위치 복원, 무저장 = 디폴트)** · **토글만 퍼-비짓 OFF 유지 — 그녀 목 어멘드먼트 명시 룰링이 컨벤션-매칭보다 상위 (의도적 스플릿, 온-레코드).**
-- **③ 거버넌스 (레저드, 무질문)**: 프리 레이어 = **유저-도메인** — 셰어 v2 선례 (메트릭 레이어 드래그/핀치가 캔버스-1:1 룰링과 공존 기확립; 카드 컴포저는 유저 캔버스). 그녀 어멘드먼트는 라인의 존재·카피·디폴트 OFF를 규정하고 위치를 고정하지 않음 → **재-어멘드먼트 불요 · 그녀 FYI SENT [8/8 확인 — 러너스-메모 동승; 그녀 답신 아카이브: 파이프라인 = API 가이드 수록 · 튜닝 트리거 셋 (풀 30+ / 컨버전 관측성) · 제로-FE-체인지 디자인 그녀 비준]. 외부 레저 EMPTY.**
+- **③ 거버넌스 (레저드, 무질문)**: 프리 레이어 = **유저-도메인** — 셰어 v2 선례 (메트릭 레이어 드래그/핀치가 캔버스-1:1 룰링과 공존 기확립; 카드 컴포저는 유저 캔버스). 그녀 어멘드먼트는 라인의 존재·카피·디폴트 OFF를 규정하고 위치를 고정하지 않음 → **재-어멘드먼트 불요 · 그녀 FYI SENT [8/3 확인 — 러너스-메모 동승; 그녀 답신 아카이브: 파이프라인 = API 가이드 수록 · 튜닝 트리거 셋 (풀 30+ / 컨버전 관측성) · 제로-FE-체인지 디자인 그녀 비준]. 외부 레저 EMPTY.**
 - **④ 스트링**: 신규 키 1 (shr.crewCount '참여인원'/'Participants') + shr.crewToggle 밸류 개정 ('크루 표시'→'크루명' / 'Show crew'→'Crew name') — **파리티 907/907.**
 
-## ~~🎨 셰어-카드 asks (오너, 8/6 ~01:30) — 큐 2건~~ 양건 집행 → 위 BUILT 엔트리 (8/6 오너 룰이 ①+②를 단일 빌드로 병합 — 카운트-requires-네임 확정, 리콘은 조인-빌드에 흡수)
+## ~~🎨 셰어-카드 asks (오너, 8/2 ~01:24) — 큐 2건~~ 양건 집행 → 위 BUILT 엔트리 (8/2 오너 룰이 ①+②를 단일 빌드로 병합 — 카운트-requires-네임 확정, 리콘은 조인-빌드에 흡수)
 - ~~**① [빌드-큐, S] 크루 토글 스플릿**: 크루명·참여인원 별도 옵트-인 — **오너 워드 펜딩: 카운트-단독 허용 vs 카운트-requires-네임** · 카드 라인 = 온인 것들로 컴포즈.~~
 - ~~**② [리콘-퍼스트, M-L 추정] 유저-조정 크루 라인**: 드래그-이동 + 핀치-리사이즈. 필요: 제스처+익스포트 파이프라인 리콘 · 바운즈 디자인 · **캔버스-1:1 거버넌스 답 (그녀 어멘드먼트 "바운즈 내 유저-포지션드" OR 빌드-7 룰링 오너 오버라이드)**. 리콘 = 오너 모닝 워드에 발화.~~
   - **어드바이저 정정 노트 (온-레코드)**: "카드 첫 에디터 피처" 프레이밍은 부정확 — **메트릭 레이어들은 이미 프리-레이어 (셰어 v2: 드래그-투-플레이스 + 핀치-투-사이즈, layerFor 시스템 + 스마트-가이드 + 익스포트 검증 완료)**. 크루 라인이 기존 레이어 시스템에 합류하는 형태면 사이징은 M-L → S-M로 하락 개연 — 리콘이 확정.
 
-## ✅ 기록 크루 배지 + 셰어 크루 라인 PROMOTED (2026-08-06) — 오너 [01:20] FULL 실관찰 · 원-컨펌
+## ✅ 기록 크루 배지 + 셰어 크루 라인 PROMOTED (2026-08-02) — 오너 [01:20] FULL 실관찰 · 원-컨펌
 - 관찰: 기록 로우 글리프+크루명 · 상세 크루 라인+N명 · 셰어 칩 OFF→ON 카드 라인 · **퍼-비짓 리셋 확인** (목 어멘드먼트 디폴트 충실).
 - 2b4543d2 → production **1109b0ea-9577-4892-88fb-9882b8554788** · 프로모션 해시-타이 MATCH (ysROhlxs… 양채널 동일). **롤백 플로어 전진 → 1109b0ea** (8b0d1658 은퇴).
 - **크루 클러스터 전체 클로즈** — 세션 폴더·배너·기록·셰어 라이브. 잔여 오너-워드 빌드: K2 리스토어 · 엘리베이션 차트. 외부: B3 비준 워드 · show_crew 시드 원-라인 · 월요일 (랜드마크 디자인·횡단보도).
@@ -1406,7 +1413,7 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 - **널-세이프 by construction**: 그녀 ②의 올-널 논-크루 대칭 — 3 서피스 전부 crew_name 널 = 무렌더 (조건 하나가 전체 게이트).
 - 신규 키 2 (act.crewSession·shr.crewToggle) ko+en — **파리티 906/906 MATCH**.
 
-## ✅ 크루 아크 PROMOTED (2026-08-06) — 오너 [01:00] FULL 실관찰 + 이월 캐리 · 원-컨펌
+## ✅ 크루 아크 PROMOTED (2026-08-02) — 오너 [01:00] FULL 실관찰 + 이월 캐리 · 원-컨펌
 - [01:00] 관찰: 내 프로필 "With 해윙크루" 표시 · 홈/유저 프로필 일관 · **null 침묵** (그녀 룰 필드 확인) · [이월: 저장 체크박스 · 수정 토글 · 절대 날짜 · 세션 체인].
 - 27a988d8 → production **8b0d1658-07ce-4b08-80e3-f9ce5572fe51** · 프로모션 해시-타이 MATCH (Kixv_9fs… 양채널 동일). **롤백 플로어 전진 → 8b0d1658** (95364a92 은퇴).
 - 라이브 (크루 아크 전체): 세션 폴더 (a:/c: 배지·앱솔루트 날짜·N명 참여) + /crew-session 뷰 (전 참여자 풀 K1 카드) · 크루 배너 전 서피스 ("With {name}", show_crew+프라이빗-크루 게이트) · 저장/수정 토글 · 컴포저 넛지 · 프리뷰 디둡 · fmtDateAbs.
@@ -1420,7 +1427,7 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 
 ## ~~🔼 세션 폴더 v2 STAGED — 500ee060 (커밋 38be097)~~ SUPERSEDED by c39f54db (v3)
 
-## 🗺️ 세션 폴더 v3 BUILT (STAGED 위 c39f54db) — 날짜 타이틀 + 루트-스크린 뷰 (오너 글랜스 룰 8/5)
+## 🗺️ 세션 폴더 v3 BUILT (STAGED 위 c39f54db) — 날짜 타이틀 + 루트-스크린 뷰 (오너 글랜스 룰 8/2)
 - **타이틀 초이스 (빌트)**: fmtDate 앱-와이드 컨벤션 채택 — ko "청라동 · 8월 2일"(최근 = 오늘/어제) · en "청라동 · Aug 2" — **리터럴 M/D/YY 미채택** (앱 유일의 비스포크 포맷이 될 것; fmtDate = 컴파일러-세이프 lang 기존 머시너리). tod.* 7키 딕셔너리 존치 (파리티 지불분), 컴포지션에서 제거.
 - **뷰 = 루트 스크린 /crew-session** (레저드 대안 승격): 파라미터 crewId·sessionKey·crewName · **멤버 = 포커스-리페치 파생 (useFocusEffect — run-post 복귀마다 재풀; 모달의 라이브-흡수 대체, 인-코멘트)** · 카드 탭 = 노멀 푸시 (백 = 폴더, 백백 = 크루 피드) · **v2 onDismiss+펜딩-ref 머시너리 삭제 (루트 스택이 버그 클래스를 구조로 킬)** · KudosSheet = 노멀 오버레이 복귀 · K1 머시너리 자체 인스턴스 (crew-runs 패턴 버바팀) · RunCard 네임드 익스포트 공유.
 - 폴더 카드·배지·그룹핑·프리뷰 디둡: 무접촉.
@@ -1429,40 +1436,40 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 
 ## ~~🔼 세션 폴더 리워크 STAGED — 23298d3c (커밋 393b797)~~ SUPERSEDED by 500ee060 (v2)
 
-## 🗂️ 세션 폴더 리워크 v2 BUILT (STAGED 위 500ee060) — 탭-스루 버그 + 타이틀 레이아웃 (오너 글랜스 8/5)
+## 🗂️ 세션 폴더 리워크 v2 BUILT (STAGED 위 500ee060) — 탭-스루 버그 + 타이틀 레이아웃 (오너 글랜스 8/1)
 - **버그 메커니즘 확정**: RN Modal = 내비게이션 트리 밖 네이티브 오버레이 — 모달 내 router.push가 run-post를 모달 하부 스택에 마운트 (비가시), 탭마다 적층 → 클로즈 시 일괄 노출. **픽스 = personal-info 초저 패턴 (지연-버그-② 선례)**: 모달 선-클로즈 → 푸시는 Modal 실 onDismiss에서 1회 (rAF/InteractionManager는 미드-디스미스 발화로 iOS 거부 가능) + 700ms 폴백 타이머, ref-널 = 단일 실행. **펜딩 ref = 인-플라이트 가드 겸임** — 연타 노-옵, 중복 불가.
 - **타이틀 레이아웃 (오너 룰)**: 그린 배지 슬롯 = "N명 참여" (참여가 곧 배지) · 타이틀 = 오토-컴포즈 "{area} · {요일} {시간대}" ("청라동 · 토요일 밤" — area-널 = 날짜-온리) · a: = 소형 "공지" 마커 온리, c: = 무라벨 · fmtAgo 서브 존속. **신규 키 tod.* 7종 ko+en (title.*는 러닝 접미사 — 레지스터 부적합; day.* 재사용)** — 데스크 증명 3/3 (토요일 밤 정확).
 - 아나토미 최종: [64px 미니] | 그린 N명 참여 (+공지 마커) / area·요일·시간대 / fmtAgo · 셰브런.
 
-## 🔓 그녀 8/5 트리아지 + ② 디플로이 (지각 릴레이 — verbal-rules 클래스, 즉시 레저)
+## 🔓 그녀 8/1 트리아지 + ② 디플로이 (지각 릴레이 — verbal-rules 클래스, 즉시 레저)
 - **① K2 리벨레이션: 셀프-쿠도스 서버 스위치 7/30 (v120)부터 OPEN** — 메인 쿠도스 POST가 셀프에 204, 리그레션-핀 완료. **우리 딤드-자기-하트 UX = 일주일짜리 팬텀 가능성** (베타 6번째 팬텀 후보 — 서버는 열려 있었는데 클라가 스스로 막음). **홀드된 RECON+BUILD (프로브 → K2-게이트 전 사이트 복원: run-post 토글 바·트윈 카드·crew-runs 딤 하트) = 크루 파일 이후 오너 워드에 발화.**
 - **② 퍼스널 크루 필드 LIVE**: 리스트 +3 (crew_id·crew_name·session_key) / 단건 +4 (+session_participant_count — 서버-글로벌, **피드와 바이트-매치, 클라 계산 절대 금지**). A-룰: 오너 = 4종 전부 (프라이빗 포함) · 논-멤버 = 올-널 200. **기록 배지 + 셰어 하프 완전 언블록** — 암드 빌드 게이트 노트 어멘드 (목 어멘드먼트 + ② 둘 다 성립 → 잔여 게이트 = 오너 빌드 워드 온리).
 - ③ 그녀 ④랜드마크 디자인 + ⑤횡단보도 = 월요일 (기기록 확인).
 
-## 🎨 셰어-카드 목 어멘드먼트 GRANTED (지연, 8/5) — 옵트-인 크루 라인
-- 스펙: "{크루명} · N명 참여" — **세션 런 AND 셰어 시트의 크루-표시 토글 온일 때만 렌더 · 디폴트 OFF · 타이포 = 날짜 라인 티어.** 캔버스-1:1 룰링 내 어멘드먼트 성립 — ~~암드 기록/셰어 빌드의 카드 반쪽 완전 언블록~~ **[8/5 확대: ② 퍼스널 크루 필드 동일-저녁 라이브 → 기록 배지 + 셰어 양 하프 완전 언블록 — 잔여 게이트 = 오너 빌드 워드 온리.]**
+## 🎨 셰어-카드 목 어멘드먼트 GRANTED (지연, 8/1) — 옵트-인 크루 라인
+- 스펙: "{크루명} · N명 참여" — **세션 런 AND 셰어 시트의 크루-표시 토글 온일 때만 렌더 · 디폴트 OFF · 타이포 = 날짜 라인 티어.** 캔버스-1:1 룰링 내 어멘드먼트 성립 — ~~암드 기록/셰어 빌드의 카드 반쪽 완전 언블록~~ **[8/1 확대: ② 퍼스널 크루 필드 동일-저녁 라이브 → 기록 배지 + 셰어 양 하프 완전 언블록 — 잔여 게이트 = 오너 빌드 워드 온리.]**
 
-## ⛰️ ③ ALT LIVE (지연, 8/5) — 엘리베이션 차트 언블록 → 큐드
+## ⛰️ ③ ALT LIVE (지연, 8/1) — 엘리베이션 차트 언블록 → 큐드
 - 트랙 엔드포인트 polyline[].alt — **0.1m 라운드 · 클라 미송신 트랙은 키 생략 (구 트랙 null 리드 → 차트 null-스킵 필수)** · **그녀 개런티 (테스트-핀): 고도는 거리/필터/검증 산식 무접촉 — 표시·분석 온리.**
 - **[빌드-큐] 엘리베이션-프로파일 차트**: run-detail 차트 (파크드 시드 언블록) · null-스킵 · 비주얼 폼 = 디자인-도킷 인접.
-- 그녀 노트: 8/5 메뉴 3건 당일 클로즈 · **④ 랜드마크 디자인 + ⑤ 횡단보도 = 월요일 랜딩.**
+- 그녀 노트: 8/1 메뉴 3건 당일 클로즈 · **④ 랜드마크 디자인 + ⑤ 횡단보도 = 월요일 랜딩.**
 
 ## ~~(구) 세션 폴더 리워크 STAGED — 23298d3c (커밋 393b797)~~ 위 참조 · 해시-타이 MATCH (hJW_bbOM…) · 마커 5/5 (폴더 폴백 신규 + 배지·넛지·session_key 캐리드) · **32cb5f1d 대체** (콜랩스 → 폴더+세션 뷰) · 프로덕션 = 95364a92 불변 · **게이트: 실내 글랜스 — 동일-일 페어 = 폴더 (배지·N명 참여·미니 얼굴) → 탭 = 세션 뷰 (풀 카드 2, 각자 ♥/시트) → 백 · 솔로 런 = 종전 카드 · 프리뷰 디둡 존속 · 컴포저 넛지** · 프로모션 = 실관찰 스탬프 + 원-컨펌
 
 ## ~~🔼 크루 세션-콜랩스 STAGED — 32cb5f1d (커밋 73e4b95)~~ SUPERSEDED by 23298d3c (폴더 리워크)
 
-## 📂 세션 폴더 리워크 BUILT (STAGED 위 23298d3c) — 오너+지연 조인트 디자인 8/5
+## 📂 세션 폴더 리워크 BUILT (STAGED 위 23298d3c) — 오너+지연 조인트 디자인 8/1
 - **폴더 카드** (앵커-카드 콜랩스 대체): 시각 구분 엔트리 — 64px 루트 미니 (앵커의 얼굴 = 프리뷰, 아이덴티티 클레임 아님; MapKit-프리 SVG) · a:/c: 배지 (빌트 그대로) · "N명 참여" (서버-글로벌 버바팀) · 날짜 · 셰브런. **쿠도스/댓글 푸터 무 — 안의 런들이 보유.**
-- **세션 뷰** (탭 타깃): ~~모달 초이스 — 라이브 파생 흡수 + K1 머시너리 공유~~ **[v3 8/5: 루트 스크린 승격 — 탭-스루 클래스가 모달과 함께 사망; 흡수는 포커스-리페치로 대체 (v3 엔트리 참조)]**. 전 참여자 = 풀 표준 런 카드 (각자 ♥/댓글/미디어, 신선한 스플릿 문법). 타이틀 "{crewName} · 함께 달림/공지 러닝 · N명 참여" (crewName 파라미터 신설 — 전체 보기 push에 동승). 시트는 모달 내부에도 렌더 (iOS 레이어링).
+- **세션 뷰** (탭 타깃): ~~모달 초이스 — 라이브 파생 흡수 + K1 머시너리 공유~~ **[v3 8/2: 루트 스크린 승격 — 탭-스루 클래스가 모달과 함께 사망; 흡수는 포커스-리페치로 대체 (v3 엔트리 참조)]**. 전 참여자 = 풀 표준 런 카드 (각자 ♥/댓글/미디어, 신선한 스플릿 문법). 타이틀 "{crewName} · 함께 달림/공지 러닝 · N명 참여" (crewName 파라미터 신설 — 전체 보기 push에 동승). 시트는 모달 내부에도 렌더 (iOS 레이어링).
 - **자동 by construction 인-코멘트**: session_key 단독 구동 — 리더/어드민 액션 부재·불요 (그들의 "자동이면 최선" 응답).
 - 존속 (73e4b95): 그룹핑 파생 · 배지 · 컴포저 넛지 · 프리뷰 디둡 (프리뷰 탭 = 앵커 run-post 유지 — 48px 로우는 폴더 아님, 명기). **기록-페이지 그녀-ask 불변 스탠딩.**
 - 신규 ko 하드코드: 폴더 폴백 "함께 달린 기록" + 뷰 타이틀 조합부 — 슬라이스-6 키잉 노트.
 
-## 📜 크루 세션-콜랩스 계약 INTAKE (그녀 2메시지, 8/5 릴레이) — **LIVE (실프로덕션 검증: 동일-일 크루 런 2건 = 원 c: 키 공유·비세션 null·K1 피드 상시 null·카드 셰이프 +1 필드)**
+## 📜 크루 세션-콜랩스 계약 INTAKE (그녀 2메시지, 8/1 릴레이) — **LIVE (실프로덕션 검증: 동일-일 크루 런 2건 = 원 c: 키 공유·비세션 null·K1 피드 상시 null·카드 셰이프 +1 필드)**
 - session_key (string|null) 전 크루 피드 아이템 — 세션 런 = 실키, 그 외 null · **키 공유 로우는 기존 카드에 흡수, 신규 스폰 무** · session_participant_count = 서버 글로벌 계산 (첫 로우가 진짜 "N명 참여" — 클라 계수 금지, 후속 페이지는 흡수만).
 - 키 프리픽스: **a:{id} = 공지 기반 (정밀 세션) · c:{crewId}:{date} = 동일-일 애드혹 버킷** — 배지 분화 가능. 대형 크루 아침/저녁 동일-일 = 공지-기반 스타트가 클린 스플릿 → **UX 카피로 크루장 공지 유도 (그녀 넛지)**. limit/offset·정렬·카드 셰이프 그 외 불변.
 
-## ✅ 오토-포즈 v4 + 크루 미디어 스플릿 PROMOTED (2026-08-05) — 오너 [22:15] FULL 실관찰 · 원-컨펌
+## ✅ 오토-포즈 v4 + 크루 미디어 스플릿 PROMOTED (2026-08-01) — 오너 [22:15] FULL 실관찰 · 원-컨펌
 - 관찰: 크루 피드 로우 사진/경로/시드 정상 · **한국 지도 사망** (양 서피스, 양 루트 코즈) · 전체보기 카드 루트맵 표준 문법 · **전력 질주 급정지 → ~6s (v4 스위트스팟 필드 적중)**.
 - 6238f2d9 → production **95364a92-185f-4b5e-9f02-23fcb4dbd187** · 프로모션 해시-타이 MATCH (66HKzF34… 양채널 동일). **롤백 플로어 전진 → 95364a92** (0f23a8e1 은퇴).
 - 라이브: v4 3-레인 침묵 (5s/15s/6s) · 크루 미디어 (A 루트맵 온리 / B 기록 캐스케이드) · 48px 퇴화-핏 클래스 사망.
@@ -1471,13 +1478,13 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 
 ## ~~🔼 오토-포즈 v4 + 크루-카드 미디어 STAGED — 631e0def (커밋 801ebdb)~~ SUPERSEDED by 6238f2d9 (스플릿 정정) · 해시-타이 MATCH (p8AEerNF…) · 마커 5/5 캐리드 (양 슬라이스 스트링-프리) · **신규 그룹 (프로덕션 = 0f23a8e1 플로어)** · **게이트: 실내 — 크루 카드 사진/라인/시드 (맨 서울-맵 절멸) + 아웃도어 1분 — 풀 스트라이드 급정지 = ~6s 포즈 (v4 스위트스팟; 이즈-스톱 ~5s·슬로우 워크 무오발 재글랜스)** · 프로모션 = 실관찰 스탬프 + 원-컨펌
 
-## ✅ 크루-♥ 와이어링 PROMOTED (2026-08-05) — 오너 [시각-미기입→원-컨펌 완성 (스탬프-디시플린 룰)] FULL 실관찰 · **메모 약속 지불 완료**
+## ✅ 크루-♥ 와이어링 PROMOTED (2026-08-01) — 오너 [시각-미기입→원-컨펌 완성 (스탬프-디시플린 룰)] FULL 실관찰 · **메모 약속 지불 완료**
 - 관찰: 크루 태그 런 저장 → 본인 카드 딤드 ♥+카운트 · 타 멤버 토글/리컨실/시트 정상 · 프리뷰 카운트 표시 (**초기 부재 = 스테일 번들 — 오너 자가-트리아지, 강제종료 후 정상: 클래스 룰 필드 적용 사례**) · 컨피던스 라이더: 턴 마커 신규 지형 정직 · 슬로우 워크 오발 0 · 리센터/회전 정상.
 - b6d2406b → production **0f23a8e1-c65e-4990-b396-7a679a1f0ed6** · 프로모션 해시-타이 MATCH (qY1gswRY… 양채널 동일). **롤백 플로어 전진 → 0f23a8e1** (2b150f38 은퇴).
 
-## 🧊 [빌드-큐] 후속 2건 (오너 8/5 스탬프 큐)
-- ~~① 오토-포즈 3-레인 리파인~~ **BUILT (v4, 8/5 오너 룰 스펙)**: 침묵 플로어 = 파이널-픽스 스피드 3레인 — <0.35 = 5s (정지 시그니처) · 0.35–1.0 = 15s (보행 밴드, 저속-보행 보호 유지) · **>1.0 = 6s (오너 스위트스팟 — 러닝 케이던스 2-3s에서 6s 침묵 ≈ 2-3픽스 상실 = 급정지 개연; 보행자는 구조상 이 레인 도달 불가)**. (b) 증거·기타 무접촉 · 상수 3종 필드-튜너블 · 시뮬 8/8 (급정지-from-런 +6s [v3 +15s] · 보행 밴드 존속 · 워커 런-레인 도달 불가 증명 · 기존 레짐 전부 보존). 크루-카드 미디어(②)와 동일 그룹 스테이징.
-- ~~② 크루 러닝 카드 미디어~~ **BUILT → REWORKED (8/5, 오너 스플릿 정정 — 801ebdb는 옳은 캐스케이드를 그른 서피스에)**:
+## 🧊 [빌드-큐] 후속 2건 (오너 8/1 스탬프 큐)
+- ~~① 오토-포즈 3-레인 리파인~~ **BUILT (v4, 8/1 오너 룰 스펙)**: 침묵 플로어 = 파이널-픽스 스피드 3레인 — <0.35 = 5s (정지 시그니처) · 0.35–1.0 = 15s (보행 밴드, 저속-보행 보호 유지) · **>1.0 = 6s (오너 스위트스팟 — 러닝 케이던스 2-3s에서 6s 침묵 ≈ 2-3픽스 상실 = 급정지 개연; 보행자는 구조상 이 레인 도달 불가)**. (b) 증거·기타 무접촉 · 상수 3종 필드-튜너블 · 시뮬 8/8 (급정지-from-런 +6s [v3 +15s] · 보행 밴드 존속 · 워커 런-레인 도달 불가 증명 · 기존 레짐 전부 보존). 크루-카드 미디어(②)와 동일 그룹 스테이징.
+- ~~② 크루 러닝 카드 미디어~~ **BUILT → REWORKED (8/1, 오너 스플릿 정정 — 801ebdb는 옳은 캐스케이드를 그른 서피스에)**:
   - **A. crew-runs (전체보기) = 루트 맵 온리** — 포토-퍼스트 제거, 표준 런-카드 라인 문법; 지오메트리 하드-전제 존속 (트랙리스 = 시드 아트, 널-폴리라인 RealMap 서울-디폴트 홀 사망 유지).
   - **B. crew-detail 크루 러닝 피드 로우 = 기록-카드 캐스케이드** (코리아 맵의 실거처): SafeImage(photo_thumb) → 루트-셰이프드 MiniMap SVG → 시드. **이 서피스의 루트 코즈 (신규 발굴): RealMap의 고정 24px onMapReady edgePadding이 48px 프레임에서 퇴화 (24+24 ≥ 프레임) → MapKit이 논-포지티브 공간에 핏 → 극단 줌아웃, cacheEnabled가 스냅샷.** 픽스 = 48px에서 MapKit 비사용 (MiniMap SVG) — 퇴화-핏 클래스 자체 사망. [인접-리스크 관찰, 무접촉: 기록 로우 62px RealMap 폴백도 동일 클래스 유효폭 14px — 리디자인 도킷에서 재방문.]
   - 페이로드 오딧 (원 빌드에서): photo_thumb+polyline_thumb 양쪽 라이브 (지연 ask 불요). v4와 동일 그룹 스테이징 (631e0def 후속 대체).
@@ -1512,7 +1519,7 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 - ⑤ v1 @멘션 = 플레인 텍스트 — **태퍼블 멘션 = 레저드 레이터 아이템**.
 - 라이더 (리콘 확정분): 댓글 페이지네이션 필수 동승 (부모-자식 페이지 분리 시 사일런트-롱 스레드) · 신규 카피 (익스팬더·칩) ko 하드코드 예정 — 슬라이스-6 키잉 노트 예약.
 
-## ✅ LA 평균 + 저속-보행 v3 + 댓글 타임스탬프/답글 PROMOTED (2026-08-05) — 오너 [20:45] FULL 실관찰 · 원-컨펌
+## ✅ LA 평균 + 저속-보행 v3 + 댓글 타임스탬프/답글 PROMOTED (2026-08-01) — 오너 [20:45] FULL 실관찰 · 원-컨펌
 - [20:45] 관찰: 답글 왕복 (칩·접힘·확장·@프리필·삭제 캐스케이드) 정상 · 댓글 시각 양 서피스 · 락-스크린 평균 유지 · **느린 걸음 오발 0회 (v3 필드 확인) + 정상 정지 ~3-5s + 큐**.
 - 4f4e2564 → production **2b150f38-6733-4425-9e68-beb36431ea57** · 프로모션 해시-타이 MATCH (i3386mTs… 양채널 동일). **롤백 플로어 전진 → 2b150f38** (bd25b00a 은퇴).
 - 라이브: LA 배너 평균 페이스 · 저속-보행 스피드-가드 듀얼 레인 · 댓글 타임스탬프 (run-post+course-post) · **답글 피처 풀 (인스타그램 패턴)** · §5 톱-레벨 error_code 트랜스포트.
@@ -1526,7 +1533,7 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 ## ~~🔼 LA 평균 페이스 스왑 STAGED — cfb00e7b (커밋 0df4244)~~ SUPERSEDED by 958c381c (+ 저속-보행 v3)
 
 ## 🚶 오토-포즈 저속-보행 오발 픽스 v3 BUILT (STAGED 위 958c381c) — 스피드-가드 듀얼 레인
-- 필드 (오너 [8/5]): 저속 보행 중 오토-포즈 반복 오발. **메커니즘 확정: 침묵 레인 (a) 단독-주범** — distanceInterval 5m ÷ 보행 0.5-0.8 m/s = 자연 픽스 갭 6-10s > 증거 5s → 티커가 모든 갭을 정지로 오독 (티커는 스피드 무참조였음). (b) 협곡 레인도 저속-보행 기여 가능 (오차원 내 5m 스텝 + 스피드 브레이크 1.0 미달) — 동시 픽스.
+- 필드 (오너 [8/1]): 저속 보행 중 오토-포즈 반복 오발. **메커니즘 확정: 침묵 레인 (a) 단독-주범** — distanceInterval 5m ÷ 보행 0.5-0.8 m/s = 자연 픽스 갭 6-10s > 증거 5s → 티커가 모든 갭을 정지로 오독 (티커는 스피드 무참조였음). (b) 협곡 레인도 저속-보행 기여 가능 (오차원 내 5m 스텝 + 스피드 브레이크 1.0 미달) — 동시 픽스.
 - **픽스 (스피드-가드 채택 — 임계 연장/interval 인하 대비 트레이드 우위): lastSpeedMps 미러 듀얼 레인** — 라스트 픽스가 이동 발화 (≥ WALK_SUPPRESS_MPS 0.35) → 침묵 SILENCE_SLOW_MS 15s (> 5/0.35 ≈ 14.3s 최저-보행 갭) 요구; 슬로우/무효 라스트 스피드 (진짜 정지 시그니처) = 5s 패스트 레인 유지. (b) 증거-브레이크 1.0 → 0.35 (더 엄격한 리셋 = 오발 안전 방향; 협곡 진정지는 근제로 스피드로 축적 유지). 상수 2종 필드-튜너블.
 - **트루-스톱 레이턴시**: 흔한 정지 (파이널 픽스 슬로우/무효) = 종전 5s 불변 ([Stop test] 3-4s 체감 보존) · 급정지-파이널-픽스-패스트 희귀 케이스 = 최악 15s (정직 명기; 종전엔 5s). [Stop test] 패스 = 노멀 게이트+진정지 레짐 존속 — 본 픽스는 추가 레짐, 무회귀 (시뮬 6/6: 저속 0.5/0.7 무발화 · 진정지 +5s · 급정지 +15s · 저속 협곡 무발화 · 협곡 진정지 보존).
 - 매뉴얼 포즈·리줌 그레이스·토글 무접촉. 검증 = 아웃도어: 저속 산책 무오발 + 진정지 3-5s 재확인.
@@ -2317,7 +2324,7 @@ Execution lane: all four writable via ASC API on owner-provided content — one 
 **MAJOR CORRECTION — the "her 1.5km cue SPOKE on her walk home" event exists in NEITHER side's records.** Her thread shows only the opposite: 0.63km zero cues · #11 pocket walk start/end-only · 이준's dry run start-then-silence. The owner's recollection was a CONFLATION (her 1.5-SETTING report + an assumed fire). **STRUCK with this correction as the evidence:** "the audio loop VERIFIED outdoors" · "her retest leg substantially closes" · "her device fills the matrix row." **WHAT SURVIVES:** the twin-detent finding — her interval genuinely WAS 1.5 (the invisible-settings pattern's second instance stands); the FIRING claim dies. **TRUE STATE:** foreground fire NEVER field-observed since the fix shipped (the [23:15]-era annotation's caution was right all along) · **scenario C: NEVER observed, period** · the #12 session-rider conditional RE-OPENS, gated on the walk's scenario-C leg. **THE CHAIN RESTORES to its pre-conflation shape:** the OWNER's fix-walk is the first real test — start cue naming the interval → foreground 0.5km split → scenario C (locked-pocket split) → mid-utterance cut; her retest follows his green, as originally sequenced. **Her ruling, verbatim: "Don't gate on a memory neither of us has; gate on the walk."** The rescinded-entry lesson gains its SECOND instance — this one caught by the PARTNER's audit: the loop working across the team boundary.
 ## 🏃 런닝 동작 FAMILY — SITTING RESULTS + RULINGS (2026-07-23)
 
-**Sitting:** tabs SILENT → **the ungated control group convicts DEVICE-LEVEL suppression** (owner checking 시스템 햅틱 + Low Power as suppressor) · **keep-awake VERIFIED (60s no dim) — toggle CLOSES** · auto-pause dead-proof bracket arrived "[taken/skipped]" — as-arrived · hold-stop no buzz (consistent w/ device suppression; re-test rides the device fix; ending-method bracket "[hold-stop/button/LA]" as-arrived). **RULINGS:** ① **자동 일시정지 STOPS BEING SOLD** — row hidden until built (a dead ON-default switch is a lie); the BUILD ledgered as a real post-gate feature item, **MUST route through togglePause** (clean-gap contract inheritance, the audit's constraint); fix = row removal + ledger, XS, **rides the error-lane slice's commit**. ② **Haptics: NO code fix ships** — device-level per the control group; owner re-tests tabs+hold-stop post 시스템햅틱/충전 flip; verdict rides his follow-up; gated-path diagnosis ONLY if tabs buzz and hold-stop doesn't. ③ ~~**Enumeration gap RULED: a small haptics slice ships pre-gate** — countdown-go (Light) + split-crossing buzz (the threshold event the audio watcher already fires — one event, two channels); **slotted behind the error-lane slice**; hold-stop's sites stay.~~ **[STRUCK 8/8, owner word (FOUR CLOSES ③): superseded — never built, no field demand; returns as a fresh item if feedback asks.]** ④ Keep-awake VERIFIED — closed.
+**Sitting:** tabs SILENT → **the ungated control group convicts DEVICE-LEVEL suppression** (owner checking 시스템 햅틱 + Low Power as suppressor) · **keep-awake VERIFIED (60s no dim) — toggle CLOSES** · auto-pause dead-proof bracket arrived "[taken/skipped]" — as-arrived · hold-stop no buzz (consistent w/ device suppression; re-test rides the device fix; ending-method bracket "[hold-stop/button/LA]" as-arrived). **RULINGS:** ① **자동 일시정지 STOPS BEING SOLD** — row hidden until built (a dead ON-default switch is a lie); the BUILD ledgered as a real post-gate feature item, **MUST route through togglePause** (clean-gap contract inheritance, the audit's constraint); fix = row removal + ledger, XS, **rides the error-lane slice's commit**. ② **Haptics: NO code fix ships** — device-level per the control group; owner re-tests tabs+hold-stop post 시스템햅틱/충전 flip; verdict rides his follow-up; gated-path diagnosis ONLY if tabs buzz and hold-stop doesn't. ③ ~~**Enumeration gap RULED: a small haptics slice ships pre-gate** — countdown-go (Light) + split-crossing buzz (the threshold event the audio watcher already fires — one event, two channels); **slotted behind the error-lane slice**; hold-stop's sites stay.~~ **[STRUCK 8/3, owner word (FOUR CLOSES ③): superseded — never built, no field demand; returns as a fresh item if feedback asks.]** ④ Keep-awake VERIFIED — closed.
 
 ## 📏 SMALL-ASK PHYSICS (지연, ledgered 2026-07-23) + ERROR-LANE SLICE QUEUED
 
