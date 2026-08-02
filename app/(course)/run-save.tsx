@@ -39,6 +39,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { RealMap } from '@/components/real-map';
 import { Icon } from '@/components/ui';
+import { errorMessage } from '@/lib/error-copy';
 import { distUnit, fmtDist, fmtDuration, fmtPaceIn, fmtWhen, paceUnit, timeTitle } from '@/lib/run-format';
 import { MAX_RUN_PHOTOS, reencodeForUpload } from '@/lib/run-photos';
 import { maybeWriteRunToHealth } from '@/lib/health';
@@ -248,7 +249,7 @@ export default function RunSaveScreen() {
       // still in memory AND on disk (pending-run crash copy) — so 다시 시도
       // re-attempts the identical POST with the current typed fields.
       setSaving(false);
-      Alert.alert(t('runSave.saveFailTitle'), e instanceof Error ? e.message : t('runSave.saveFailBody'), [
+      Alert.alert(t('runSave.saveFailTitle'), errorMessage(e), [
         { text: t('common.later'), style: 'cancel' },
         { text: t('common.retry'), onPress: () => handleSave() },
       ]);

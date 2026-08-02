@@ -47,6 +47,7 @@ import { Avatar } from '@/components/avatar';
 import { KudosSheet } from '@/components/kudos-sheet';
 import { MediaCarousel } from '@/components/media-carousel';
 import { PhotoViewer } from '@/components/photo-viewer';
+import { errorMessage } from '@/lib/error-copy';
 import { setRouteMap } from '@/store/route-map';
 import { Icon } from '@/components/ui';
 import { ScreenshotShareOffer } from '@/components/screenshot-share-offer';
@@ -179,7 +180,7 @@ export default function RunPostScreen() {
       router.replace('/(tabs)/records' as never);
     } catch (e: unknown) {
       setDeleting(false);
-      Alert.alert(t('annd.delFailT'), e instanceof Error ? e.message : t('runSave.saveFailBody'));
+      Alert.alert(t('annd.delFailT'), errorMessage(e));
     }
   }
   const [reportReason, setReportReason] = useState<ReportReason | null>(null);
@@ -201,7 +202,7 @@ export default function RunPostScreen() {
       })
       .catch((e: unknown) => {
         setReportBusy(false);
-        Alert.alert(t('up.reportFail'), e instanceof Error ? e.message : t('auth.tryLater'));
+        Alert.alert(t('up.reportFail'), errorMessage(e));
       });
   }
 

@@ -13,6 +13,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useState } from 'react';
 
 import { apiFetch } from '@/lib/api';
+import { errorMessage } from '@/lib/error-copy';
 
 // identity-only cache (#8 correction): nickname/avatar are lock-served to
 // every viewer — the ONLY leak-free cacheable subset. Target-keyed (not
@@ -100,7 +101,7 @@ export function useUserProfile(uid: string | null) {
         AsyncStorage.setItem(identKey(uid), JSON.stringify({ nickname: p.nickname, avatar_url: p.avatar_url })).catch(() => {});
       })
       .catch((e: unknown) => {
-        if (!cancelled) setError(e instanceof Error ? e.message : '프로필을 불러올 수 없어요');
+        if (!cancelled) setError(errorMessage(e));
       })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };

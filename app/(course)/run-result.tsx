@@ -22,6 +22,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useNavigation } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { errorMessage } from '@/lib/error-copy';
 import { t, tf, useT } from '@/lib/i18n';
 import {
   ActivityIndicator,
@@ -153,7 +154,7 @@ export default function RunResultScreen() {
       maybeWriteRunToHealth(run);
       if (saved.new_records && saved.new_records.length > 0) setPbRecords(saved.new_records);
     } catch (e: unknown) {
-      setSaveError(e instanceof Error ? e.message : t('res.saveFail'));
+      setSaveError(errorMessage(e));
       setSaveState('error');
     } finally {
       inFlightRef.current = false;

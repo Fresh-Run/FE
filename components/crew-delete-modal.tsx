@@ -11,6 +11,7 @@
  */
 import { router } from 'expo-router';
 import React, { useState } from 'react';
+import { errorMessage } from '@/lib/error-copy';
 import { t, tf } from '@/lib/i18n';
 import { ActivityIndicator, Alert, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -41,7 +42,7 @@ export function CrewDeleteModal({ visible, crewId, crewName, memberCount, onClos
       router.replace('/(tabs)/community' as never);
     } catch (e: unknown) {
       setDeleting(false);
-      Alert.alert(t('crw.deleteFail'), e instanceof Error ? e.message : t('runSave.saveFailBody'));
+      Alert.alert(t('crw.deleteFail'), errorMessage(e));
     }
   }
 

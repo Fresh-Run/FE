@@ -24,6 +24,7 @@ import { Avatar } from '@/components/avatar';
 import { Icon } from '@/components/ui';
 import { useFollowList, type FollowUser } from '@/hooks/use-follow-list';
 import { ApiError, apiFetch, apiRequest } from '@/lib/api';
+import { errorMessage } from '@/lib/error-copy';
 import { openProfile } from '@/lib/profile-nav';
 import { radius as R, shadows, spacing as S, type Tokens, DENSE_MAX_FONT_SCALE} from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
@@ -75,7 +76,7 @@ export default function FollowListScreen() {
         .catch((e: unknown) => {
           setOverlay(p => ({ ...p, [u.user_id]: cur })); // rollback
           usePendingFollows.getState().add(u.user_id);
-          Alert.alert(t('fr.failTitle'), e instanceof Error ? e.message : t('runSave.saveFailBody'));
+          Alert.alert(t('fr.failTitle'), errorMessage(e));
         });
       return;
     }
@@ -84,7 +85,7 @@ export default function FollowListScreen() {
       apiFetch<void>(`/api/users/${u.user_id}/follow`, { method: 'DELETE' })
         .catch((e: unknown) => {
           setOverlay(p => ({ ...p, [u.user_id]: cur })); // rollback
-          Alert.alert(t('fr.failTitle'), e instanceof Error ? e.message : t('runSave.saveFailBody'));
+          Alert.alert(t('fr.failTitle'), errorMessage(e));
         });
       return;
     }
@@ -107,7 +108,7 @@ export default function FollowListScreen() {
           return;
         }
         setOverlay(p => ({ ...p, [u.user_id]: cur })); // rollback
-        Alert.alert(t('fr.failTitle'), e instanceof Error ? e.message : t('runSave.saveFailBody'));
+        Alert.alert(t('fr.failTitle'), errorMessage(e));
       });
   }, [stateFor]);
 
@@ -126,7 +127,7 @@ export default function FollowListScreen() {
             apiFetch<void>(`/api/me/followers/${u.user_id}`, { method: 'DELETE' })
               .catch((e: unknown) => {
                 setRemoved(p => { const n = new Set(p); n.delete(u.user_id); return n; }); // rollback
-                Alert.alert(t('fl.removeFail'), e instanceof Error ? e.message : t('runSave.saveFailBody'));
+                Alert.alert(t('fl.removeFail'), errorMessage(e));
               });
           },
         },

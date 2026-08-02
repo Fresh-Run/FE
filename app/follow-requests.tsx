@@ -23,6 +23,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/avatar';
 import { Icon } from '@/components/ui';
+import { errorMessage } from '@/lib/error-copy';
 import { listFollowRequests, respondFollowRequest, type FollowRequestItem } from '@/lib/profile-api';
 import { openProfile } from '@/lib/profile-nav';
 import { fmtWhen } from '@/lib/run-format';
@@ -53,7 +54,7 @@ export default function FollowRequestsScreen() {
       // 404 = already handled elsewhere — refetch shows the truth
       load();
       Alert.alert(approve ? t('fq.approveFail') : t('fq.rejectFail'),
-        e instanceof Error ? e.message : t('auth.tryLater'));
+        errorMessage(e));
     } finally {
       setBusyId(null);
     }

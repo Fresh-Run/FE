@@ -10,6 +10,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useState } from 'react';
 
 import { apiFetch } from '@/lib/api';
+import { errorMessage } from '@/lib/error-copy';
 import { useStore } from '@/store/use-store';
 
 const cacheKey = (uid: string) => `@fr_myprofile:${uid}`;
@@ -104,7 +105,7 @@ export function useMyPublicProfile() {
         AsyncStorage.setItem(cacheKey(uid), JSON.stringify({ profile: fresh, runs: runRows })).catch(() => {});
       } catch (e: unknown) {
         // cached paint stands on a refetch miss — error only on a blank screen
-        if (!cancelled && !painted) setError(e instanceof Error ? e.message : '프로필을 불러올 수 없어요');
+        if (!cancelled && !painted) setError(errorMessage(e));
       } finally {
         if (!cancelled) setLoading(false);
       }

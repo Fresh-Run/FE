@@ -64,6 +64,7 @@ import {
   type RunSharePayload,
 } from '@/lib/chat-api';
 import { Avatar } from '@/components/avatar';
+import { errorMessage } from '@/lib/error-copy';
 import { openProfile } from '@/lib/profile-nav';
 import { apiFetch } from '@/lib/api';
 import { distUnit, fmtDist, fmtDuration, fmtPaceIn, fmtWhen, paceUnit } from '@/lib/run-format';
@@ -216,7 +217,7 @@ export default function CrewChatScreen() {
       setMessages(prev => prev && !prev.some(m => m.id === msg.id) ? [msg, ...prev] : prev);
       setSharePickerOpen(false);
     } catch (e: unknown) {
-      Alert.alert(t('chat.shareFail'), e instanceof Error ? e.message : t('auth.tryLater'));
+      Alert.alert(t('chat.shareFail'), errorMessage(e));
     } finally {
       setSharingId(null);
     }
@@ -256,7 +257,7 @@ export default function CrewChatScreen() {
             await deleteMessage(crewId!, m.id);
             setMessages(prev => prev?.map(x => x.id === m.id ? { ...x, deleted: true, content: null } : x) ?? null);
           } catch (e: unknown) {
-            Alert.alert(t('annd.delFailT'), e instanceof Error ? e.message : t('auth.tryLater'));
+            Alert.alert(t('annd.delFailT'), errorMessage(e));
           }
         },
       },

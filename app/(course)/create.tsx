@@ -16,6 +16,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { errorMessage } from '@/lib/error-copy';
 import { t, tf } from '@/lib/i18n';
 import {
   ActivityIndicator,
@@ -344,7 +345,7 @@ export default function CreateScreen() {
         // here, unit-aware, from the server's authoritative min.
         setGenError(tf('crt.loopTooShort', { d: `${fmtDist(e.minTargetKm, units, 1)}${distUnit(units)}` }));
       } else {
-        setGenError(e instanceof Error ? e.message : t('crt.genFail'));
+        setGenError(errorMessage(e));
       }
       setViewState('form');
     } finally {

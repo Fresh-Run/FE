@@ -6,6 +6,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import React, { useCallback, useRef, useState } from 'react';
+import { errorMessage } from '@/lib/error-copy';
 import { t, tf, useLang, type StringKey } from '@/lib/i18n';
 import {
   ActivityIndicator,
@@ -209,7 +210,7 @@ export default function CrewDetailScreen() {
       await uploadCrewImage(crew!.id, kind, croppedUri); // crop output = re-encoded, EXIF-free
       refetch();
     } catch (e: unknown) {
-      Alert.alert(kind === 'cover' ? t('crw.coverFail') : t('crw.iconFail'), e instanceof Error ? e.message : t('auth.tryLater'));
+      Alert.alert(kind === 'cover' ? t('crw.coverFail') : t('crw.iconFail'), errorMessage(e));
     } finally {
       setImgBusy(null);
     }
@@ -304,7 +305,7 @@ export default function CrewDetailScreen() {
       }
       refetch();
     } catch (e: unknown) {
-      setMutErr(e instanceof Error ? e.message : t('crw.joinFail'));
+      setMutErr(errorMessage(e));
     } finally {
       setBusy(false);
     }
@@ -324,7 +325,7 @@ export default function CrewDetailScreen() {
             await cancelJoinRequest(crew.id);
             refetch();
           } catch (e: unknown) {
-            setMutErr(e instanceof Error ? e.message : t('crw.cancelFail'));
+            setMutErr(errorMessage(e));
           } finally {
             setBusy(false);
           }
@@ -353,7 +354,7 @@ export default function CrewDetailScreen() {
               await leaveCrew(crew.id);
               router.back();
             } catch (e: unknown) {
-              setMutErr(e instanceof Error ? e.message : t('crw.leaveFail'));
+              setMutErr(errorMessage(e));
               setBusy(false);
             }
           },

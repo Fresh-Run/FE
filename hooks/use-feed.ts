@@ -16,6 +16,7 @@ import {
   type NearbyRun,
 } from '@/lib/feed-api';
 import { ApiError } from '@/lib/api';
+import { errorMessage } from '@/lib/error-copy';
 import type { Coordinate } from '@/types';
 
 const PAGE = 20; // server default page size (limit≤100)
@@ -45,7 +46,7 @@ export function useFeed() {
       setItems(page);
       setHasMore(page.length > 0);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : '피드를 불러올 수 없어요');
+      setError(errorMessage(e));
     } finally {
       busyRef.current = false;
       setLoading(false);
@@ -136,7 +137,7 @@ export function useNearbyFeed(coord: Coordinate | null, refreshKey = 0) {
         // koreaOnly rides WITH error (the render chain enters on error, then
         // branches) — clearing error here would strand the UI on the spinner
         if (e instanceof ApiError && e.status === 400 && outsideKorea(coord)) setKoreaOnly(true);
-        setError(e instanceof Error ? e.message : '주변 러닝을 불러올 수 없어요');
+        setError(errorMessage(e));
       })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };

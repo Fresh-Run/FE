@@ -22,6 +22,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Avatar } from '@/components/avatar';
 import { Icon } from '@/components/ui';
 import { listBlocks, unblockUser, type BlockedUser } from '@/lib/blocks-api';
+import { errorMessage } from '@/lib/error-copy';
 import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { t, tf, useT } from '@/lib/i18n';
@@ -56,7 +57,7 @@ export default function BlockListScreen() {
             setRemoved(p => new Set(p).add(u.user_id)); // optimistic
             unblockUser(u.user_id).catch((e: unknown) => {
               setRemoved(p => { const n = new Set(p); n.delete(u.user_id); return n; }); // rollback
-              Alert.alert(t('bl.unblockFail'), e instanceof Error ? e.message : t('auth.tryLater'));
+              Alert.alert(t('bl.unblockFail'), errorMessage(e));
             });
           },
         },

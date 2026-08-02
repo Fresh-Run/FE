@@ -36,6 +36,7 @@ import {
   updateAnnouncement,
   type AnnouncementInput,
 } from '@/lib/announcements-api';
+import { errorMessage } from '@/lib/error-copy';
 import { radius as R, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { t } from '@/lib/i18n';
@@ -141,7 +142,7 @@ export default function AnnouncementComposeScreen() {
       else await createAnnouncement(crewId, input);
       router.back();
     } catch (e: unknown) {
-      Alert.alert(editing ? t('annc.editFail') : t('annc.postFail'), e instanceof Error ? e.message : t('auth.tryLater'));
+      Alert.alert(editing ? t('annc.editFail') : t('annc.postFail'), errorMessage(e));
     } finally {
       setSubmitting(false);
     }

@@ -23,6 +23,7 @@
 import { useFocusEffect } from '@react-navigation/native';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useState } from 'react';
+import { errorMessage } from '@/lib/error-copy';
 import { t, tf } from '@/lib/i18n';
 import {
   ActivityIndicator,
@@ -113,7 +114,7 @@ export default function CrewAdminScreen() {
         message: tf('crw.inviteMsg', { name: crew.name, code }),
       });
     } catch (e: unknown) {
-      Alert.alert(t('crw.inviteCodeErr'), e instanceof Error ? e.message : t('runSave.saveFailBody'));
+      Alert.alert(t('crw.inviteCodeErr'), errorMessage(e));
     } finally {
       setInviteBusy(false);
     }
@@ -133,7 +134,7 @@ export default function CrewAdminScreen() {
             try {
               setInviteCode(await issueInviteCode(crewId));
             } catch (e: unknown) {
-              Alert.alert(t('crw.regenFail'), e instanceof Error ? e.message : t('runSave.saveFailBody'));
+              Alert.alert(t('crw.regenFail'), errorMessage(e));
             } finally {
               setInviteBusy(false);
             }
@@ -167,7 +168,7 @@ export default function CrewAdminScreen() {
               await leaveCrew(crewId!);
               router.dismissAll?.(); // pop hub + crew-detail → 커뮤니티 (focus-refetch drops the crew; crew-edit delete precedent)
             } catch (e: unknown) {
-              Alert.alert(t('crw.leaveFailT'), e instanceof Error ? e.message : t('auth.tryLater'));
+              Alert.alert(t('crw.leaveFailT'), errorMessage(e));
               setLeaving(false);
             }
           },

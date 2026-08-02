@@ -33,6 +33,7 @@ import { AvatarCrop, type CropSource } from '@/components/avatar-crop';
 import { Icon } from '@/components/ui';
 import { NumberWheelRow } from '@/components/wheel-sheet';
 import { ApiError } from '@/lib/api';
+import { errorMessage } from '@/lib/error-copy';
 import { fetchBodyMassKg } from '@/lib/health';
 import { useHealth } from '@/store/use-health';
 import { uploadAvatar } from '@/lib/avatar-api';
@@ -232,7 +233,7 @@ export default function PersonalInfoScreen() {
       await updateProfile({ avatar_url: url }); // single-field (partial-PATCH standard)
       setPhotoUrl(url); // write-through: 홈/프로필 paint it immediately
     } catch (e: unknown) {
-      Alert.alert('사진 업로드 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요');
+      Alert.alert('사진 업로드 실패', errorMessage(e));
     } finally {
       setUploadingPhoto(false);
     }
@@ -248,7 +249,7 @@ export default function PersonalInfoScreen() {
       await updateProfile({ avatar_url: null }); // null-as-removal, single-field (probed)
       setPhotoUrl(null); // write-through — initials return everywhere
     } catch (e: unknown) {
-      Alert.alert('사진 삭제 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요');
+      Alert.alert('사진 삭제 실패', errorMessage(e));
     } finally {
       setUploadingPhoto(false);
     }
@@ -325,7 +326,7 @@ export default function PersonalInfoScreen() {
       if (e instanceof ApiError && e.status === 409) {
         setNameError('이미 사용 중인 닉네임이에요');
       } else {
-        Alert.alert('저장 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요');
+        Alert.alert('저장 실패', errorMessage(e));
       }
     } finally {
       setSaving(false);

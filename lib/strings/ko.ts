@@ -723,6 +723,26 @@ export const ko = {
   'act.crewSession': '크루 세션',
   'shr.crewToggle': '크루명',  // 8/6 스플릿 — 단일 '크루 표시' 칩이 크루명/참여인원 둘로
   'shr.crewCount': '참여인원',
+  // ── G 에러-카피 컨벤션 (8/8, §5) — errorMessage(e) 전용 ──
+  'err.alreadyMember': '이미 가입한 크루예요',
+  'err.alreadyRequested': '이미 신청했어요',
+  'err.rsvpClosed': '참석 신청이 마감됐어요',
+  'err.crewOwner': '크루장은 먼저 크루를 넘기거나 삭제해야 해요',
+  'err.demoAccount': '데모 계정에서는 사용할 수 없어요',
+  'err.likesDisabled': '좋아요가 꺼진 게시물이에요',
+  'err.commentsDisabled': '댓글이 꺼진 게시물이에요',
+  'err.followPending': '팔로우 요청이 대기 중이에요',
+  'err.routeGenFailed': '경로 생성에 실패했어요. 조건을 바꿔 다시 시도해 주세요.',
+  'err.routeGenBusy': '코스 생성이 잠시 혼잡해요. 잠시 후 다시 시도해 주세요.',
+  'err.serverError': '일시적인 서버 오류예요. 잠시 후 다시 시도해 주세요.',
+  'err.badRequest': '요청을 처리하지 못했어요. 다시 시도해 주세요.',
+  'err.invalidInput': '입력값을 확인해 주세요.',
+  'err.fieldMissing': '{field} 값이 비어 있어요',
+  'err.fieldTooLong': '{field} 값이 너무 길어요',
+  'err.fieldInvalid': '{field} 값을 확인해 주세요',
+  'err.network': '네트워크 연결을 확인해 주세요.',
+  'err.timeout': '요청 시간이 초과됐어요. 다시 시도해 주세요.',
+  'ks.me': '나', // kudos-시트 셀프-로우 배지 (8/8 라이더)
   'rc.withCrew': 'With {name}',  // 8/5 오너 카피 룰링 — 양 로케일 동일 (조사 이슈 해소)
   'runSave.showCrew': '피드에 크루 표시',
   'rp.viewReplies': '답글 {n}개 보기',

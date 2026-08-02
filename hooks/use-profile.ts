@@ -9,6 +9,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { ApiError, apiFetch } from '@/lib/api';
+import { errorMessage } from '@/lib/error-copy';
 import { supabase } from '@/lib/supabase';
 
 export type Profile = {
@@ -79,7 +80,7 @@ export function useProfile() {
         hasDataRef.current = true;
       } else if (firstLoad) {
         const e = profileRes.reason;
-        setError(e instanceof Error ? e.message : '프로필을 불러올 수 없어요');
+        setError(errorMessage(e));
         setLoading(false);
         return;
       }

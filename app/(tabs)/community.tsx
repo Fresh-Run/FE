@@ -2,6 +2,7 @@
  * 커뮤니티 tab — crew browse + my crews.
  */
 import { useFocusEffect } from '@react-navigation/native';
+import { errorMessage } from '@/lib/error-copy';
 import { regionName } from '@/lib/korea-regions';
 import { router } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -346,7 +347,7 @@ function DiscoverTab() {
         Alert.alert(t('com.joinFail'), t('crw.alreadyJoined'));
       }
     } catch (e: unknown) {
-      Alert.alert(t('com.joinFail'), e instanceof Error ? e.message : t('runSave.saveFailBody'));
+      Alert.alert(t('com.joinFail'), errorMessage(e));
     }
   }
 
@@ -455,7 +456,7 @@ function InviteCodeSheet({
       const row = await previewCrewByCode(code);
       setPreview({ ...row, join_policy: (row.join_policy as 'open' | 'approval') ?? 'open' } as unknown as Crew);
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : '';
+      const msg = errorMessage(e);
       setError(msg.includes('(404)') || msg.includes('찾을 수') ? t('com.codeCheck') : msg || t('com.codeCheck'));
     } finally {
       setBusy(false);
@@ -471,7 +472,7 @@ function InviteCodeSheet({
       close();
       onJoined(joined.id);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : t('crw.joinFail'));
+      setError(errorMessage(e));
       setBusy(false);
     }
   }

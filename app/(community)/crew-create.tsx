@@ -14,6 +14,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import * as Location from 'expo-location';
 import { router } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { errorMessage } from '@/lib/error-copy';
 import { t, tf, type StringKey } from '@/lib/i18n';
 import {
   ActivityIndicator,
@@ -312,7 +313,7 @@ export default function CrewCreateScreen() {
       setCreated(crew);
     } catch (e: unknown) {
       // 403 premium_required arrives verbatim via ApiError (approved)
-      Alert.alert(t('crw.createFailTitle'), e instanceof Error ? e.message : t('runSave.saveFailBody'));
+      Alert.alert(t('crw.createFailTitle'), errorMessage(e));
     } finally {
       setBusy(false);
     }

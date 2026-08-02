@@ -34,6 +34,7 @@ import { AvatarCrop, type CropSource } from '@/components/avatar-crop';
 import { Button, Icon, Input, Text } from '@/components/ui';
 import { useTokens } from '@/hooks/use-tokens';
 import { ApiError } from '@/lib/api';
+import { errorMessage } from '@/lib/error-copy';
 import { uploadAvatar } from '@/lib/avatar-api';
 import { updateProfile } from '@/lib/profile-api';
 import { useLocalProfile } from '@/store/use-local-profile';
@@ -143,7 +144,7 @@ export default function OnboardingScreen() {
         setStep(1);
         setNameError(tx('onb.nickTaken'));
       } else {
-        setNameError(e instanceof Error ? e.message : tx('onb.saveFail'));
+        setNameError(errorMessage(e));
         setStep(1);
       }
     } finally {

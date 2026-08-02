@@ -711,6 +711,26 @@ export const en: Record<keyof typeof ko, string> = {
   'act.crewSession': 'Crew session',
   'shr.crewToggle': 'Crew name', // 8/6 split — the single chip became name/count pair
   'shr.crewCount': 'Participants',
+  // ── G error-copy convention (8/8, §5) — errorMessage(e) only ──
+  'err.alreadyMember': 'You are already a member of this crew',
+  'err.alreadyRequested': 'Already requested',
+  'err.rsvpClosed': 'RSVP is closed for this meetup',
+  'err.crewOwner': 'Transfer or delete your crew first',
+  'err.demoAccount': 'Not available on the demo account',
+  'err.likesDisabled': 'Likes are turned off for this post',
+  'err.commentsDisabled': 'Comments are turned off for this post',
+  'err.followPending': 'Your follow request is pending',
+  'err.routeGenFailed': 'Route generation failed — try again with different settings.',
+  'err.routeGenBusy': 'Route generation is busy — please try again shortly.', // her API-guide line verbatim
+  'err.serverError': 'A temporary server error occurred — please try again shortly.',
+  'err.badRequest': 'The request could not be completed. Please try again.',
+  'err.invalidInput': 'Please check your input.',
+  'err.fieldMissing': 'The {field} field is required',
+  'err.fieldTooLong': 'The {field} field is too long',
+  'err.fieldInvalid': 'Please check the {field} field',
+  'err.network': 'Please check your network connection.',
+  'err.timeout': 'The request timed out — please try again.',
+  'ks.me': 'Me', // kudos-sheet self-row badge (8/8 rider)
   'rc.withCrew': 'With {name}', // no josa slot — en needs none; the extra var is a no-op
   'runSave.showCrew': 'Show crew on feed',
   'rp.viewReplies': 'View replies ({n})',

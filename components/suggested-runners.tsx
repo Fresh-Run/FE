@@ -20,6 +20,7 @@ import React, { useEffect, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Avatar } from '@/components/avatar';
+import { errorMessage } from '@/lib/error-copy';
 import { t, useT } from '@/lib/i18n';
 import { ApiError, apiFetch, apiRequest } from '@/lib/api';
 import { getSuggestedUsers, type SuggestedUser } from '@/lib/profile-api';
@@ -65,7 +66,7 @@ export function useSuggestedRunners(): SuggestedRunnersState {
         .catch((e: unknown) => {
           setOverlay(p => ({ ...p, [u.user_id]: cur }));
           usePendingFollows.getState().add(u.user_id);
-          Alert.alert(t('fr.failTitle'), e instanceof Error ? e.message : t('runSave.saveFailBody'));
+          Alert.alert(t('fr.failTitle'), errorMessage(e));
         });
       return;
     }
@@ -74,7 +75,7 @@ export function useSuggestedRunners(): SuggestedRunnersState {
       apiFetch<void>(`/api/users/${u.user_id}/follow`, { method: 'DELETE' })
         .catch((e: unknown) => {
           setOverlay(p => ({ ...p, [u.user_id]: cur }));
-          Alert.alert(t('fr.failTitle'), e instanceof Error ? e.message : t('runSave.saveFailBody'));
+          Alert.alert(t('fr.failTitle'), errorMessage(e));
         });
       return;
     }
@@ -95,7 +96,7 @@ export function useSuggestedRunners(): SuggestedRunnersState {
           return;
         }
         setOverlay(p => ({ ...p, [u.user_id]: cur }));
-        Alert.alert(t('fr.failTitle'), e instanceof Error ? e.message : t('runSave.saveFailBody'));
+        Alert.alert(t('fr.failTitle'), errorMessage(e));
       });
   }
 

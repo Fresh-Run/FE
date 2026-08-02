@@ -10,6 +10,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { apiFetch } from '@/lib/api';
+import { errorMessage } from '@/lib/error-copy';
 import { useStore } from '@/store/use-store';
 
 const cacheKey = (uid: string) => `@fr_follows:${uid}`;
@@ -85,7 +86,7 @@ export function useFollowList(overrideUid?: string | null) {
           AsyncStorage.setItem(cacheKey(uid), JSON.stringify({ following: fing, followers: fers })).catch(() => {});
         }
       } catch (e: unknown) {
-        if (!cancelled && !painted) setError(e instanceof Error ? e.message : '목록을 불러올 수 없어요');
+        if (!cancelled && !painted) setError(errorMessage(e));
       } finally {
         if (!cancelled) setLoading(false);
       }

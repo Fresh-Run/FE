@@ -30,6 +30,7 @@ import Svg, { Circle, Line } from 'react-native-svg';
 import { MonthPicker } from '@/components/month-picker';
 import { Icon } from '@/components/ui';
 import { ApiError } from '@/lib/api';
+import { errorMessage } from '@/lib/error-copy';
 import { getMonthlyInsight, type MonthlyInsight, type MonthRank, type PaceTrendPoint } from '@/lib/insights-api';
 import { getLang, t, tf, useT, type StringKey } from '@/lib/i18n';
 import { distUnit, fmtDist, fmtDuration, fmtPaceIn, paceUnit } from '@/lib/run-format';
@@ -173,7 +174,7 @@ export default function MonthlyInsightScreen() {
       setData(null);
       setError(e instanceof ApiError && e.status === 403
         ? t('mi.premiumOnly')
-        : e instanceof Error ? e.message : t('mi.loadFail'));
+        : errorMessage(e));
     } finally {
       setLoading(false);
     }

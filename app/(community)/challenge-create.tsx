@@ -29,6 +29,7 @@ import { Icon } from '@/components/ui';
 import { NumberWheelRow } from '@/components/wheel-sheet';
 import { ApiError } from '@/lib/api';
 import { createChallenge, dateToKstIsoDay, kstDateStr } from '@/lib/challenges-api';
+import { errorMessage } from '@/lib/error-copy';
 import { radius as R, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { t, tf } from '@/lib/i18n';
@@ -67,7 +68,7 @@ export default function ChallengeCreateScreen() {
           { text: t('com.confirm'), onPress: () => router.back() },
         ]);
       } else {
-        Alert.alert(t('chc.createFail'), e instanceof Error ? e.message : t('auth.tryLater'));
+        Alert.alert(t('chc.createFail'), errorMessage(e));
       }
     } finally {
       setSubmitting(false);

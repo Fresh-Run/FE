@@ -29,6 +29,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '@/components/ui';
 import { ApiError } from '@/lib/api';
 import { listMyCrews, mapCrew, type Crew } from '@/lib/crews-api';
+import { errorMessage } from '@/lib/error-copy';
 import { deleteAccount } from '@/lib/profile-api';
 import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
@@ -72,7 +73,7 @@ export default function DeleteAccountScreen() {
       } else if (e instanceof ApiError && e.code === 'demo_account') {
         Alert.alert('데모 계정', '데모 계정은 탈퇴할 수 없어요.');
       } else {
-        Alert.alert('탈퇴 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요');
+        Alert.alert('탈퇴 실패', errorMessage(e));
       }
     }
   }

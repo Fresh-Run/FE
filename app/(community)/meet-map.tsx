@@ -38,6 +38,7 @@ import { PlacePickSheet } from '@/components/place-pick-sheet';
 import { RealMap } from '@/components/real-map';
 import { Icon } from '@/components/ui';
 import { updateCrew } from '@/lib/crews-api';
+import { errorMessage } from '@/lib/error-copy';
 import { accentShadow, radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { t } from '@/lib/i18n';
@@ -86,7 +87,7 @@ export default function MeetMapScreen() {
       setPlace({ name: draftName.trim(), coords: draftCoords });
       setDraftCoords(null); // back to display mode; crew-detail refetches on focus
     } catch (e: unknown) {
-      Alert.alert(t('runSave.saveFailTitle'), e instanceof Error ? e.message : t('auth.tryLater'));
+      Alert.alert(t('runSave.saveFailTitle'), errorMessage(e));
     } finally {
       setSaving(false);
     }

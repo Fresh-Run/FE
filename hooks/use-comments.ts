@@ -29,7 +29,14 @@ export function useRouteComments(routeId: string | null) {
   const [comments, setComments] = useState<CommentView[]>([]);
   const [loading, setLoading]   = useState(false);
   const [posting, setPosting]   = useState(false);
-  const [error, setError]       = useState<string | null>(null);
+  // Reactive-t rider (G, 8/8): the RAW error is stored, never a resolved
+  // string — consumers render errorMessageIn(useLang(), error) so a
+  // language flip re-resolves (the 7/28 ledgered stale-locale class).
+  // NOTE (dead-code find, on the ledger): this hook currently has ZERO
+  // consumers — course-post grew its own machinery (boolean loadError,
+  // already render-keyed). Converted anyway so any future consumer
+  // inherits the fixed class.
+  const [error, setError]       = useState<unknown>(null);
 
   useEffect(() => {
     if (!routeId) { setComments([]); setError(null); return; }
@@ -39,7 +46,7 @@ export function useRouteComments(routeId: string | null) {
     setError(null);
     getRouteComments(routeId)
       .then(rows => { if (!cancelled) setComments(rows.map(mapComment)); })
-      .catch((e: unknown) => { if (!cancelled) setError(e instanceof Error ? e.message : t('cm.loadFail')); })
+      .catch((e: unknown) => { if (!cancelled) setError(e); })
       .finally(() => { if (!cancelled) setLoading(false); });
 
     return () => { cancelled = true; };
@@ -55,7 +62,7 @@ export function useRouteComments(routeId: string | null) {
       setComments(prev => [...prev, mapComment(row)]);
       return true;
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : t('cm.postFail'));
+      setError(e);
       return false;
     } finally {
       setPosting(false);

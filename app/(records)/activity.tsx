@@ -17,6 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MediaCarousel } from '@/components/media-carousel';
 import { PhotoViewer } from '@/components/photo-viewer';
 import { ScreenshotShareOffer } from '@/components/screenshot-share-offer';
+import { errorMessage } from '@/lib/error-copy';
 import { setRouteMap } from '@/store/route-map';
 import { PaceChart, SplitsTable } from '@/components/run-splits';
 import { Icon } from '@/components/ui';
@@ -109,7 +110,7 @@ export default function ActivityScreen() {
       router.replace('/(tabs)/records' as never);
     } catch (e: unknown) {
       setDeleting(false);
-      Alert.alert(t('annd.delFailT'), e instanceof Error ? e.message : t('runSave.saveFailBody'));
+      Alert.alert(t('annd.delFailT'), errorMessage(e));
     }
   }
 

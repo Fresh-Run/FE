@@ -19,6 +19,7 @@
  */
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { errorMessage } from '@/lib/error-copy';
 import { t, tf, type StringKey } from '@/lib/i18n';
 import {
   ActivityIndicator,
@@ -113,7 +114,7 @@ export default function CrewPermsScreen() {
       setFlash(true);
       setTimeout(() => router.back(), 700);
     } catch (e: unknown) {
-      Alert.alert(t('runSave.saveFailTitle'), e instanceof Error ? e.message : t('auth.tryLater'));
+      Alert.alert(t('runSave.saveFailTitle'), errorMessage(e));
       load(); // server truth wins back
     } finally {
       setSaving(false);

@@ -24,6 +24,7 @@ import { Avatar } from '@/components/avatar';
 import { MiniMap } from '@/components/mini-map';
 import { RealMap } from '@/components/real-map';
 import { Icon } from '@/components/ui';
+import { errorMessage } from '@/lib/error-copy';
 import { copyRoute } from '@/lib/routes-api';
 import { courseStats, distUnit, fmtDist, fmtDuration, fmtPace, fmtPaceIn, paceUnit, type CourseStatsInput } from '@/lib/run-format';
 import { useSettings } from '@/store/use-settings';
@@ -112,7 +113,7 @@ export default function CoursePreviewScreen() {
       // replace: back from tracking-idle should land on the feed, not here
       router.replace('/(course)/tracking' as any);
     } catch (e: unknown) {
-      Alert.alert('시작할 수 없어요', e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요');
+      Alert.alert('시작할 수 없어요', errorMessage(e));
       setStarting(false);
     }
   };

@@ -1298,6 +1298,15 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 
 ## ~~🔼 (구) STAGED — a7599217 (커밋 4c9e337)~~ PROMOTED 위 참조 · 해시-타이 MATCH (J0E2-ihy… — 퍼블리시-타임 dist 기준; 수동-export 비결정성 잔존 온-레코드) · 마커: /kudos ×1·likes_disabled ×1 (스트링-프리)
 
+## 🧯 G: 에러-카피 컨벤션 + 스윕 + 라이더 2종 BUILT (미스테이지 — 오너 빌드 워드 8/8, 체크포인트-앤-스톱)
+- **① 컨벤션 (lib/error-copy.ts)**: errorMessage(e) — 서버 프로즈 절대 무반환. ⑴ 알려진 error_code → 키드 카피 (**맵 15코드**: 프로덕트 10 [already_member·already_requested·rsvp_closed·crew_owner·demo_account·likes_disabled·comments_disabled·follow_request_pending·route_generation_failed·route_generation_unavailable] + 제네럴 [server_error·bad_request] + 답글 2 [comment_parent_invalid→rp.replyParentGone·reply_depth_exceeded→rp.replyDepth — 기존 키 재사용, run-post 사이트-캐치는 존속]) ⑵ 422/validation_error → detail[0] type+loc 컴포즈 (missing/string_too_long/extra_forbidden 3종 키드 템플릿; 필드 = loc 테일 버바팀 — 퍼-필드 레이블 맵 부재, 룰링의 "else the field key" 분기 명기; msg 절대 무렌더) ⑶ 스테이터스 버킷 (network/timeout/5xx/4xx 키드 제네릭; 미지 코드 = 버킷, 프로즈 무). **가이드 §347 미지 코드 (crew_not_found 등) = 버킷 폴백으로 커버** — 맵 확장은 후속. 컴파일러-세이프 인-코멘트 (이벤트-타임 콜, e 단일 입력) + **errorMessageIn(lang, e) 렌더-바디 변형** (fmtDate lang-파라미터 패턴).
+- **② 스윕: 67사이트/39파일** (감사 ~70/41 대비: 실측 68, 카브-아웃 1파일 제외 = 67 집행) — 66 기계 치환 (`e instanceof Error ? e.message : 폴백` 균일 셰이프) + onboarding-name 수동 1 (tx 로컬 앨리어스가 정규식 회피). **카브-아웃 존중**: use-generate-route (스윕 리스트 자체에 부재 — 프로즌 확인) · store/use-quota **전체 무접촉** (429 쿼터 e.message = 트랜스포트-컴포즈 정직 카피 — errorMessage가 오히려 플래튼했을 것).
+- **③ 리액티브-t 라이더**: use-comments — setError(리졸브드) 2사이트 → **raw error 저장 + errorMessageIn(useLang(), e) 렌더-리졸브 계약**. **데드-코드 발견 (온-레코드)**: useRouteComments 컨슈머 ZERO — course-post가 자체 머시너리 (불리언 loadError, 기-렌더-키드). 훅은 미래 컨슈머 대비 전환 완료; 7/28 레저드 인스턴스 = 고아였음 (스테일-독스 클래스 추가 사례).
+- **④ 셀프-로우 라이더**: kudos-시트 own 로우 = 나 배지 (액센트 필) + 액센트 아바타 링 (캔버스 변형) · likerName flex:1→flexShrink (배지가 이름에 밀착; 좌정렬 렌더 동일) · 신규 키 ks.me.
+- **⑤ 플래그 (무수정, 컴파일러-캐시 차원)**: ⓐ **community.tsx — 베어-t JSX 22사이트 + useT 무구독, 탭 = 롱-리브드 마운트 (최고 리스크 프로파일: 미드-세션 플립 스테일)** ⓑ crew-detail.tsx — 베어-t 30사이트 + useT 무 (푸시드 스크린, 리마운트 자가-치유 — 저리스크). 양쪽 i18n 슬라이스 6-8 리줌 시 전환 대상.
+- **바이트-스캔 독트린 추가**: en 스트링에 em-dash (—) 포함 시 Hermes가 전체를 UTF-16 저장 — ASCII 스캔 0 (Route generation is busy로 실증; ko-온리 규칙의 en 확장).
+- 신규 키 19 (err.* 18 + ks.me) — **파리티 926/926** · tsc 0 · eslint 0 에러 (기존 _layout 경고 1 무접촉 프리-이그지스팅) · 컨벤션 데스크-증명 9/9 (§5 셰이프) · 커밋-타이드 export 해시 PFJppn4k….
+
 ## 🧹 FOUR CLOSES (오너 워드 8/8, 원-커밋 — 어드바이저리 서베이 후속)
 - **① B3 RATIFIED**: 오너 비준 — 그녀 ON 디폴트 존속 확정, 펜딩 브래킷 클로즈. 근거 온-레코드: 정직성 게이트가 OFF 포스처를 완전 서빙 → ON + 셰이프 룰 = 확정 디자인. (원 엔트리 브래킷 갱신.)
 - **② 라이더-(b) own-kudos 하모나이즈 CLOSE**: 리졸브드-바이-리얼리티 — K2 리스토어 (8/8)가 ♥=토글 원-그래머를 전면 성립 (피드·run-post·프로필·크루 전부). 스테일-독스 테이크. 셰어-카드 거버넌스 FYI = **옵셔널-스탠딩** (러너스-메모 동승 미확인 — 송신 확인 도착 시 sent로 갱신).
@@ -1357,7 +1366,7 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 - **① 토글 스플릿**: 단일 '크루 표시' 칩 → **크루명 + 참여인원** 2칩, 양쪽 퍼-비짓 디폴트 OFF (목 어멘드먼트 존속) · **시맨틱 = 카운트-requires-네임 (룰 버바팀)**: 참여인원 칩은 크루명 ON **그리고** 단건 count 논-널일 때만 렌더 (하이드 — 데드-칩 무) · 카드 라인 컴포즈 = "{crew_name}" 또는 "{crew_name} · N명 참여" · 비짓 내 카운트 상태는 네임 재-ON 시 존속 (칩 독립성 = 메트릭 문법).
 - **② 프리-레이어 조인 (조인, 포크 무)**: `ShareLayerKey = ShareMetricKey | 'crew'` — useMetricLayer **4번째 무조건 훅 인스턴스** (`layerFor.crew`) · 스마트-가이드 geoms 등록 + 시블링 스냅 타깃 합류 (양방향: 크루가 메트릭에 스냅, 메트릭이 크루에 스냅) · 익스포트 = 캔버스 ref 내부 렌더 → view-shot 자동 캡처 (파이프라인 무변경) · **디폴트 배치 = 구 스태틱 라인 자리** ({x:0.05, y:0.88, s:1} — left 14/bottom ~34의 프랙션 근사; 소형 티어 = crewTxt 12pt 자체, s 아님) · 스태틱 st.crewLine 삭제 · 잉크 = 구 라인 타이포 + 메트릭 패밀리 텍스트 섀도 (자유 배치 = 밝은 포토 영역 착지 가능, 명기 디비에이션).
 - **컨벤션 리포트 (스펙 "report if theirs differs and match" 조항 집행)**: 메트릭 레이어 실제 컨벤션 = **배치 퍼시스트** (@fr_share_prefs placements, 캔버스 프랙션 — 토글 상태도 퍼시스트) → 스펙의 퍼-비짓 가정과 상이. **매치: 크루 배치 퍼시스트 (placements.crew — 재-ON = 저장 위치 복원, 무저장 = 디폴트)** · **토글만 퍼-비짓 OFF 유지 — 그녀 목 어멘드먼트 명시 룰링이 컨벤션-매칭보다 상위 (의도적 스플릿, 온-레코드).**
-- **③ 거버넌스 (레저드, 무질문)**: 프리 레이어 = **유저-도메인** — 셰어 v2 선례 (메트릭 레이어 드래그/핀치가 캔버스-1:1 룰링과 공존 기확립; 카드 컴포저는 유저 캔버스). 그녀 어멘드먼트는 라인의 존재·카피·디폴트 OFF를 규정하고 위치를 고정하지 않음 → **재-어멘드먼트 불요 · 그녀 FYI 옵셔널-스탠딩 [8/8 FOUR CLOSES ② — 송신 미확인; 러너스-메모 동승 확인 시 sent 갱신].**
+- **③ 거버넌스 (레저드, 무질문)**: 프리 레이어 = **유저-도메인** — 셰어 v2 선례 (메트릭 레이어 드래그/핀치가 캔버스-1:1 룰링과 공존 기확립; 카드 컴포저는 유저 캔버스). 그녀 어멘드먼트는 라인의 존재·카피·디폴트 OFF를 규정하고 위치를 고정하지 않음 → **재-어멘드먼트 불요 · 그녀 FYI SENT [8/8 확인 — 러너스-메모 동승; 그녀 답신 아카이브: 파이프라인 = API 가이드 수록 · 튜닝 트리거 셋 (풀 30+ / 컨버전 관측성) · 제로-FE-체인지 디자인 그녀 비준]. 외부 레저 EMPTY.**
 - **④ 스트링**: 신규 키 1 (shr.crewCount '참여인원'/'Participants') + shr.crewToggle 밸류 개정 ('크루 표시'→'크루명' / 'Show crew'→'Crew name') — **파리티 907/907.**
 
 ## ~~🎨 셰어-카드 asks (오너, 8/6 ~01:30) — 큐 2건~~ 양건 집행 → 위 BUILT 엔트리 (8/6 오너 룰이 ①+②를 단일 빌드로 병합 — 카운트-requires-네임 확정, 리콘은 조인-빌드에 흡수)

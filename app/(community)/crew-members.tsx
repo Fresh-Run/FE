@@ -18,6 +18,7 @@
  */
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
+import { errorMessage } from '@/lib/error-copy';
 import { t, tf } from '@/lib/i18n';
 import {
   ActivityIndicator,
@@ -80,7 +81,7 @@ export default function CrewMembersScreen() {
       await setMemberRole(crewId!, m.user_id, role);
       load();
     } catch (e: unknown) {
-      Alert.alert(t('crw.changeFail'), e instanceof Error ? e.message : t('auth.tryLater'));
+      Alert.alert(t('crw.changeFail'), errorMessage(e));
     } finally {
       setBusyUid(null);
     }
@@ -118,7 +119,7 @@ export default function CrewMembersScreen() {
               await transferCrew(crewId!, m.user_id);
               load(); // roles re-render from server truth; my actions vanish
             } catch (e: unknown) {
-              Alert.alert(t('crw.transferFail'), e instanceof Error ? e.message : t('auth.tryLater'));
+              Alert.alert(t('crw.transferFail'), errorMessage(e));
             } finally {
               setBusyUid(null);
             }
@@ -139,7 +140,7 @@ export default function CrewMembersScreen() {
             await kickMember(crewId!, m.user_id);
             load();
           } catch (e: unknown) {
-            Alert.alert(t('crw.kickFail'), e instanceof Error ? e.message : t('auth.tryLater'));
+            Alert.alert(t('crw.kickFail'), errorMessage(e));
           } finally {
             setBusyUid(null);
           }

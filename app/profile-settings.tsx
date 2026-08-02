@@ -26,6 +26,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/ui';
 import { Toggle } from '@/components/toggle';
+import { errorMessage } from '@/lib/error-copy';
 import { getMyProfile, listFollowRequests, updateProfile, type ProfileVisibility } from '@/lib/profile-api';
 import { useStore } from '@/store/use-store';
 import { shadows, spacing as S, type Tokens } from '@/lib/theme';
@@ -124,7 +125,7 @@ export default function ProfileSettingsScreen() {
       getMyProfile(VIS_TIMEOUT_MS)
         .then(p => setApproval(p.follow_approval ?? false))
         .catch(() => {});
-      Alert.alert('변경 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요.');
+      Alert.alert('변경 실패', errorMessage(e));
     }
   }
 
@@ -145,7 +146,7 @@ export default function ProfileSettingsScreen() {
       getMyProfile(VIS_TIMEOUT_MS)
         .then(p => setVisibility(p.visibility ?? 'public'))
         .catch(() => { /* still offline — prev stands; next mount re-reads */ });
-      Alert.alert('변경 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요.');
+      Alert.alert('변경 실패', errorMessage(e));
     } finally {
       setVisBusy(false);
     }

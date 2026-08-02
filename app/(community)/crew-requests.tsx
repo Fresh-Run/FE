@@ -15,6 +15,7 @@
 import { useFocusEffect } from '@react-navigation/native';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useState } from 'react';
+import { errorMessage } from '@/lib/error-copy';
 import { t, tf, useLang } from '@/lib/i18n';
 import {
   ActivityIndicator,
@@ -56,7 +57,7 @@ export default function CrewRequestsScreen() {
     if (!crewId) return;
     listJoinRequests(crewId)
       .then(list => { setRows(list); setError(null); })
-      .catch(e => setError(e instanceof Error ? e.message : t('crw.reqLoadFail')));
+      .catch(e => setError(errorMessage(e)));
   }, [crewId]);
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
@@ -72,7 +73,7 @@ export default function CrewRequestsScreen() {
       } else if (e instanceof ApiError && e.status === 404) {
         load(); // already decided elsewhere — stale row, refresh
       } else {
-        Alert.alert(t('crw.approveFail'), e instanceof Error ? e.message : t('runSave.saveFailBody'));
+        Alert.alert(t('crw.approveFail'), errorMessage(e));
       }
     } finally {
       setBusyId(null);
@@ -92,7 +93,7 @@ export default function CrewRequestsScreen() {
             setRows(prev => (prev ?? []).filter(x => x.id !== r.id));
           } catch (e: unknown) {
             if (e instanceof ApiError && e.status === 404) load();
-            else Alert.alert(t('crw.rejectFail'), e instanceof Error ? e.message : t('runSave.saveFailBody'));
+            else Alert.alert(t('crw.rejectFail'), errorMessage(e));
           } finally {
             setBusyId(null);
           }

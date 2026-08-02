@@ -32,6 +32,7 @@ import { RunCard } from '@/components/run-card';
 import { Icon } from '@/components/ui';
 import { ApiError, apiFetch, apiRequest } from '@/lib/api';
 import { blockUser } from '@/lib/blocks-api';
+import { errorMessage } from '@/lib/error-copy';
 import { REPORT_REASONS, reportUser, type ReportReason } from '@/lib/reports-api';
 import { radius as R, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
@@ -208,7 +209,7 @@ export default function UserProfileScreen() {
       })
       .catch((e: unknown) => {
         setReportBusy(false);
-        Alert.alert(t('up.reportFail'), e instanceof Error ? e.message : t('auth.tryLater'));
+        Alert.alert(t('up.reportFail'), errorMessage(e));
       });
   }
 
@@ -226,7 +227,7 @@ export default function UserProfileScreen() {
           onPress: () => {
             blockUser(uid)
               .then(() => router.back()) // profile now 404s to me — bounce out
-              .catch((e: unknown) => Alert.alert(t('up.blockFail'), e instanceof Error ? e.message : t('auth.tryLater')));
+              .catch((e: unknown) => Alert.alert(t('up.blockFail'), errorMessage(e)));
           },
         },
       ],

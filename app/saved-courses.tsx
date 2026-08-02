@@ -40,6 +40,7 @@ import { MiniMap } from '@/components/mini-map';
 import { RealMap } from '@/components/real-map';
 import { Icon } from '@/components/ui';
 import { getBookmarkedRoutes } from '@/lib/bookmarks-api';
+import { errorMessage } from '@/lib/error-copy';
 import { getMyProfile } from '@/lib/profile-api';
 import { openProfile } from '@/lib/profile-nav';
 import { courseStats, fmtDuration } from '@/lib/run-format';
@@ -308,7 +309,7 @@ export default function SavedCoursesScreen() {
             deleteRoute(r.id)
               .then(() => setMine(prev => (prev ?? []).filter(x => x.id !== r.id)))
               .catch((e: unknown) =>
-                Alert.alert('삭제 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요'));
+                Alert.alert('삭제 실패', errorMessage(e)));
           },
         },
       ],
@@ -336,7 +337,7 @@ export default function SavedCoursesScreen() {
             setRoutePublic(r.id, publishing)
               .then(updated => setMine(prev => (prev ?? []).map(x => (x.id === updated.id ? updated : x))))
               .catch((e: unknown) =>
-                Alert.alert(publishing ? '공개 실패' : '전환 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요'));
+                Alert.alert(publishing ? '공개 실패' : '전환 실패', errorMessage(e)));
           },
         },
       ],

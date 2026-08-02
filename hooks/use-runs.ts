@@ -7,6 +7,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { ApiError, apiFetch } from '@/lib/api';
+import { errorMessage } from '@/lib/error-copy';
 import { supabase } from '@/lib/supabase';
 
 const RUNS_PAGE_SIZE = 50;
@@ -131,7 +132,7 @@ export function useRuns() {
       } catch (e: unknown) {
         // Silent-refetch failure keeps the stale list; error state is for
         // the no-data case only.
-        if (!cancelled && firstLoad) setError(e instanceof Error ? e.message : '기록을 불러올 수 없어요');
+        if (!cancelled && firstLoad) setError(errorMessage(e));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -200,7 +201,7 @@ export function useRunDetail(runId: string | null) {
         if (cancelled) return;
         setError(e instanceof ApiError && e.status === 404
           ? '기록을 찾을 수 없어요'
-          : e instanceof Error ? e.message : '기록을 찾을 수 없어요');
+          : errorMessage(e));
       })
       .finally(() => { if (!cancelled) setLoading(false); });
 

@@ -30,6 +30,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/ui';
+import { errorMessage } from '@/lib/error-copy';
 import { t, useLang, useT } from '@/lib/i18n';
 import { timeTitle } from '@/lib/run-format';
 import { MAX_RUN_PHOTOS, reencodeForUpload, uploadRunPhotoToSlot } from '@/lib/run-photos';
@@ -181,7 +182,7 @@ export default function EditRunScreen() {
       });
       router.back(); // 활동 상세 + 기록 focus-refetch pick it up
     } catch (e: unknown) {
-      Alert.alert(t('runSave.saveFailTitle'), e instanceof Error ? e.message : t('runSave.saveFailBody'));
+      Alert.alert(t('runSave.saveFailTitle'), errorMessage(e));
     } finally {
       setSaving(false);
     }

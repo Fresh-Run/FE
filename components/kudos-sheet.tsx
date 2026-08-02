@@ -2,8 +2,9 @@
  * Likers bottom sheet (canvas: FrMyProfile likers sheet) — extracted from
  * my-profile.tsx at the ledger-scoped graduation moment (own-run social view
  * became the second consumer, 2026-07-12). Rows: initials avatar + name +
- * relative time; row tap → profile. The canvas 나-badge/heart-toggle variants
- * stay future feed-context work (original scoping note).
+ * relative time; row tap → profile. The canvas 나-badge variant SHIPPED 8/8
+ * (the K2 restore made self-rows real); the heart-toggle-in-sheet variant
+ * stays future work (original scoping note).
  */
 import React from 'react';
 import {
@@ -23,6 +24,7 @@ import { fmtAgo } from '@/lib/run-format';
 import { shadows, type Tokens, DENSE_MAX_FONT_SCALE} from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { tf, useLang, useT } from '@/lib/i18n';
+import { useStore } from '@/store/use-store';
 
 export function KudosSheet({ runId, kudosCount, onClose }: {
   runId: string; kudosCount: number; onClose: () => void;
@@ -31,6 +33,9 @@ export function KudosSheet({ runId, kudosCount, onClose }: {
   const lang = useLang(); // compiler-visible locale for fmtAgo (2026-08-03 formatter-cache fix)
   const C = useTokens();
   const st = useStyles(makeSt);
+  // 8/8 self-row rider (K2 made own rows possible): 나 badge + accent ring
+  // per the canvas variant — the original scoping note's graduation moment
+  const myUid = useStore(s => s.session?.user.id);
   const [rows, setRows]       = React.useState<RunKudoser[] | null>(null);
   const [failed, setFailed]   = React.useState(false);
   const [attempt, setAttempt] = React.useState(0);
@@ -66,21 +71,30 @@ export function KudosSheet({ runId, kudosCount, onClose }: {
             <FlatList
               data={rows}
               keyExtractor={k => k.user_id}
-              renderItem={({ item }) => (
-                <View style={[st.likerRow, shadows.sm]}>
-                  {/* Row body → profile (canvas tappable-name zone; the
-                      self-row — possible since the 8/8 K2 restore — routes
-                      to 내 프로필 via openProfile's self-check) */}
-                  <Pressable
-                    onPress={() => openProfile(item.user_id, item.nickname)}
-                    style={({ pressed }) => [st.likerBody, pressed && { opacity: 0.7 }]}
-                  >
-                    <Avatar name={item.nickname} size={44} photoUrl={item.avatar_url} ring={C.border} initialsRatio={0.38} upper />
-                    <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.likerName} numberOfLines={1}>{item.nickname}</Text>
-                  </Pressable>
-                  <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.likerWhen}>{fmtAgo(item.created_at, lang)}</Text>
-                </View>
-              )}
+              renderItem={({ item }) => {
+                const isMe = item.user_id === myUid;
+                return (
+                  <View style={[st.likerRow, shadows.sm]}>
+                    {/* Row body → profile (canvas tappable-name zone; the
+                        self-row routes to 내 프로필 via openProfile's
+                        self-check). Self-row = 나 badge + accent ring, the
+                        canvas variant (8/8 rider). */}
+                    <Pressable
+                      onPress={() => openProfile(item.user_id, item.nickname)}
+                      style={({ pressed }) => [st.likerBody, pressed && { opacity: 0.7 }]}
+                    >
+                      <Avatar name={item.nickname} size={44} photoUrl={item.avatar_url} ring={isMe ? C.accent : C.border} initialsRatio={0.38} upper />
+                      <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.likerName} numberOfLines={1}>{item.nickname}</Text>
+                      {isMe && (
+                        <View style={st.meBadge}>
+                          <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.meBadgeTxt}>{T('ks.me')}</Text>
+                        </View>
+                      )}
+                    </Pressable>
+                    <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.likerWhen}>{fmtAgo(item.created_at, lang)}</Text>
+                  </View>
+                );
+              }}
               ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
               ListEmptyComponent={<Text style={[st.stateTxt, { textAlign: 'center' }]}>{T('kd.empty')}</Text>}
               contentContainerStyle={{ padding: 20, paddingTop: 14, paddingBottom: 28 }}
@@ -107,6 +121,10 @@ const makeSt = (C: Tokens) => StyleSheet.create({
 
   likerRow:  { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 16, paddingVertical: 11, paddingHorizontal: 13 },
   likerBody: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 12 },
-  likerName: { flex: 1, minWidth: 0, fontSize: 15, fontWeight: '700', color: C.text, letterSpacing: -0.3 },
+  // flexShrink (was flex:1, 8/8): the 나 badge hugs the name instead of
+  // being pushed to the row's far edge; left-aligned text renders identically
+  likerName: { flexShrink: 1, minWidth: 0, fontSize: 15, fontWeight: '700', color: C.text, letterSpacing: -0.3 },
+  meBadge: { paddingHorizontal: 7, paddingVertical: 2.5, borderRadius: 8, backgroundColor: C.accent },
+  meBadgeTxt: { fontSize: 10.5, fontWeight: '800', color: C.accentText, letterSpacing: -0.2 },
   likerWhen: { fontSize: 11.5, color: C.faint, letterSpacing: -0.2, flexShrink: 0 },
 });

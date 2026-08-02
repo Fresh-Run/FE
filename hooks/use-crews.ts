@@ -18,6 +18,7 @@ import {
   type JoinRequestStatus,
   type ListCrewsParams,
 } from '@/lib/crews-api';
+import { errorMessage } from '@/lib/error-copy';
 import { supabase } from '@/lib/supabase';
 import { useJoinRequests } from '@/store/join-requests';
 
@@ -59,7 +60,7 @@ export function useBrowseCrews(params: ListCrewsParams = {}) {
         hasDataRef.current = true;
       })
       .catch((e: unknown) => {
-        if (!cancelled && !hasDataRef.current) setError(e instanceof Error ? e.message : '크루를 불러올 수 없어요');
+        if (!cancelled && !hasDataRef.current) setError(errorMessage(e));
       })
       .finally(() => { if (!cancelled) setLoading(false); });
 
@@ -101,7 +102,7 @@ export function useMyCrews() {
         if (cancelled) return;
         setCrews(rows.map(r => mapCrew(r, r.owner_id === user.id ? 'owner' : 'member')));
       } catch (e: unknown) {
-        if (!cancelled) setError(e instanceof Error ? e.message : '크루를 불러올 수 없어요');
+        if (!cancelled) setError(errorMessage(e));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -173,7 +174,7 @@ export function useCrewDetail(crewId: string | null) {
           useJoinRequests.getState().setPending(crewId, false);
         }
       } catch (e: unknown) {
-        if (!cancelled) setError(e instanceof Error ? e.message : '크루를 찾을 수 없어요');
+        if (!cancelled) setError(errorMessage(e));
       } finally {
         if (!cancelled) setLoading(false);
       }

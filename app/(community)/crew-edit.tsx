@@ -19,6 +19,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import * as Location from 'expo-location';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
+import { errorMessage } from '@/lib/error-copy';
 import { t } from '@/lib/i18n';
 import {
   ActivityIndicator,
@@ -199,7 +200,7 @@ export default function CrewEditScreen() {
       });
       router.back(); // crew-detail refetches on focus
     } catch (e: unknown) {
-      Alert.alert(t('runSave.saveFailTitle'), e instanceof Error ? e.message : t('runSave.saveFailBody'));
+      Alert.alert(t('runSave.saveFailTitle'), errorMessage(e));
     } finally {
       setBusy(false);
     }
