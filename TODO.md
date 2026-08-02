@@ -1298,7 +1298,12 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 
 ## ~~🔼 (구) STAGED — a7599217 (커밋 4c9e337)~~ PROMOTED 위 참조 · 해시-타이 MATCH (J0E2-ihy… — 퍼블리시-타임 dist 기준; 수동-export 비결정성 잔존 온-레코드) · 마커: /kudos ×1·likes_disabled ×1 (스트링-프리)
 
-## 🔼 G 컨벤션+스윕+라이더 STAGED — 11ca86fa (커밋 b1f3750) · 해시-타이 MATCH (PFJppn4k… — 체크포인트 커밋-타이드 해시와 동일) · 마커 재검 (ko UTF-16·em-dash en UTF-16·err.* 키) · **신규 그룹 (프로덕션 = 1e4c630e 플로어 불변)** · **게이트: 실내 글랜스 — ① 에러 카피 스팟체크: 비행기모드 → 임의 액션 = "네트워크 연결을 확인해 주세요" (프로즈 아닌 키드 카피) · en 플립 동일 액션 = en 카피 ② kudos-시트: 자기 좋아요 → 시트 자기 행 = 나 배지+액센트 링 (en = Me) ③ 회귀: 크루 가입/팔로우 등 정상 플로우 무변화** · 프로모션 = 실관찰 스탬프 + 원-컨펌
+## ✅ G 컨벤션+스윕+라이더 PROMOTED (2026-08-08) — 오너 [01:25] FULL 실관찰 · 원-컨펌
+- [01:25] 관찰: 비행기모드 에러 = 키드 카피 **양 언어** · 나 배지 + 링 표시 · 정상 플로우 무변화.
+- 11ca86fa → production **0c0a59f0-6754-457b-9444-e21260c7b1fb** · 프로모션 해시-타이 MATCH (PFJppn4k… 양채널 동일). **롤백 플로어 전진 → 0c0a59f0** (1e4c630e 은퇴).
+- **G 아크 클로즈** (8/2 감사 → §5 배포 → 컨벤션+67사이트 스윕 → 프로모션): 서버 프로즈 렌더 = 앱 전체 사멸 (카브-아웃 2 명시 잔존). 잔여 오너-워드 빌드: 엘리베이션 차트. 플래그드 (i18n 6-8 리줌 대상): community.tsx 베어-t 22 (탭, 고위험) · crew-detail.tsx 30 (푸시드, 저위험).
+
+## ~~🔼 (구) G STAGED — 11ca86fa (커밋 b1f3750)~~ PROMOTED 위 참조 · 해시-타이 MATCH (PFJppn4k… — 체크포인트 커밋-타이드 동일) · 마커 재검 (ko UTF-16·em-dash en UTF-16·err.* 키)
 
 ## 🧯 G: 에러-카피 컨벤션 + 스윕 + 라이더 2종 BUILT (STAGED 위 11ca86fa — 오너 빌드 워드 8/8)
 - **① 컨벤션 (lib/error-copy.ts)**: errorMessage(e) — 서버 프로즈 절대 무반환. ⑴ 알려진 error_code → 키드 카피 (**맵 15코드**: 프로덕트 10 [already_member·already_requested·rsvp_closed·crew_owner·demo_account·likes_disabled·comments_disabled·follow_request_pending·route_generation_failed·route_generation_unavailable] + 제네럴 [server_error·bad_request] + 답글 2 [comment_parent_invalid→rp.replyParentGone·reply_depth_exceeded→rp.replyDepth — 기존 키 재사용, run-post 사이트-캐치는 존속]) ⑵ 422/validation_error → detail[0] type+loc 컴포즈 (missing/string_too_long/extra_forbidden 3종 키드 템플릿; 필드 = loc 테일 버바팀 — 퍼-필드 레이블 맵 부재, 룰링의 "else the field key" 분기 명기; msg 절대 무렌더) ⑶ 스테이터스 버킷 (network/timeout/5xx/4xx 키드 제네릭; 미지 코드 = 버킷, 프로즈 무). **가이드 §347 미지 코드 (crew_not_found 등) = 버킷 폴백으로 커버** — 맵 확장은 후속. 컴파일러-세이프 인-코멘트 (이벤트-타임 콜, e 단일 입력) + **errorMessageIn(lang, e) 렌더-바디 변형** (fmtDate lang-파라미터 패턴).
