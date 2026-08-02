@@ -1298,7 +1298,9 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 
 ## ~~🔼 (구) STAGED — a7599217 (커밋 4c9e337)~~ PROMOTED 위 참조 · 해시-타이 MATCH (J0E2-ihy… — 퍼블리시-타임 dist 기준; 수동-export 비결정성 잔존 온-레코드) · 마커: /kudos ×1·likes_disabled ×1 (스트링-프리)
 
-## 🔼 정직성 게이트 + tagKept STAGED — 67a56f46 (커밋 9464ce5) · 해시-타이 MATCH (_82EommA… 퍼블리시-타임 dist) · 마커: show_crew ×1·tagKept ×1 (스트링-프리) · **신규 그룹 (프로덕션 = ab4f20f3 플로어 불변)** · **게이트: 실내 글랜스 — ① 크루 런 OFF 저장 → 홈/전체 피드 own 카드 배너 무 (미러) · 기록 배지+활동 상세 라인은 존속 (프라이빗) ② edit-run 열기 → 체크박스가 실플래그 표시 (OFF 런 = 언체크) ③ ON 런 = 배너 정상 · [선택: 태그 × 제거 저장 → 노멀 런]** · 프로모션 = 실관찰 스탬프 + 원-컨펌
+## 🔼 정직성 게이트 어멘드 (트윈 미러 합류) STAGED — 9d17a831 (커밋 82d6d61) · 해시-타이 MATCH (SgzlWKUl… 퍼블리시-타임 dist) · 마커: show_crew ×1·tagKept ×1 캐리드 · **67a56f46 대체** (+ 오너 저지먼트 콜 행사: **셰이프-베이스 룰** — 프로필-셰이프 (셰어드 run-card·내 프로필 트윈) = 스트레인저 미러 게이트 / 레코드-셰이프 (기록·활동 상세) = 크루 상시 인지 · MyRun += show_crew · 프레디킷 데스크 4/4 재검: OFF 트윈 배너 드롭) · 프로덕션 = ab4f20f3 플로어 불변 · **게이트: 실내 글랜스 — ① 크루 런 OFF 저장 → 홈/전체 피드 own 카드 + 내 프로필 트윈 양쪽 배너 무 (미러) · 기록 배지+활동 상세 라인은 존속 (레코드-셰이프) ② edit-run 체크박스 = 실플래그 (OFF 런 언체크) ③ ON 런 = 배너 정상** · 프로모션 = 실관찰 스탬프 + 원-컨펌
+
+## ~~🔼 (구) 정직성 게이트 + tagKept STAGED — 67a56f46 (커밋 9464ce5)~~ SUPERSEDED by 9d17a831 (트윈 미러 어멘드) · 해시-타이 MATCH (_82EommA…)
 
 ## 🪞 오너-뷰 정직성 게이트 + tagKept 라이더 BUILT (STAGED 위 67a56f46 — 오너 빌드 워드 8/8, 그녀 (a)+(b) 배포 컨펌 후행)
 - **프로브 재검 (라이브, 프로브크루2 생성→소멸, ON/OFF 런 2건, 월드 복원 204×3)**: own 리스트+단건 = **show_crew 실불리언** (OFF 런에 False — 시드 갭 사망 증서) · 타인 로우 = show_crew null 고정 ((a) 오너-온리) + crew_name (b) 게이트 차별화 (ON 서빙/OFF 널) 재확인.
