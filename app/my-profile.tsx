@@ -10,9 +10,9 @@
  *  - section = "내 러닝" + real total ("공개 N개" reframing is its own item);
  *  - run cards are reduced feed-style: no per-run area/tags — title falls
  *    back to timeTitle(ran_at);
- *  - footer: ♥ kudos_count + likers sheet. NOT a toggle — self-kudos is a
- *    server 400; heart+count are one tap target. 💬 omitted entirely (run
- *    comments unshipped server-side — 지연 ask logged);
+ *  - footer: ♥ live toggle + count→likers sheet (K1 split; self-kudos live
+ *    since the 8/8 K2 restore — the 400 lifted 7/30 v120). 💬 display-only
+ *    (own runs' comments live on the run-post own-mode);
  *  - 프로필 공유 → 준비 중 (no shareable URL yet).
  */
 import { useFocusEffect } from '@react-navigation/native';
@@ -35,6 +35,7 @@ import { MiniMap } from '@/components/mini-map';
 import { RealMap } from '@/components/real-map';
 import { Icon } from '@/components/ui';
 import { useMyPublicProfile, type MyRun } from '@/hooks/use-my-public-profile';
+import { ApiError, apiFetch } from '@/lib/api';
 import { distUnit, fmtDist, fmtDuration, fmtPaceIn, fmtWhen, paceUnit, timeTitle } from '@/lib/run-format';
 import { radius as R, shadows, spacing as S, type Tokens, DENSE_MAX_FONT_SCALE} from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
@@ -52,8 +53,8 @@ const VIS_CAPTION_KEY = {
 
 // Reduced feed-style run card (canvas shows area/tags — no backend source
 // for own runs; honest subset, tap → activity detail)
-function RunCard({ run, name, photoUrl, units, mapLive, onKudos }: {
-  run: MyRun; name: string; photoUrl?: string | null; units: ReturnType<typeof useSettings.getState>['settings']['units']; mapLive: boolean; onKudos: () => void }) {
+function RunCard({ run, name, photoUrl, units, mapLive, kudosOff, onKudos, onCountPress }: {
+  run: MyRun; name: string; photoUrl?: string | null; units: ReturnType<typeof useSettings.getState>['settings']['units']; mapLive: boolean; kudosOff: boolean; onKudos: () => void; onCountPress: () => void }) {
   const T = useT(); // reactive anchor (name-twin card, long-lived FlatList — the 4a-now shared-card treatment)
   const lang = useLang(); // compiler-visible locale for the date/title formatters (2026-08-03 formatter-cache fix)
   const C = useTokens();
@@ -107,20 +108,24 @@ function RunCard({ run, name, photoUrl, units, mapLive, onKudos }: {
           ))}
         </View>
       </View>
-      {/* Footer — ♥ + count are ONE tap target → likers sheet (own cards
-          can't toggle: self-kudos = 400). 💬 is display-only: own runs have
-          no post screen (card tap → activity analysis covers it). */}
+      {/* Footer — K1 split, K2 RESTORED (8/8): self-kudos 400 lifted
+          server-side 7/30 (v120, probed 204 + round-trip) — the ♥ is a live
+          toggle with the 44pt asymmetric template; the COUNT keeps the
+          likers sheet (left slop 0 — disjoint zones, the 8/4 geometry).
+          💬 is display-only: own runs have no post screen (card tap →
+          activity analysis covers it). */}
       <View style={st.cardFooter}>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          {/* ONE GRAMMAR (8/1): ♥ disabled+dimmed (self-like 400 — K2 swaps
-              in the toggle on her lift); the COUNT opens the likers sheet. */}
           <View style={st.kudosBtn}>
-            <Icon name="heart-outline" size={18} color={C.faint} />
-            {/* 8/4 tap-geometry: left slop 0 — the count's zone stops at the
-                (inert) heart's edge; the 44pt ♥ template lands with K2's
-                toggle restore. */}
-            <Pressable onPress={onKudos} hitSlop={{ top: 8, bottom: 8, left: 0, right: 8 }} style={({ pressed }) => pressed ? { opacity: 0.6 } : null}>
-              <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.kudosCount}>{run.kudos_count}</Text>
+            {kudosOff ? (
+              <Icon name="heart-outline" size={18} color={C.sub} />
+            ) : (
+              <Pressable onPress={onKudos} hitSlop={{ top: 13, bottom: 13, left: 13, right: 2 }} style={({ pressed }) => pressed ? { opacity: 0.6 } : null}>
+                <Icon name={run.my_kudos ? 'heart' : 'heart-outline'} size={18} color={run.my_kudos ? C.danger : C.sub} />
+              </Pressable>
+            )}
+            <Pressable onPress={onCountPress} hitSlop={{ top: 8, bottom: 8, left: 0, right: 8 }} style={({ pressed }) => pressed ? { opacity: 0.6 } : null}>
+              <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={[st.kudosCount, !kudosOff && run.my_kudos && { color: C.danger }]}>{run.kudos_count}</Text>
             </Pressable>
           </View>
           {/* 💬 display-only — taps fall through to the card (→ social view) */}
@@ -152,6 +157,24 @@ export default function MyProfileScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [runs.length]);
   const [kudosRun, setKudosRun] = React.useState<MyRun | null>(null);
+  // K2 restore (8/8) — K1 machinery, the crew-runs pattern verbatim:
+  // optimistic overlay + wholesale clear on fresh rows + per-run 403 net
+  const [kudosOv, setKudosOv] = React.useState<Record<string, { on: boolean; delta: number }>>({});
+  const [kudosOff403, setKudosOff403] = React.useState<Set<string>>(new Set());
+  useEffect(() => { setKudosOv({}); }, [runs]); // fresh rows carry the server truth
+  function toggleKudos(run: MyRun) {
+    if (kudosOff403.has(run.id)) return;
+    const cur = kudosOv[run.id]?.on ?? run.my_kudos;
+    const next = !cur;
+    setKudosOv(p => ({ ...p, [run.id]: { on: next, delta: (next ? 1 : 0) - (run.my_kudos ? 1 : 0) } }));
+    apiFetch<void>(`/api/runs/${run.id}/kudos`, { method: next ? 'POST' : 'DELETE' })
+      .catch((e: unknown) => {
+        setKudosOv(p => ({ ...p, [run.id]: { on: run.my_kudos, delta: 0 } }));
+        if (e instanceof ApiError && e.code === 'likes_disabled') {
+          setKudosOff403(p => new Set(p).add(run.id));
+        }
+      });
+  }
 
   // polyline_thumb slice — real-map-only-for-viewable-cells (feed pattern:
   // stable refs, 25% threshold; off-screen cells keep the SVG)
@@ -253,11 +276,24 @@ export default function MyProfileScreen() {
           viewabilityConfig={viewabilityConfig}
           onViewableItemsChanged={onViewableItemsChanged}
           ListHeaderComponent={header}
-          renderItem={({ item }) => (
-            <View style={{ paddingHorizontal: S.gutter }}>
-              <RunCard run={item} name={profile.nickname} photoUrl={profile.avatarUrl} units={units} mapLive={liveIds.has(item.id)} onKudos={() => setKudosRun(item)} />
-            </View>
-          )}
+          renderItem={({ item }) => {
+            const ov = kudosOv[item.id];
+            const shown = ov ? { ...item, my_kudos: ov.on, kudos_count: item.kudos_count + ov.delta } : item;
+            return (
+              <View style={{ paddingHorizontal: S.gutter }}>
+                <RunCard
+                  run={shown}
+                  name={profile.nickname}
+                  photoUrl={profile.avatarUrl}
+                  units={units}
+                  mapLive={liveIds.has(item.id)}
+                  kudosOff={item.allow_likes === false || kudosOff403.has(item.id)}
+                  onKudos={() => toggleKudos(item)}
+                  onCountPress={() => setKudosRun(shown)}
+                />
+              </View>
+            );
+          }}
           ItemSeparatorComponent={() => <View style={{ height: 14 }} />}
           ListEmptyComponent={
             <View style={st.centered}>

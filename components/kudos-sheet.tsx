@@ -68,8 +68,9 @@ export function KudosSheet({ runId, kudosCount, onClose }: {
               keyExtractor={k => k.user_id}
               renderItem={({ item }) => (
                 <View style={[st.likerRow, shadows.sm]}>
-                  {/* Row body → profile (canvas tappable-name zone; self-case
-                      can't occur — self-kudos is a server 400) */}
+                  {/* Row body → profile (canvas tappable-name zone; the
+                      self-row — possible since the 8/8 K2 restore — routes
+                      to 내 프로필 via openProfile's self-check) */}
                   <Pressable
                     onPress={() => openProfile(item.user_id, item.nickname)}
                     style={({ pressed }) => [st.likerBody, pressed && { opacity: 0.7 }]}

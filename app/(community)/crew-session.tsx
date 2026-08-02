@@ -24,7 +24,6 @@ import { tf } from '@/lib/i18n';
 import { spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { useSettings } from '@/store/use-settings';
-import { useStore } from '@/store/use-store';
 import { RunCard } from './crew-runs';
 
 export default function CrewSessionScreen() {
@@ -33,7 +32,6 @@ export default function CrewSessionScreen() {
   const insets = useSafeAreaInsets();
   const { crewId, sessionKey, crewName } = useLocalSearchParams<{ crewId: string; sessionKey: string; crewName?: string }>();
   const units = useSettings(s => s.settings.units);
-  const myUid = useStore(s => s.session?.user.id);
 
   const [rows, setRows] = useState<CrewRunItem[] | null>(null);
   // K1 machinery — the crew-runs pattern verbatim (own instance: a route
@@ -108,7 +106,6 @@ export default function CrewSessionScreen() {
                 units={units}
                 mapLive
                 onOpen={() => openRun(item)}
-                isMine={item.user_id === myUid}
                 kudosOff={item.allow_likes === false || kudosOff403.has(item.run_id)}
                 onKudos={() => toggleKudos(item)}
                 onCountPress={() => setKudosSheetRun({ id: shown.run_id, count: shown.kudos_count })}

@@ -50,16 +50,15 @@ import { shadows, spacing as S, type Tokens, DENSE_MAX_FONT_SCALE } from '@/lib/
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { useRunTrack } from '@/lib/track-cache';
 import { useSettings } from '@/store/use-settings';
-import { useStore } from '@/store/use-store';
 import { t, tf, useLang } from '@/lib/i18n';
 
-export function RunCard({ run, units, mapLive, onOpen, isMine, kudosOff, onKudos, onCountPress }: {
+export function RunCard({ run, units, mapLive, onOpen, kudosOff, onKudos, onCountPress }: {
   run: CrewRunItem;
   units: ReturnType<typeof useSettings.getState>['settings']['units'];
   mapLive: boolean;
   onOpen: () => void;
-  /** K1 wiring (8/5, her payload live): own rows = dimmed ♥ + count→sheet */
-  isMine: boolean;
+  /** likes_disabled / 403-net read-only heart (own rows toggle since the
+      8/8 K2 restore) */
   kudosOff: boolean;
   onKudos: () => void;
   onCountPress: () => void;
@@ -143,20 +142,21 @@ export function RunCard({ run, units, mapLive, onOpen, isMine, kudosOff, onKudos
       </View>
       {/* K1 grammar (8/5 crew-♥ wiring — the memo promise): ♥ toggles /
           count opens the sheet, home-feed rules verbatim incl. the 44pt
-          asymmetric slop geometry; own rows = dimmed inert ♥ (self-like 400,
-          K2 restores); allow_likes === false = read-only heart. 💬 stays
-          display-only (card tap → run-post). */}
+          asymmetric slop geometry; allow_likes === false = read-only heart.
+          💬 stays display-only (card tap → run-post). K2 RESTORED (8/8):
+          the dimmed inert own-♥ died — self-kudos 400 lifted server-side
+          7/30 (v120, probed); own rows toggle like any other. */}
       <View style={st.cardFooter}>
         <View style={st.kudosCluster}>
-          {isMine || kudosOff ? (
-            <Icon name="heart-outline" size={18} color={isMine ? C.faint : C.sub} />
+          {kudosOff ? (
+            <Icon name="heart-outline" size={18} color={C.sub} />
           ) : (
             <Pressable onPress={onKudos} hitSlop={{ top: 13, bottom: 13, left: 13, right: 2 }} style={({ pressed }) => pressed ? { opacity: 0.6 } : null}>
               <Icon name={run.my_kudos ? 'heart' : 'heart-outline'} size={18} color={run.my_kudos ? C.danger : C.sub} />
             </Pressable>
           )}
           <Pressable onPress={onCountPress} hitSlop={{ top: 8, bottom: 8, left: 0, right: 8 }} style={({ pressed }) => pressed ? { opacity: 0.6 } : null}>
-            <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={[st.footCount, !isMine && !kudosOff && run.my_kudos && { color: C.danger }]}>{run.kudos_count}</Text>
+            <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={[st.footCount, !kudosOff && run.my_kudos && { color: C.danger }]}>{run.kudos_count}</Text>
           </Pressable>
         </View>
         <View style={[st.kudosCluster, { marginLeft: 14 }]}>
@@ -204,7 +204,6 @@ export default function CrewRunsScreen() {
     const when = fmtDateAbs(anchor.ran_at, lang); // absolute — a folder name can't age (8/5 fix)
     return anchor.area ? `${anchor.area} · ${when}` : when;
   }, [lang]);
-  const myUid = useStore(s => s.session?.user.id);
 
   function toggleKudos(run: CrewRunItem) {
     if (kudosOff403.has(run.run_id)) return;
@@ -359,7 +358,6 @@ export default function CrewRunsScreen() {
                 units={units}
                 mapLive={liveIds.has(item.run_id)}
                 onOpen={() => openRun(item)}
-                isMine={item.user_id === myUid}
                 kudosOff={item.allow_likes === false || kudosOff403.has(item.run_id)}
                 onKudos={() => toggleKudos(item)}
                 onCountPress={() => setKudosSheetRun({ id: shown.run_id, count: shown.kudos_count })}

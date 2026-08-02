@@ -33,6 +33,11 @@ export type MyRun = {
   duration_sec: number;
   avg_pace_sec_per_km: number | null;
   kudos_count: number;
+  /** 8/8 K2 restore: the twin ♥ toggles (self-kudos 400 lifted 7/30 v120);
+      served on the personal list (probed) */
+  my_kudos: boolean;
+  /** false = read-only heart (the home-feed convention) */
+  allow_likes: boolean | null;
   comment_count: number;
   polyline_thumb: { lat: number; lng: number }[] | null; // BE 6baa192, ≤36pt
   // Never null on own list — legacy rows are 'followers' server-side (지연 확인)

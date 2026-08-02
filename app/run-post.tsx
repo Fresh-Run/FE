@@ -3,9 +3,10 @@
  * Two modes at the entry point:
  *  - others' runs (user-profile RunCard, !is_mine): kudos toggle + comments.
  *  - OWN runs (`own=1` — 내 프로필 💬 target, owner directive 2026-07-12):
- *    author reads/replies to comments on their own run; ♥ is count-only →
- *    likers sheet (self-kudos is a server 400, no toggle); header inert
- *    (self-navigation loop). Card body stays → 활동 상세 (analysis view).
+ *    author reads/replies to comments on their own run; ♥ toggles (self-
+ *    kudos live since the 8/8 K2 restore — the 400 lifted 7/30 v120) +
+ *    likers-sheet row; header inert (self-navigation loop). Card body
+ *    stays → 활동 상세 (analysis view).
  * A mode flag, not a sibling: the skeleton (hero/stats/comments/composer)
  * is identical — a sibling would duplicate the screen to vary ~30 lines.
  *
@@ -151,7 +152,7 @@ export default function RunPostScreen() {
   const { line: heroLine, pending: heroPending } = useRunTrack(run?.id ?? null, run?.polyline_thumb);
   const track = heroLine !== null && heroLine !== (run?.polyline_thumb ?? null) ? heroLine : null;
 
-  // Likers sheet (own mode — ♥ is count-only)
+  // Likers sheet (the dedicated row below the bar, both modes)
   const [likersOpen, setLikersOpen] = useState(false);
 
   // 신고 sheet (others' runs only — ⋯ hidden on own mode; server self-400 is
@@ -482,17 +483,16 @@ export default function RunPostScreen() {
               )}
 
               {/* ♥ kudos — ONE GRAMMAR (owner ruling 8/1): ♥ = toggle,
-                  count = sheet, everywhere. Own mode: ♥ DISABLED while the
-                  self-like 400 stands — K2 swaps in the rollback toggle
-                  when her lift lands; the count opens the sheet. */}
+                  count = sheet, everywhere. */}
               {/* 8/4 grammar (owner-ruled): the BAR is the button — tap
                   anywhere on it = like/unlike (the old inner islands left
                   ~90% of a button-dressed bar dead). The SHEET moved to its
                   own deliberate row below; the count inside the bar is
-                  display-only. Own-mode: the button costume dies — no bar
-                  (nothing to like; K2 restores a real toggle bar here on her
-                  self-like 400-lift; the sheet row stays either way). */}
-              {isOwn ? null : kudosOff ? (
+                  display-only. */}
+              {/* K2 RESTORED (8/8): self-kudos 400 lifted server-side 7/30
+                  (v120, probed 204 + round-trip) — own mode gets the real
+                  toggle bar back; the sheet row below stays. */}
+              {kudosOff ? (
                 /* likes_disabled — read-only bar (no toggle); sheet row below */
                 <View style={st.kudosBtn}>
                   <Icon name="heart-outline" size={18} color={C.sub} />
