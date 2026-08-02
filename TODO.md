@@ -1298,7 +1298,9 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 
 ## ~~🔼 (구) STAGED — a7599217 (커밋 4c9e337)~~ PROMOTED 위 참조 · 해시-타이 MATCH (J0E2-ihy… — 퍼블리시-타임 dist 기준; 수동-export 비결정성 잔존 온-레코드) · 마커: /kudos ×1·likes_disabled ×1 (스트링-프리)
 
-## 🏠 홈 재탭 스크롤-투-탑 BUILT (미스테이지 — 오너 룰 8/3; 스테이지 시 6adba50d 대체 합류, 엘리베이션과 동일 스탬프 라이드)
+## 🔼 홈 재탭 + 엘리베이션 캐리 STAGED — 483a75d2 (커밋 e7f4a6b) · 해시-타이 MATCH (b1mqJRiY… — 체크포인트 커밋-타이드 동일) · 마커: scrollToOffset·tabPress 신규 + 엘리베이션 캐리드 (총 상승 ×1) · **6adba50d 대체** · 프로덕션 = 0c0a59f0 플로어 불변 · **게이트 (합산 스탬프): ① 엘리베이션 4레그 (6adba50d 엔트리 버바팀 — 필드 런 고도 섹션·run-post 동일·구 런 부재·en 플립) ② 홈 재탭 10초 글랜스: 딥 스크롤 → 홈 탭 재탭 = 애니메이트 맨 위 · 타 탭 → 홈 = 위치 보존** · 프로모션 = 실관찰 스탬프 + 원-컨펌
+
+## 🏠 홈 재탭 스크롤-투-탑 BUILT (STAGED 위 483a75d2 — 오너 룰 8/3, 엘리베이션과 동일 스탬프 라이드)
 - **와이어링 (정확)**: fresh-tab-bar handlePress가 표준 `navigation.emit({type:'tabPress', target: routeKey})` 기발신 (커스텀 바 기존 코드, 무변경) → index.tsx가 자기 탭의 tabPress만 수신 (`navigation.addListener`, expo-router useNavigation) → **emit-타임 `isFocused()` 분기**: true = 재탭 → `scrollToOffset({offset:0, animated:true})` · false = 타 탭발 도착 (포커스는 emit 후 랜딩) → 무동작 = 위치 보존 (항목 3).
 - **양 피드 탭**: 전체/친구는 단일 FlatList의 data 스왑 (리스트 교체 아님) — ref 하나가 표시 중인 쪽을 커버.
 - **스크롤 온리**: 리페치 무탑승 (리프레시 = 풀-투-리프레시 몫; 재탭은 포커스 이벤트 재발화도 없음 — 기존 focus-refetch 머시너리 무접촉).
@@ -1312,7 +1314,7 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 - **인-코드 코멘트 잔존 (무수정, 명기)**: 세션 중 작성된 코드 코멘트의 8/5–8/8 일자 (K2 RESTORED 8/8·8/7 리콘·8/6 크루 배지 등 ~20사이트) — 스트링-프리 (주석), 번들 무영향; 스윕은 별도 워드 (코드 처닝 대비 가치 판단 오너 몫).
 - 라티오 토큰 (마커 8/8·시뮬 8/8·Gate 8/8·en 8/8·빌드넘버 8/7/5/4/3) 무접촉 검증.
 
-## 🔼 엘리베이션 차트 STAGED — 6adba50d (커밋 abb006a) · 해시-타이 MATCH (e6f7MyN6… — 체크포인트 커밋-타이드 동일) · 마커 재검 · **폼 룰링: 제안대로 ACCEPTED (오너 8/3)** · **신규 그룹 (프로덕션 = 0c0a59f0 플로어 불변)** · **게이트: 오너 자기 필드 런 (8/1 이후 기록분 = alt 보유 자연 픽스처) — ① 활동 상세: 고도 섹션 (필드-에어리어·min/max 레이블·총 상승/하강 그럴듯한 수치 — 절대치보단 개연성) ② run-post 동일 섹션 ③ 구 런 (프리-8/1) = 섹션 완전 부재 (무엠티-스테이트) ④ en 플립 = Elevation/Ascent/Descent** · 프로모션 = 실관찰 스탬프 + 원-컨펌
+## ~~🔼 엘리베이션 차트 STAGED — 6adba50d (커밋 abb006a)~~ SUPERSEDED by 483a75d2 (+ 홈 재탭) · 해시-타이 MATCH (e6f7MyN6… — 체크포인트 커밋-타이드 동일) · 마커 재검 · **폼 룰링: 제안대로 ACCEPTED (오너 8/3)** · **신규 그룹 (프로덕션 = 0c0a59f0 플로어 불변)** · **게이트: 오너 자기 필드 런 (8/1 이후 기록분 = alt 보유 자연 픽스처) — ① 활동 상세: 고도 섹션 (필드-에어리어·min/max 레이블·총 상승/하강 그럴듯한 수치 — 절대치보단 개연성) ② run-post 동일 섹션 ③ 구 런 (프리-8/1) = 섹션 완전 부재 (무엠티-스테이트) ④ en 플립 = Elevation/Ascent/Descent** · 프로모션 = 실관찰 스탬프 + 원-컨펌
 
 ## ⛰️ 엘리베이션-프로파일 차트 BUILT (STAGED 위 6adba50d — 오너 빌드 워드 8/3, 폼 ACCEPTED)
 - **라이브 프로브**: alt 라운드트립 실증 — 프로브 런 gps_track alt 송신 → 서빙 폴리라인 alt 값 존속 (0.1m 라운드; 구 런 = 전 포인트 alt:null — 그녀 "키 생략" 계약이 실와이어에선 null-서빙, null-스킵이 양쪽 커버) · **코스 루트 폴리라인 = lat/lng 온리 (프로브)** → course-post 제외, 명기 · 트랙 엔드포인트의 server elev_gain_m 존재 온-레코드 (미소비 — 클라 히스테리시스 수치와 상이 가능, 라벨 충돌 없음).
