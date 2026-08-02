@@ -27,8 +27,9 @@
  *    the avatar/run-photo lane; pure JS).
  *  - FREE-PLACED METRICS: each enabled metric is its OWN draggable layer
  *    (drag + pinch, NO rotation — rotated text is a regret) — the
- *    story-editor grammar; placement persists as canvas FRACTIONS so
- *    format flips keep relative positions. Fully free, no snap (v2 call).
+ *    story-editor grammar; placement holds as canvas FRACTIONS so format
+ *    flips keep relative positions WITHIN a visit (8/3 ruling: per-visit
+ *    defaults — cross-visit persistence died; entry = designed default).
  */
 import Slider from '@react-native-community/slider';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -71,10 +72,13 @@ type MetricPlacement = { x: number; y: number; s: number }; // x/y = canvas frac
 type SharePrefs = {
   metrics: Record<ShareMetricKey, boolean>;
   format: '1:1' | '9:16';
-  /** v2 free-placement — absent keys fall to the default stack (merge-safe).
-      Incl. 'crew' (8/6): PLACEMENT persists like the metrics' — the layer
-      convention matched — while the crew TOGGLES stay per-visit OFF. */
-  placements?: Partial<Record<ShareLayerKey, MetricPlacement>>;
+  /** ~~v2 free-placement persistence~~ DIED 8/3 (owner ruling: per-visit
+      defaults — the share card is a per-run COMPOSITION, not a workspace;
+      every share starts from the designed default). Placements now live in
+      SESSION STATE only (the component's sessionPlacements — drag/pinch
+      and format-flip fraction memory work exactly as before WITHIN a
+      visit; entry resets). Old stored `placements` blobs are INERT KEYS
+      (the stale-blob class — nothing reads them, no migration write). */
   /** v2.1 — route stroke styling (global taste, like metric selection) */
   strokeColor?: string;
   strokeWeight?: number;
@@ -181,10 +185,11 @@ function snapTick() {
 }
 
 // ─── Free-placed metric layer (v2) — drag + pinch, NO rotation ───────────────
-// One hook instance per layer key (fixed count of 4 since the 8/6 crew join —
+// One hook instance per layer key (fixed count of 4 since the 8/2 crew join —
 // hooks stay unconditional; toggles hide the RENDER, never the hook).
-// Position lives in shared values (px), persists as canvas FRACTIONS on
-// gesture end; canvas-dim changes (format flip) re-derive px from fractions.
+// Position lives in shared values (px), committed as canvas FRACTIONS to
+// SESSION state on gesture end (8/3 per-visit ruling); canvas-dim changes
+// (format flip) re-derive px from fractions within the visit.
 
 function useMetricLayer(
   key: ShareLayerKey,
@@ -418,8 +423,15 @@ export default function ShareCardScreen() {
   const bg = allBgs[Math.min(bgIdx, allBgs.length - 1)];
 
   // ── canvas geometry — fit the format inside the viewport ────────────────────
+  // 8/3 EDIT-CANVAS GROWTH (owner part 2): height cap 0.52 → 0.68 of the
+  // window — the whole screen scrolls, so controls stay reachable below a
+  // taller card. On a 390×844 device: 9:16 preview 247→323pt wide (+31%
+  // linear); 1:1 was already width-capped at 358pt (unchanged). EXPORT
+  // UNTOUCHED — view-shot captures at fixed 1080-wide regardless of the
+  // preview scale; gesture targets live ON the layers, so they grow with
+  // the preview for free.
   const maxW = winW - S.gutter * 2;
-  const maxH = winH * 0.52;
+  const maxH = winH * 0.68;
   const ratio = prefs.format === '1:1' ? 1 : 16 / 9;
   const canvasW = Math.min(maxW, maxH / ratio);
   const canvasH = canvasW * ratio;
@@ -466,13 +478,14 @@ export default function ShareCardScreen() {
   const endDotProps = useAnimatedProps(() => ({ r: 5.5 / sc.value, strokeWidth: 2 / sc.value }));
 
   // v2 free-placed layers — fixed four incl. crew (hooks unconditional; the
-  // toggle hides the RENDER, never the hook)
+  // toggle hides the RENDER, never the hook). 8/3 PER-VISIT RULING: gesture
+  // ends persist to SESSION STATE only (format-flip fraction memory intact
+  // within the visit); every composer entry starts at DEFAULT_PLACEMENT —
+  // the AsyncStorage placement write DIED (supersedes the crew-line build's
+  // matched persist convention).
+  const [sessionPlacements, setSessionPlacements] = useState<Partial<Record<ShareLayerKey, MetricPlacement>>>({});
   const persistPlacement = useMemo(() => (key: ShareLayerKey, p: MetricPlacement) => {
-    setPrefs(prev => {
-      const next = { ...prev, placements: { ...(prev.placements ?? {}), [key]: p } };
-      AsyncStorage.setItem(PREFS_KEY, JSON.stringify(next)).catch(() => {});
-      return next;
-    });
+    setSessionPlacements(prev => ({ ...prev, [key]: p }));
   }, []);
   // smart-guide context — one per canvas; geoms registered by the layer hooks
   const guideX = useSharedValue(-1);
@@ -480,10 +493,10 @@ export default function ShareCardScreen() {
   const guideCtx = useRef<GuideCtx>({ geoms: {}, guideX, guideY }).current;
   const guideVStyle = useAnimatedStyle(() => ({ opacity: guideX.value >= 0 ? 1 : 0, transform: [{ translateX: guideX.value }] }));
   const guideHStyle = useAnimatedStyle(() => ({ opacity: guideY.value >= 0 ? 1 : 0, transform: [{ translateY: guideY.value }] }));
-  const distLayer = useMetricLayer('dist', canvasW, canvasH, prefs.placements?.dist, persistPlacement, guideCtx, !bgAdjustMode);
-  const paceLayer = useMetricLayer('pace', canvasW, canvasH, prefs.placements?.pace, persistPlacement, guideCtx, !bgAdjustMode);
-  const timeLayer = useMetricLayer('time', canvasW, canvasH, prefs.placements?.time, persistPlacement, guideCtx, !bgAdjustMode);
-  const crewLayer = useMetricLayer('crew', canvasW, canvasH, prefs.placements?.crew, persistPlacement, guideCtx, !bgAdjustMode);
+  const distLayer = useMetricLayer('dist', canvasW, canvasH, sessionPlacements.dist, persistPlacement, guideCtx, !bgAdjustMode);
+  const paceLayer = useMetricLayer('pace', canvasW, canvasH, sessionPlacements.pace, persistPlacement, guideCtx, !bgAdjustMode);
+  const timeLayer = useMetricLayer('time', canvasW, canvasH, sessionPlacements.time, persistPlacement, guideCtx, !bgAdjustMode);
+  const crewLayer = useMetricLayer('crew', canvasW, canvasH, sessionPlacements.crew, persistPlacement, guideCtx, !bgAdjustMode);
   const layerFor = { dist: distLayer, pace: paceLayer, time: timeLayer, crew: crewLayer } as const;
 
   // ── v2.1 per-run background adjust (photos only) ────────────────────────────
