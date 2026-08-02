@@ -26,6 +26,9 @@ export type MyPublicProfile = {
 export type MyRun = {
   /** 8/5 크루 배너 (그녀 ② 개인 리드) — null = 무배너, 이유 추론 금지 */
   crew_name?: string | null;
+  /** 8/8 그녀 (a) 오너-온리 서빙 — the twin's mirror gate (owner amend:
+      profile-shaped surfaces join the shared card's predicate) */
+  show_crew?: boolean | null;
   id: string;
   ran_at: string;
   title: string | null;

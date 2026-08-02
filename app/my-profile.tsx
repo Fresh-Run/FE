@@ -78,12 +78,12 @@ function RunCard({ run, name, photoUrl, units, mapLive, kudosOff, onKudos, onCou
           <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.cardName}>{name}</Text>
           <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.cardDate}>{fmtWhen(run.ran_at, lang)}</Text>
           {/* 8/5 crew banner — twin grammar matching the shared RunCard.
-              8/8: DELIBERATELY UNGATED by show_crew (private-family call,
-              checkpoint-stated): this surface lists 비공개 runs with
-              visibility captions — record-keeping grammar like 기록, not a
-              stranger mirror. The honesty gate lives on the shared
-              run-card's public-context own rows. */}
-          {run.crew_name ? (
+              8/8 OWNER AMEND (the flagged judgment call exercised): the twin
+              JOINS THE MIRROR — same predicate as the shared card. The
+              shape-based rule: PROFILE-SHAPED surfaces mirror the stranger's
+              view (an OFF run bannering here reads as "still public");
+              RECORD-SHAPED surfaces (기록, 활동 상세) always know their crew. */}
+          {run.crew_name && run.show_crew !== false ? (
             <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.cardCrew} numberOfLines={1}>{tf('rc.withCrew', { name: run.crew_name })}</Text>
           ) : null}
         </View>

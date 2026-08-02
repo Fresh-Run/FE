@@ -282,10 +282,10 @@ function RunRow({ run }: { run: Run }) {
         {/* 8/6 crew badge (her ② fields; null-safe by her all-null non-crew
             symmetry — nothing renders on non-crew runs). Interim 62px shape:
             glyph + name truncating BEFORE the date; the real treatment stays
-            with the row-redesign docket. 8/8 ruling: DELIBERATELY UNGATED by
-            show_crew — 기록 is your private record; the flag governs public
-            display, not what you remember about your own run. The honesty
-            gate lives on public-context own cards (run-card). */}
+            with the row-redesign docket. 8/8 ruling (shape-based): 기록 is
+            RECORD-SHAPED — it always knows its crew; show_crew never gates
+            here. PROFILE-SHAPED surfaces (shared run-card, my-profile twin)
+            mirror the stranger's view instead. */}
         {run.crew_name ? (
           <View style={st.runWhenRow}>
             <Icon name="people" size={10} color={C.accentGrn} />

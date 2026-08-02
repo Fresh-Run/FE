@@ -238,10 +238,10 @@ export default function ActivityScreen() {
           {/* Title */}
           <Text style={st.titleTxt}>{title}</Text>
           {/* 8/6 crew line (her ② single-read; count verbatim never computed;
-              null → no line by all-null symmetry). 8/8 ruling: DELIBERATELY
-              UNGATED by show_crew — 활동 상세 is your private analysis
-              surface; the flag governs public display, not your own records.
-              The honesty gate lives on public-context own cards (run-card). */}
+              null → no line by all-null symmetry). 8/8 ruling (shape-based):
+              활동 상세 is RECORD-SHAPED — it always knows its crew; show_crew
+              never gates here. PROFILE-SHAPED surfaces (shared run-card,
+              my-profile twin) mirror the stranger's view instead. */}
           {run.crew_name ? (
             <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.crewLine} numberOfLines={1}>
               {run.crew_name} · {T('act.crewSession')}{run.session_participant_count != null ? ` · ${tf('crw.nJoined', { n: run.session_participant_count })}` : ''}
