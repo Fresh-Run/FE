@@ -1223,7 +1223,7 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 - Promotion discipline UNCHANGED: every promotion to a tester-facing channel gets its own explicit one-confirm.
 - AMENDMENT (7/30, marker-placement correction): the hold was NEVER a written rule with its own ledger line — it operated as a standing VERBAL instruction that contradicted written constraint ④ ("invites/testers never wait"). Retiring it RESTORES ④ rather than superseding anything; ③ (core-loop scope) was retired separately by the Phase 2 epic itself, and the 36531a0 marker mis-attributed that. Markers corrected in place (③ → Phase-2 attribution · ④ → reaffirmed). **Ledger-hygiene lesson: verbal rules that contradict written constraints are invisible to audit until someone reads both — standing verbal instructions get a ledger line at issuance.**
 
-## ✅ 라이크-시스템 픽스 PROMOTED (2026-08-01) — 오너 [17:45] FULL ("2" 재현 1 정착·피드 리프레시 유지·자기-♥ 딤+카운트 시트·타인 불변) · 원-컨펌 (프로모트 커맨드 1회 인터럽트 → 스탬프 재송신 = 재확인 기록) · 4246ecb4 → production b8478119-5ffd-475d-8d75-283397dc5a23 · 프로모션 해시-타이 MATCH (tw7Ez3yX… 양채널 동일). **롤백 플로어 전진 → b8478119** (dac0e660 은퇴). 원-그래머 전면 + 리컨실-온-어라이벌 라이브 — 가드-블록-리컨실 트랩 인-코드 명기. **[8/4 AMEND: run-post에서 시트 도어 = 전용 "좋아요 N개" 로우 (카운트 아님) — 바가 버튼 그 자체가 됨 (탭 전면 = 토글); 카드 서피스는 원-그래머 불변 (♥=토글, 카운트=시트) + 슬롭 분리.]**
+## ✅ 라이크-시스템 픽스 PROMOTED (2026-08-01) — 오너 [17:45] FULL ("2" 재현 1 정착·피드 리프레시 유지·자기-♥ 딤+카운트 시트·타인 불변) · 원-컨펌 (프로모트 커맨드 1회 인터럽트 → 스탬프 재송신 = 재확인 기록) · 4246ecb4 → production b8478119-5ffd-475d-8d75-283397dc5a23 · 프로모션 해시-타이 MATCH (tw7Ez3yX… 양채널 동일). **롤백 플로어 전진 → b8478119** (dac0e660 은퇴). 원-그래머 전면 + 리컨실-온-어라이벌 라이브 — 가드-블록-리컨실 트랩 인-코드 명기. **[8/1 AMEND: run-post에서 시트 도어 = 전용 "좋아요 N개" 로우 (카운트 아님) — 바가 버튼 그 자체가 됨 (탭 전면 = 토글); 카드 서피스는 원-그래머 불변 (♥=토글, 카운트=시트) + 슬롭 분리.]**
 
 ## 🔼 라이크-시스템 픽스 STAGED — 4246ecb4-acf6-4579-84fc-28828ec0894c (커밋 1fcb3ea) · 해시-타이 MATCH · 플로어 dac0e660 · 워크: 0-라이크 포스트 라이크→1→재진입 여전히 1 (재현) · 피드 라이크→풀-리프레시 1 유지 · 자기 포스트 ♥ 딤+이너트·카운트→시트 (트윈+런포스트) · 타인 ♥ 토글/카운트 시트 불변 · 프로모션 개별 컨펌 대기
 
@@ -1301,7 +1301,7 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 ## 📅 레저 데이트 정정 (오너 하이진 워드, 실제 8/3) — 어드바이저 데이트-드리프트 스윕
 - **정정 54건 적용**: 8/5–8/8 라벨 → 커밋-타임스탬프 앵커 실날짜. 매핑: "8/5" 라벨 = 실 **8/1 밤** (그녀 트리아지/목 어멘드먼트/③알트 릴레이 21:47–23:54, 크루-♥·v4·답글 프로모션 포함) 또는 실 **8/2 새벽** (폴더 v3·B3·배너) · "8/6"–"8/7" = 실 **8/2** · "8/8" = 실 **8/3**. 이벤트 순서 무변 (오너 확인) — 캘린더 라벨만 시정.
 - **오너 스테이트 범위 (8/2–8/3) 밖 2건 명기**: 8/1-밤 커밋들 (21:47–23:54) — 커밋 타임스탬프 증거로 8/1 기입; 오너가 8/2로 간주 시 원-라인 정정.
-- **레인지 밖 플래그 (무수정, 워드 대기)**: "8/4" 라벨 엔트리들 (크루 미디어 "오너 필드 8/4"·답글 계약 "그녀 8/4"·"오너 8/4 재명확") — 커밋 앵커상 실 8/1 개연 동일-드리프트 클래스이나 오너 지정 범위(8/5–8/8) 밖 → 워드 시 동일 스윕.
+- ~~**레인지 밖 플래그**: "8/4" 라벨 엔트리들~~ **[스윕 완료 — 오너 워드 ②: 커밋 앵커 승 (레저 4사이트 → 8/1; 커밋 메시지 내 "8/4"는 불변 기록으로 존치). ① 8/1-밤 = 8/1 존속 비준 (밤은 제 캘린더 날짜 소속). ③ 인-코드 코멘트 = 존치 확정 (파일 터치 시 자가-시정).]**
 - **인-코드 코멘트 잔존 (무수정, 명기)**: 세션 중 작성된 코드 코멘트의 8/5–8/8 일자 (K2 RESTORED 8/8·8/7 리콘·8/6 크루 배지 등 ~20사이트) — 스트링-프리 (주석), 번들 무영향; 스윕은 별도 워드 (코드 처닝 대비 가치 판단 오너 몫).
 - 라티오 토큰 (마커 8/8·시뮬 8/8·Gate 8/8·en 8/8·빌드넘버 8/7/5/4/3) 무접촉 검증.
 
@@ -1510,8 +1510,8 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 - 에러 코드 2종 소비: comment_parent_invalid (원 댓글 사라짐 — CASCADE 레이스, 칩 해제+키드 카피) · reply_depth_exceeded (UI상 도달 불가 — 정직 카피). **api.ts §5 톱-레벨 error_code 라인 인-스코프 풀-포워드** (그녀 신규 코드가 톱-레벨 — 이 슬라이스의 에러 경로가 요구; `body.error_code ?? detail.error`, G 홀세일 컨벤션은 G 잔존).
 - 노티 무변경 (그녀 컨펌: 기존 run_commented 적합). **course-post 댓글 = 아웃-오브-스코프** (run-post = 소셜 서피스; 패리티 추후 희망 시). 신규 키 7 (ko+en) — **파리티 900/900 MATCH**.
 
-## 💬 답글 피처 — 계약 LOCKED (그녀 8/4 답) + 디자인 룰링 (오너 "인스타그램 패턴", 8/4) — 집행 위 슬라이스
-- **그녀 계약 (8/4 확정)**: parent_comment_id nullable 양방향 · 1-레벨 서버 강제 · 플랫 리스트+parent 참조, limit/offset 불변 · **comment_count = 답글 포함** · 부모 DELETE = **DB-레벨 CASCADE** · 신규 에러 코드 2종 `comment_parent_invalid` / `reply_depth_exceeded` (**→ G의 code→key 맵에 애디티브**) · 답글 노티 = 그녀 컨틴전시 (기존 타입 적합 시 라우팅 무변경, 아니면 팔로업 — 디플로이 노티스에서 확정).
+## 💬 답글 피처 — 계약 LOCKED (그녀 8/1 답) + 디자인 룰링 (오너 "인스타그램 패턴", 8/1) — 집행 위 슬라이스
+- **그녀 계약 (8/1 확정)**: parent_comment_id nullable 양방향 · 1-레벨 서버 강제 · 플랫 리스트+parent 참조, limit/offset 불변 · **comment_count = 답글 포함** · 부모 DELETE = **DB-레벨 CASCADE** · 신규 에러 코드 2종 `comment_parent_invalid` / `reply_depth_exceeded` (**→ G의 code→key 맵에 애디티브**) · 답글 노티 = 그녀 컨틴전시 (기존 타입 적합 시 라우팅 무변경, 아니면 팔로업 — 디플로이 노티스에서 확정).
 - ① 원-레벨 스레딩 (데이터) — 송신된 ask 그대로 (nullable parent_comment_id · 플랫 리스트+parent 참조 · comment_count 시맨틱 확정 · DELETE 정책 그녀 픽).
 - ② **디폴트 접힘**: 부모별 "답글 N개 보기" 익스팬더 (탭 = 인라인 확장, 어센딩) · 부모 = 팔로우-리스트 페이지네이션 · 답글 = 플랫 페치의 그룹드 칠드런에서 익스팬드 시 렌더.
 - ③ **답글 버튼 전 로우** (답글 포함): 답글에 답글 = 부모 스레드 타깃 + 컴포저 "@{nickname} " 플레인-텍스트 프리필. 원-레벨 강제 = 서버 (그녀 422) + 클라 (본 어포던스 외 네스팅 무).
@@ -1540,7 +1540,7 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 
 ## ~~(구) LA 평균 페이스 스왑 STAGED — cfb00e7b (커밋 0df4244)~~ 위 958c381c 참조 · 해시-타이 MATCH (fvTE3Pyf…) · 마커 6/6 캐리드 (스왑 = JS 밸류-온리, 커밋-타이드 해시 증명) · **신규 그룹 (프로덕션 = bd25b00a 플로어)** · **게이트: 실내 글랜스 1 — 런 시작 → 폰 락 → 배너 페이스 = 평균값, 정지 시 존속 (구 윈도우면 널)** · 프로모션 = 실관찰 스탬프 + 원-컨펌
 
-## 🔒 LA 배너 — 페이스 스왑 BUILT (STAGED 위 cfb00e7b) + 빌드-11 위젯 배치 LEDGERED (8/4 룰링 2건)
+## 🔒 LA 배너 — 페이스 스왑 BUILT (STAGED 위 cfb00e7b) + 빌드-11 위젯 배치 LEDGERED (8/1 룰링 2건)
 - **빌드 (OTA)**: pushLiveActivity paceSecPerKm = 30s 윈도우 → **평균 페이스** (런 화면 산식 그대로: ≥50m 플로어·세션 클록·동일 라운딩 — 배너 = 런 화면 평균 = 저장값 상시 일치, 데스크 4/4 EQUAL). 원-푸시-사이트 → 락 카드+익스팬디드 DI 동시 커버. Swift 제네릭 "페이스" 라벨 = 정직 (현재 아님) · 정지 중 윈도우-널 대신 평균 존속 = 락-스크린 우위 페이스.
 - **빌드-11 위젯 배치 (네이티브 이벤트 대기, 룰드)**: ① **타입 램프 옵션 (a)**: 밸류 19→22-23pt semibold→bold · 라벨 10.5→11.5 · 유닛 12→13 · 재원 = 섹션 패딩 15/14→~12 · **minimumScaleFactor 0.6 존속 (빌드-9 크런치 레슨)** · 캔버스-1:1 룰링 존중 (그녀 목 내 어멘드먼트, 무재구조). ② 라이더: 락-스크린 오디오 엔타이틀먼트 · "페이스"→"평균 페이스" 라벨 · ContentState pauseSource (자동 일시정지 캡션) · 크루 초대 딥링크 플립 (link+code) · **appVersion 런타임-타깃 리마인더 — 범프 시 명시 (스탠딩 룰)**.
 
