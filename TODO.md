@@ -1291,7 +1291,12 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 - **④ 그녀-레인 발견**: user-profile 엔드포인트 (/users/{id}/runs)는 타인 리드에서 crew_name **항상 null** (ON 런·크루메이트 뷰어에도) — 배너가 유저 프로필 서피스에 못 뜸; 8/5 "풀 크루 필드 서빙 확인"은 과독이었음 (그녀 세션 런 null만 관찰됨). + 기존 원-라이너 (own 리드에 show_crew 서빙) 중요도 상승 — 오너-뷰 정직성 픽스의 전제.
 - **픽스 플랜 (오너 워드 대기)**: [클라, 즉시] ⓐ edit-run 더티-플래그 — 토글을 유저가 건드린 경우에만 PATCH에 show_crew 동봉 (강제-리셋 사멸) ⓑ run-result 넷 save에 pending-run의 showCrew 스레드. [그녀 원-라인 ask 승격] own 리드 show_crew 서빙 → 클라 오너-뷰 배너를 플래그로 게이트 (완전한 정직성). [그녀 FYI] user-profile crew_name 서빙 부재. **[8/7 오너 빌드 워드 → 하단 BUILT 엔트리]**
 
-## 🔼 show_crew 홀 2건 STAGED — 9c850baa (커밋 5c0c4dc) · 해시-타이 MATCH (MoQKw74O… — **체크포인트의 커밋-타이드 해시와 동일**: --source-maps가 퍼블리시-패리티 재료였음 확정, 전 사이클 편차 클래스 클로즈) · 마커: show_crew ×1·showCrew ×2 (스트링-프리 슬라이스) · **신규 그룹 (프로덕션 = f5352b62 플로어 불변)** · **게이트: 실내 글랜스 — ⓐ 크루 런 편집: 토글 무접촉 제목 수정 → 저장 → 배너 상태 보존 (재공개 무) · 토글 실제 변경 → 반영 · ⓑ 넷-레인은 데스크-증명 수용 가능 (크래시 재현 = 선택적)** · 프로모션 = 실관찰 스탬프 + 원-컨펌
+## ✅ show_crew 홀 2건 PROMOTED (2026-08-08) — 오너 [00:10] FULL 실관찰 (크로스-어카운트) · 원-컨펌
+- [00:10] 관찰: OFF 저장 → test1 피드 배너 사라짐 (**라이트 패스 라이브 확인** — 게이트 차별화의 필드 재현) · 타이틀만 수정 → 저장 → test1 배너 여전히 무 (**포스-리셋 사망 실증**) · 편집 화면 체크박스 ON 표시 = 알려진 시드 갭 (그녀 원-라이너 대기, 온-레코드).
+- 9c850baa → production **ec964840-1d5b-4e7a-aa7d-a80be19693c8** · 프로모션 해시-타이 MATCH (MoQKw74O… 양채널 동일). **롤백 플로어 전진 → ec964840** (f5352b62 은퇴).
+- 오픈: 오너-뷰 정직성 게이트 (그녀 원-라이너 = 전제, ask 승격됨) · user-profile crew_name 서빙 부재 FYI · tagKept 넷-스레드 시블링 갭 (노트드).
+
+## ~~🔼 (구) STAGED — 9c850baa (커밋 5c0c4dc)~~ PROMOTED 위 참조 · 해시-타이 MATCH (MoQKw74O… — 체크포인트의 커밋-타이드 해시와 동일: --source-maps가 퍼블리시-패리티 재료였음 확정, 전 사이클 편차 클래스 클로즈) · 마커: show_crew ×1·showCrew ×2 (스트링-프리 슬라이스)
 
 ## 🔧 show_crew 홀 2건 BUILT (STAGED 위 9c850baa — 오너 빌드 워드 8/7)
 - **① edit-run 더티-게이트 (강제-리셋 사멸)**: showCrewTouchedRef (bio originalRef 문법의 터치 변형) — 토글 onPress가 마크, PATCH는 `crew_id && touched`일 때만 show_crew 동봉 · 언터치 = 필드 부재 = 서버 저장값 보존. 킬한 노출 경로 인-코멘트 (8/7 일자: 제목 수정 → 블라인드 ON이 저장 OFF 위에 덮임 = 재공개).
