@@ -1,5 +1,11 @@
 export type Coordinate = { lat: number; lng: number };
 
+/** Run-track point — her ③ (8/5): alt in 0.1m rounds, null/absent where the
+    client never sent (pre-deploy runs serve alt: null on every point —
+    null-skip treats both identically). Extends Coordinate so every map
+    consumer keeps reading tracks unchanged. */
+export type TrackPoint = Coordinate & { alt?: number | null };
+
 export type Vibe = 'park' | 'riverside' | 'city_night' | 'straight';
 
 export type AudioSettings = {

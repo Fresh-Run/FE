@@ -3,11 +3,11 @@
  * FrSplitsTable + FrPaceChart, activity-detail.jsx). Fed by the server's
  * RunSplit[] ({km, sec, elev_gain_m, partial} — probed 2026-07-11).
  *
- * ELEVATION PARKED (지연 ruling ⓑ, design-wave A rider): elev_gain_m is
- * permanently null by privacy design — the ±elev column and the chart's
- * elevation curve were empty theater and came OUT. Pace bars + ⚡ fastest
- * carry both views. The eventual path is a SERVER-side elevation lookup
- * from track coords, not device collection — re-add when that ships.
+ * ELEVATION UNPARKED APP-LEVEL (8/8): her ③ shipped alt on the track
+ * polyline (device-collected, 0.1m rounds) — the elevation-chart component
+ * owns the profile as its OWN section (activity + run-post). This chart's
+ * per-split ±elev column stays out: per-SPLIT elev_gain_m remains null on
+ * the wire (the ⓑ history above the 8/8 note is why it left).
  *
  * Unit note: split buckets are server-defined PER KM — the Km column keeps
  * km marks in both unit modes (relabeling buckets as miles would be fake

@@ -731,6 +731,10 @@ export const en: Record<keyof typeof ko, string> = {
   'err.network': 'Please check your network connection.',
   'err.timeout': 'The request timed out — please try again.',
   'ks.me': 'Me', // kudos-sheet self-row badge (8/8 rider)
+  // ── elevation chart (8/8, her ③ alt) ──
+  'elv.title': 'Elevation',
+  'elv.gain': 'Ascent',
+  'elv.loss': 'Descent',
   'rc.withCrew': 'With {name}', // no josa slot — en needs none; the extra var is a no-op
   'runSave.showCrew': 'Show crew on feed',
   'rp.viewReplies': 'View replies ({n})',

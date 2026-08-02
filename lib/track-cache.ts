@@ -8,9 +8,9 @@ import { useEffect, useState } from 'react';
 import { AppState } from 'react-native';
 
 import { getRunTrack } from '@/lib/run-social-api';
-import type { Coordinate } from '@/types';
+import type { Coordinate, TrackPoint } from '@/types';
 
-const cache = new Map<string, Coordinate[]>();
+const cache = new Map<string, TrackPoint[]>();
 const pending = new Set<string>(); // dedupe concurrent card mounts
 // Failed-set SOFTENING (latch episode, owner GO 2026-07-22): a 502-burst
 // launch window latched a whole session onto thumbs. Failures now EXPIRE
@@ -40,8 +40,8 @@ function isFailedFresh(runId: string): boolean {
 export function useRunTrack(
   runId: string | null | undefined,
   thumb: Coordinate[] | null | undefined,
-): { line: Coordinate[] | null; pending: boolean } {
-  const [track, setTrack] = useState<Coordinate[] | null>(() => (runId && cache.get(runId)) || null);
+): { line: TrackPoint[] | null; pending: boolean } {
+  const [track, setTrack] = useState<TrackPoint[] | null>(() => (runId && cache.get(runId)) || null);
   const [inFlight, setInFlight] = useState(false);
   useEffect(() => {
     if (!runId) return;

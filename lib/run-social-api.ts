@@ -8,7 +8,7 @@
 // out-of-scope or trackless → 404).
 
 import { apiFetch } from '@/lib/api';
-import type { Coordinate } from '@/types';
+import type { TrackPoint } from '@/types';
 
 export type RunComment = {
   id: string;
@@ -24,7 +24,8 @@ export type RunComment = {
 };
 
 export type RunTrack = {
-  polyline: Coordinate[];
+  /** carries alt (her ③, 0.1m rounds) — TrackPoint widening 8/8 */
+  polyline: TrackPoint[];
   server_distance_km: number | null;
   elev_gain_m: number | null;
   point_count_raw: number | null;

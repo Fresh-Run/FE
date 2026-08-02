@@ -743,6 +743,10 @@ export const ko = {
   'err.network': '네트워크 연결을 확인해 주세요.',
   'err.timeout': '요청 시간이 초과됐어요. 다시 시도해 주세요.',
   'ks.me': '나', // kudos-시트 셀프-로우 배지 (8/8 라이더)
+  // ── 엘리베이션 차트 (8/8, 그녀 ③ alt) ──
+  'elv.title': '고도',
+  'elv.gain': '총 상승',
+  'elv.loss': '총 하강',
   'rc.withCrew': 'With {name}',  // 8/5 오너 카피 룰링 — 양 로케일 동일 (조사 이슈 해소)
   'runSave.showCrew': '피드에 크루 표시',
   'rp.viewReplies': '답글 {n}개 보기',

@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { ElevationChart } from '@/components/elevation-chart';
 import { MediaCarousel } from '@/components/media-carousel';
 import { PhotoViewer } from '@/components/photo-viewer';
 import { ScreenshotShareOffer } from '@/components/screenshot-share-offer';
@@ -286,7 +287,7 @@ export default function ActivityScreen() {
             </>
           )}
 
-          {/* 페이스 차트 — needs at least two splits (elevation parked, 지연 ⓑ) */}
+          {/* 페이스 차트 — needs at least two splits (elevation UNPARKED 8/8 — its own section below) */}
           {splits.length >= 2 && (
             <>
               <Text style={st.sectionTitle}>{T('act.sectionPace')}</Text>
@@ -324,6 +325,12 @@ export default function ActivityScreen() {
               <PaceChart splits={splits} units={units} />
             </>
           )}
+
+          {/* 고도 프로파일 (8/8, her ③ alt — the 지연-ⓑ park lifts): the
+              component null-skips itself on pre-deploy/thin-alt tracks —
+              mounted unconditionally, renders nothing without data. `track`
+              = the FULL fetched line only (thumbs carry no alt anyway). */}
+          <ElevationChart points={track} />
 
           {/* Notes — only when present */}
           {run.notes ? (
