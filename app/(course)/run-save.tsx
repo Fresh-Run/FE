@@ -101,8 +101,11 @@ export default function RunSaveScreen() {
   const [tagKept, setTagKept] = useState(true);
   // 8/5 crew banner (her contract DEFAULT ON; private crews = server hard
   // gate regardless): the toggle rides the tag row — untagged runs never
-  // see it. Sent explicitly on POST so OFF is honored.
-  const [showCrew, setShowCrew] = useState(true);
+  // see it. Sent explicitly on POST so OFF is honored. 8/7: seeded from
+  // the draft and persisted on toggle (the title/memo grammar) so the
+  // run-result safety-net save carries the user's choice, not the
+  // omission-default; recovery restores it like any typed field.
+  const [showCrew, setShowCrew] = useState(initialDraft.showCrew);
 
   // run.area send-rider (S-batch #3, guide §96): reverse-geocode the run's
   // START point via the existing Apple path — district = subLocality =
@@ -321,7 +324,7 @@ export default function RunSaveScreen() {
               </View>
             ) : null}
             {tagKept ? (
-              <Pressable onPress={() => setShowCrew(v => !v)} style={st.showCrewRow} hitSlop={6}>
+              <Pressable onPress={() => { const next = !showCrew; setShowCrew(next); updatePendingDraft({ showCrew: next }); }} style={st.showCrewRow} hitSlop={6}>
                 <Icon name={showCrew ? 'checkbox' : 'square-outline'} size={17} color={showCrew ? C.accentGrn : C.faint} />
                 <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.showCrewTxt}>{T('runSave.showCrew')}</Text>
               </Pressable>

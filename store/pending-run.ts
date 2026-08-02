@@ -44,9 +44,16 @@ export type PendingDraft = {
   /** Local URIs, ALREADY re-encoded (EXIF-free) at pick time — crash-safe
       like the text fields; uploaded after the run save (attach-after). */
   photos: string[];
+  /** 8/7 safety-net thread: the crew-banner checkbox is compose state like
+      title/memo — before this it lived only in run-save's local useState,
+      so a crash after unchecking saved via the run-result net WITHOUT the
+      field (server default ON). Persisted here on toggle; the net save
+      reads it. Old disk copies recover as true via the EMPTY_DRAFT merge
+      (the contract default). */
+  showCrew: boolean;
 };
 
-const EMPTY_DRAFT: PendingDraft = { title: '', memo: '', visibility: 'public', photos: [] };
+const EMPTY_DRAFT: PendingDraft = { title: '', memo: '', visibility: 'public', photos: [], showCrew: true };
 
 let pending: PendingRun | null = null;
 let draft: PendingDraft = EMPTY_DRAFT;

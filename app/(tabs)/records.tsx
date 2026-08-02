@@ -282,7 +282,9 @@ function RunRow({ run }: { run: Run }) {
         {/* 8/6 crew badge (her ② fields; null-safe by her all-null non-crew
             symmetry — nothing renders on non-crew runs). Interim 62px shape:
             glyph + name truncating BEFORE the date; the real treatment stays
-            with the row-redesign docket. */}
+            with the row-redesign docket. 8/7: own reads serve crew_name
+            regardless of show_crew (A-rule) — badge ignores the toggle until
+            her one-liner serves the flag (her-ask; run-card has the full note). */}
         {run.crew_name ? (
           <View style={st.runWhenRow}>
             <Icon name="people" size={10} color={C.accentGrn} />

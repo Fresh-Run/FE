@@ -60,7 +60,12 @@ export function RunCard({ run, units, mapLive, onKudos, kudosOff, onOpen, onAvat
           <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.cardDate}>{fmtWhen(run.ran_at, lang)}</Text>
           {/* 8/5 crew banner (her contract, deployed): crew_name non-null =
               the runner chose to show it (show_crew gate + private-crew hard
-              gate, both server-side). null = NOTHING — never infer why. */}
+              gate, both server-side). null = NOTHING — never infer why.
+              OWN-VIEW CAVEAT (8/7 recon): personal reads serve crew_name
+              unconditionally (her A-rule) and don't serve show_crew, so on
+              own rows this renders regardless of the toggle. Honesty gate
+              NOT buildable until her one-liner (show_crew on own reads,
+              her-ask on the ledger) lands — then gate own rows on the flag. */}
           {run.crew_name ? (
             <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.cardCrew} numberOfLines={1}>{tf('rc.withCrew', { name: run.crew_name })}</Text>
           ) : null}

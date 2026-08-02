@@ -238,7 +238,10 @@ export default function ActivityScreen() {
           {/* Title */}
           <Text style={st.titleTxt}>{title}</Text>
           {/* 8/6 crew line (her ② single-read; count verbatim never computed;
-              null → no line by all-null symmetry) */}
+              null → no line by all-null symmetry). 8/7: own single serves
+              crew_name regardless of show_crew (A-rule) — line ignores the
+              toggle until her one-liner serves the flag (run-card has the
+              full note). */}
           {run.crew_name ? (
             <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.crewLine} numberOfLines={1}>
               {run.crew_name} · {T('act.crewSession')}{run.session_participant_count != null ? ` · ${tf('crw.nJoined', { n: run.session_participant_count })}` : ''}

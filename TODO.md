@@ -1289,7 +1289,14 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 - **② 증상 메커니즘 (컨빅션)**: 퍼스널 리드 (GET /runs 리스트·단건)는 **A-룰로 crew_name 무조건 서빙** (OFF 런에서 실측) + 단건 show_crew: null (그녀 시드 갭 존속) → 클라 배너/배지는 crew_name 존재로 렌더 → **오너 자신의 화면 (기록·활동 상세·내 프로필 트윈)에선 토글과 무관하게 항상 표시** — "미반영"으로 관찰됨. 타인에겐 안 보임. 오너-뷰 정직성 결함, 리크 무.
 - **③ 동반 컨빅션 (진짜 프라이버시-인접, 클라 레인)**: ⓐ **edit-run 강제-리셋 홀** — showCrew useState(true) 블라인드 시드 (단건이 플래그 미서빙) + 크루 런이면 매 저장 PATCH show_crew 동봉 → **OFF로 저장한 런의 무관 편집 (제목 수정 등)이 침묵으로 ON 복귀 = 실제 재공개**. ⓑ run-result 세이프티-넷 save가 showCrew 미동봉 (크래시-복구 레인 = 서버 디폴트 ON).
 - **④ 그녀-레인 발견**: user-profile 엔드포인트 (/users/{id}/runs)는 타인 리드에서 crew_name **항상 null** (ON 런·크루메이트 뷰어에도) — 배너가 유저 프로필 서피스에 못 뜸; 8/5 "풀 크루 필드 서빙 확인"은 과독이었음 (그녀 세션 런 null만 관찰됨). + 기존 원-라이너 (own 리드에 show_crew 서빙) 중요도 상승 — 오너-뷰 정직성 픽스의 전제.
-- **픽스 플랜 (오너 워드 대기)**: [클라, 즉시] ⓐ edit-run 더티-플래그 — 토글을 유저가 건드린 경우에만 PATCH에 show_crew 동봉 (강제-리셋 사멸) ⓑ run-result 넷 save에 pending-run의 showCrew 스레드. [그녀 원-라인 ask 승격] own 리드 show_crew 서빙 → 클라 오너-뷰 배너를 플래그로 게이트 (완전한 정직성). [그녀 FYI] user-profile crew_name 서빙 부재.
+- **픽스 플랜 (오너 워드 대기)**: [클라, 즉시] ⓐ edit-run 더티-플래그 — 토글을 유저가 건드린 경우에만 PATCH에 show_crew 동봉 (강제-리셋 사멸) ⓑ run-result 넷 save에 pending-run의 showCrew 스레드. [그녀 원-라인 ask 승격] own 리드 show_crew 서빙 → 클라 오너-뷰 배너를 플래그로 게이트 (완전한 정직성). [그녀 FYI] user-profile crew_name 서빙 부재. **[8/7 오너 빌드 워드 → 하단 BUILT 엔트리]**
+
+## 🔧 show_crew 홀 2건 BUILT (미스테이지 — 오너 빌드 워드 8/7, 체크포인트-앤-스톱)
+- **① edit-run 더티-게이트 (강제-리셋 사멸)**: showCrewTouchedRef (bio originalRef 문법의 터치 변형) — 토글 onPress가 마크, PATCH는 `crew_id && touched`일 때만 show_crew 동봉 · 언터치 = 필드 부재 = 서버 저장값 보존. 킬한 노출 경로 인-코멘트 (8/7 일자: 제목 수정 → 블라인드 ON이 저장 OFF 위에 덮임 = 재공개).
+- **② 세이프티-넷 스레드**: **유실 지점 확정 — showCrew가 run-save 스크린-로컬 useState에만 존재, PendingDraft (크래시-생존 스토어) 미탑승** → 컴포즈 킬 = 선택 소멸, 넷 save 필드 생략 = 서버 디폴트 ON. 픽스 = PendingDraft += showCrew (디폴트 true = 계약 디폴트; 구 디스크 카피 = EMPTY_DRAFT 머지로 true 복구, merge-safe) · run-save 시드 = initialDraft.showCrew + 토글마다 updatePendingDraft (title/memo 문법 버바팀 — 리커버리도 복원) · run-result 넷 save가 draft에서 리드해 동봉.
+- **③ 오너-뷰 정직성 게이트 = 미빌드 (그녀 전제)**: 렌더 3사이트 (run-card·기록 배지·활동 상세) 무접촉, her-ask 포인터 인-코멘트 (run-card 풀 노트 + 2사이트 단축 참조).
+- 노트드-낫-빌트: 넷 save의 tagKept 미스레드 (태그 × 제거 후 크래시 = 넷이 재태깅) — 시블링 갭, 스펙 외, 온-레코드.
+- 스트링-프리 (신규 키 0, 파리티 907 불변) · tsc 0 · eslint 0 · 커밋-타이드 export 해시 MoQKw74O… (show_crew 와이어-키 ×1 디덥 정합, showCrew 드래프트-키 ×2).
 
 ## ~~🔼 (구) STAGED — def1115f (커밋 53985e8)~~ PROMOTED 위 참조 · 해시-타이 MATCH (brXH5bSS… — 퍼블리시-타임 dist 기준; 프리-퍼블리시 수동 export는 소스맵 방출 차이로 상이 해시, 서빙 바이트 재스캔으로 마커 재증명) · 마커: 크루명·참여인원·Crew name·Participants 각 ×1 신규 (구 칩 밸류 사망 — 잔여 '크루 표시'/'Show crew' = runSave 키 서브스트링 귀속) · CDN 로우-애셋 403 온-레코드 (서빙 검증 = 매니페스트-해시 vs 로컬-dist 유지)
 

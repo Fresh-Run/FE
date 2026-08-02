@@ -55,8 +55,15 @@ export default function EditRunScreen() {
   // (detail's crew_id, her ② fields). SEED GAP, ledgered: the detail does
   // NOT serve show_crew (probed 8/5) — seeded ON (the contract default);
   // a user who saved OFF sees ON here until her one-line additive lands
-  // (her-ask on the ledger). PATCH sends it only when the row rendered.
+  // (her-ask on the ledger).
   const [showCrew, setShowCrew] = useState(true);
+  // DIRTY GATE (8/7, the recon's convicted exposure path): with the seed
+  // blind, sending show_crew on EVERY crew-run save meant any unrelated
+  // edit (title fix) silently PATCHed the blind ON over a stored OFF —
+  // republishing a banner the user had turned off. show_crew now rides
+  // the PATCH only when the toggle was actually touched this session;
+  // untouched → field absent → her server preserves the stored value.
+  const showCrewTouchedRef = useRef(false);
   const [seeded, setSeeded]         = useState(false);
   const [saving, setSaving]         = useState(false);
 
@@ -165,7 +172,7 @@ export default function EditRunScreen() {
         // Same promise as run-save: empty title → the suggestion IS the title
         title: (title.trim() || suggestedTitle).slice(0, 60),
         visibility,
-        ...(run?.crew_id ? { show_crew: showCrew } : {}),
+        ...(run?.crew_id && showCrewTouchedRef.current ? { show_crew: showCrew } : {}),
         notes: notes.trim() || null,
         ...(finalPaths ? { photos: finalPaths } : {}),
       });
@@ -266,7 +273,7 @@ export default function EditRunScreen() {
           {/* 크루 배너 토글 (8/5) — 크루-태그 런 온리 */}
           {run?.crew_id ? (
             <View style={{ paddingHorizontal: S.gutter, paddingTop: 18 }}>
-              <Pressable onPress={() => setShowCrew(v => !v)} style={st.showCrewRow} hitSlop={6}>
+              <Pressable onPress={() => { showCrewTouchedRef.current = true; setShowCrew(v => !v); }} style={st.showCrewRow} hitSlop={6}>
                 <Icon name={showCrew ? 'checkbox' : 'square-outline'} size={17} color={showCrew ? C.accentGrn : C.faint} />
                 <Text style={st.showCrewTxt}>{T('runSave.showCrew')}{run.crew_name ? ` (${run.crew_name})` : ''}</Text>
               </Pressable>

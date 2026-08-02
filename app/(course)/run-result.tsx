@@ -138,8 +138,11 @@ export default function RunResultScreen() {
         avgPaceSecPerKm: run.avgPaceSecPerKm,
         routeId: run.course?.id ?? null,
         gpsTrack: run.gpsTrack,
+        // 8/7 safety-net thread: the crew-banner choice rides the crash-safe
+        // draft (pending-run) — the omission here meant server default ON
+        // regardless of what the user unchecked before the crash
         ...(run.crewSession
-          ? { crewId: run.crewSession.crewId, announcementId: run.crewSession.announcementId }
+          ? { crewId: run.crewSession.crewId, announcementId: run.crewSession.announcementId, showCrew: getPendingDraft().showCrew }
           : {}),
       });
       savedRunRef.current = saved;
