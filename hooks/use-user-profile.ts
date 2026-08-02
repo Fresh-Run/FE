@@ -52,6 +52,10 @@ export type UserRun = {
   nickname: string;
   /** 8/5 크루 배너 (K1 피드 캐스트 공유) — null/absent = 무배너, 이유 추론 금지 */
   crew_name?: string | null;
+  /** 8/8 그녀 (a): 오너-온리 서빙 (추론-공격 내로잉) — own rows carry the
+      real bool; others' rows null/absent (never infer from the null).
+      The own-view honesty gate keys on this. */
+  show_crew?: boolean | null;
   avatar_url: string | null; // served (probed 2026-07-13, avatar sweep)
   ran_at: string;
   title: string | null;

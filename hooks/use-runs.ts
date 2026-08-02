@@ -29,6 +29,8 @@ export type Run = {
   session_key?: string | null;
   /** 단건 온리 (그녀 ②) — 서버-글로벌, 버바팀 리드, 클라 계산 금지 */
   session_participant_count?: number | null;
+  /** 8/8 그녀 (a) 오너-온리 서빙 — edit-run 시드 소스 (시드 갭 사망) */
+  show_crew?: boolean | null;
   id: string;
   ran_at: string;
   distance_km: number;

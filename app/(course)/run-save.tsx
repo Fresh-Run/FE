@@ -98,7 +98,9 @@ export default function RunSaveScreen() {
   // setting. Shown as a removable line; × revokes it for this save (removal
   // sticks). Removed → crew_id/announcement_id omitted → saves as a normal run.
   const crewSession = run?.crewSession;
-  const [tagKept, setTagKept] = useState(true);
+  // 8/8: seeded from the draft + persisted on both transitions (× / undo) —
+  // the crash-recovery net save honors a removed tag (the sibling gap)
+  const [tagKept, setTagKept] = useState(initialDraft.tagKept);
   // 8/5 crew banner (her contract DEFAULT ON; private crews = server hard
   // gate regardless): the toggle rides the tag row — untagged runs never
   // see it. Sent explicitly on POST so OFF is honored. 8/7: seeded from
@@ -318,7 +320,7 @@ export default function RunSaveScreen() {
                     <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.tagSub} numberOfLines={1}>{tf('runSave.crewMeeting', { title: crewSession.announcementTitle })}</Text>
                   ) : null}
                 </View>
-                <Pressable onPress={() => setTagKept(false)} hitSlop={8} style={st.tagRemove}>
+                <Pressable onPress={() => { setTagKept(false); updatePendingDraft({ tagKept: false }); }} hitSlop={8} style={st.tagRemove}>
                   <Icon name="close" size={15} color={C.faint} />
                 </Pressable>
               </View>
@@ -329,7 +331,7 @@ export default function RunSaveScreen() {
                 <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.showCrewTxt}>{T('runSave.showCrew')}</Text>
               </Pressable>
             ) : (
-              <Pressable onPress={() => setTagKept(true)} style={st.tagRemovedRow}>
+              <Pressable onPress={() => { setTagKept(true); updatePendingDraft({ tagKept: true }); }} style={st.tagRemovedRow}>
                 <Text style={st.tagRemovedTxt}>{T('runSave.tagRemoved')}</Text>
                 <Text style={st.tagUndo}>{T('runSave.undo')}</Text>
               </Pressable>

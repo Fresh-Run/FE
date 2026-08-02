@@ -51,9 +51,14 @@ export type PendingDraft = {
       reads it. Old disk copies recover as true via the EMPTY_DRAFT merge
       (the contract default). */
   showCrew: boolean;
+  /** 8/8 tagKept rider (the ledgered sibling gap): the crew-tag × removal
+      is compose state too — before this, a crash after removing the tag
+      meant the net save re-tagged the run. Persisted on both transitions
+      (× and undo); old disk copies recover as true via the merge. */
+  tagKept: boolean;
 };
 
-const EMPTY_DRAFT: PendingDraft = { title: '', memo: '', visibility: 'public', photos: [], showCrew: true };
+const EMPTY_DRAFT: PendingDraft = { title: '', memo: '', visibility: 'public', photos: [], showCrew: true, tagKept: true };
 
 let pending: PendingRun | null = null;
 let draft: PendingDraft = EMPTY_DRAFT;

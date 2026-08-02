@@ -1298,6 +1298,15 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 
 ## ~~🔼 (구) STAGED — a7599217 (커밋 4c9e337)~~ PROMOTED 위 참조 · 해시-타이 MATCH (J0E2-ihy… — 퍼블리시-타임 dist 기준; 수동-export 비결정성 잔존 온-레코드) · 마커: /kudos ×1·likes_disabled ×1 (스트링-프리)
 
+## 🪞 오너-뷰 정직성 게이트 + tagKept 라이더 BUILT (미스테이지 — 오너 빌드 워드 8/8, 그녀 (a)+(b) 배포 컨펌 후행)
+- **프로브 재검 (라이브, 프로브크루2 생성→소멸, ON/OFF 런 2건, 월드 복원 204×3)**: own 리스트+단건 = **show_crew 실불리언** (OFF 런에 False — 시드 갭 사망 증서) · 타인 로우 = show_crew null 고정 ((a) 오너-온리) + crew_name (b) 게이트 차별화 (ON 서빙/OFF 널) 재확인.
+- **서피스 테이블 (룰링 적용 as built)**: 퍼블릭-컨텍스트 own 카드 (셰어드 run-card — 홈/전체 피드·유저-프로필 캐스트) = **게이트** · 기록 배지 = 언게이트 (프라이빗 레코드, why 인-코멘트) · 활동 상세 = 언게이트 (동일) · **내 프로필 트윈 = 언게이트 [저지먼트 콜, 체크포인트-스테이트]**: 비공개 런을 가시성 캡션과 함께 나열하는 레코드-키핑 문법 = 기록 패밀리, 스트레인저 미러 아님.
+- **프레디킷 (정확 문구)**: `run.crew_name && run.show_crew !== false` — 타인 로우는 null → 통과 (기존 서버-게이트 로직 그대로) · own 로우만 실불리언이 게이트. 크루메이트 뉘앙스 인-코멘트 (그녀 (b) 인-크루 티어: OFF 런도 크루메이트에겐 배너 — 미러는 스트레인저 뷰 반영).
+- **타입**: UserRun += show_crew (피드 캐스트 전파: NearbyRun·ActivityRun 교차 자동) · Run (단건) += show_crew.
+- **edit-run 시드**: 시드 이펙트에 `setShowCrew(run.show_crew ?? true)` — **레저드 시드 갭 사망** (블라인드 ON은 프리-시드 초기값+널 폴백으로만 잔존 = 계약 디폴트) · 더티-게이트 존속 (터치 시에만 송신) · 러닝 저장 체크박스 무접촉 (컴포즈-타임 디폴트 ON 계약).
+- **tagKept 라이더**: PendingDraft += tagKept (디폴트 true, EMPTY_DRAFT 머지 = 구 디스크 카피 세이프) · run-save 시드 initialDraft.tagKept + **양 전이 퍼시스트 (× 제거 AND 언두)** · run-result 넷 save 조건 `crewSession && draft.tagKept` — 제거된 태그는 크래시를 관통해 제거 유지.
+- 스트링-프리 (파리티 907 불변) · tsc 0 · eslint 0 · 커밋-타이드 export 해시 WBYcQ0K4… (show_crew ×1·tagKept ×1 디덥).
+
 ## 💚 K2 셀프-쿠도스 리스토어 BUILT (STAGED 위 a7599217 — 오너 RECON+BUILD 워드 8/8)
 - **① 프로브 판정: 204 — 팬텀 확정.** test1 자기-런에 클라 정확 엔드포인트 (POST /api/runs/{id}/kudos) → **204** · 리드백 my_kudos:true + count 셀프 포함 · 재-POST 204 (멱등) · DELETE 204 → 클린 리버트 (④ 시맨틱 = 어디서나와 동일, 라운드-트립 실증). 월드 복원 완결 (count 0 복귀).
 - **② 컨빅션 오리진 (팬텀 클래스 7번째 — 스테일-독스 변형)**: 셀프-쿠도스 400은 **2026-07-07 라이브 프로브로 실증된 진실이었음** (레저 원문: "probed, ledger 2026-07-07") — 어섬드 아님. v120 (7/30)이 스위치를 열었고, 프로브드-진실이 만료-체크 없이 3주 생존 → **리얼-덴-리프티드**: 컨빅션은 정직했고, 스테일화가 팬텀을 만듦 (5번째 셀프-리포트-400과 동족 — 서버 정책 변경이 클라 확신을 무효화하는 클래스; 프로브에 유효기한 없음이 교훈).

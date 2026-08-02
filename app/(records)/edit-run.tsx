@@ -52,10 +52,11 @@ export default function EditRunScreen() {
   const [notes, setNotes]           = useState('');
   const [visibility, setVisibility] = useState<RunVisibility>('public');
   // 8/5 crew banner toggle — rendered only when the run IS crew-tagged
-  // (detail's crew_id, her ② fields). SEED GAP, ledgered: the detail does
-  // NOT serve show_crew (probed 8/5) — seeded ON (the contract default);
-  // a user who saved OFF sees ON here until her one-line additive lands
-  // (her-ask on the ledger).
+  // (detail's crew_id, her ② fields). SEED GAP DEAD (8/8): her (a) serves
+  // show_crew on own reads (probe-verified real bool) — the checkbox seeds
+  // from the run's actual flag in the seed effect below; the blind ON
+  // default survives only as the pre-seed initial and the null fallback
+  // (contract default).
   const [showCrew, setShowCrew] = useState(true);
   // DIRTY GATE (8/7, the recon's convicted exposure path): with the seed
   // blind, sending show_crew on EVERY crew-run save meant any unrelated
@@ -82,6 +83,8 @@ export default function EditRunScreen() {
     setTitle(run.title ?? '');
     setNotes(run.notes ?? '');
     setVisibility((run.visibility as RunVisibility) ?? 'public');
+    setShowCrew(run.show_crew ?? true); // 8/8: the real flag (her (a)); null = contract default
+
     const urls = run.photos ?? [];
     const paths = run.photo_paths ?? [];
     const n = Math.min(urls.length, paths.length); // parallel by contract

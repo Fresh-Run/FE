@@ -238,10 +238,10 @@ export default function ActivityScreen() {
           {/* Title */}
           <Text style={st.titleTxt}>{title}</Text>
           {/* 8/6 crew line (her ② single-read; count verbatim never computed;
-              null → no line by all-null symmetry). 8/7: own single serves
-              crew_name regardless of show_crew (A-rule) — line ignores the
-              toggle until her one-liner serves the flag (run-card has the
-              full note). */}
+              null → no line by all-null symmetry). 8/8 ruling: DELIBERATELY
+              UNGATED by show_crew — 활동 상세 is your private analysis
+              surface; the flag governs public display, not your own records.
+              The honesty gate lives on public-context own cards (run-card). */}
           {run.crew_name ? (
             <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.crewLine} numberOfLines={1}>
               {run.crew_name} · {T('act.crewSession')}{run.session_participant_count != null ? ` · ${tf('crw.nJoined', { n: run.session_participant_count })}` : ''}

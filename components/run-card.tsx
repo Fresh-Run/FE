@@ -58,15 +58,18 @@ export function RunCard({ run, units, mapLive, onKudos, kudosOff, onOpen, onAvat
         <View style={{ flex: 1, minWidth: 0 }}>
           <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.cardName}>{run.nickname}</Text>
           <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.cardDate}>{fmtWhen(run.ran_at, lang)}</Text>
-          {/* 8/5 crew banner (her contract, deployed): crew_name non-null =
-              the runner chose to show it (show_crew gate + private-crew hard
-              gate, both server-side). null = NOTHING — never infer why.
-              OWN-VIEW CAVEAT (8/7 recon): personal reads serve crew_name
-              unconditionally (her A-rule) and don't serve show_crew, so on
-              own rows this renders regardless of the toggle. Honesty gate
-              NOT buildable until her one-liner (show_crew on own reads,
-              her-ask on the ledger) lands — then gate own rows on the flag. */}
-          {run.crew_name ? (
+          {/* 8/5 crew banner (her contract) + 8/8 OWN-VIEW HONESTY GATE
+              (her (a) deployed, probe-verified): predicate =
+              crew_name && show_crew !== false.
+              - others' rows: show_crew is null/absent (owner-only serving)
+                → !== false passes → crew_name presence governs, exactly the
+                server-gated pre-8/8 logic. null = NOTHING — never infer why.
+              - OWN rows: the real bool gates — OFF hides your own banner,
+                mirroring the STRANGER's view (the flag's actual meaning).
+                Nuance: crewmates still see the banner on your OFF runs
+                (her (b) in-crew tier) — the mirror reflects strangers,
+                not crewmates. */}
+          {run.crew_name && run.show_crew !== false ? (
             <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.cardCrew} numberOfLines={1}>{tf('rc.withCrew', { name: run.crew_name })}</Text>
           ) : null}
         </View>
