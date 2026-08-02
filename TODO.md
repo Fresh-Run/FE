@@ -1298,7 +1298,12 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 
 ## ~~🔼 (구) STAGED — a7599217 (커밋 4c9e337)~~ PROMOTED 위 참조 · 해시-타이 MATCH (J0E2-ihy… — 퍼블리시-타임 dist 기준; 수동-export 비결정성 잔존 온-레코드) · 마커: /kudos ×1·likes_disabled ×1 (스트링-프리)
 
-## 🔼 홈 재탭 + 엘리베이션 캐리 STAGED — 483a75d2 (커밋 e7f4a6b) · 해시-타이 MATCH (b1mqJRiY… — 체크포인트 커밋-타이드 동일) · 마커: scrollToOffset·tabPress 신규 + 엘리베이션 캐리드 (총 상승 ×1) · **6adba50d 대체** · 프로덕션 = 0c0a59f0 플로어 불변 · **게이트 (합산 스탬프): ① 엘리베이션 4레그 (6adba50d 엔트리 버바팀 — 필드 런 고도 섹션·run-post 동일·구 런 부재·en 플립) ② 홈 재탭 10초 글랜스: 딥 스크롤 → 홈 탭 재탭 = 애니메이트 맨 위 · 타 탭 → 홈 = 위치 보존** · 프로모션 = 실관찰 스탬프 + 원-컨펌
+## ✅ 엘리베이션 차트 + 홈 재탭 PROMOTED (2026-08-03) — 오너 [02:10] FULL 실관찰 · 원-컨펌
+- [02:10] 관찰: 오늘 산책 런 고도 차트 렌더 (**수치 상식적** — 개연성 게이트 통과) · 런포스트 동일 · 구 런 무표시 · 홈 재탭 최상단 · 왕복 위치 보존. [en-플립 레그 = 스탬프 미기재 — 딕셔너리-서빙 데스크-증명으로 수용, 온-레코드.]
+- 483a75d2 → production **2fc56f4e-c47a-4dbc-9d9a-6fd6943d56be** · 프로모션 해시-타이 MATCH (b1mqJRiY… 양채널 동일). **롤백 플로어 전진 → 2fc56f4e** (0c0a59f0 은퇴).
+- 라이브: 고도 프로파일 (활동 상세 + run-post, null-스킵) · 홈 재탭 스크롤-투-탑. **오너-워드 빌드 큐 EMPTY** — 잔여: 재탭 확장 워드 (기록/커뮤니티/프로필 서베이 온-레코드) · i18n 6-8 리줌 · 빌드-11 배치. 외부: 그녀 월요일 (랜드마크·횡단보도).
+
+## ~~🔼 (구) 홈 재탭 + 엘리베이션 캐리 STAGED — 483a75d2 (커밋 e7f4a6b)~~ PROMOTED 위 참조 · 해시-타이 MATCH (b1mqJRiY…) · 6adba50d 대체분
 
 ## 🏠 홈 재탭 스크롤-투-탑 BUILT (STAGED 위 483a75d2 — 오너 룰 8/3, 엘리베이션과 동일 스탬프 라이드)
 - **와이어링 (정확)**: fresh-tab-bar handlePress가 표준 `navigation.emit({type:'tabPress', target: routeKey})` 기발신 (커스텀 바 기존 코드, 무변경) → index.tsx가 자기 탭의 tabPress만 수신 (`navigation.addListener`, expo-router useNavigation) → **emit-타임 `isFocused()` 분기**: true = 재탭 → `scrollToOffset({offset:0, animated:true})` · false = 타 탭발 도착 (포커스는 emit 후 랜딩) → 무동작 = 위치 보존 (항목 3).
