@@ -1298,6 +1298,13 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 
 ## ~~🔼 (구) STAGED — a7599217 (커밋 4c9e337)~~ PROMOTED 위 참조 · 해시-타이 MATCH (J0E2-ihy… — 퍼블리시-타임 dist 기준; 수동-export 비결정성 잔존 온-레코드) · 마커: /kudos ×1·likes_disabled ×1 (스트링-프리)
 
+## 🏠 홈 재탭 스크롤-투-탑 BUILT (미스테이지 — 오너 룰 8/3; 스테이지 시 6adba50d 대체 합류, 엘리베이션과 동일 스탬프 라이드)
+- **와이어링 (정확)**: fresh-tab-bar handlePress가 표준 `navigation.emit({type:'tabPress', target: routeKey})` 기발신 (커스텀 바 기존 코드, 무변경) → index.tsx가 자기 탭의 tabPress만 수신 (`navigation.addListener`, expo-router useNavigation) → **emit-타임 `isFocused()` 분기**: true = 재탭 → `scrollToOffset({offset:0, animated:true})` · false = 타 탭발 도착 (포커스는 emit 후 랜딩) → 무동작 = 위치 보존 (항목 3).
+- **양 피드 탭**: 전체/친구는 단일 FlatList의 data 스왑 (리스트 교체 아님) — ref 하나가 표시 중인 쪽을 커버.
+- **스크롤 온리**: 리페치 무탑승 (리프레시 = 풀-투-리프레시 몫; 재탭은 포커스 이벤트 재발화도 없음 — 기존 focus-refetch 머시너리 무접촉).
+- **④ 확장 서베이 (리포트-온리, 오너 워드 대기)**: 기록 = ScrollView (records:367 — ref+`scrollTo` 동일 패턴, S) · 커뮤니티 = FlatList + 중첩 ScrollView 2컨테이너 (community:355/601 — 활성 서브뷰 판별 필요, S-M) · 프로필 = ScrollView (profile:318 — S). 각 탭 ~10줄 동일 문법; 커뮤니티만 서브뷰 분기 한 겹.
+- 스트링-프리 (파리티 929 불변) · tsc 0 · eslint 0 · 커밋-타이드 export 해시 b1mqJRiY… (scrollToOffset ×1·tabPress ×1).
+
 ## 📅 레저 데이트 정정 (오너 하이진 워드, 실제 8/3) — 어드바이저 데이트-드리프트 스윕
 - **정정 54건 적용**: 8/5–8/8 라벨 → 커밋-타임스탬프 앵커 실날짜. 매핑: "8/5" 라벨 = 실 **8/1 밤** (그녀 트리아지/목 어멘드먼트/③알트 릴레이 21:47–23:54, 크루-♥·v4·답글 프로모션 포함) 또는 실 **8/2 새벽** (폴더 v3·B3·배너) · "8/6"–"8/7" = 실 **8/2** · "8/8" = 실 **8/3**. 이벤트 순서 무변 (오너 확인) — 캘린더 라벨만 시정.
 - **오너 스테이트 범위 (8/2–8/3) 밖 2건 명기**: 8/1-밤 커밋들 (21:47–23:54) — 커밋 타임스탬프 증거로 8/1 기입; 오너가 8/2로 간주 시 원-라인 정정.

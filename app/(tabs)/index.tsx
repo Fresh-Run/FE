@@ -12,7 +12,7 @@ import { SuggestedRunnersRow, useSuggestedRunners } from '@/components/suggested
 import { t, tf, tfIn, tIn, useLang, useT } from '@/lib/i18n';
 import { useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
+import { router, useNavigation } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -491,6 +491,24 @@ export default function HomeScreen() {
   // Maps slice 2 — real-map-only-for-viewable-cells. Stable refs (FlatList
   // forbids changing these props mid-list); 25% visibility flips a cell live.
   const [liveIds, setLiveIds] = useState<Set<string>>(new Set());
+  // 홈 재탭 = 맨 위로 (owner-ruled 8/3): the tab bar emits tabPress
+  // (fresh-tab-bar handlePress); this screen's listener receives its OWN
+  // tab's presses only. isFocused() at emit time distinguishes the re-tap
+  // (true → scroll) from arriving-from-another-tab (false — focus lands
+  // AFTER the emit → position preserved, item-3 rule). SCROLL ONLY — no
+  // refetch rides the tap (refresh stays pull-to-refresh's job); the one
+  // FlatList serves BOTH feed tabs (전체/친구 swap data, not lists), so a
+  // single ref covers whichever is showing.
+  const feedListRef = useRef<FlatList<FeedRun | { __suggest: string }>>(null);
+  const navigation = useNavigation();
+  useEffect(() => {
+    return navigation.addListener('tabPress' as never, () => {
+      if (navigation.isFocused()) {
+        feedListRef.current?.scrollToOffset({ offset: 0, animated: true });
+      }
+    });
+  }, [navigation]);
+
   const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 25 }).current;
   const onViewableItemsChanged = useRef(
     ({ viewableItems }: { viewableItems: { key: string }[] }) => {
@@ -549,6 +567,7 @@ export default function HomeScreen() {
       {/* Cold-start recovery of an unsaved run (crash safety, 러닝 저장 item) */}
       <PendingRunRecovery />
       <FlatList
+        ref={feedListRef}
         data={displayList}
         keyExtractor={(r) => '__suggest' in r ? r.__suggest : r.run_id}
         showsVerticalScrollIndicator={false}
