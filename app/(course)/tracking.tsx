@@ -73,7 +73,13 @@ const MAP_H = 330;                    // expanded-detent map viewport (canvas)
 // field-tunable; lookahead re-derived (0.28 × 850 ≈ 238 → 240).
 const NAV_ALTITUDE_M = 850;   // v5 ruled framing (was 420 — read "tight" vs image 2)
 const NAV_PITCH_DEG = 0;      // v2 FLAT (was 57 — field: tilt read as distortion, not depth)
-const NAV_LOOKAHEAD_M = 240;  // v5 re-derived for 850 (was 120 at 420)
+// v5.2 (owner ruling 8/3 — tangent-vertical CONFIRMED; the 0.22 band hid
+// the dot under the stats card): the dot's screen band, ~35% up — clearly
+// above the collapsed card, course still owning the screen above. ONE
+// fraction drives the lookahead for BOTH follow and recenter (courseCamera
+// is the single math — the band is identical everywhere by construction).
+const NAV_BAND_FRAC = 0.35;
+const NAV_LOOKAHEAD_M = Math.round((0.5 - NAV_BAND_FRAC) * NAV_ALTITUDE_M); // ≈128 (was 240 at 0.22)
 const FREE_RECENTER_ALTITUDE_M = 420; // free runs keep their prior close view (unchanged behavior)
 // v3 follow-animation duration: with the LIVE dot during follow (the dot
 // renders each raw fix instantly; the camera animates to its projection),
