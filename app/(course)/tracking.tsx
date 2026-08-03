@@ -36,7 +36,7 @@ import Reanimated, {
   useSharedValue,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Circle, Path as SvgPath } from 'react-native-svg';
+import Svg, { Circle } from 'react-native-svg';
 
 import { Icon } from '@/components/ui';
 import { SEOUL_FALLBACK, useCurrentLocation } from '@/hooks/use-current-location';
@@ -71,6 +71,13 @@ const MAP_H = 330;                    // expanded-detent map viewport (canvas)
 const NAV_ALTITUDE_M = 420;   // v2 ↑ from 320 — top-down overview
 const NAV_PITCH_DEG = 0;      // v2 FLAT (was 57 — field: tilt read as distortion, not depth)
 const NAV_LOOKAHEAD_M = 120;  // v2 re-derived for pitch 0 (was 180 at 57°)
+// v3 follow-animation duration: with the LIVE dot during follow (the dot
+// renders each raw fix instantly; the camera animates to its projection),
+// the dot detaches from the ~22% spot for the animation window. Desk math:
+// one fix-step ≈ 5m ≈ 5/420·850pt ≈ 10pt of screen slip — visible at
+// 500ms, tight at 350ms (still completes well inside the 1-2s fix cadence,
+// rotation stays smooth). Field-tunable.
+const NAV_FOLLOW_MS = 350;    // was inline 500
 const NAV_ENTER_MS = 1800;    // overview → follow flight, flown DURING the countdown ("drive pressed")
 // ── 8/3 nav-completion — ALL FIELD-TUNABLE (the walk judges) ──
 // 8/3 tmap grammar (owner ruling — SUPERSEDES the compass-fusion standing
@@ -86,9 +93,9 @@ const BEARING_ALPHA_FAST = 0.65;
 const BEARING_FAST_DEG = 15;    // |Δ| at/above → the fast lane
 const SNAP_TO_ROUTE_M = 18;     // v2 display-only arrow snap (boundary — see the camera effect)
 const ARRIVAL_M = 25;           // v2 go-to-start: arrival radius → NAVIGATING
-const ARROW_ANCHOR_FRAC = 0.22; // the fixed arrow: fraction up from the map frame's bottom
-                                // (matches where the tuned 180m lookahead at 57°/320m
-                                // projects the runner — the 8/3 "~22% band")
+// (v3: ARROW_ANCHOR_FRAC deleted with the arrow — the ~22% band survives
+// as the CAMERA's own projection: lookahead × flat posture puts the runner
+// there by construction; NAV_FOLLOW_MS below keeps the dot visually tied.)
 const NEXT_BAND_M = 300;      // the emphasized "next stretch" band + the turn overlay's approach window
 // T1.7 CLOSE (owner verdict from the field look, 2026-07-26): 320/57/180
 // READS RIGHT — the baseline landed; the tuning panel stripped per the
@@ -701,7 +708,7 @@ export default function TrackingScreen() {
         pitch: NAV_PITCH_DEG,
         heading: h,
       },
-      { duration: 500 },
+      { duration: NAV_FOLLOW_MS },
     );
      
   }, [drawnPath.length, state, drawnPath, courseCoords.length, navBearing, navPhase, course]);
@@ -978,11 +985,12 @@ export default function TrackingScreen() {
           // T1.5 zoom agency: pinch-zoom joins the indefinite suspension (onPanDrag
           // misses two-finger gestures); recenter resumes follow instantly
           onRegionChangeComplete={(_r, d) => { if (d?.isGesture && state === 'running') onUserPan(); }}
-          // v2 mode split (the arrow's contract): the dot and the arrow
-          // are mutually exclusive — dot whenever the camera is FREE
-          // (panned) or non-nav; arrow only while locked. The dot is the
-          // truth when the arrow would lie.
-          showsUserLocation={!(hasCoursePath && state === 'running' && !recenterVisible)}
+          // nav v3: the native dot is the runner marker in ALL phases (the
+          // v2 arrow + mode split died — executive ruling). The dot renders
+          // raw GPS truth; the camera holds the path (snap survives for the
+          // CENTER only), and the dot's accuracy halo carries any drift
+          // honestly.
+          showsUserLocation
           // T1.6 POI MUTE: course tracking quiets to roads + ribbon; free
           // runs keep today's map (the prop is per-render — not mode-awkward)
           // 8/3 owner ruling (field experience over the 8/1 desk call):
@@ -1053,19 +1061,14 @@ export default function TrackingScreen() {
           )}
         </MapView>
 
-        {/* ── tmap grammar (8/3): the FIXED user arrow — screen-space chrome
-            at bottom-center. THE ARROW'S CONTRACT (v2 mode split): it
-            renders ONLY while the camera is locked to the runner — screen
-            position = runner's position; anything else is a lie. User pans
-            (recenterVisible) → arrow HIDES, the native blue dot shows the
-            true position; recenter → dot off, arrow returns. */}
-        {hasCoursePath && state === 'running' && !recenterVisible && (
-          <View pointerEvents="none" style={st.navArrowWrap}>
-            <Svg width={34} height={34} viewBox="0 0 34 34">
-              <SvgPath d="M17 2 L30 30 L17 23 L4 30 Z" fill={C.accent} stroke="#fff" strokeWidth={2} strokeLinejoin="round" />
-            </Svg>
-          </View>
-        )}
+        {/* ── nav v3 (8/3 executive ruling, second field walk): THE ARROW IS
+            DEAD — deleted, not disabled. The NATIVE DOT is the runner marker
+            in every phase: the camera-follow already projects the runner's
+            position at the ~22% band BY CONSTRUCTION (pointAhead lookahead
+            at the flat posture), so the dot sits at the old anchor without
+            any screen-space chrome, and its heading cone is the direction
+            indicator. Reversal path if ever needed: a custom snappable
+            Marker (ledgered). */}
 
         {/* ── tmap blinking turn overlay (8/3 part 4): approach window =
             NEXT_BAND_M (the field-tuned band — the reuse the ruling names);
@@ -1327,15 +1330,9 @@ const makeSt = (C: Tokens) => StyleSheet.create({
   gpsChipTxt: { fontSize: 11, fontWeight: '700', color: '#fff', letterSpacing: -0.2 },
   turnBadge:  { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: C.surface, borderWidth: 1.5, borderColor: C.border, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 4, ...shadows.sm },
   turnTxt:    { fontSize: 11, fontWeight: '800', color: C.text, letterSpacing: -0.2 },
-  // 8/3 tmap grammar: fixed user arrow (screen-space chrome) + turn overlay.
-  // The overlay card is FIXTURE black-on-white (tmap's outline treatment) —
-  // identical in both schemes by design, high-contrast over any tile.
-  navArrowWrap: {
-    position: 'absolute', left: 0, right: 0,
-    bottom: `${Math.round(ARROW_ANCHOR_FRAC * 100)}%`,
-    alignItems: 'center',
-    shadowColor: '#000', shadowOpacity: 0.35, shadowRadius: 3, shadowOffset: { width: 0, height: 1 },
-  },
+  // 8/3 turn overlay (v3: the arrow style died with the arrow). The card is
+  // FIXTURE black-on-white (tmap's outline treatment) — identical in both
+  // schemes by design, high-contrast over any tile.
   turnOverlayWrap: { position: 'absolute', left: 0, right: 0, top: '28%', alignItems: 'center' },
   turnOverlayCard: {
     alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 18,
