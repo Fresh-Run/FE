@@ -186,6 +186,11 @@ type SelKey = ShareLayerKey | 'track';
 const SCALE_PRESETS = [0.85, 1.0, 1.25];
 /** Touch slop added around a layer's box for hit-testing (px) */
 const HIT_PAD_PX = 8;
+/** 8/3 amend (지연 mid-glance): one-finger corner resize handle — hit
+    radius 18px ≈ a 36pt circle (the ~28pt target + generous slop). */
+const HANDLE_HIT_R_PX = 18;
+/** resize floor — the handle can't collapse a layer past this scale */
+const HANDLE_SCALE_MIN = 0.3;
 
 // Snap tick — Light, gated under run.haptics per the vocabulary table's own
 // scope (tabs/toggles are non-run surfaces and ride the same gate: it is the
@@ -611,8 +616,14 @@ export default function ShareCardScreen() {
     // a layer toggled off while selected deselects (no ghost selection)
     if (selected && !renderedCsv.split(',').includes(selected)) setSelected(null);
   }, [selected, renderedCsv]);
-  const ownsPan = useSharedValue(0);   // 0 none · 1 metric-class · 2 track
+  const ownsPan = useSharedValue(0);   // 0 none · 1 metric-move · 2 track-move · 3 handle-resize
   const ownsPinch = useSharedValue(0);
+  // 8/3 handle amend: grab snapshot for the distance-from-center mapping
+  const grabHandle = useSharedValue(0); // set at onTouchesDown, consumed at onStart
+  const grabCX = useSharedValue(0);
+  const grabCY = useSharedValue(0);
+  const grabD0 = useSharedValue(1);
+  const grabS0 = useSharedValue(1);
   const applyTapSelect = useCallback((k: string) => {
     setSelected(k === '' ? null : (k as SelKey));
   }, []);
@@ -636,6 +647,34 @@ export default function ShareCardScreen() {
   }, [canvasW, canvasH, persistPlacement]);
   const canvasGesture = useMemo(() => {
     const geoms = guideCtx.geoms;
+    // 8/3 handle amend: the selected layer's bottom-right border corner —
+    // the resize knob's canvas position (border inset 6 scales with the
+    // layer; track uses its axis-aligned box, rotation ignored as before).
+    // Returns [cx, cy, hx, hy] of layer center + handle center, or null.
+    const handleGeom = (): [number, number, number, number] | null => {
+      'worklet';
+      const sel = selectedSV.value;
+      if (sel === '') return null;
+      if (sel === 'track') {
+        if (renderedSV.value.indexOf('track') === -1) return null;
+        const cx = canvasW / 2 + tx.value;
+        const cy = canvasH / 2 + ty.value;
+        const off = (layerSize / 2 + 6) * sc.value;
+        return [cx, cy, cx + off, cy + off];
+      }
+      const g = geoms[sel as ShareLayerKey];
+      if (!g || g.w.value === 0) return null;
+      const cx = g.tx.value + g.w.value / 2;
+      const cy = g.ty.value + g.h.value / 2;
+      return [cx, cy, cx + (g.w.value / 2 + 6) * g.sc.value, cy + (g.h.value / 2 + 6) * g.sc.value];
+    };
+    const handleHit = (x: number, y: number): boolean => {
+      'worklet';
+      const hg = handleGeom();
+      if (!hg) return false;
+      const dx = x - hg[2], dy = y - hg[3];
+      return dx * dx + dy * dy <= HANDLE_HIT_R_PX * HANDLE_HIT_R_PX;
+    };
     const hitTest = (x: number, y: number): string => {
       'worklet';
       const rendered = renderedSV.value;
@@ -663,11 +702,30 @@ export default function ShareCardScreen() {
       .onTouchesDown((e, mgr) => {
         'worklet';
         const t0 = e.allTouches[0];
-        if (t0 && hitTest(t0.x, t0.y) !== '') mgr.fail(); // direct wins on-layer
+        if (!t0) return;
+        // ARBITRATION (8/3 amend): handle > layer > canvas. The knob is
+        // CHROME — its hit wins over everything; the canvas owns the touch
+        // in resize mode instead of failing to the layer underneath.
+        if (handleHit(t0.x, t0.y)) {
+          const hg = handleGeom();
+          if (hg) {
+            grabHandle.value = 1;
+            grabCX.value = hg[0];
+            grabCY.value = hg[1];
+            const dx = t0.x - hg[0], dy = t0.y - hg[1];
+            grabD0.value = Math.max(10, Math.sqrt(dx * dx + dy * dy)); // div-by-0 floor
+            const sel = selectedSV.value;
+            grabS0.value = sel === 'track' ? sc.value
+              : (geoms[sel as ShareLayerKey]?.sc.value ?? 1);
+          }
+          return; // canvas OWNS — no fail
+        }
+        if (hitTest(t0.x, t0.y) !== '') mgr.fail(); // direct wins on-layer
       })
       .onStart(() => {
         'worklet';
         ownsPan.value = 0;
+        if (grabHandle.value === 1) { ownsPan.value = 3; return; }
         const sel = selectedSV.value;
         if (sel === '') return;
         if (sel === 'track') { ownsPan.value = 2; return; }
@@ -682,19 +740,40 @@ export default function ShareCardScreen() {
           if (g) dragStep(sel, g, guideCtx, canvasW, canvasH, e.changeX, e.changeY);
         } else if (ownsPan.value === 2) {
           tx.value += e.changeX; ty.value += e.changeY;
+        } else if (ownsPan.value === 3) {
+          // MAPPING (stated): scale = grab-scale × (finger distance from the
+          // layer's center ÷ grab distance) — pull outward to grow, inward
+          // to shrink, center-anchored like the pinch. Floor at 0.3.
+          const dx = e.x - grabCX.value, dy = e.y - grabCY.value;
+          const d = Math.sqrt(dx * dx + dy * dy);
+          const next = Math.max(HANDLE_SCALE_MIN, grabS0.value * (d / grabD0.value));
+          const sel = selectedSV.value;
+          if (sel === 'track') sc.value = next;
+          else {
+            const g = geoms[sel as ShareLayerKey];
+            if (g) g.sc.value = next;
+          }
         }
       })
       .onEnd(() => {
         'worklet';
-        if (ownsPan.value === 1) {
-          const sel = selectedSV.value as ShareLayerKey;
-          const g = geoms[sel];
-          if (g) {
-            dragEnd(g, guideCtx);
-            runOnJS(persistPlacement)(sel, { x: g.tx.value / canvasW, y: g.ty.value / canvasH, s: g.sc.value });
+        const mode = ownsPan.value;
+        if (mode === 1 || mode === 3) {
+          const sel = selectedSV.value;
+          if (sel !== 'track' && sel !== '') {
+            const g = geoms[sel as ShareLayerKey];
+            if (g) {
+              if (mode === 1) dragEnd(g, guideCtx);
+              runOnJS(persistPlacement)(sel as ShareLayerKey, { x: g.tx.value / canvasW, y: g.ty.value / canvasH, s: g.sc.value });
+            }
           }
         }
         ownsPan.value = 0;
+        grabHandle.value = 0;
+      })
+      .onFinalize(() => {
+        'worklet';
+        grabHandle.value = 0; // a grab that never activated must not leak
       });
     const pinch = Gesture.Pinch().enabled(!bgAdjustMode)
       .onTouchesDown((e, mgr) => {
@@ -731,6 +810,7 @@ export default function ShareCardScreen() {
       .onEnd((e, success) => {
         'worklet';
         if (!success) return;
+        if (handleHit(e.x, e.y)) return; // knob taps are chrome — no cycle
         const k = hitTest(e.x, e.y);
         if (k !== '') runOnJS(applyPresetCycle)(k);
       });
@@ -738,6 +818,7 @@ export default function ShareCardScreen() {
       .onEnd((e, success) => {
         'worklet';
         if (!success) return;
+        if (handleHit(e.x, e.y)) return; // knob taps keep the selection
         runOnJS(applyTapSelect)(hitTest(e.x, e.y));
       });
     return Gesture.Simultaneous(pan, pinch, Gesture.Exclusive(doubleTap, singleTap));
@@ -839,7 +920,7 @@ export default function ShareCardScreen() {
                     <AnimatedCircle cx={route.start[0]} cy={route.start[1]} animatedProps={startDotProps} fill="#fff" stroke={stroke} />
                     <AnimatedCircle cx={route.end[0]} cy={route.end[1]} animatedProps={endDotProps} fill={stroke} stroke="#fff" />
                   </Svg>
-                  {selected === 'track' && <View pointerEvents="none" style={st.selBorder} />}
+                  {selected === 'track' && <View pointerEvents="none" style={st.selBorder}><View style={st.selHandle} /></View>}
                 </Reanimated.View>
               </GestureDetector>
             )}
@@ -851,7 +932,7 @@ export default function ShareCardScreen() {
                 <Reanimated.View onLayout={layerFor[k].onLayout} style={[st.metricLayer, layerFor[k].style]}>
                   <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.statVal} onLayout={layerFor[k].onValueLayout}>{v}</Text>
                   <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.statLbl}>{l}</Text>
-                  {selected === k && <View pointerEvents="none" style={st.selBorder} />}
+                  {selected === k && <View pointerEvents="none" style={st.selBorder}><View style={st.selHandle} /></View>}
                 </Reanimated.View>
               </GestureDetector>
             ))}
@@ -865,7 +946,7 @@ export default function ShareCardScreen() {
                   <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.crewTxt} onLayout={layerFor.crew.onValueLayout} numberOfLines={1}>
                     {run.crew_name}{showCrewCount && run.session_participant_count != null ? ` · ${tf('crw.nJoined', { n: run.session_participant_count })}` : ''}
                   </Text>
-                  {selected === 'crew' && <View pointerEvents="none" style={st.selBorder} />}
+                  {selected === 'crew' && <View pointerEvents="none" style={st.selBorder}><View style={st.selHandle} /></View>}
                 </Reanimated.View>
               </GestureDetector>
             ) : null}
@@ -1018,6 +1099,18 @@ const makeSt = (C: Tokens) => StyleSheet.create({
     borderWidth: 1.5, borderStyle: 'dashed', borderColor: 'rgba(255,255,255,0.9)',
     borderRadius: 8,
     shadowColor: '#fff', shadowOpacity: 0.35, shadowRadius: 4, shadowOffset: { width: 0, height: 0 },
+  },
+  // 8/3 amend: the one-finger resize knob — 16px circle centered ON the
+  // border's bottom-right corner (right/bottom -8 relative to the border
+  // box); same white chrome, dark hairline for photo legibility. VISUAL
+  // only — the 36pt touch logic lives in the canvas hit-test (handleHit);
+  // rides the border, so it scales with the layer and joins the
+  // pre-capture deselect for free.
+  selHandle: {
+    position: 'absolute', right: -8, bottom: -8, width: 16, height: 16,
+    borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.95)',
+    borderWidth: 1, borderColor: 'rgba(0,0,0,0.35)',
+    shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 2, shadowOffset: { width: 0, height: 1 },
   },
   crewTxt: { fontSize: 12, fontWeight: '600', color: 'rgba(255,255,255,0.85)', letterSpacing: -0.2, textShadowColor: 'rgba(0,0,0,0.55)', textShadowRadius: 4 },
 
