@@ -14,7 +14,6 @@
  * a run is active. Saving (POST /api/runs) and post-run screens are slice 3.
  */
 import * as Haptics from 'expo-haptics';
-import * as ExpoLocation from 'expo-location';
 import { useKeepAwake } from 'expo-keep-awake';
 import { router, useFocusEffect, useNavigation } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -37,7 +36,7 @@ import Reanimated, {
   useSharedValue,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Circle } from 'react-native-svg';
+import Svg, { Circle, Path as SvgPath } from 'react-native-svg';
 
 import { Icon } from '@/components/ui';
 import { SEOUL_FALLBACK, useCurrentLocation } from '@/hooks/use-current-location';
@@ -68,15 +67,46 @@ const NAV_PITCH_DEG = 57;     // ↑ from 45 — the T-map-class perspective
 const NAV_LOOKAHEAD_M = 180;  // ↑ from 120 — pushes the puck toward the ~22% band
 const NAV_ENTER_MS = 1800;    // overview → follow flight, flown DURING the countdown ("drive pressed")
 // ── 8/3 nav-completion — ALL FIELD-TUNABLE (the walk judges) ──
-const FUSION_SPEED_MPS = 1.0; // below: compass steers heading; above: course-over-ground
-const HEADING_SNAP_DEG = 5;   // compass jitter floor — SNAP threshold chosen over a low-pass
-                              // (no lag, no circular-mean math; sub-5° wobble is invisible at nav zoom)
-const NEXT_BAND_M = 300;      // the emphasized "next stretch" band length
+// 8/3 tmap grammar (owner ruling — SUPERSEDES the compass-fusion standing
+// rotation; ledger pointer at the fusion entry): the camera bears from
+// MOVEMENT ONLY. Constants field-tunable.
+const BEARING_HOLD_MPS = 0.5;   // below: GPS course is untrustworthy — HOLD the last bearing
+const BEARING_ALPHA = 0.35;     // circular low-pass per accepted fix — the world must not jitter
+const ARROW_ANCHOR_FRAC = 0.22; // the fixed arrow: fraction up from the map frame's bottom
+                                // (matches where the tuned 180m lookahead at 57°/320m
+                                // projects the runner — the 8/3 "~22% band")
+const NEXT_BAND_M = 300;      // the emphasized "next stretch" band + the turn overlay's approach window
 // T1.7 CLOSE (owner verdict from the field look, 2026-07-26): 320/57/180
 // READS RIGHT — the baseline landed; the tuning panel stripped per the
 // temp-probe doctrine without needing its session.
 const SHEET_TOP = MAP_H - 22;         // sheet's expanded top edge (canvas -22 overlap)
 const COMPACT_VISIBLE = 100;          // compact detent: handle + strip
+
+// ─── tmap blinking turn overlay (8/3 part 4) ─────────────────────────────────
+// Big black-on-white approach card: bold direction arrow + live countdown.
+// Blink = slow opacity pulse at ~1Hz (500ms down + 500ms up, the StatusBadge
+// loop's grammar) — attention without strobe. String-free (glyph + Nm).
+
+function TurnOverlay({ dir, distM }: { dir: 'left' | 'right'; distM: number }) {
+  const st = useStyles(makeSt);
+  const opacity = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(opacity, { toValue: 0.35, duration: 500, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+      Animated.timing(opacity, { toValue: 1,    duration: 500, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+    ]));
+    loop.start();
+    return () => loop.stop();
+  }, [opacity]);
+  return (
+    <Animated.View pointerEvents="none" style={[st.turnOverlayWrap, { opacity }]}>
+      <View style={st.turnOverlayCard}>
+        <Icon name={dir === 'right' ? 'arrow-redo' : 'arrow-undo'} size={44} color="#0C0F14" />
+        <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.turnOverlayDist}>{Math.round(distM)}m</Text>
+      </View>
+    </Animated.View>
+  );
+}
 
 // ─── Status badge (blinking dot while running) ────────────────────────────────
 
@@ -562,43 +592,27 @@ export default function TrackingScreen() {
     [courseCoords, nearestSeg],
   );
 
-  // ── Compass fusion (8/3): COG freezes at rest (iOS sends -1, we keep
-  // last-good) so the map stopped rotating when the runner turned in place.
-  // watchHeadingAsync (expo-location, in-binary) feeds heading BELOW
-  // FUSION_SPEED_MPS; course-over-ground above it — the nav-app convention.
-  // Lifecycle = course runs while running ONLY (battery honesty: no compass
-  // stream on free runs, idle, or pause). Smoothing = HEADING_SNAP_DEG snap.
-  const compassHeadingRef = useRef<number | null>(null);
-  useEffect(() => {
-    if (courseCoords.length < 2 || state !== 'running') return; // course runs only (hasCoursePath declared below)
-    let dead = false;
-    let sub: ExpoLocation.LocationSubscription | null = null;
-    ExpoLocation.watchHeadingAsync((h: ExpoLocation.LocationHeadingObject) => {
-      const deg = h.trueHeading >= 0 ? h.trueHeading : h.magHeading;
-      if (deg == null || deg < 0) return;
-      const prev = compassHeadingRef.current;
-      const delta = prev == null ? 360 : Math.abs(((deg - prev + 540) % 360) - 180);
-      if (delta < HEADING_SNAP_DEG) return; // jitter floor
-      compassHeadingRef.current = deg;
-      // cadence rider (spec ③): while compass is the ACTIVE source (slow/
-      // standing), rotation follows it continuously — heading-only partial
-      // camera animation, suspension-respecting.
-      const sp = runSession.getLastSpeedMps();
-      if ((sp == null || sp < FUSION_SPEED_MPS) && !lastUserPanRef.current) {
-        mapRef.current?.animateCamera({ heading: deg }, { duration: 300 });
-      }
-    }).then((s: ExpoLocation.LocationSubscription) => { if (dead) s.remove(); else sub = s; });
-    return () => { dead = true; sub?.remove(); };
-  }, [courseCoords.length, state]);
-
-  /** The fused nav heading: compass at rest/slow, COG when moving; either
-      alone when the other is absent. */
-  const navHeading = useCallback((): number | null => {
+  // ── tmap grammar (8/3, owner ruling): course-up from MOVEMENT ONLY.
+  // COMPASS FUSION KILLED ENTIRELY — the watchHeadingAsync magnetometer
+  // listener, the turn-in-place tilt rotation, and the 5° snap machinery
+  // are REMOVED (not disabled). The camera bears from the GPS course
+  // (runSession's course-over-ground), circular-low-passed so the world
+  // doesn't jitter; below BEARING_HOLD_MPS there is no course — the last
+  // bearing HOLDS (standing still keeps the world steady).
+  const navBearingRef = useRef<number | null>(null);
+  const navBearing = useCallback((): number | null => {
     const sp = runSession.getLastSpeedMps();
     const cog = runSession.getLastHeading();
-    const compass = compassHeadingRef.current;
-    if (sp == null || sp < FUSION_SPEED_MPS) return compass ?? cog;
-    return cog ?? compass;
+    const prev = navBearingRef.current;
+    if (cog != null && sp != null && sp >= BEARING_HOLD_MPS) {
+      if (prev == null) {
+        navBearingRef.current = cog;
+      } else {
+        const diff = ((cog - prev + 540) % 360) - 180;
+        navBearingRef.current = (prev + diff * BEARING_ALPHA + 360) % 360;
+      }
+    }
+    return navBearingRef.current;
   }, []);
 
   // Camera follow on path growth (running only, not while user-panned)
@@ -615,20 +629,24 @@ export default function TrackingScreen() {
       mapRef.current?.animateCamera({ center: last }, { duration: 500 });
       return;
     }
-    const h = navHeading(); // fused: compass at rest, COG in motion (8/3)
+    // tmap grammar: bearing from movement (smoothed COG, hold at rest).
+    // Pre-first-movement (null): heading 0 = the north-up course-up
+    // degenerate — the runner still projects onto the fixed-arrow anchor
+    // (arrow points N until the first stride gives a course).
+    const h = navBearing() ?? 0;
     const hereC = { lat: last.latitude, lng: last.longitude };
-    const center = h != null ? pointAhead(hereC, h, NAV_LOOKAHEAD_M) : hereC;
+    const center = pointAhead(hereC, h, NAV_LOOKAHEAD_M);
     mapRef.current?.animateCamera(
       {
         center: { latitude: center.lat, longitude: center.lng },
         altitude: NAV_ALTITUDE_M,
         pitch: NAV_PITCH_DEG,
-        ...(h != null ? { heading: h } : {}),
+        heading: h,
       },
       { duration: 500 },
     );
      
-  }, [drawnPath.length, state, drawnPath, courseCoords.length, navHeading]);
+  }, [drawnPath.length, state, drawnPath, courseCoords.length, navBearing]);
 
   // Center on the USER's RESOLVED location (T-B correction ②): the hook's
   // coordinate is Seoul-fallback-initialized (never null), so truthiness
@@ -698,15 +716,16 @@ export default function TrackingScreen() {
     // The old altitude-only snap left a flat top-down frame that the next fix
     // re-asserted — a visible double-jump. Free-run recenter unchanged.
     if (hasCoursePath && state === 'running') {
-      const h = navHeading();
+      // one-motion nav-posture restore, tmap bearing (movement-only)
+      const h = navBearing() ?? 0;
       const hereC = { lat: target.latitude, lng: target.longitude };
-      const center = h != null ? pointAhead(hereC, h, NAV_LOOKAHEAD_M) : hereC;
+      const center = pointAhead(hereC, h, NAV_LOOKAHEAD_M);
       mapRef.current?.animateCamera(
         {
           center: { latitude: center.lat, longitude: center.lng },
           altitude: NAV_ALTITUDE_M,
           pitch: NAV_PITCH_DEG,
-          ...(h != null ? { heading: h } : {}),
+          heading: h,
         },
         { duration: 400 },
       );
@@ -899,7 +918,11 @@ export default function TrackingScreen() {
           // T1.5 zoom agency: pinch-zoom joins the indefinite suspension (onPanDrag
           // misses two-finger gestures); recenter resumes follow instantly
           onRegionChangeComplete={(_r, d) => { if (d?.isGesture && state === 'running') onUserPan(); }}
-          showsUserLocation
+          // tmap grammar (8/3): during a course RUN the fixed screen-space
+          // ARROW is the runner — the native blue dot would double-mark
+          // (and drift against the anchor during camera animation). Free
+          // runs / idle / paused keep the dot.
+          showsUserLocation={!(hasCoursePath && state === 'running')}
           // T1.6 POI MUTE: course tracking quiets to roads + ribbon; free
           // runs keep today's map (the prop is per-render — not mode-awkward)
           // 8/3 owner ruling (field experience over the 8/1 desk call):
@@ -951,6 +974,31 @@ export default function TrackingScreen() {
             <Polyline coordinates={drawnPath} strokeColor={C.accent} strokeWidth={5} />
           )}
         </MapView>
+
+        {/* ── tmap grammar (8/3): the FIXED user arrow — screen-space chrome
+            at bottom-center (ARROW_ANCHOR_FRAC up from the map bottom, where
+            the tuned lookahead projects the runner). NEVER rotates, NEVER
+            moves — the MAP turns under it. House accent solid arrow with a
+            white outline (chosen over tmap-blue: the accent is the app's
+            nav ink; blue would introduce a foreign family). */}
+        {hasCoursePath && state === 'running' && (
+          <View pointerEvents="none" style={st.navArrowWrap}>
+            <Svg width={34} height={34} viewBox="0 0 34 34">
+              <SvgPath d="M17 2 L30 30 L17 23 L4 30 Z" fill={C.accent} stroke="#fff" strokeWidth={2} strokeLinejoin="round" />
+            </Svg>
+          </View>
+        )}
+
+        {/* ── tmap blinking turn overlay (8/3 part 4): approach window =
+            NEXT_BAND_M (the field-tuned band — the reuse the ruling names);
+            distance counts down live (turnAhead recomputes per accepted
+            fix); turn passage drops it by construction (nextTurn returns
+            the following turn or null); off-route hands the screen to the
+            off-course machinery. Voice cues unchanged (turns stay visual-
+            only per the standing ruling). */}
+        {turnAhead && state === 'running' && !offCourse && turnAhead.distM <= NEXT_BAND_M && (
+          <TurnOverlay dir={turnAhead.dir} distM={turnAhead.distM} />
+        )}
 
         {/* Course title pill (bundle: tracking-screen.jsx course mode) */}
         {course && (
@@ -1189,6 +1237,23 @@ const makeSt = (C: Tokens) => StyleSheet.create({
   gpsChipTxt: { fontSize: 11, fontWeight: '700', color: '#fff', letterSpacing: -0.2 },
   turnBadge:  { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: C.surface, borderWidth: 1.5, borderColor: C.border, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 4, ...shadows.sm },
   turnTxt:    { fontSize: 11, fontWeight: '800', color: C.text, letterSpacing: -0.2 },
+  // 8/3 tmap grammar: fixed user arrow (screen-space chrome) + turn overlay.
+  // The overlay card is FIXTURE black-on-white (tmap's outline treatment) —
+  // identical in both schemes by design, high-contrast over any tile.
+  navArrowWrap: {
+    position: 'absolute', left: 0, right: 0,
+    bottom: `${Math.round(ARROW_ANCHOR_FRAC * 100)}%`,
+    alignItems: 'center',
+    shadowColor: '#000', shadowOpacity: 0.35, shadowRadius: 3, shadowOffset: { width: 0, height: 1 },
+  },
+  turnOverlayWrap: { position: 'absolute', left: 0, right: 0, top: '28%', alignItems: 'center' },
+  turnOverlayCard: {
+    alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 18,
+    borderWidth: 2, borderColor: '#0C0F14',
+    paddingHorizontal: 22, paddingVertical: 14, gap: 2,
+    ...shadows.sm,
+  },
+  turnOverlayDist: { fontSize: 24, fontWeight: '900', color: '#0C0F14', letterSpacing: -0.5, fontVariant: ['tabular-nums'] },
 
   // Course title pill (course mode)
   coursePillWrap: { position: 'absolute', left: 0, right: 0, alignItems: 'center' },
