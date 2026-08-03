@@ -68,9 +68,13 @@ const MAP_H = 330;                    // expanded-detent map viewport (canvas)
 // height ≈ the camera altitude (standard-FOV approximation — stated,
 // field-tunable), so runner-behind-center = (0.50−0.22)·visH ≈ 0.28×420
 // ≈ 118 → lookahead 120.
-const NAV_ALTITUDE_M = 420;   // v2 ↑ from 320 — top-down overview
+// nav v5 (8/3 living-room ruling — IMAGE 2 IS THE FRAMING: dot visible with
+// route context, moderate zoom ≈ 2× the 420m view): one altitude constant,
+// field-tunable; lookahead re-derived (0.28 × 850 ≈ 238 → 240).
+const NAV_ALTITUDE_M = 850;   // v5 ruled framing (was 420 — read "tight" vs image 2)
 const NAV_PITCH_DEG = 0;      // v2 FLAT (was 57 — field: tilt read as distortion, not depth)
-const NAV_LOOKAHEAD_M = 120;  // v2 re-derived for pitch 0 (was 180 at 57°)
+const NAV_LOOKAHEAD_M = 240;  // v5 re-derived for 850 (was 120 at 420)
+const FREE_RECENTER_ALTITUDE_M = 420; // free runs keep their prior close view (unchanged behavior)
 // v3 follow-animation duration: with the LIVE dot during follow (the dot
 // renders each raw fix instantly; the camera animates to its projection),
 // the dot detaches from the ~22% spot for the animation window. Desk math:
@@ -105,6 +109,25 @@ const NEXT_BAND_M = 300;      // the emphasized "next stretch" band + the turn o
 // temp-probe doctrine without needing its session.
 const SHEET_TOP = MAP_H - 22;         // sheet's expanded top edge (canvas -22 overlap)
 const COMPACT_VISIBLE = 100;          // compact detent: handle + strip
+
+// ─── nav v5: THE ONE CAMERA MATH (8/3 recenter fly-away conviction) ──────────
+// Recenter and follow had drifted apart — divergence between them was this
+// bug's whole GENUS (recenter's paused path fell to a course-less tail that
+// could center on the location hook's SEOUL-FALLBACK coordinate; its
+// running path lookahead-ed on a degenerate ?? 0 bearing). BOTH now call
+// this single function. The bearing rule: NO established bearing (never
+// moved ≥ BEARING_HOLD_MPS, or paused) → center ON the runner, north-up,
+// NO lookahead — you cannot look "ahead" of a runner with no direction.
+// Lookahead applies only with a live course bearing.
+function courseCamera(runner: { lat: number; lng: number }, bearing: number | null) {
+  const center = bearing != null ? pointAhead(runner, bearing, NAV_LOOKAHEAD_M) : runner;
+  return {
+    center: { latitude: center.lat, longitude: center.lng },
+    altitude: NAV_ALTITUDE_M,
+    pitch: NAV_PITCH_DEG,
+    heading: bearing ?? 0,
+  };
+}
 
 // ─── tmap blinking turn overlay (8/3 part 4) ─────────────────────────────────
 // Big black-on-white approach card: bold direction arrow + live countdown.
@@ -690,29 +713,13 @@ export default function TrackingScreen() {
       mapRef.current?.animateCamera({ center: last }, { duration: 500 });
       return;
     }
-    // tmap grammar: bearing from movement (smoothed COG, hold at rest).
-    // Pre-first-movement (null): heading 0 = the north-up course-up
-    // degenerate — the runner still projects onto the fixed-arrow anchor
-    // (arrow points N until the first stride gives a course).
-    const h = navBearing() ?? 0;
-    // v2 DISPLAY-ONLY route snap: within SNAP_TO_ROUTE_M the fixed arrow
-    // renders ON the line (buildings die). HARD BOUNDARY: raw GPS alone
-    // keeps driving tracking/distance/pace/verification and the off-route
-    // machinery — the snap moves the CAMERA CENTER (= the arrow's world
-    // position) only (the alt-guarantee separation grammar; helper doc in
-    // course-nav.ts). Past the threshold it un-snaps naturally.
+    // v5 unified math: courseCamera owns the whole posture. Bearing null
+    // (pre-first-movement) → center ON the runner north-up (no more ?? 0
+    // lookahead into a nonsense direction). Camera-center snap unchanged
+    // (display-only; HARD BOUNDARY per course-nav.ts helper doc).
     const raw = { lat: last.latitude, lng: last.longitude };
     const hereC = (navPhase === 'nav' && course?.polyline ? snapToCourse(course.polyline, raw, SNAP_TO_ROUTE_M) : null) ?? raw;
-    const center = pointAhead(hereC, h, NAV_LOOKAHEAD_M);
-    mapRef.current?.animateCamera(
-      {
-        center: { latitude: center.lat, longitude: center.lng },
-        altitude: NAV_ALTITUDE_M,
-        pitch: NAV_PITCH_DEG,
-        heading: h,
-      },
-      { duration: NAV_FOLLOW_MS },
-    );
+    mapRef.current?.animateCamera(courseCamera(hereC, navBearing()), { duration: NAV_FOLLOW_MS });
      
   }, [drawnPath.length, state, drawnPath, courseCoords.length, navBearing, navPhase, course]);
 
@@ -842,35 +849,28 @@ export default function TrackingScreen() {
     lastUserPanRef.current = 0;
     recenterShownRef.current = false;
     setRecenterVisible(false);
+    // v5 (the fly-away conviction): COURSE runs never reach the free tail
+    // and never touch hereCoord — its Seoul-fallback initialization was the
+    // "unrelated location" (paused recenter fell through to the tail with
+    // an empty drawnPath → camera flew to 서울 중심). Course target chain:
+    // last fix → course start → nothing (no-op). PAUSED now takes the nav
+    // branch too, with bearing FORCED null (no lookahead while paused).
+    if (hasCoursePath && state !== 'idle') {
+      const t = drawnPath.length > 0
+        ? { lat: drawnPath[drawnPath.length - 1].latitude, lng: drawnPath[drawnPath.length - 1].longitude }
+        : course?.polyline?.[0] ?? null;
+      if (!t) return;
+      const hereC = (navPhase === 'nav' && course?.polyline ? snapToCourse(course.polyline, t, SNAP_TO_ROUTE_M) : null) ?? t;
+      const bearing = state === 'running' ? navBearing() : null;
+      mapRef.current?.animateCamera(courseCamera(hereC, bearing), { duration: 400 });
+      return;
+    }
     const target = drawnPath.length > 0
       ? drawnPath[drawnPath.length - 1]
       : hereCoord ? { latitude: hereCoord.lat, longitude: hereCoord.lng } : null;
     if (!target) return;
-    // 8/3: course-run recenter restores the FULL nav posture in ONE animation
-    // (heading + lookahead + pitch + altitude — the follow effect's math).
-    // The old altitude-only snap left a flat top-down frame that the next fix
-    // re-asserted — a visible double-jump. Free-run recenter unchanged.
-    if (hasCoursePath && state === 'running') {
-      // one-motion nav-posture restore, tmap bearing (movement-only) —
-      // v2: same display-only snap as the follow effect
-      const h = navBearing() ?? 0;
-      const rawT = { lat: target.latitude, lng: target.longitude };
-      const hereC = (navPhase === 'nav' && course?.polyline ? snapToCourse(course.polyline, rawT, SNAP_TO_ROUTE_M) : null) ?? rawT;
-      const center = pointAhead(hereC, h, NAV_LOOKAHEAD_M);
-      mapRef.current?.animateCamera(
-        {
-          center: { latitude: center.lat, longitude: center.lng },
-          altitude: NAV_ALTITUDE_M,
-          pitch: NAV_PITCH_DEG,
-          heading: h,
-        },
-        { duration: 400 },
-      );
-      return;
-    }
-    // altitude: recenter snaps to the course-follow close view (tester ask) —
-    // opinionated reset of any pinched-out zoom, owner walks and rules
-    mapRef.current?.animateCamera({ center: target, altitude: NAV_ALTITUDE_M }, { duration: 400 });
+    // free-run recenter: the prior close view, unchanged (named constant)
+    mapRef.current?.animateCamera({ center: target, altitude: FREE_RECENTER_ALTITUDE_M }, { duration: 400 });
   };
 
   // GPS-lost chip: >15s without a raw fix while running. 8/3 ruled interplay:
