@@ -745,6 +745,9 @@ export const ko = {
   'ks.me': '나', // kudos-시트 셀프-로우 배지 (8/8 라이더)
   // ── 엘리베이션 차트 (8/8, 그녀 ③ alt) ──
   'elv.title': '고도',
+  // ── 내비 v2 고-투-스타트 (8/3) ──
+  'trk.toStart': '출발점까지 {d}',
+  'trk.startCue': '코스 시작!',
   'elv.gain': '총 상승',
   'elv.loss': '총 하강',
   'rc.withCrew': 'With {name}',  // 8/5 오너 카피 룰링 — 양 로케일 동일 (조사 이슈 해소)

@@ -733,6 +733,9 @@ export const en: Record<keyof typeof ko, string> = {
   'ks.me': 'Me', // kudos-sheet self-row badge (8/8 rider)
   // ── elevation chart (8/8, her ③ alt) ──
   'elv.title': 'Elevation',
+  // ── nav v2 go-to-start (8/3) ──
+  'trk.toStart': 'To start: {d}',
+  'trk.startCue': 'Course start!',
   'elv.gain': 'Ascent',
   'elv.loss': 'Descent',
   'rc.withCrew': 'With {name}', // no josa slot — en needs none; the extra var is a no-op

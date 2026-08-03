@@ -34,6 +34,34 @@ export function nearestOnCourse(
   return { segIndex: bestIdx, distM: best, alongM: bestAlong };
 }
 
+/** DISPLAY-ONLY route snap (nav v2, 8/3): the nearest on-course point when
+    p is within maxM of the line, else null. HARD BOUNDARY (stated here and
+    in the ledger): this is consumed by the nav CAMERA/fixed-arrow rendering
+    ALONE — raw GPS keeps driving tracking, distance, pace, verification,
+    and the off-route machinery (the alt-guarantee separation grammar).
+    Leaving the line past maxM un-snaps naturally; off-route detection is
+    untouched by construction (it reads nearestOnCourse on the RAW fix). */
+export function snapToCourse(course: readonly Coordinate[], p: Coordinate, maxM: number): Coordinate | null {
+  if (course.length < 2) return null;
+  const kx = Math.cos((p.lat * Math.PI) / 180) * M_PER_DEG_LAT;
+  const ky = M_PER_DEG_LAT;
+  const px = p.lng * kx, py = p.lat * ky;
+  let best = Infinity, bx0 = 0, by0 = 0;
+  for (let i = 0; i < course.length - 1; i++) {
+    const a = course[i], b = course[i + 1];
+    const ax = a.lng * kx, ay = a.lat * ky;
+    const bx = b.lng * kx, by = b.lat * ky;
+    const dx = bx - ax, dy = by - ay;
+    const len2 = dx * dx + dy * dy;
+    const t = len2 > 0 ? Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / len2)) : 0;
+    const qx = ax + t * dx, qy = ay + t * dy;
+    const d = Math.hypot(px - qx, py - qy);
+    if (d < best) { best = d; bx0 = qx; by0 = qy; }
+  }
+  if (best > maxM) return null;
+  return { lat: by0 / ky, lng: bx0 / kx };
+}
+
 /** Total course length in meters (equirect per segment — same scale truth). */
 export function courseLengthM(course: readonly Coordinate[]): number {
   let cum = 0;

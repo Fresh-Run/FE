@@ -40,7 +40,7 @@ import Svg, { Circle, Path as SvgPath } from 'react-native-svg';
 
 import { Icon } from '@/components/ui';
 import { SEOUL_FALLBACK, useCurrentLocation } from '@/hooks/use-current-location';
-import { courseLengthM, nearestOnCourse, nextTurn, OFF_COURSE_ENTER_M, OFF_COURSE_EXIT_M, pointAhead, sliceAhead } from '@/lib/course-nav';
+import { courseLengthM, nearestOnCourse, nextTurn, OFF_COURSE_ENTER_M, OFF_COURSE_EXIT_M, pointAhead, sliceAhead, snapToCourse } from '@/lib/course-nav';
 import { runSession } from '@/store/run-session';
 import { useRunTracker } from '@/hooks/use-run-tracker';
 import { composeFinishCue, composeSplitCue, composeStartCue, speakCue, stopSpeech } from '@/lib/audio-coach';
@@ -62,16 +62,30 @@ const MAP_H = 330;                    // expanded-detent map viewport (canvas)
 // ── T1.5/1.7 nav camera posture (course mode) — TUNABLE. T1.7 retune from
 // the T-map comparison (owner-measured deltas): puck 40-45%→target 20-25%
 // screen height · forward range ~200m→300-400m · pitch reads 45→~57.
-const NAV_ALTITUDE_M = 320;   // ↑ from 280 — more forward range at the steeper pitch
-const NAV_PITCH_DEG = 57;     // ↑ from 45 — the T-map-class perspective
-const NAV_LOOKAHEAD_M = 180;  // ↑ from 120 — pushes the puck toward the ~22% band
+// nav v2 (8/3 course-run convictions): FLAT 2D — pitch 0, course-up
+// rotation KEPT (the world still turns; the runner always runs "up").
+// Flat pair re-derived for the ~22% band: at pitch 0 the visible ground
+// height ≈ the camera altitude (standard-FOV approximation — stated,
+// field-tunable), so runner-behind-center = (0.50−0.22)·visH ≈ 0.28×420
+// ≈ 118 → lookahead 120.
+const NAV_ALTITUDE_M = 420;   // v2 ↑ from 320 — top-down overview
+const NAV_PITCH_DEG = 0;      // v2 FLAT (was 57 — field: tilt read as distortion, not depth)
+const NAV_LOOKAHEAD_M = 120;  // v2 re-derived for pitch 0 (was 180 at 57°)
 const NAV_ENTER_MS = 1800;    // overview → follow flight, flown DURING the countdown ("drive pressed")
 // ── 8/3 nav-completion — ALL FIELD-TUNABLE (the walk judges) ──
 // 8/3 tmap grammar (owner ruling — SUPERSEDES the compass-fusion standing
 // rotation; ledger pointer at the fusion entry): the camera bears from
 // MOVEMENT ONLY. Constants field-tunable.
 const BEARING_HOLD_MPS = 0.5;   // below: GPS course is untrustworthy — HOLD the last bearing
-const BEARING_ALPHA = 0.35;     // circular low-pass per accepted fix — the world must not jitter
+// v2 two-speed blend (field: 0.35 lagged real turns by seconds): hard
+// course changes converge FAST, straights stay gentle. Response math at
+// run cadence (~1 fix / 1-2s): a 90° turn under FAST 0.65 leaves
+// 31°→11°→4° residual in 3 fixes ≈ 2-4s (0.35 needed ~5-7 fixes).
+const BEARING_ALPHA_SLOW = 0.3;
+const BEARING_ALPHA_FAST = 0.65;
+const BEARING_FAST_DEG = 15;    // |Δ| at/above → the fast lane
+const SNAP_TO_ROUTE_M = 18;     // v2 display-only arrow snap (boundary — see the camera effect)
+const ARRIVAL_M = 25;           // v2 go-to-start: arrival radius → NAVIGATING
 const ARROW_ANCHOR_FRAC = 0.22; // the fixed arrow: fraction up from the map frame's bottom
                                 // (matches where the tuned 180m lookahead at 57°/320m
                                 // projects the runner — the 8/3 "~22% band")
@@ -519,6 +533,41 @@ export default function TrackingScreen() {
     [course],
   );
 
+  // ── nav v2 (8/3): the GO-TO-START chapter — PRE_START → NAVIGATING,
+  // one-way. Trigger: the first accepted fix within ARRIVAL_M of the course
+  // start (a run beginning at the start transitions on fix #1). Course-nav
+  // proper (turn overlay/marker + off-route) engages only in NAVIGATING —
+  // pre-start the runner is LEGITIMATELY off the line and the guidance
+  // chapter owns the screen (stated deviation from item-6 "untouched":
+  // one phase gate per consumer, machinery internals untouched).
+  const [navPhase, setNavPhase] = useState<'pre' | 'nav'>('pre');
+  useEffect(() => {
+    if (courseCoords.length < 2 || navPhase !== 'pre' || state !== 'running') return;
+    const here = livePath[livePath.length - 1];
+    const s0 = course?.polyline?.[0];
+    if (!here || !s0) return;
+    const kx = Math.cos((here.lat * Math.PI) / 180) * 111_320;
+    const d = Math.hypot((here.lng - s0.lng) * kx, (here.lat - s0.lat) * 110_540);
+    if (d <= ARRIVAL_M) {
+      setNavPhase('nav');
+      // ONE arrival cue, voice_cue-gated (the off-route cue's exact pattern)
+      if (useSettings.getState().settings.run.voice_cue) {
+        speakCue(t('trk.startCue'), useSettings.getState().settings.audio_coach.rate);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [livePath.length, courseCoords.length, navPhase, state]);
+  // live distance to the start (pre-phase chip; re-derives per accepted fix)
+  const toStartM = useMemo(() => {
+    if (courseCoords.length < 2 || navPhase !== 'pre') return null;
+    const here = livePath[livePath.length - 1];
+    const s0 = course?.polyline?.[0];
+    if (!here || !s0) return null;
+    const kx = Math.cos((here.lat * Math.PI) / 180) * 111_320;
+    return Math.hypot((here.lng - s0.lng) * kx, (here.lat - s0.lat) * 110_540);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [livePath.length, courseCoords.length, navPhase, course]);
+
   // ── T1 NAVIGATION (course runs ONLY — free runs keep zero delta) ──────────
   // nearest-segment index drives the ahead/behind emphasis; point-to-segment
   // distance drives off-course with hysteresis (enter 40m / exit 25m).
@@ -548,6 +597,7 @@ export default function TrackingScreen() {
     setNearestSeg(segIndex);
     setRejoinM(Math.round(distM));
     setAlongM(am);
+    if (navPhase !== 'nav') { setOffCourse(false); return; } // v2: pre-start = legitimately off the line
     setOffCourse(prev => {
       const next = prev ? distM > OFF_COURSE_EXIT_M : distM > OFF_COURSE_ENTER_M;
       if (next && !prev) {
@@ -567,7 +617,7 @@ export default function TrackingScreen() {
       return next;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [livePath.length, state, course]);
+  }, [livePath.length, state, course, navPhase]);
 
   // 8/3 nav-completion: the emphasized "next stretch" band (alongM →
   // alongM+NEXT_BAND_M, exact cuts on segments) + the first geometry-detected
@@ -609,7 +659,8 @@ export default function TrackingScreen() {
         navBearingRef.current = cog;
       } else {
         const diff = ((cog - prev + 540) % 360) - 180;
-        navBearingRef.current = (prev + diff * BEARING_ALPHA + 360) % 360;
+        const a = Math.abs(diff) >= BEARING_FAST_DEG ? BEARING_ALPHA_FAST : BEARING_ALPHA_SLOW;
+        navBearingRef.current = (prev + diff * a + 360) % 360;
       }
     }
     return navBearingRef.current;
@@ -634,7 +685,14 @@ export default function TrackingScreen() {
     // degenerate — the runner still projects onto the fixed-arrow anchor
     // (arrow points N until the first stride gives a course).
     const h = navBearing() ?? 0;
-    const hereC = { lat: last.latitude, lng: last.longitude };
+    // v2 DISPLAY-ONLY route snap: within SNAP_TO_ROUTE_M the fixed arrow
+    // renders ON the line (buildings die). HARD BOUNDARY: raw GPS alone
+    // keeps driving tracking/distance/pace/verification and the off-route
+    // machinery — the snap moves the CAMERA CENTER (= the arrow's world
+    // position) only (the alt-guarantee separation grammar; helper doc in
+    // course-nav.ts). Past the threshold it un-snaps naturally.
+    const raw = { lat: last.latitude, lng: last.longitude };
+    const hereC = (navPhase === 'nav' && course?.polyline ? snapToCourse(course.polyline, raw, SNAP_TO_ROUTE_M) : null) ?? raw;
     const center = pointAhead(hereC, h, NAV_LOOKAHEAD_M);
     mapRef.current?.animateCamera(
       {
@@ -646,7 +704,7 @@ export default function TrackingScreen() {
       { duration: 500 },
     );
      
-  }, [drawnPath.length, state, drawnPath, courseCoords.length, navBearing]);
+  }, [drawnPath.length, state, drawnPath, courseCoords.length, navBearing, navPhase, course]);
 
   // Center on the USER's RESOLVED location (T-B correction ②): the hook's
   // coordinate is Seoul-fallback-initialized (never null), so truthiness
@@ -716,9 +774,11 @@ export default function TrackingScreen() {
     // The old altitude-only snap left a flat top-down frame that the next fix
     // re-asserted — a visible double-jump. Free-run recenter unchanged.
     if (hasCoursePath && state === 'running') {
-      // one-motion nav-posture restore, tmap bearing (movement-only)
+      // one-motion nav-posture restore, tmap bearing (movement-only) —
+      // v2: same display-only snap as the follow effect
       const h = navBearing() ?? 0;
-      const hereC = { lat: target.latitude, lng: target.longitude };
+      const rawT = { lat: target.latitude, lng: target.longitude };
+      const hereC = (navPhase === 'nav' && course?.polyline ? snapToCourse(course.polyline, rawT, SNAP_TO_ROUTE_M) : null) ?? rawT;
       const center = pointAhead(hereC, h, NAV_LOOKAHEAD_M);
       mapRef.current?.animateCamera(
         {
@@ -918,11 +978,11 @@ export default function TrackingScreen() {
           // T1.5 zoom agency: pinch-zoom joins the indefinite suspension (onPanDrag
           // misses two-finger gestures); recenter resumes follow instantly
           onRegionChangeComplete={(_r, d) => { if (d?.isGesture && state === 'running') onUserPan(); }}
-          // tmap grammar (8/3): during a course RUN the fixed screen-space
-          // ARROW is the runner — the native blue dot would double-mark
-          // (and drift against the anchor during camera animation). Free
-          // runs / idle / paused keep the dot.
-          showsUserLocation={!(hasCoursePath && state === 'running')}
+          // v2 mode split (the arrow's contract): the dot and the arrow
+          // are mutually exclusive — dot whenever the camera is FREE
+          // (panned) or non-nav; arrow only while locked. The dot is the
+          // truth when the arrow would lie.
+          showsUserLocation={!(hasCoursePath && state === 'running' && !recenterVisible)}
           // T1.6 POI MUTE: course tracking quiets to roads + ribbon; free
           // runs keep today's map (the prop is per-render — not mode-awkward)
           // 8/3 owner ruling (field experience over the 8/1 desk call):
@@ -959,10 +1019,28 @@ export default function TrackingScreen() {
           {courseNext.length > 1 && (
             <Polyline coordinates={courseNext} strokeColor="#FFFFFF" strokeWidth={5} lineCap="round" lineJoin="round" />
           )}
+          {/* v2 GO-TO-START chapter: unmissable start flag (bigger than
+              turn chips) + dashed guidance line from the runner to the
+              start — both dissolve on arrival (navPhase → 'nav') */}
+          {courseCoords.length > 1 && navPhase === 'pre' && (
+            <Marker coordinate={courseCoords[0]} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={false}>
+              <View style={st.startFlag}>
+                <Icon name="flag" size={16} color="#0C1206" />
+              </View>
+            </Marker>
+          )}
+          {courseCoords.length > 1 && navPhase === 'pre' && drawnPath.length > 0 && (
+            <Polyline
+              coordinates={[drawnPath[drawnPath.length - 1], courseCoords[0]]}
+              strokeColor={C.accent}
+              strokeWidth={3}
+              lineDashPattern={[8, 8]}
+            />
+          )}
           {/* 8/3: geometry turn marker — VISUAL ONLY (ruled: no TTS until
               tuning + T2 names; a wrong spoken turn is worse than none).
               Direction from the bearing delta's sign; distance from alongM. */}
-          {turnAhead && state === 'running' && (
+          {turnAhead && state === 'running' && navPhase === 'nav' && (
             <Marker coordinate={{ latitude: turnAhead.point.lat, longitude: turnAhead.point.lng }} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={false}>
               <View style={st.turnBadge}>
                 <Icon name={turnAhead.dir === 'right' ? 'arrow-redo' : 'arrow-undo'} size={13} color={C.text} />
@@ -976,12 +1054,12 @@ export default function TrackingScreen() {
         </MapView>
 
         {/* ── tmap grammar (8/3): the FIXED user arrow — screen-space chrome
-            at bottom-center (ARROW_ANCHOR_FRAC up from the map bottom, where
-            the tuned lookahead projects the runner). NEVER rotates, NEVER
-            moves — the MAP turns under it. House accent solid arrow with a
-            white outline (chosen over tmap-blue: the accent is the app's
-            nav ink; blue would introduce a foreign family). */}
-        {hasCoursePath && state === 'running' && (
+            at bottom-center. THE ARROW'S CONTRACT (v2 mode split): it
+            renders ONLY while the camera is locked to the runner — screen
+            position = runner's position; anything else is a lie. User pans
+            (recenterVisible) → arrow HIDES, the native blue dot shows the
+            true position; recenter → dot off, arrow returns. */}
+        {hasCoursePath && state === 'running' && !recenterVisible && (
           <View pointerEvents="none" style={st.navArrowWrap}>
             <Svg width={34} height={34} viewBox="0 0 34 34">
               <SvgPath d="M17 2 L30 30 L17 23 L4 30 Z" fill={C.accent} stroke="#fff" strokeWidth={2} strokeLinejoin="round" />
@@ -996,8 +1074,20 @@ export default function TrackingScreen() {
             the following turn or null); off-route hands the screen to the
             off-course machinery. Voice cues unchanged (turns stay visual-
             only per the standing ruling). */}
-        {turnAhead && state === 'running' && !offCourse && turnAhead.distM <= NEXT_BAND_M && (
+        {turnAhead && state === 'running' && navPhase === 'nav' && !offCourse && turnAhead.distM <= NEXT_BAND_M && (
           <TurnOverlay dir={turnAhead.dir} distM={turnAhead.distM} />
+        )}
+
+        {/* v2 go-to-start distance line — live countdown to the start */}
+        {hasCoursePath && navPhase === 'pre' && state === 'running' && toStartM != null && toStartM > ARRIVAL_M && (
+          <View pointerEvents="none" style={[st.coursePillWrap, { top: insets.top + 52 }]}>
+            <View style={st.toStartChip}>
+              <Icon name="flag-outline" size={13} color="#7CF03D" />
+              <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.toStartTxt}>
+                {tf('trk.toStart', { d: toStartM >= 1000 ? `${(toStartM / 1000).toFixed(1)}km` : `${Math.round(toStartM)}m` })}
+              </Text>
+            </View>
+          </View>
         )}
 
         {/* Course title pill (bundle: tracking-screen.jsx course mode) */}
@@ -1259,6 +1349,11 @@ const makeSt = (C: Tokens) => StyleSheet.create({
   coursePillWrap: { position: 'absolute', left: 0, right: 0, alignItems: 'center' },
   coursePill:     { flexDirection: 'row', alignItems: 'center', gap: 6, maxWidth: '64%', backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: R.pill, paddingHorizontal: 13, paddingVertical: 7 },
   coursePillTxt:  { fontSize: 12, fontWeight: '700', color: '#fff', letterSpacing: -0.2 },
+  // v2 go-to-start chapter: flag-class start marker (bigger than the turn
+  // chips — unmissable) + the to-start distance chip (pill family)
+  startFlag:   { width: 34, height: 34, borderRadius: 17, backgroundColor: '#7CF03D', borderWidth: 2.5, borderColor: '#fff', alignItems: 'center', justifyContent: 'center', ...shadows.sm },
+  toStartChip: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: R.pill, paddingHorizontal: 12, paddingVertical: 6 },
+  toStartTxt:  { fontSize: 12, fontWeight: '700', color: '#fff', letterSpacing: -0.2, fontVariant: ['tabular-nums'] },
 
   // Badge
   badge:    { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(0,0,0,0.45)', borderRadius: R.pill, paddingHorizontal: 13, paddingVertical: 7 },
