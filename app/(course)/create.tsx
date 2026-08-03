@@ -11,7 +11,7 @@
  * Result hero renders the real route geometry via MiniMap's polyline prop
  * (dark+neon stylized aesthetic — no real base map by design decision).
  */
-import Slider from '@react-native-community/slider';
+import { SeededSlider } from '@/components/seeded-slider';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -595,7 +595,7 @@ export default function CreateScreen() {
               stop selling detents the server 422s); 일방통행 keeps 1km/0.5mi
               — its own end-distance gate governs there and short
               point-to-point runs are legal. */}
-          <Slider
+          <SeededSlider
             style={st.slider}
             minimumValue={oneWay ? (isMi ? 0.5 : 1) : (isMi ? LOOP_MIN_MI : LOOP_MIN_TARGET_KM)}
             maximumValue={isMi ? 20 : 30}

@@ -12,7 +12,7 @@
  * Entry is premium-gated on the profile tab; the screen itself renders for
  * anyone who lands here (the gate is the affordance, cues gate at runtime).
  */
-import Slider from '@react-native-community/slider';
+import { SeededSlider } from '@/components/seeded-slider';
 import { router } from 'expo-router';
 import React, { useEffect } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -37,7 +37,7 @@ function SliderRow({ label, value, min, max, step, fmt, onChange }: {
         <Text style={st.rowLabel}>{label}</Text>
         <Text style={st.sliderVal}>{fmt(value)}</Text>
       </View>
-      <Slider
+      <SeededSlider
         minimumValue={min} maximumValue={max} step={step} value={value}
         onSlidingComplete={onChange}
         minimumTrackTintColor={C.accent} maximumTrackTintColor={C.border} thumbTintColor="#fff"

@@ -9,7 +9,7 @@
  * display); success 초대하기 → user-search INVITE picker (2026-07-20 slice —
  * the share lane lives inside the picker's 링크로 초대 row).
  */
-import Slider from '@react-native-community/slider';
+import { SeededSlider } from '@/components/seeded-slider';
 import { useFocusEffect } from '@react-navigation/native';
 import * as Location from 'expo-location';
 import { router } from 'expo-router';
@@ -406,7 +406,7 @@ export default function CrewCreateScreen() {
               <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.fieldLabel}>{t('crw.radius')}</Text>
               <Text style={st.sliderValue}>{radiusKm} km</Text>
             </View>
-            <Slider
+            <SeededSlider
               minimumValue={1}
               maximumValue={20}
               step={1}

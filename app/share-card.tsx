@@ -31,7 +31,7 @@
  *    flips keep relative positions WITHIN a visit (8/3 ruling: per-visit
  *    defaults — cross-visit persistence died; entry = designed default).
  */
-import Slider from '@react-native-community/slider';
+import { SeededSlider } from '@/components/seeded-slider';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
@@ -1007,7 +1007,7 @@ export default function ShareCardScreen() {
                 </Pressable>
                 <View style={st.dimSlider}>
                   <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.dimLbl}>{tf('shr.dim', { p: Math.round(bgDim * 100) })}</Text>
-                  <Slider
+                  <SeededSlider
                     style={{ flex: 1 }}
                     minimumValue={0} maximumValue={0.6} step={0.05} value={bgDim}
                     onSlidingComplete={v => persistBg({ dim: Math.round(v * 20) / 20 })}

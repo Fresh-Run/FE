@@ -14,7 +14,7 @@
  * reference users). The dialog copy states exactly that. Form primitives,
  * constants, and styles are shared imports from crew-create (no duplication).
  */
-import Slider from '@react-native-community/slider';
+import { SeededSlider } from '@/components/seeded-slider';
 import { useFocusEffect } from '@react-navigation/native';
 import * as Location from 'expo-location';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -343,7 +343,7 @@ export default function CrewEditScreen() {
               <Text style={st.fieldLabel}>{t('crw.radius')}</Text>
               <Text style={st.sliderValue}>{radiusKm} km</Text>
             </View>
-            <Slider
+            <SeededSlider
               minimumValue={1}
               maximumValue={20}
               step={1}
