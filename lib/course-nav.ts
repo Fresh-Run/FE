@@ -34,6 +34,24 @@ export function nearestOnCourse(
   return { segIndex: bestIdx, distM: best, alongM: bestAlong };
 }
 
+/** Course tangent (nav v5.1, 8/3): the bearing of the course segment
+    nearest to p, toward the course's FORWARD direction (the next vertex in
+    course order; duplicate vertices are walked over). Null on degenerate
+    courses. Consumed by the nav camera's bearing ladder — ORIENTATION
+    only, same rendering-only boundary as snapToCourse. */
+export function courseTangentAt(course: readonly Coordinate[], p: Coordinate): number | null {
+  if (course.length < 2) return null;
+  const { segIndex } = nearestOnCourse(course, p);
+  const a = course[segIndex];
+  let j = segIndex + 1;
+  while (j < course.length && course[j].lat === a.lat && course[j].lng === a.lng) j++;
+  if (j >= course.length) return null; // tail of duplicates — no direction
+  const b = course[j];
+  const kx = Math.cos((a.lat * Math.PI) / 180);
+  const deg = (Math.atan2((b.lng - a.lng) * kx, b.lat - a.lat) * 180) / Math.PI;
+  return (deg + 360) % 360;
+}
+
 /** DISPLAY-ONLY route snap (nav v2, 8/3): the nearest on-course point when
     p is within maxM of the line, else null. HARD BOUNDARY (stated here and
     in the ledger): this is consumed by the nav CAMERA/fixed-arrow rendering

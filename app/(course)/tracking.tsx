@@ -40,7 +40,7 @@ import Svg, { Circle } from 'react-native-svg';
 
 import { Icon } from '@/components/ui';
 import { SEOUL_FALLBACK, useCurrentLocation } from '@/hooks/use-current-location';
-import { courseLengthM, nearestOnCourse, nextTurn, OFF_COURSE_ENTER_M, OFF_COURSE_EXIT_M, pointAhead, sliceAhead, snapToCourse } from '@/lib/course-nav';
+import { courseLengthM, courseTangentAt, nearestOnCourse, nextTurn, OFF_COURSE_ENTER_M, OFF_COURSE_EXIT_M, pointAhead, sliceAhead, snapToCourse } from '@/lib/course-nav';
 import { runSession } from '@/store/run-session';
 import { useRunTracker } from '@/hooks/use-run-tracker';
 import { composeFinishCue, composeSplitCue, composeStartCue, speakCue, stopSpeech } from '@/lib/audio-coach';
@@ -115,10 +115,11 @@ const COMPACT_VISIBLE = 100;          // compact detent: handle + strip
 // bug's whole GENUS (recenter's paused path fell to a course-less tail that
 // could center on the location hook's SEOUL-FALLBACK coordinate; its
 // running path lookahead-ed on a degenerate ?? 0 bearing). BOTH now call
-// this single function. The bearing rule: NO established bearing (never
-// moved ≥ BEARING_HOLD_MPS, or paused) → center ON the runner, north-up,
-// NO lookahead — you cannot look "ahead" of a runner with no direction.
-// Lookahead applies only with a live course bearing.
+// this single function. v5.1 (owner ruling): "north-up on a course run"
+// DIED — a course always has a direction. The bearing LADDER (see
+// courseBearing below) guarantees a bearing on every course-run call:
+// live movement COG → course tangent → (null only survives as a
+// course-less residual: center-on-runner north-up, free-run family).
 function courseCamera(runner: { lat: number; lng: number }, bearing: number | null) {
   const center = bearing != null ? pointAhead(runner, bearing, NAV_LOOKAHEAD_M) : runner;
   return {
@@ -699,6 +700,27 @@ export default function TrackingScreen() {
     return navBearingRef.current;
   }, []);
 
+  /** nav v5.1 BEARING LADDER (owner ruling 8/3 — the course path must run
+      VERTICAL from the dot, standstill included):
+      ① live movement bearing (speed ≥ BEARING_HOLD_MPS, smoothed COG) —
+        skipped entirely when preferTangent (paused: a stale last-speed
+        must not resurrect a movement bearing);
+      ② the COURSE TANGENT at the runner's nearest on-course point, toward
+        COURSE ORDER (the forward choice, stated: alongM monotonicity is
+        not tracked today, so course-order is v1's honest rule — a runner
+        legitimately traveling the line backward is MOVING, so rung ①
+        owns their bearing and the tangent never fights them);
+      ③ held/last bearing as residual (course-less calls — free-run family
+        never reaches here). */
+  const courseBearing = useCallback((raw: { lat: number; lng: number }, preferTangent = false): number | null => {
+    const cog = navBearing(); // side effect: keeps the smoothed ref fresh
+    const sp = runSession.getLastSpeedMps();
+    if (!preferTangent && sp != null && sp >= BEARING_HOLD_MPS && cog != null) return cog;
+    const tangent = course?.polyline && course.polyline.length > 1 ? courseTangentAt(course.polyline, raw) : null;
+    if (tangent != null) return tangent;
+    return cog;
+  }, [navBearing, course]);
+
   // Camera follow on path growth (running only, not while user-panned)
   useEffect(() => {
     if (state !== 'running' || drawnPath.length === 0) return;
@@ -719,9 +741,11 @@ export default function TrackingScreen() {
     // (display-only; HARD BOUNDARY per course-nav.ts helper doc).
     const raw = { lat: last.latitude, lng: last.longitude };
     const hereC = (navPhase === 'nav' && course?.polyline ? snapToCourse(course.polyline, raw, SNAP_TO_ROUTE_M) : null) ?? raw;
-    mapRef.current?.animateCamera(courseCamera(hereC, navBearing()), { duration: NAV_FOLLOW_MS });
+    // v5.1: the ladder — course runs ALWAYS have a bearing (tangent at
+    // standstill) → the dot sits at the ~22% band in every camera state
+    mapRef.current?.animateCamera(courseCamera(hereC, courseBearing(hereC)), { duration: NAV_FOLLOW_MS });
      
-  }, [drawnPath.length, state, drawnPath, courseCoords.length, navBearing, navPhase, course]);
+  }, [drawnPath.length, state, drawnPath, courseCoords.length, courseBearing, navPhase, course]);
 
   // ── nav v4.2 (8/3 field: dot visible pre-start, DIES at press-start;
   // indoor-reproducible) — DOUBLE CONVICTION, desk-proven:
@@ -861,7 +885,9 @@ export default function TrackingScreen() {
         : course?.polyline?.[0] ?? null;
       if (!t) return;
       const hereC = (navPhase === 'nav' && course?.polyline ? snapToCourse(course.polyline, t, SNAP_TO_ROUTE_M) : null) ?? t;
-      const bearing = state === 'running' ? navBearing() : null;
+      // v5.1: paused/standstill → the course TANGENT (preferTangent skips
+      // the movement rung — a stale last-speed must not resurrect a COG)
+      const bearing = courseBearing(hereC, state !== 'running');
       mapRef.current?.animateCamera(courseCamera(hereC, bearing), { duration: 400 });
       return;
     }
