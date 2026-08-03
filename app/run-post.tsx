@@ -44,7 +44,6 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/avatar';
-import { ElevationChart } from '@/components/elevation-chart';
 import { KudosSheet } from '@/components/kudos-sheet';
 import { MediaCarousel } from '@/components/media-carousel';
 import { PhotoViewer } from '@/components/photo-viewer';
@@ -470,10 +469,6 @@ export default function RunPostScreen() {
                 />
               </View>
 
-              {/* 고도 프로파일 (8/8, her ③ alt) — same section as 활동 상세,
-                  own AND others' runs (the track endpoint serves both);
-                  null-skips itself on altless tracks */}
-              <ElevationChart points={track} />
 
               {/* 분석 보기 — own mode: analysis stays one tap from social
                   (활동 상세's 내 프로필 entry moved here, owner correction) */}

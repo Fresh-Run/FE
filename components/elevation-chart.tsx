@@ -1,6 +1,8 @@
 /**
- * Elevation profile (8/8 build, her ③ alt contract) — 활동 상세 + run-post
- * section. Proposed form (checkpoint decision, owner rules): filled area
+ * Elevation profile (her ③ alt contract) — 활동 상세 ONLY (8/3 owner-record
+ * ruling: the shape doctrine applied — public-shaped surfaces don't carry
+ * analysis-grade personal data; the original both-surfaces build was
+ * specced then superseded, run-post removed). Form: filled area
  * profile — distance on x, altitude on y, accentGrn line over a translucent
  * fill, min/max altitude labels on the left edge, non-interactive v1.
  * Y auto-ranges with a MIN_SPAN_M floor so flat runs don't render as
