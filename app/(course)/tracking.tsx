@@ -30,7 +30,7 @@ import {
 } from 'react-native';
 import BottomSheet, { BottomSheetView } from '@gorhom/bottom-sheet';
 import { Gesture, GestureDetector, GestureHandlerRootView, type GestureType } from 'react-native-gesture-handler';
-import MapView, { AnimatedRegion, Marker, Polyline } from 'react-native-maps';
+import MapView, { Marker, Polyline } from 'react-native-maps';
 import Reanimated, {
   useAnimatedStyle,
   useSharedValue,
@@ -716,47 +716,72 @@ export default function TrackingScreen() {
      
   }, [drawnPath.length, state, drawnPath, courseCoords.length, navBearing, navPhase, course]);
 
-  // ── nav v4: THE CUSTOM DOT (the ledgered reversal path — 941c51a's note —
-  // firing on field evidence). Position = the SNAPPED point within
-  // SNAP_TO_ROUTE_M during NAVIGATING (display snap RESURRECTED: the dot
-  // reads the same snapToCourse the camera does — inside-buildings dies
-  // again); raw elsewhere. HARD BOUNDARY re-stated: raw GPS alone drives
-  // tracking/distance/pace/verification/off-route — the snap is RENDERING
-  // only. Glide = AnimatedRegion.timing per accepted fix (linear,
-  // DOT_GLIDE_MS); the first fix seats instantly (no fly-in). Heading cone
-  // SKIPPED for v4 — course-up rotation already encodes direction (the
-  // world turns); a cone can come later if the field asks.
-  const dotRegion = useRef(new AnimatedRegion({ latitude: 0, longitude: 0, latitudeDelta: 0, longitudeDelta: 0 })).current;
-  const dotSeededRef = useRef(false);
-  // v4.1 (8/3 field: NO dot rendered): CONVICTION = the canonical iOS
-  // blank-marker bug — tracksViewChanges={false} at mount snapshots the
-  // marker view BEFORE the disc/ring painted → an invisible marker. Fix =
-  // the documented pattern: mount with TRUE (live view), flip to false
-  // 600ms after the session's marker mounts (paint has composited); the
-  // flip kills the re-rasterize churn from the 500ms metrics tick. Resets
-  // to true whenever the marker unmounts (idle) so a new session repaints.
+  // ── nav v4.2 (8/3 field: dot visible pre-start, DIES at press-start;
+  // indoor-reproducible) — DOUBLE CONVICTION, desk-proven:
+  // ① PRIMARY (the v4.1 hole, code-timeline proof): the tracksViewChanges
+  //   flip timer keyed on `state !== 'idle'` — it starts at COUNTDOWN and
+  //   flips false at +600ms, but the marker MOUNTS on the FIRST FIX
+  //   (~countdown 3s + fix latency later) → mounted with false → the
+  //   IDENTICAL snapshot-blank bug, unfixed. v4.2: the timer keys on the
+  //   marker's ACTUAL mount (dotCoord != null).
+  // ② BELT (eliminated wholesale): the Animated marker pipe is known-flaky
+  //   on the new architecture, and a NaN reaching an Animated value poisons
+  //   it permanently. v4.2 drops that pipe entirely — plain Marker +
+  //   guarded React-state coordinate + a JS micro-lerp (3 steps over
+  //   DOT_GLIDE_MS) keeps the glide contract; state can never be poisoned.
+  //   snapToCourse desk-swept FINITE on all repro-adjacent shapes (start
+  //   vertex/dup vertex/single segment) — NaN was not the mechanism; the
+  //   guard ships as belt.
+  // Position = snapped within SNAP_TO_ROUTE_M during NAVIGATING (display
+  // snap; HARD BOUNDARY unchanged — raw GPS drives everything real), raw
+  // elsewhere. Heading cone still skipped (course-up rotation encodes
+  // direction).
+  const [dotCoord, setDotCoord] = useState<{ latitude: number; longitude: number } | null>(null);
+  const dotCoordRef = useRef<{ latitude: number; longitude: number } | null>(null);
+  const dotLerpRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // v4.2 flip timer — keyed to the MARKER'S MOUNT (dotCoord), not the state
+  // flip: false only after the mounted marker has had 600ms to paint;
+  // resets whenever the marker unmounts.
   const [dotTracks, setDotTracks] = useState(true);
+  const dotMounted = dotCoord != null;
   useEffect(() => {
-    if (!(courseCoords.length > 1 && state !== 'idle')) { setDotTracks(true); return; }
+    if (!(courseCoords.length > 1 && state !== 'idle' && dotMounted)) { setDotTracks(true); return; }
     const timer = setTimeout(() => setDotTracks(false), 600);
     return () => clearTimeout(timer);
-  }, [courseCoords.length, state]);
+  }, [courseCoords.length, state, dotMounted]);
   useEffect(() => {
     const last = drawnPath[drawnPath.length - 1];
     if (!last) return;
     const raw = { lat: last.latitude, lng: last.longitude };
-    const p = (navPhase === 'nav' && course?.polyline ? snapToCourse(course.polyline, raw, SNAP_TO_ROUTE_M) : null) ?? raw;
-    if (!dotSeededRef.current) {
-      dotSeededRef.current = true;
-      dotRegion.setValue({ latitude: p.lat, longitude: p.lng, latitudeDelta: 0, longitudeDelta: 0 });
+    let p = (navPhase === 'nav' && course?.polyline ? snapToCourse(course.polyline, raw, SNAP_TO_ROUTE_M) : null) ?? raw;
+    // NaN/invalid guard (belt): bad snap → raw; bad raw → keep the last good
+    if (!Number.isFinite(p.lat) || !Number.isFinite(p.lng)) p = raw;
+    if (!Number.isFinite(p.lat) || !Number.isFinite(p.lng)) return;
+    const target = { latitude: p.lat, longitude: p.lng };
+    if (dotLerpRef.current) { clearInterval(dotLerpRef.current); dotLerpRef.current = null; }
+    const from = dotCoordRef.current;
+    if (!from) {
+      // first fix seats instantly — no fly-in
+      dotCoordRef.current = target;
+      setDotCoord(target);
       return;
     }
-    dotRegion.timing({
-      latitude: p.lat, longitude: p.lng,
-      duration: DOT_GLIDE_MS, easing: Easing.linear, useNativeDriver: false,
-    } as Parameters<typeof dotRegion.timing>[0]).start();
+    const STEPS = 3;
+    let step = 0;
+    dotLerpRef.current = setInterval(() => {
+      step += 1;
+      const fr = step / STEPS;
+      const next = {
+        latitude: from.latitude + (target.latitude - from.latitude) * fr,
+        longitude: from.longitude + (target.longitude - from.longitude) * fr,
+      };
+      dotCoordRef.current = next;
+      setDotCoord(next);
+      if (step >= STEPS && dotLerpRef.current) { clearInterval(dotLerpRef.current); dotLerpRef.current = null; }
+    }, DOT_GLIDE_MS / STEPS);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [drawnPath.length, navPhase, course]);
+  useEffect(() => () => { if (dotLerpRef.current) clearInterval(dotLerpRef.current); }, []);
 
   // Center on the USER's RESOLVED location (T-B correction ②): the hook's
   // coordinate is Seoul-fallback-initialized (never null), so truthiness
@@ -1111,16 +1136,16 @@ export default function TrackingScreen() {
               size at every zoom (markers are screen-space), NO halo ever.
               Billboard by default (flat=false): stays a dot under map
               rotation, never a tilting sprite. */}
-          {hasCoursePath && state !== 'idle' && drawnPath.length > 0 && (
-            <Marker.Animated
-              coordinate={dotRegion as unknown as { latitude: number; longitude: number }}
+          {hasCoursePath && state !== 'idle' && dotCoord != null && (
+            <Marker
+              coordinate={dotCoord}
               anchor={{ x: 0.5, y: 0.5 }}
               flat={false}
               tracksViewChanges={dotTracks}
               zIndex={10}
             >
               <View style={st.userDot} />
-            </Marker.Animated>
+            </Marker>
           )}
         </MapView>
 
