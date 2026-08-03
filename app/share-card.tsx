@@ -37,7 +37,7 @@ import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { t, tf, useLang } from '@/lib/i18n';
 import { Image, Pressable, ScrollView, Share, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -168,12 +168,24 @@ type LayerGeom = {
   w: SharedValue<number>; h: SharedValue<number>;
   /** measured width of the VALUE Text alone — X-snap targets the value glyphs */
   vw: SharedValue<number>;
+  /** 8/3 selection model: raw finger truth + snap edges live in the geom so
+      the ANYWHERE channel (canvas gestures driving the selected layer) runs
+      the exact same drag worklet as direct manipulation. */
+  rawX: SharedValue<number>; rawY: SharedValue<number>;
+  snappedX: SharedValue<number>; snappedY: SharedValue<number>;
 };
 type GuideCtx = {
   geoms: Partial<Record<ShareLayerKey, LayerGeom>>; // registered at hook mount
   guideX: SharedValue<number>; // px of the vertical guide line; -1 = hidden
   guideY: SharedValue<number>; // px of the horizontal guide line; -1 = hidden
 };
+
+// 8/3 selection model: selectable keys = the four text layers + the track
+type SelKey = ShareLayerKey | 'track';
+/** Double-tap preset scales S→M→L→S (absolute layer scale, field-tunable) */
+const SCALE_PRESETS = [0.85, 1.0, 1.25];
+/** Touch slop added around a layer's box for hit-testing (px) */
+const HIT_PAD_PX = 8;
 
 // Snap tick — Light, gated under run.haptics per the vocabulary table's own
 // scope (tabs/toggles are non-run surfaces and ride the same gate: it is the
@@ -191,6 +203,94 @@ function snapTick() {
 // SESSION state on gesture end (8/3 per-visit ruling); canvas-dim changes
 // (format flip) re-derive px from fractions within the visit.
 
+// ─── Shared drag worklets (8/3 selection model) — ONE snap machine for BOTH
+// channels: direct manipulation (the layer's own pan) and the anywhere-drag
+// (canvas pan driving the selected layer). Extracted verbatim from the v2
+// per-layer onChange; behavior identical by construction.
+
+function dragStart(g: LayerGeom) {
+  'worklet';
+  g.rawX.value = g.tx.value;
+  g.rawY.value = g.ty.value;
+}
+
+function dragStep(key: ShareLayerKey, g: LayerGeom, guides: GuideCtx, canvasW: number, canvasH: number, changeX: number, changeY: number) {
+  'worklet';
+  g.rawX.value += changeX;
+  g.rawY.value += changeY;
+  // Snap on the value sub-box, not the container — the label trails
+  // visually (owner walk finding 7/30: pace's 55px label offset its
+  // value ~31px from box-center guides). vw falls back to the box
+  // until the value's first onLayout. Exact under center-origin
+  // scale: value visual center = raw + w/2 + sc·(vw − w)/2 (the box
+  // scales about ITS center; the value rides left of it).
+  const vEff = g.vw.value || g.w.value;
+  const halfW = (vEff * g.sc.value) / 2;
+  const halfH = (g.h.value * g.sc.value) / 2;
+  const cx = g.rawX.value + g.w.value / 2 + (g.sc.value * (vEff - g.w.value)) / 2;
+  const cy = g.rawY.value + g.h.value / 2;
+  // candidate = [snap-to center position, guide-line px]
+  const xc: [number, number][] = [
+    [canvasW / 2, canvasW / 2],                              // ① V centerline
+    [SAFE_MARGIN_PX + halfW, SAFE_MARGIN_PX],                // ② left margin (edge)
+    [canvasW - SAFE_MARGIN_PX - halfW, canvasW - SAFE_MARGIN_PX], // ② right margin (edge)
+  ];
+  const yc: [number, number][] = [
+    [canvasH / 2, canvasH / 2],                              // ① H centerline
+    [SAFE_MARGIN_PX + halfH, SAFE_MARGIN_PX],                // ② top margin
+    [canvasH - SAFE_MARGIN_PX - halfH, canvasH - SAFE_MARGIN_PX], // ② bottom margin
+  ];
+  // ③ siblings — centers + edges (skip unrendered: w === 0)
+  for (const k2 of (['dist', 'pace', 'time', 'crew'] as ShareLayerKey[])) {
+    if (k2 === key) continue;
+    const sg = guides.geoms[k2];
+    if (!sg || sg.w.value === 0) continue;
+    const gvEff = sg.vw.value || sg.w.value; // sibling value sub-box too
+    const sHalfW = (gvEff * sg.sc.value) / 2;
+    const sHalfH = (sg.h.value * sg.sc.value) / 2;
+    const scx = sg.tx.value + sg.w.value / 2 + (sg.sc.value * (gvEff - sg.w.value)) / 2;
+    const scy = sg.ty.value + sg.h.value / 2;
+    xc.push([scx, scx]);                                     // H-center align
+    xc.push([scx - sHalfW + halfW, scx - sHalfW]);           // left-align
+    xc.push([scx + sHalfW - halfW, scx + sHalfW]);           // right-align
+    yc.push([scy, scy]);                                     // V-center align
+    yc.push([scy - sHalfH + halfH, scy - sHalfH]);           // top-align
+    yc.push([scy + sHalfH - halfH, scy + sHalfH]);           // bottom-align
+  }
+  let bestX = -1, bestXd = SNAP_THRESHOLD_PX + 1, bestXg = -1;
+  for (const [pos, g2] of xc) {
+    const d = Math.abs(cx - pos);
+    if (d < bestXd) { bestXd = d; bestX = pos; bestXg = g2; }
+  }
+  let bestY = -1, bestYd = SNAP_THRESHOLD_PX + 1, bestYg = -1;
+  for (const [pos, g2] of yc) {
+    const d = Math.abs(cy - pos);
+    if (d < bestYd) { bestYd = d; bestY = pos; bestYg = g2; }
+  }
+  const xSnap = bestXd <= SNAP_THRESHOLD_PX;
+  const ySnap = bestYd <= SNAP_THRESHOLD_PX;
+  // invert the value-center mapping — layout x from the target center
+  g.tx.value = xSnap ? bestX - g.w.value / 2 - (g.sc.value * (vEff - g.w.value)) / 2 : g.rawX.value; // magnetic pull ↔ clean release
+  g.ty.value = ySnap ? bestY - g.h.value / 2 : g.rawY.value;
+  guides.guideX.value = xSnap ? bestXg : -1; // lines exist ONLY while snapped
+  guides.guideY.value = ySnap ? bestYg : -1;
+  if ((xSnap && g.snappedX.value === 0) || (ySnap && g.snappedY.value === 0)) {
+    runOnJS(snapTick)(); // rising edge only — engage tick, no machine-gun
+  }
+  g.snappedX.value = xSnap ? 1 : 0;
+  g.snappedY.value = ySnap ? 1 : 0;
+}
+
+function dragEnd(g: LayerGeom, guides: GuideCtx) {
+  'worklet';
+  guides.guideX.value = -1; // guides vanish on release — never outlive a drag
+  guides.guideY.value = -1;
+  g.snappedX.value = 0;
+  g.snappedY.value = 0;
+  g.rawX.value = g.tx.value; // next drag starts from the settled (snapped) spot
+  g.rawY.value = g.ty.value;
+}
+
 function useMetricLayer(
   key: ShareLayerKey,
   canvasW: number,
@@ -199,6 +299,8 @@ function useMetricLayer(
   persist: (key: ShareLayerKey, p: MetricPlacement) => void,
   guides: GuideCtx,
   enabled = true,
+  /** 8/3 selection model: a direct drag/pinch SELECTS as it manipulates */
+  onSelect?: (key: ShareLayerKey) => void,
 ) {
   const base = stored ?? DEFAULT_PLACEMENT[key];
   const tx = useSharedValue(base.x * canvasW);
@@ -212,7 +314,7 @@ function useMetricLayer(
   const vw = useSharedValue(0); // measured value-Text width — onValueLayout below
   const snappedX = useSharedValue(0); // 0/1 — tick fires on the rising edge only
   const snappedY = useSharedValue(0);
-  guides.geoms[key] = { tx, ty, sc, w, h, vw }; // idempotent per-render registration
+  guides.geoms[key] = { tx, ty, sc, w, h, vw, rawX, rawY, snappedX, snappedY }; // idempotent per-render registration
   // reposition on hydrate/format-flip (fractions are the truth)
   useEffect(() => {
     tx.value = base.x * canvasW;
@@ -223,93 +325,33 @@ function useMetricLayer(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canvasW, canvasH, stored]);
   const gesture = useMemo(() => {
+    const g: LayerGeom = { tx, ty, sc, w, h, vw, rawX, rawY, snappedX, snappedY };
     const end = () => {
       'worklet';
-      guides.guideX.value = -1; // guides vanish on release — never outlive a drag
-      guides.guideY.value = -1;
-      snappedX.value = 0;
-      snappedY.value = 0;
-      rawX.value = tx.value; // next drag starts from the settled (snapped) spot
-      rawY.value = ty.value;
+      dragEnd(g, guides);
       runOnJS(persist)(key, { x: tx.value / canvasW, y: ty.value / canvasH, s: sc.value });
     };
-    const siblings = (['dist', 'pace', 'time', 'crew'] as ShareLayerKey[]).filter(k2 => k2 !== key);
+    const select = () => {
+      'worklet';
+      if (onSelect) runOnJS(onSelect)(key);
+    };
     return Gesture.Simultaneous(
       Gesture.Pan().enabled(enabled)
         .onStart(() => {
           'worklet';
-          rawX.value = tx.value;
-          rawY.value = ty.value;
+          dragStart(g);
+          select(); // one gesture, both effects (8/3 item 3)
         })
         .onChange(e => {
           'worklet';
-          rawX.value += e.changeX;
-          rawY.value += e.changeY;
-          // Snap on the value sub-box, not the container — the label trails
-          // visually (owner walk finding 7/30: pace's 55px label offset its
-          // value ~31px from box-center guides). vw falls back to the box
-          // until the value's first onLayout. Exact under center-origin
-          // scale: value visual center = raw + w/2 + sc·(vw − w)/2 (the box
-          // scales about ITS center; the value rides left of it).
-          const vEff = vw.value || w.value;
-          const halfW = (vEff * sc.value) / 2;
-          const halfH = (h.value * sc.value) / 2;
-          const cx = rawX.value + w.value / 2 + (sc.value * (vEff - w.value)) / 2;
-          const cy = rawY.value + h.value / 2;
-          // candidate = [snap-to center position, guide-line px]
-          const xc: [number, number][] = [
-            [canvasW / 2, canvasW / 2],                              // ① V centerline
-            [SAFE_MARGIN_PX + halfW, SAFE_MARGIN_PX],                // ② left margin (edge)
-            [canvasW - SAFE_MARGIN_PX - halfW, canvasW - SAFE_MARGIN_PX], // ② right margin (edge)
-          ];
-          const yc: [number, number][] = [
-            [canvasH / 2, canvasH / 2],                              // ① H centerline
-            [SAFE_MARGIN_PX + halfH, SAFE_MARGIN_PX],                // ② top margin
-            [canvasH - SAFE_MARGIN_PX - halfH, canvasH - SAFE_MARGIN_PX], // ② bottom margin
-          ];
-          // ③ siblings — centers + edges (skip unrendered: w === 0)
-          for (const k2 of siblings) {
-            const g = guides.geoms[k2];
-            if (!g || g.w.value === 0) continue;
-            const gvEff = g.vw.value || g.w.value; // sibling value sub-box too
-            const sHalfW = (gvEff * g.sc.value) / 2;
-            const sHalfH = (g.h.value * g.sc.value) / 2;
-            const scx = g.tx.value + g.w.value / 2 + (g.sc.value * (gvEff - g.w.value)) / 2;
-            const scy = g.ty.value + g.h.value / 2;
-            xc.push([scx, scx]);                                     // H-center align
-            xc.push([scx - sHalfW + halfW, scx - sHalfW]);           // left-align
-            xc.push([scx + sHalfW - halfW, scx + sHalfW]);           // right-align
-            yc.push([scy, scy]);                                     // V-center align
-            yc.push([scy - sHalfH + halfH, scy - sHalfH]);           // top-align
-            yc.push([scy + sHalfH - halfH, scy + sHalfH]);           // bottom-align
-          }
-          let bestX = -1, bestXd = SNAP_THRESHOLD_PX + 1, bestXg = -1;
-          for (const [pos, g2] of xc) {
-            const d = Math.abs(cx - pos);
-            if (d < bestXd) { bestXd = d; bestX = pos; bestXg = g2; }
-          }
-          let bestY = -1, bestYd = SNAP_THRESHOLD_PX + 1, bestYg = -1;
-          for (const [pos, g2] of yc) {
-            const d = Math.abs(cy - pos);
-            if (d < bestYd) { bestYd = d; bestY = pos; bestYg = g2; }
-          }
-          const xSnap = bestXd <= SNAP_THRESHOLD_PX;
-          const ySnap = bestYd <= SNAP_THRESHOLD_PX;
-          // invert the value-center mapping — layout x from the target center
-          tx.value = xSnap ? bestX - w.value / 2 - (sc.value * (vEff - w.value)) / 2 : rawX.value; // magnetic pull ↔ clean release
-          ty.value = ySnap ? bestY - h.value / 2 : rawY.value;
-          guides.guideX.value = xSnap ? bestXg : -1; // lines exist ONLY while snapped
-          guides.guideY.value = ySnap ? bestYg : -1;
-          if ((xSnap && snappedX.value === 0) || (ySnap && snappedY.value === 0)) {
-            runOnJS(snapTick)(); // rising edge only — engage tick, no machine-gun
-          }
-          snappedX.value = xSnap ? 1 : 0;
-          snappedY.value = ySnap ? 1 : 0;
+          dragStep(key, g, guides, canvasW, canvasH, e.changeX, e.changeY);
         })
         .onEnd(end),
-      Gesture.Pinch().enabled(enabled).onChange(e => { sc.value *= e.scaleChange; }).onEnd(end),
+      Gesture.Pinch().enabled(enabled)
+        .onStart(select)
+        .onChange(e => { sc.value *= e.scaleChange; }).onEnd(end),
     );
-  }, [key, canvasW, canvasH, persist, tx, ty, sc, rawX, rawY, w, h, vw, snappedX, snappedY, guides, enabled]);
+  }, [key, canvasW, canvasH, persist, tx, ty, sc, rawX, rawY, w, h, vw, snappedX, snappedY, guides, enabled, onSelect]);
   const style = useAnimatedStyle(() => ({
     transform: [{ translateX: tx.value }, { translateY: ty.value }, { scale: sc.value }],
   }));
@@ -453,13 +495,29 @@ export default function ShareCardScreen() {
   // Slice 2 (build 8 alive): the canvas ref view-shot captures
   const canvasRef = useRef<View>(null);
   const [exporting, setExporting] = useState(false);
+  // ── 8/3 SELECTION MODEL (option A + double-tap rider) ──────────────────────
+  // Tap a layer → selected (dashed border); anywhere-drag/pinch drives the
+  // SELECTED layer; direct manipulation on any layer keeps working and
+  // selects as it moves. selectedSV mirrors JS state into worklets.
+  const [selected, setSelected] = useState<SelKey | null>(null);
+  const selectedSV = useSharedValue('');
+  useEffect(() => { selectedSV.value = selected ?? ''; }, [selected, selectedSV]);
+  const selectLayer = useCallback((k: ShareLayerKey) => setSelected(k), []);
   const tx = useSharedValue(0);
   const ty = useSharedValue(0);
   const sc = useSharedValue(1);
   const rot = useSharedValue(0);
+  // Track gestures: direct pan/pinch select-as-they-move (the metric
+  // grammar); ROTATION STAYS DIRECT-ONLY (8/3 item-5 choice: an anywhere-
+  // rotate is ambiguous against the anywhere-pinch's two-finger grammar —
+  // twist on the track itself, as always).
   const gesture = useMemo(() => Gesture.Simultaneous(
-    Gesture.Pan().enabled(!bgAdjustMode).onChange(e => { tx.value += e.changeX; ty.value += e.changeY; }),
-    Gesture.Pinch().enabled(!bgAdjustMode).onChange(e => { sc.value *= e.scaleChange; }),
+    Gesture.Pan().enabled(!bgAdjustMode)
+      .onStart(() => { 'worklet'; runOnJS(setSelected)('track'); })
+      .onChange(e => { tx.value += e.changeX; ty.value += e.changeY; }),
+    Gesture.Pinch().enabled(!bgAdjustMode)
+      .onStart(() => { 'worklet'; runOnJS(setSelected)('track'); })
+      .onChange(e => { sc.value *= e.scaleChange; }),
     Gesture.Rotation().enabled(!bgAdjustMode).onChange(e => { rot.value += e.rotationChange; }),
   ), [tx, ty, sc, rot, bgAdjustMode]);
   const layerStyle = useAnimatedStyle(() => ({
@@ -493,10 +551,10 @@ export default function ShareCardScreen() {
   const guideCtx = useRef<GuideCtx>({ geoms: {}, guideX, guideY }).current;
   const guideVStyle = useAnimatedStyle(() => ({ opacity: guideX.value >= 0 ? 1 : 0, transform: [{ translateX: guideX.value }] }));
   const guideHStyle = useAnimatedStyle(() => ({ opacity: guideY.value >= 0 ? 1 : 0, transform: [{ translateY: guideY.value }] }));
-  const distLayer = useMetricLayer('dist', canvasW, canvasH, sessionPlacements.dist, persistPlacement, guideCtx, !bgAdjustMode);
-  const paceLayer = useMetricLayer('pace', canvasW, canvasH, sessionPlacements.pace, persistPlacement, guideCtx, !bgAdjustMode);
-  const timeLayer = useMetricLayer('time', canvasW, canvasH, sessionPlacements.time, persistPlacement, guideCtx, !bgAdjustMode);
-  const crewLayer = useMetricLayer('crew', canvasW, canvasH, sessionPlacements.crew, persistPlacement, guideCtx, !bgAdjustMode);
+  const distLayer = useMetricLayer('dist', canvasW, canvasH, sessionPlacements.dist, persistPlacement, guideCtx, !bgAdjustMode, selectLayer);
+  const paceLayer = useMetricLayer('pace', canvasW, canvasH, sessionPlacements.pace, persistPlacement, guideCtx, !bgAdjustMode, selectLayer);
+  const timeLayer = useMetricLayer('time', canvasW, canvasH, sessionPlacements.time, persistPlacement, guideCtx, !bgAdjustMode, selectLayer);
+  const crewLayer = useMetricLayer('crew', canvasW, canvasH, sessionPlacements.crew, persistPlacement, guideCtx, !bgAdjustMode, selectLayer);
   const layerFor = { dist: distLayer, pace: paceLayer, time: timeLayer, crew: crewLayer } as const;
 
   // ── v2.1 per-run background adjust (photos only) ────────────────────────────
@@ -529,6 +587,163 @@ export default function ShareCardScreen() {
   const [showCrewName, setShowCrewName] = useState(false);
   const [showCrewCount, setShowCrewCount] = useState(false);
 
+  // ── 8/3 selection model: the CANVAS gesture system (anywhere-channel) ──────
+  // Arbitration (the table, stated): ① touch lands ON a layer → the canvas
+  // pan/pinch FAIL themselves (onTouchesDown hit-test + manager.fail()) —
+  // direct manipulation wins, no double-handling, no cross-detector refs
+  // (the v2.1 fragility the mode grammar was built against). ② touch on
+  // EMPTY canvas + a selection active → the canvas gestures drive the
+  // selected layer (same dragStep worklet → guides/snap identical). ③ no
+  // selection + empty touch → nothing. ④ bgAdjustMode ON → this whole
+  // system is .enabled(false) AND entering the mode deselects — the bg
+  // detector alone is live, exactly the v2.1 grammar. Taps never fail:
+  // single-tap = select/deselect by hit, double-tap = preset cycle.
+  const renderedCsv = [
+    prefs.metrics.dist ? 'dist' : '',
+    prefs.metrics.pace && run?.avg_pace_sec_per_km != null ? 'pace' : '',
+    prefs.metrics.time ? 'time' : '',
+    showCrewName && run?.crew_name ? 'crew' : '',
+    route ? 'track' : '',
+  ].filter(Boolean).join(',');
+  const renderedSV = useSharedValue('');
+  useEffect(() => { renderedSV.value = renderedCsv; }, [renderedCsv, renderedSV]);
+  useEffect(() => {
+    // a layer toggled off while selected deselects (no ghost selection)
+    if (selected && !renderedCsv.split(',').includes(selected)) setSelected(null);
+  }, [selected, renderedCsv]);
+  const ownsPan = useSharedValue(0);   // 0 none · 1 metric-class · 2 track
+  const ownsPinch = useSharedValue(0);
+  const applyTapSelect = useCallback((k: string) => {
+    setSelected(k === '' ? null : (k as SelKey));
+  }, []);
+  const applyPresetCycle = useCallback((k: string) => {
+    // S→M→L→S on the double-tapped layer (selects it too). Nearest preset
+    // to the current scale advances by one; constants field-tunable.
+    const scv = k === 'track' ? sc : guideCtx.geoms[k as ShareLayerKey]?.sc;
+    if (!scv) return;
+    let nearest = 0;
+    for (let i = 1; i < SCALE_PRESETS.length; i++) {
+      if (Math.abs(scv.value - SCALE_PRESETS[i]) < Math.abs(scv.value - SCALE_PRESETS[nearest])) nearest = i;
+    }
+    const next = SCALE_PRESETS[(nearest + 1) % SCALE_PRESETS.length];
+    scv.value = next;
+    setSelected(k as SelKey);
+    if (k !== 'track') {
+      const g = guideCtx.geoms[k as ShareLayerKey];
+      if (g) persistPlacement(k as ShareLayerKey, { x: g.tx.value / canvasW, y: g.ty.value / canvasH, s: next });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canvasW, canvasH, persistPlacement]);
+  const canvasGesture = useMemo(() => {
+    const geoms = guideCtx.geoms;
+    const hitTest = (x: number, y: number): string => {
+      'worklet';
+      const rendered = renderedSV.value;
+      // top-most first (render order: metrics under crew; track underneath all)
+      const order: ShareLayerKey[] = ['crew', 'time', 'pace', 'dist'];
+      for (const k of order) {
+        if (rendered.indexOf(k) === -1) continue;
+        const g = geoms[k];
+        if (!g || g.w.value === 0) continue;
+        const cx = g.tx.value + g.w.value / 2;
+        const cy = g.ty.value + g.h.value / 2;
+        if (Math.abs(x - cx) <= (g.w.value * g.sc.value) / 2 + HIT_PAD_PX
+          && Math.abs(y - cy) <= (g.h.value * g.sc.value) / 2 + HIT_PAD_PX) return k;
+      }
+      if (rendered.indexOf('track') !== -1) {
+        // rotation ignored — axis-aligned box approximation (stated)
+        const cx = canvasW / 2 + tx.value;
+        const cy = canvasH / 2 + ty.value;
+        const half = (layerSize * sc.value) / 2;
+        if (Math.abs(x - cx) <= half && Math.abs(y - cy) <= half) return 'track';
+      }
+      return '';
+    };
+    const pan = Gesture.Pan().enabled(!bgAdjustMode)
+      .onTouchesDown((e, mgr) => {
+        'worklet';
+        const t0 = e.allTouches[0];
+        if (t0 && hitTest(t0.x, t0.y) !== '') mgr.fail(); // direct wins on-layer
+      })
+      .onStart(() => {
+        'worklet';
+        ownsPan.value = 0;
+        const sel = selectedSV.value;
+        if (sel === '') return;
+        if (sel === 'track') { ownsPan.value = 2; return; }
+        const g = geoms[sel as ShareLayerKey];
+        if (g) { dragStart(g); ownsPan.value = 1; }
+      })
+      .onChange(e => {
+        'worklet';
+        if (ownsPan.value === 1) {
+          const sel = selectedSV.value as ShareLayerKey;
+          const g = geoms[sel];
+          if (g) dragStep(sel, g, guideCtx, canvasW, canvasH, e.changeX, e.changeY);
+        } else if (ownsPan.value === 2) {
+          tx.value += e.changeX; ty.value += e.changeY;
+        }
+      })
+      .onEnd(() => {
+        'worklet';
+        if (ownsPan.value === 1) {
+          const sel = selectedSV.value as ShareLayerKey;
+          const g = geoms[sel];
+          if (g) {
+            dragEnd(g, guideCtx);
+            runOnJS(persistPlacement)(sel, { x: g.tx.value / canvasW, y: g.ty.value / canvasH, s: g.sc.value });
+          }
+        }
+        ownsPan.value = 0;
+      });
+    const pinch = Gesture.Pinch().enabled(!bgAdjustMode)
+      .onTouchesDown((e, mgr) => {
+        'worklet';
+        if (e.numberOfTouches >= 2) {
+          const a = e.allTouches[0], b = e.allTouches[1];
+          if (hitTest((a.x + b.x) / 2, (a.y + b.y) / 2) !== '') mgr.fail(); // direct wins on-layer
+        }
+      })
+      .onStart(() => {
+        'worklet';
+        const sel = selectedSV.value;
+        ownsPinch.value = sel === '' ? 0 : sel === 'track' ? 2 : 1;
+      })
+      .onChange(e => {
+        'worklet';
+        if (ownsPinch.value === 1) {
+          const g = geoms[selectedSV.value as ShareLayerKey];
+          if (g) g.sc.value *= e.scaleChange;
+        } else if (ownsPinch.value === 2) {
+          sc.value *= e.scaleChange;
+        }
+      })
+      .onEnd(() => {
+        'worklet';
+        if (ownsPinch.value === 1) {
+          const sel = selectedSV.value as ShareLayerKey;
+          const g = geoms[sel];
+          if (g) runOnJS(persistPlacement)(sel, { x: g.tx.value / canvasW, y: g.ty.value / canvasH, s: g.sc.value });
+        }
+        ownsPinch.value = 0;
+      });
+    const doubleTap = Gesture.Tap().numberOfTaps(2).enabled(!bgAdjustMode)
+      .onEnd((e, success) => {
+        'worklet';
+        if (!success) return;
+        const k = hitTest(e.x, e.y);
+        if (k !== '') runOnJS(applyPresetCycle)(k);
+      });
+    const singleTap = Gesture.Tap().numberOfTaps(1).enabled(!bgAdjustMode)
+      .onEnd((e, success) => {
+        'worklet';
+        if (!success) return;
+        runOnJS(applyTapSelect)(hitTest(e.x, e.y));
+      });
+    return Gesture.Simultaneous(pan, pinch, Gesture.Exclusive(doubleTap, singleTap));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bgAdjustMode, canvasW, canvasH, layerSize, guideCtx, persistPlacement, applyPresetCycle, applyTapSelect]);
+
   if (!run) return <View style={st.root} />;
 
   // ── metric values — the ruled three. 시간 = SINGLE 총 시간 (owner lean
@@ -555,9 +770,10 @@ export default function ShareCardScreen() {
     if (exporting) return;
     setExporting(true);
     try {
-      if (bgAdjustMode) {
+      if (bgAdjustMode || selected) {
         setBgAdjustMode(false);
-        await new Promise(r => setTimeout(r, 120)); // let the badge unmount
+        setSelected(null); // selection border must never reach the capture
+        await new Promise(r => setTimeout(r, 120)); // let badge/border unmount
       }
       const uri = await captureRef(canvasRef, {
         format: 'png', quality: 1, result: 'tmpfile',
@@ -590,6 +806,10 @@ export default function ShareCardScreen() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}>
         {/* ── THE CARD ── */}
         <View style={st.canvasWrap}>
+          {/* 8/3 selection model: the canvas-level detector carries the
+              anywhere-channel + tap selection (arbitration table at the
+              canvasGesture definition) */}
+          <GestureDetector gesture={canvasGesture}>
           <View ref={canvasRef} collapsable={false} style={[st.canvas, { width: canvasW, height: canvasH }]}>
             {bg.kind === 'photo' && (
               <GestureDetector gesture={bgLayer.gesture}>
@@ -619,6 +839,7 @@ export default function ShareCardScreen() {
                     <AnimatedCircle cx={route.start[0]} cy={route.start[1]} animatedProps={startDotProps} fill="#fff" stroke={stroke} />
                     <AnimatedCircle cx={route.end[0]} cy={route.end[1]} animatedProps={endDotProps} fill={stroke} stroke="#fff" />
                   </Svg>
+                  {selected === 'track' && <View pointerEvents="none" style={st.selBorder} />}
                 </Reanimated.View>
               </GestureDetector>
             )}
@@ -630,6 +851,7 @@ export default function ShareCardScreen() {
                 <Reanimated.View onLayout={layerFor[k].onLayout} style={[st.metricLayer, layerFor[k].style]}>
                   <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.statVal} onLayout={layerFor[k].onValueLayout}>{v}</Text>
                   <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.statLbl}>{l}</Text>
+                  {selected === k && <View pointerEvents="none" style={st.selBorder} />}
                 </Reanimated.View>
               </GestureDetector>
             ))}
@@ -643,12 +865,14 @@ export default function ShareCardScreen() {
                   <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.crewTxt} onLayout={layerFor.crew.onValueLayout} numberOfLines={1}>
                     {run.crew_name}{showCrewCount && run.session_participant_count != null ? ` · ${tf('crw.nJoined', { n: run.session_participant_count })}` : ''}
                   </Text>
+                  {selected === 'crew' && <View pointerEvents="none" style={st.selBorder} />}
                 </Reanimated.View>
               </GestureDetector>
             ) : null}
             {/* permanent wordmark (re-ruling) — subtle corner, both formats */}
             <Text style={st.wordmark} pointerEvents="none">FreshRun</Text>
           </View>
+          </GestureDetector>
           {/* smart-guide lines — OUTSIDE the captured ref (structural export
               exclusion: capture cannot see them, ever) + gesture-end clearing
               (belt). Render only while a drag is snapped. */}
@@ -697,7 +921,7 @@ export default function ShareCardScreen() {
             <>
               <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.groupLbl}>{t('shr.bgPhoto')}</Text>
               <View style={st.chipRow}>
-                <Pressable onPress={() => setBgAdjustMode(m => !m)} style={[st.chip, bgAdjustMode && st.chipOn]}>
+                <Pressable onPress={() => { setSelected(null); setBgAdjustMode(m => !m); }} style={[st.chip, bgAdjustMode && st.chipOn]}>
                   <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={[st.chipTxt, bgAdjustMode && st.chipTxtOn]}>{bgAdjustMode ? t('shr.adjustDone') : t('shr.adjustBg')}</Text>
                 </Pressable>
                 <View style={st.dimSlider}>
@@ -784,6 +1008,17 @@ const makeSt = (C: Tokens) => StyleSheet.create({
   // areas the fixed bottom-left corner never met). maxWidth dropped — the
   // layer is measured/pinchable like its siblings.
   crewLayer: { position: 'absolute', left: 0, top: 0 },
+  // 8/3 selection visual — the Stories treatment: subtle dashed border +
+  // soft glow, white ink (the dark-canvas family; the accent line is the
+  // ROUTE's color — a white selection reads as chrome, not content).
+  // Drawn, not labeled (string-free). pointerEvents none; excluded from
+  // export by the pre-capture deselect.
+  selBorder: {
+    position: 'absolute', top: -6, bottom: -6, left: -6, right: -6,
+    borderWidth: 1.5, borderStyle: 'dashed', borderColor: 'rgba(255,255,255,0.9)',
+    borderRadius: 8,
+    shadowColor: '#fff', shadowOpacity: 0.35, shadowRadius: 4, shadowOffset: { width: 0, height: 0 },
+  },
   crewTxt: { fontSize: 12, fontWeight: '600', color: 'rgba(255,255,255,0.85)', letterSpacing: -0.2, textShadowColor: 'rgba(0,0,0,0.55)', textShadowRadius: 4 },
 
   bgRow:    { gap: 8, paddingHorizontal: S.gutter, paddingTop: 14 },
