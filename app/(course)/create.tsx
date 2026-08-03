@@ -596,6 +596,7 @@ export default function CreateScreen() {
               — its own end-distance gate governs there and short
               point-to-point runs are legal. */}
           <SeededSlider
+            siteId="course-dist"
             style={st.slider}
             minimumValue={oneWay ? (isMi ? 0.5 : 1) : (isMi ? LOOP_MIN_MI : LOOP_MIN_TARGET_KM)}
             maximumValue={isMi ? 20 : 30}

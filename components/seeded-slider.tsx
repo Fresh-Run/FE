@@ -1,38 +1,56 @@
 /**
- * SeededSlider — the slider thumb/value mismatch class fix (8/3 owner field
- * report: 말하기 속도 thumb HARD RIGHT while reading x1.0, which is
- * MID-range 0.6–1.6 — the decisive sighting; 코스 거리 questionable).
+ * SeededSlider v2 — the slider thumb/value mismatch class (8/3 field, two
+ * rounds).
  *
- * MECHANISM (the class): @react-native-community/slider is NOT a controlled
- * component — `value` seeds the native thumb, and the seating is exposed to
- * two known iOS defects: ① the initial thumb position can be computed
- * against a pre-layout width / the native default 0–1 range depending on
- * prop-application order (a value ≥ the stale max pins the thumb hard
- * right — the exact 말하기-속도 signature); ② dynamic min/max changes
- * reclamp against a stale value (코스 거리's mode/unit-dependent floor).
- * Post-mount `value` updates (store hydration, server seeds) ride the same
- * unreliable native setValue path.
+ * ROUND 1 (single-screen mis-seat): @react-native-community/slider is a
+ * non-controlled component; the native thumb's initial seating is exposed
+ * to pre-layout width / stale-range clamping (말하기 속도 hard-right at
+ * x1.0 = mid-range 0.6–1.6). Fix: reseat-by-remount.
  *
- * FIX — one-shot RESEAT by key-remount, three triggers, drags never fight:
- *  a) after the FIRST onLayout (the fresh mount seats against the real
- *     width and the current value/range);
- *  b) when min/max CHANGE while idle (the reclamp defense);
- *  c) when `value` changes EXTERNALLY while idle (hydration landing late —
- *     distinguished from slider-originated changes via lastNative).
- * Prop order min → max → step → value is kept explicit as the documented
- * ordering defense. Desk-diagnosed; the field glance judges.
+ * ROUND 2 (cross-screen bleed, owner repro: course-gen ↔ 오디오 설정 —
+ * second screen hard-right): MECHANISM VERDICT — NOT React reconciliation.
+ * `key` is sibling-scoped and the two screens' sliders live in different
+ * navigator subtrees; React cannot merge instances across parents, so the
+ * wrapper's per-instance refs are always fresh on a screen mount. The
+ * bleed is BENEATH React: Fabric (newArchEnabled) recycles native views BY
+ * TYPE — a discarded RCTSlider returns to a pool and the next mount draws
+ * it; incomplete recycle-reset leaves the PREVIOUS site's min/max/value
+ * normalization in the native view (the known community-slider new-arch
+ * class). Round 1's remounts amplified it: every key-flip fed a slider
+ * into the pool, so cross-navigation reliably drew a stale view — exactly
+ * "cold entry correct, second screen wrong".
+ *
+ * v2 INVARIANT — a slider can never render seated against another site's
+ * range, regardless of what native view Fabric hands us:
+ *  ① `siteId` REQUIRED (compile-enforced): key = `${siteId}:${seed}` —
+ *     globally distinct keys, no sibling-scope edge anywhere.
+ *  ② seatedRange guard: the seat cycle is keyed to the CURRENT range —
+ *     any mismatch (incl. dynamic min/max) always forces a fresh reseat.
+ *  ③ post-attach value assertion: after the reseated mount lays out, the
+ *     value prop is re-applied with an invisible epsilon nudge (a fresh
+ *     native setValue AFTER the view — recycled or not — is fully
+ *     attached; step quantization snaps the epsilon away). Stale recycled
+ *     normalization is overwritten every seat cycle.
+ * Drags are never fought (sliding ref gates every trigger). Desk-proven;
+ * the field glance judges.
  */
 import Slider, { type SliderProps } from '@react-native-community/slider';
 import React, { useEffect, useRef, useState } from 'react';
 
-export function SeededSlider(props: SliderProps) {
-  const { value, minimumValue, maximumValue, step, onValueChange, onSlidingStart, onSlidingComplete, ...rest } = props;
+/** invisible re-assert nudge — far below every site's step grid */
+const ASSERT_EPS = 1e-6;
+
+export function SeededSlider(props: SliderProps & { siteId: string }) {
+  const { siteId, value, minimumValue, maximumValue, step, onValueChange, onSlidingStart, onSlidingComplete, ...rest } = props;
   const [seed, setSeed] = useState(0);
-  const laidOut = useRef(false);
+  const [assertTick, setAssertTick] = useState(0);
+  const seatedRange = useRef<string | null>(null); // null = never seated
+  const assertedSeed = useRef(-1);                 // one assertion per seat cycle
   const sliding = useRef(false);
   const lastNative = useRef<number | undefined>(value);
+  const rangeKey = `${minimumValue}:${maximumValue}`;
 
-  // (c) external value change while idle → reseat
+  // external value change while idle (late hydration / server seed) → reseat
   useEffect(() => {
     if (sliding.current || value == null) { lastNative.current = value; return; }
     if (lastNative.current == null || Math.abs(value - lastNative.current) > 1e-6) {
@@ -41,27 +59,33 @@ export function SeededSlider(props: SliderProps) {
     }
   }, [value]);
 
-  // (b) range change while idle → reseat
-  const rangeKey = `${minimumValue}:${maximumValue}`;
-  const prevRange = useRef(rangeKey);
+  // range change while idle → the seatedRange guard in onLayout reseats;
+  // this effect just wakes a layout pass when the range flips with no
+  // other render cause
   useEffect(() => {
-    if (prevRange.current === rangeKey) return;
-    prevRange.current = rangeKey;
-    if (!sliding.current) setSeed(s => s + 1);
+    if (!sliding.current && seatedRange.current != null && seatedRange.current !== rangeKey) {
+      setSeed(s => s + 1);
+    }
   }, [rangeKey]);
 
   return (
     <Slider
-      key={seed}
+      key={`${siteId}:${seed}`}
       {...rest}
       minimumValue={minimumValue}
       maximumValue={maximumValue}
       step={step}
-      value={value}
+      value={value == null ? value : value + (assertTick % 2 === 1 ? ASSERT_EPS : 0)}
       onLayout={e => {
-        // (a) one-shot: the ref survives the remount, so the second mount's
-        // onLayout does not loop
-        if (!laidOut.current) { laidOut.current = true; setSeed(s => s + 1); }
+        if (seatedRange.current !== rangeKey) {
+          // seat (or re-seat) against THIS site's range — a fresh mount
+          seatedRange.current = rangeKey;
+          setSeed(s => s + 1);
+        } else if (assertedSeed.current !== seed) {
+          // post-attach assertion: one fresh native setValue per seat cycle
+          assertedSeed.current = seed;
+          setAssertTick(t => t + 1);
+        }
         rest.onLayout?.(e);
       }}
       onSlidingStart={v => { sliding.current = true; onSlidingStart?.(v); }}

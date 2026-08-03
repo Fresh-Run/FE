@@ -407,6 +407,7 @@ export default function CrewCreateScreen() {
               <Text style={st.sliderValue}>{radiusKm} km</Text>
             </View>
             <SeededSlider
+              siteId="crew-create-radius"
               minimumValue={1}
               maximumValue={20}
               step={1}

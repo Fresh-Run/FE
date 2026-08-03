@@ -1008,6 +1008,7 @@ export default function ShareCardScreen() {
                 <View style={st.dimSlider}>
                   <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.dimLbl}>{tf('shr.dim', { p: Math.round(bgDim * 100) })}</Text>
                   <SeededSlider
+                    siteId="share-dim"
                     style={{ flex: 1 }}
                     minimumValue={0} maximumValue={0.6} step={0.05} value={bgDim}
                     onSlidingComplete={v => persistBg({ dim: Math.round(v * 20) / 20 })}

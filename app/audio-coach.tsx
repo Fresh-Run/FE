@@ -25,8 +25,8 @@ import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { useSettings } from '@/store/use-settings';
 
-function SliderRow({ label, value, min, max, step, fmt, onChange }: {
-  label: string; value: number; min: number; max: number; step: number;
+function SliderRow({ siteId, label, value, min, max, step, fmt, onChange }: {
+  siteId: string; label: string; value: number; min: number; max: number; step: number;
   fmt: (v: number) => string; onChange: (v: number) => void;
 }) {
   const C = useTokens();
@@ -38,6 +38,7 @@ function SliderRow({ label, value, min, max, step, fmt, onChange }: {
         <Text style={st.sliderVal}>{fmt(value)}</Text>
       </View>
       <SeededSlider
+        siteId={siteId}
         minimumValue={min} maximumValue={max} step={step} value={value}
         onSlidingComplete={onChange}
         minimumTrackTintColor={C.accent} maximumTrackTintColor={C.border} thumbTintColor="#fff"
@@ -82,6 +83,7 @@ export default function AudioCoachScreen() {
             {/* 지연 feature ask (2026-07-21): slider release speaks a sample
                 line — 속도는 새 rate로, 간격은 값을 읽어줘서 귀로 확인 */}
             <SliderRow
+              siteId="coach-rate"
               label="말하기 속도" value={coach.rate} min={0.6} max={1.6} step={0.1}
               fmt={v => `${v.toFixed(1)}x`}
               onChange={v => {
@@ -92,6 +94,7 @@ export default function AudioCoachScreen() {
             />
             <View style={st.divider} />
             <SliderRow
+              siteId="coach-interval"
               label="안내 간격" value={coach.cue_interval_km} min={0.5} max={3} step={0.5}
               fmt={v => `${v} km`}
               onChange={v => {
