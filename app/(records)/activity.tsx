@@ -330,7 +330,7 @@ export default function ActivityScreen() {
               component null-skips itself on pre-deploy/thin-alt tracks —
               mounted unconditionally, renders nothing without data. `track`
               = the FULL fetched line only (thumbs carry no alt anyway). */}
-          <ElevationChart points={track} />
+          <ElevationChart points={track} units={units} />
 
           {/* Notes — only when present */}
           {run.notes ? (

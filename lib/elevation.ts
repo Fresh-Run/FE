@@ -30,8 +30,12 @@ export const SMOOTH_WINDOW = 5;
     hysteresis then gates the residual drift. Proofs 4/4: teeth→0/0 ·
     +20m gradual→18 · 30up/30down noisy→27/26 · random jitter→0/0. */
 export const HYSTERESIS_M = 2.5;
-/** Minimum y-axis span (m) — flat runs must not render as mountains. */
-export const MIN_SPAN_M = 30;
+/** v2 Y-range (8/3 owner field critique — the 30m fixed floor read
+    21m→-9m over ~12m of real variation, flattening the story):
+    span = max(actualRange × SPAN_PAD, MIN_SPAN_M). A 12m run shows real
+    shape; a dead-flat run still doesn't render as mountains. */
+export const SPAN_PAD = 1.3;
+export const MIN_SPAN_M = 8;
 
 export type ElevationProfile = {
   /** cumulative distance (m) per drawn point */
