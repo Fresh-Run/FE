@@ -728,6 +728,19 @@ export default function TrackingScreen() {
   // world turns); a cone can come later if the field asks.
   const dotRegion = useRef(new AnimatedRegion({ latitude: 0, longitude: 0, latitudeDelta: 0, longitudeDelta: 0 })).current;
   const dotSeededRef = useRef(false);
+  // v4.1 (8/3 field: NO dot rendered): CONVICTION = the canonical iOS
+  // blank-marker bug — tracksViewChanges={false} at mount snapshots the
+  // marker view BEFORE the disc/ring painted → an invisible marker. Fix =
+  // the documented pattern: mount with TRUE (live view), flip to false
+  // 600ms after the session's marker mounts (paint has composited); the
+  // flip kills the re-rasterize churn from the 500ms metrics tick. Resets
+  // to true whenever the marker unmounts (idle) so a new session repaints.
+  const [dotTracks, setDotTracks] = useState(true);
+  useEffect(() => {
+    if (!(courseCoords.length > 1 && state !== 'idle')) { setDotTracks(true); return; }
+    const timer = setTimeout(() => setDotTracks(false), 600);
+    return () => clearTimeout(timer);
+  }, [courseCoords.length, state]);
   useEffect(() => {
     const last = drawnPath[drawnPath.length - 1];
     if (!last) return;
@@ -1103,7 +1116,7 @@ export default function TrackingScreen() {
               coordinate={dotRegion as unknown as { latitude: number; longitude: number }}
               anchor={{ x: 0.5, y: 0.5 }}
               flat={false}
-              tracksViewChanges={false}
+              tracksViewChanges={dotTracks}
               zIndex={10}
             >
               <View style={st.userDot} />
