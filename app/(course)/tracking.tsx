@@ -36,11 +36,11 @@ import Reanimated, {
   useSharedValue,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Circle } from 'react-native-svg';
+import Svg, { Circle, Path as SvgPath } from 'react-native-svg';
 
 import { Icon } from '@/components/ui';
 import { SEOUL_FALLBACK, useCurrentLocation } from '@/hooks/use-current-location';
-import { courseLengthM, courseTangentAt, nearestOnCourse, nextTurn, OFF_COURSE_ENTER_M, OFF_COURSE_EXIT_M, pointAhead, sliceAhead, snapToCourse } from '@/lib/course-nav';
+import { courseLengthM, courseTangentAt, nearestOnCourse, nextTurn, OFF_COURSE_ENTER_M, OFF_COURSE_EXIT_M, pointAhead, snapToCourse } from '@/lib/course-nav';
 import { runSession } from '@/store/run-session';
 import { useRunTracker } from '@/hooks/use-run-tracker';
 import { composeFinishCue, composeSplitCue, composeStartCue, speakCue, stopSpeech } from '@/lib/audio-coach';
@@ -91,6 +91,19 @@ const NAV_FOLLOW_MS = 350;    // was inline 500
 // nav v4 (8/3 field screenshots): the custom dot's per-fix glide — short
 // linear position animation so the dot glides, never teleports.
 const DOT_GLIDE_MS = 300;
+// ── course-line direction arrows (8/3, the Naver grammar) ──
+// White chevrons along the course, spaced by SCREEN distance: world
+// spacing = ARROW_SCREEN_PX × meters-per-pixel of the SETTLED region
+// (recomputed on onRegionChangeComplete behind a material-change guard —
+// never per frame). Zoom in → smaller-feeling, more numerous, by
+// construction. Visible-region only, hard cap ARROW_MAX (evenly re-spaced
+// above it). The dot saga's paint-before-freeze tracksViewChanges pattern
+// applies from birth.
+const ARROW_SCREEN_PX = 50;
+const ARROW_MAX = 90;
+const ARROW_REGION_MARGIN = 1.2;   // visible-bounds filter, 20% slack
+const ARROW_ZOOM_EPS = 0.10;       // recompute only on ≥10% zoom change…
+const ARROW_PAN_FRAC = 0.20;       // …or a center shift > 20% of the span
 const NAV_ENTER_MS = 1800;    // overview → follow flight, flown DURING the countdown ("drive pressed")
 // ── 8/3 nav-completion — ALL FIELD-TUNABLE (the walk judges) ──
 // 8/3 tmap grammar (owner ruling — SUPERSEDES the compass-fusion standing
@@ -663,10 +676,6 @@ export default function TrackingScreen() {
   // alongM+NEXT_BAND_M, exact cuts on segments) + the first geometry-detected
   // turn ahead. Both recompute per alongM update (once per accepted fix —
   // a full walk over course vertices is trivial at that cadence).
-  const courseNext = useMemo(
-    () => (courseCoords.length > 1 ? sliceAhead(course?.polyline ?? [], alongM, NEXT_BAND_M).map(c => ({ latitude: c.lat, longitude: c.lng })) : []),
-    [courseCoords.length, course, alongM],
-  );
   const turnAhead = useMemo(
     () => (courseCoords.length > 1 ? nextTurn(course?.polyline ?? [], alongM) : null),
     [courseCoords.length, course, alongM],
@@ -820,6 +829,71 @@ export default function TrackingScreen() {
   }, [drawnPath.length, navPhase, course]);
   useEffect(() => () => { if (dotLerpRef.current) clearInterval(dotLerpRef.current); }, []);
 
+  // (hoisted further 8/3 — the arrow spacing math needs it before the T-B fit)
+  const { height: winH } = useWindowDimensions();
+
+  // ── course arrows: settled-region state (material-change guarded) ────────
+  const [arrowRegion, setArrowRegion] = useState<{ lat: number; lng: number; latDelta: number; lngDelta: number } | null>(null);
+  const arrowRegionRef = useRef<typeof arrowRegion>(null);
+  const onRegionSettled = useCallback((r: { latitude: number; longitude: number; latitudeDelta: number; longitudeDelta: number }) => {
+    const prev = arrowRegionRef.current;
+    if (prev) {
+      const zoomΔ = Math.abs(r.latitudeDelta - prev.latDelta) / prev.latDelta;
+      const panΔ = Math.max(Math.abs(r.latitude - prev.lat) / prev.latDelta, Math.abs(r.longitude - prev.lng) / prev.lngDelta);
+      if (zoomΔ < ARROW_ZOOM_EPS && panΔ < ARROW_PAN_FRAC) return; // follow-anim settles skip here — no churn while running
+    }
+    const next = { lat: r.latitude, lng: r.longitude, latDelta: r.latitudeDelta, lngDelta: r.longitudeDelta };
+    arrowRegionRef.current = next;
+    setArrowRegion(next);
+  }, []);
+  const courseArrows = useMemo(() => {
+    const poly = course?.polyline;
+    if (!poly || poly.length < 2 || !arrowRegion) return [];
+    const mpp = (arrowRegion.latDelta * 110_540) / winH; // meters per screen pixel at settle
+    let spacingM = Math.max(10, ARROW_SCREEN_PX * mpp);
+    const latHalf = (arrowRegion.latDelta / 2) * ARROW_REGION_MARGIN;
+    const lngHalf = (arrowRegion.lngDelta / 2) * ARROW_REGION_MARGIN;
+    const inRegion = (lat: number, lng: number) =>
+      Math.abs(lat - arrowRegion.lat) <= latHalf && Math.abs(lng - arrowRegion.lng) <= lngHalf;
+    const build = (spM: number) => {
+      const out: { key: string; lat: number; lng: number; bearing: number }[] = [];
+      let cum = 0, nextAt = spM;
+      for (let i = 0; i < poly.length - 1 && out.length <= ARROW_MAX; i++) {
+        const a = poly[i], b = poly[i + 1];
+        const kx = Math.cos((a.lat * Math.PI) / 180);
+        const segM = Math.hypot((b.lat - a.lat) * 110_540, (b.lng - a.lng) * kx * 110_540);
+        if (segM <= 0) continue;
+        const brg = ((Math.atan2((b.lng - a.lng) * kx, b.lat - a.lat) * 180) / Math.PI + 360) % 360;
+        while (nextAt <= cum + segM) {
+          const t = (nextAt - cum) / segM;
+          const lat = a.lat + (b.lat - a.lat) * t;
+          const lng = a.lng + (b.lng - a.lng) * t;
+          if (inRegion(lat, lng)) out.push({ key: `a${Math.round(nextAt)}`, lat, lng, bearing: brg });
+          if (out.length > ARROW_MAX) break;
+          nextAt += spM;
+        }
+        cum += segM;
+      }
+      return out;
+    };
+    let arrows = build(spacingM);
+    if (arrows.length > ARROW_MAX) {
+      // evenly re-space so the visible line fits the cap
+      spacingM = spacingM * (arrows.length / ARROW_MAX);
+      arrows = build(spacingM).slice(0, ARROW_MAX);
+    }
+    return arrows;
+  }, [course, arrowRegion, winH]);
+  // paint-before-freeze, from birth (the dot saga's pattern): every arrow
+  // set change repaints live for 600ms, then freezes
+  const [arrowTracks, setArrowTracks] = useState(true);
+  useEffect(() => {
+    if (courseArrows.length === 0) { setArrowTracks(true); return; }
+    setArrowTracks(true);
+    const t = setTimeout(() => setArrowTracks(false), 600);
+    return () => clearTimeout(t);
+  }, [courseArrows]);
+
   // Center on the USER's RESOLVED location (T-B correction ②): the hook's
   // coordinate is Seoul-fallback-initialized (never null), so truthiness
   // fired the old center-once on the fallback at mount. status === 'granted'
@@ -841,8 +915,6 @@ export default function TrackingScreen() {
     mapRef.current?.animateCamera({ center: { latitude: hereCoord.lat, longitude: hereCoord.lng } }, { duration: 400 });
   }, [hasCoursePath, locStatus, hereCoord]);
 
-  // (hoisted from the T-B block below — the visible-strip fit needs it)
-  const { height: winH } = useWindowDimensions();
 
   // Course fit — TO THE VISIBLE STRIP, not the full frame (leg-1 walk
   // conviction, 2026-07-21): the map is screen-sized behind the sheet, and
@@ -1086,7 +1158,7 @@ export default function TrackingScreen() {
           onPanDrag={onUserPan}
           // T1.5 zoom agency: pinch-zoom joins the indefinite suspension (onPanDrag
           // misses two-finger gestures); recenter resumes follow instantly
-          onRegionChangeComplete={(_r, d) => { if (d?.isGesture && state === 'running') onUserPan(); }}
+          onRegionChangeComplete={(r, d) => { if (d?.isGesture && state === 'running') onUserPan(); onRegionSettled(r); }}
           // nav v4 (8/3 field screenshots — the halo verdict): the NATIVE
           // dot's accuracy halo is a real-meter circle that dominates at
           // street zoom and iOS offers no API to hide it → during a course
@@ -1122,16 +1194,36 @@ export default function TrackingScreen() {
           )}
           {courseAhead.length > 1 && (
             <>
-              <Polyline coordinates={courseAhead} strokeColor="rgba(12,18,6,0.85)" strokeWidth={14} lineCap="round" lineJoin="round" />
-              <Polyline coordinates={courseAhead} strokeColor={routeStroke('dark')} strokeWidth={10} lineCap="round" lineJoin="round" />
+              {/* 8/3 thin pre-run preview: idle = HALVED (14/10 → 7/5 —
+                  the halve branch chosen; "unify to the run ribbon" is the
+                  identity here since the ribbon IS 14/10). Run-time widths
+                  unchanged. */}
+              <Polyline coordinates={courseAhead} strokeColor="rgba(12,18,6,0.85)" strokeWidth={state === 'idle' ? 7 : 14} lineCap="round" lineJoin="round" />
+              <Polyline coordinates={courseAhead} strokeColor={routeStroke('dark')} strokeWidth={state === 'idle' ? 5 : 10} lineCap="round" lineJoin="round" />
             </>
           )}
-          {/* 8/3: next-stretch emphasis — a white core over the ahead ribbon
-              (nav-app current-leg grammar; no new palette entry). Width and
-              NEXT_BAND_M are field-tunable. */}
-          {courseNext.length > 1 && (
-            <Polyline coordinates={courseNext} strokeColor="#FFFFFF" strokeWidth={5} lineCap="round" lineJoin="round" />
-          )}
+          {/* ~~next-stretch white band~~ RETIRED 8/3 (owner ruling): the
+              direction ARROWS replace it (the Naver grammar — direction
+              everywhere, not a 300m highlight); the turn overlay still owns
+              approach announcements. NEXT_BAND_M survives as the overlay's
+              approach window only. */}
+          {courseArrows.map(a => (
+            <Marker
+              key={a.key}
+              coordinate={{ latitude: a.lat, longitude: a.lng }}
+              anchor={{ x: 0.5, y: 0.5 }}
+              flat
+              rotation={a.bearing}
+              tracksViewChanges={arrowTracks}
+              zIndex={5}
+            >
+              <View style={st.courseArrow}>
+                <Svg width={10} height={10} viewBox="0 0 10 10">
+                  <SvgPath d="M2 6.5 L5 3.5 L8 6.5" stroke="#FFFFFF" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" />
+                </Svg>
+              </View>
+            </Marker>
+          ))}
           {/* v2 GO-TO-START chapter: unmissable start flag (bigger than
               turn chips) + dashed guidance line from the runner to the
               start — both dissolve on arrival (navPhase → 'nav') */}
@@ -1455,6 +1547,11 @@ const makeSt = (C: Tokens) => StyleSheet.create({
   // schemes by design, high-contrast over any tile.
   // nav v4 custom dot — the Apple look exactly: 18px system-blue disc +
   // 3px white ring (24px total), soft shadow; fixed pixel size by nature
+  // course direction arrows (Naver grammar) — 10px white chevron, subtle
+  // shadow; flat markers rotate WITH the map
+  courseArrow: {
+    shadowColor: '#000', shadowOpacity: 0.4, shadowRadius: 1.5, shadowOffset: { width: 0, height: 0.5 },
+  },
   userDot: {
     width: 24, height: 24, borderRadius: 12,
     backgroundColor: '#007AFF', borderWidth: 3, borderColor: '#FFFFFF',
