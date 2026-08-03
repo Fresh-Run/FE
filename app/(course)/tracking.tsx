@@ -30,7 +30,7 @@ import {
 } from 'react-native';
 import BottomSheet, { BottomSheetView } from '@gorhom/bottom-sheet';
 import { Gesture, GestureDetector, GestureHandlerRootView, type GestureType } from 'react-native-gesture-handler';
-import MapView, { Marker, Polyline } from 'react-native-maps';
+import MapView, { AnimatedRegion, Marker, Polyline } from 'react-native-maps';
 import Reanimated, {
   useAnimatedStyle,
   useSharedValue,
@@ -78,6 +78,9 @@ const NAV_LOOKAHEAD_M = 120;  // v2 re-derived for pitch 0 (was 180 at 57°)
 // 500ms, tight at 350ms (still completes well inside the 1-2s fix cadence,
 // rotation stays smooth). Field-tunable.
 const NAV_FOLLOW_MS = 350;    // was inline 500
+// nav v4 (8/3 field screenshots): the custom dot's per-fix glide — short
+// linear position animation so the dot glides, never teleports.
+const DOT_GLIDE_MS = 300;
 const NAV_ENTER_MS = 1800;    // overview → follow flight, flown DURING the countdown ("drive pressed")
 // ── 8/3 nav-completion — ALL FIELD-TUNABLE (the walk judges) ──
 // 8/3 tmap grammar (owner ruling — SUPERSEDES the compass-fusion standing
@@ -713,6 +716,35 @@ export default function TrackingScreen() {
      
   }, [drawnPath.length, state, drawnPath, courseCoords.length, navBearing, navPhase, course]);
 
+  // ── nav v4: THE CUSTOM DOT (the ledgered reversal path — 941c51a's note —
+  // firing on field evidence). Position = the SNAPPED point within
+  // SNAP_TO_ROUTE_M during NAVIGATING (display snap RESURRECTED: the dot
+  // reads the same snapToCourse the camera does — inside-buildings dies
+  // again); raw elsewhere. HARD BOUNDARY re-stated: raw GPS alone drives
+  // tracking/distance/pace/verification/off-route — the snap is RENDERING
+  // only. Glide = AnimatedRegion.timing per accepted fix (linear,
+  // DOT_GLIDE_MS); the first fix seats instantly (no fly-in). Heading cone
+  // SKIPPED for v4 — course-up rotation already encodes direction (the
+  // world turns); a cone can come later if the field asks.
+  const dotRegion = useRef(new AnimatedRegion({ latitude: 0, longitude: 0, latitudeDelta: 0, longitudeDelta: 0 })).current;
+  const dotSeededRef = useRef(false);
+  useEffect(() => {
+    const last = drawnPath[drawnPath.length - 1];
+    if (!last) return;
+    const raw = { lat: last.latitude, lng: last.longitude };
+    const p = (navPhase === 'nav' && course?.polyline ? snapToCourse(course.polyline, raw, SNAP_TO_ROUTE_M) : null) ?? raw;
+    if (!dotSeededRef.current) {
+      dotSeededRef.current = true;
+      dotRegion.setValue({ latitude: p.lat, longitude: p.lng, latitudeDelta: 0, longitudeDelta: 0 });
+      return;
+    }
+    dotRegion.timing({
+      latitude: p.lat, longitude: p.lng,
+      duration: DOT_GLIDE_MS, easing: Easing.linear, useNativeDriver: false,
+    } as Parameters<typeof dotRegion.timing>[0]).start();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [drawnPath.length, navPhase, course]);
+
   // Center on the USER's RESOLVED location (T-B correction ②): the hook's
   // coordinate is Seoul-fallback-initialized (never null), so truthiness
   // fired the old center-once on the fallback at mount. status === 'granted'
@@ -985,12 +1017,15 @@ export default function TrackingScreen() {
           // T1.5 zoom agency: pinch-zoom joins the indefinite suspension (onPanDrag
           // misses two-finger gestures); recenter resumes follow instantly
           onRegionChangeComplete={(_r, d) => { if (d?.isGesture && state === 'running') onUserPan(); }}
-          // nav v3: the native dot is the runner marker in ALL phases (the
-          // v2 arrow + mode split died — executive ruling). The dot renders
-          // raw GPS truth; the camera holds the path (snap survives for the
-          // CENTER only), and the dot's accuracy halo carries any drift
-          // honestly.
-          showsUserLocation
+          // nav v4 (8/3 field screenshots — the halo verdict): the NATIVE
+          // dot's accuracy halo is a real-meter circle that dominates at
+          // street zoom and iOS offers no API to hide it → during a course
+          // SESSION (running/paused) the native dot is OFF and the CUSTOM
+          // dot below is the runner. Free runs + idle keep the native dot:
+          // today's behavior, no field complaint there — the halo evidence
+          // is course-nav screenshots; extending is one condition flip if
+          // the field asks (stated).
+          showsUserLocation={!(hasCoursePath && state !== 'idle')}
           // T1.6 POI MUTE: course tracking quiets to roads + ribbon; free
           // runs keep today's map (the prop is per-render — not mode-awkward)
           // 8/3 owner ruling (field experience over the 8/1 desk call):
@@ -1058,6 +1093,21 @@ export default function TrackingScreen() {
           )}
           {drawnPath.length > 1 && (
             <Polyline coordinates={drawnPath} strokeColor={C.accent} strokeWidth={5} />
+          )}
+          {/* nav v4: the custom runner dot — the Apple look, fixed pixel
+              size at every zoom (markers are screen-space), NO halo ever.
+              Billboard by default (flat=false): stays a dot under map
+              rotation, never a tilting sprite. */}
+          {hasCoursePath && state !== 'idle' && drawnPath.length > 0 && (
+            <Marker.Animated
+              coordinate={dotRegion as unknown as { latitude: number; longitude: number }}
+              anchor={{ x: 0.5, y: 0.5 }}
+              flat={false}
+              tracksViewChanges={false}
+              zIndex={10}
+            >
+              <View style={st.userDot} />
+            </Marker.Animated>
           )}
         </MapView>
 
@@ -1333,6 +1383,13 @@ const makeSt = (C: Tokens) => StyleSheet.create({
   // 8/3 turn overlay (v3: the arrow style died with the arrow). The card is
   // FIXTURE black-on-white (tmap's outline treatment) — identical in both
   // schemes by design, high-contrast over any tile.
+  // nav v4 custom dot — the Apple look exactly: 18px system-blue disc +
+  // 3px white ring (24px total), soft shadow; fixed pixel size by nature
+  userDot: {
+    width: 24, height: 24, borderRadius: 12,
+    backgroundColor: '#007AFF', borderWidth: 3, borderColor: '#FFFFFF',
+    shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 3, shadowOffset: { width: 0, height: 1 },
+  },
   turnOverlayWrap: { position: 'absolute', left: 0, right: 0, top: '28%', alignItems: 'center' },
   turnOverlayCard: {
     alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 18,
