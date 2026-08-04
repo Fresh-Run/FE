@@ -921,35 +921,38 @@ export default function TrackingScreen() {
               with a double polyline (dark casing 14 UNDER lime fill 10 —
               render order = z-order). Behind stays a single dimmed lime
               (receded on purpose — no casing); alpha channel per T1's lesson. */}
-          {courseBehind.length > 1 && (
+          {/* 8/3 HOTFIX crash-class sweep (AIRMap insertReactSubview nil —
+              see real-map.tsx conviction note): ternary-to-null + the
+              Fragment inside MapView decomposed to sibling conditionals. */}
+          {courseBehind.length > 1 ? (
             <Polyline coordinates={courseBehind} strokeColor={routeStroke('dark') + '59'} strokeWidth={10} lineCap="round" lineJoin="round" />
-          )}
-          {courseAhead.length > 1 && (
-            <>
-              <Polyline coordinates={courseAhead} strokeColor="rgba(12,18,6,0.85)" strokeWidth={14} lineCap="round" lineJoin="round" />
-              <Polyline coordinates={courseAhead} strokeColor={routeStroke('dark')} strokeWidth={10} lineCap="round" lineJoin="round" />
-            </>
-          )}
+          ) : null}
+          {courseAhead.length > 1 ? (
+            <Polyline coordinates={courseAhead} strokeColor="rgba(12,18,6,0.85)" strokeWidth={14} lineCap="round" lineJoin="round" />
+          ) : null}
+          {courseAhead.length > 1 ? (
+            <Polyline coordinates={courseAhead} strokeColor={routeStroke('dark')} strokeWidth={10} lineCap="round" lineJoin="round" />
+          ) : null}
           {/* 8/3: next-stretch emphasis — a white core over the ahead ribbon
               (nav-app current-leg grammar; no new palette entry). Width and
               NEXT_BAND_M are field-tunable. */}
-          {courseNext.length > 1 && (
+          {courseNext.length > 1 ? (
             <Polyline coordinates={courseNext} strokeColor="#FFFFFF" strokeWidth={5} lineCap="round" lineJoin="round" />
-          )}
+          ) : null}
           {/* 8/3: geometry turn marker — VISUAL ONLY (ruled: no TTS until
               tuning + T2 names; a wrong spoken turn is worse than none).
               Direction from the bearing delta's sign; distance from alongM. */}
-          {turnAhead && state === 'running' && (
+          {turnAhead && state === 'running' ? (
             <Marker coordinate={{ latitude: turnAhead.point.lat, longitude: turnAhead.point.lng }} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={false}>
               <View style={st.turnBadge}>
                 <Icon name={turnAhead.dir === 'right' ? 'arrow-redo' : 'arrow-undo'} size={13} color={C.text} />
                 <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.turnTxt}>{Math.round(turnAhead.distM)}m</Text>
               </View>
             </Marker>
-          )}
-          {drawnPath.length > 1 && (
+          ) : null}
+          {drawnPath.length > 1 ? (
             <Polyline coordinates={drawnPath} strokeColor={C.accent} strokeWidth={5} />
-          )}
+          ) : null}
         </MapView>
 
         {/* Course title pill (bundle: tracking-screen.jsx course mode) */}
