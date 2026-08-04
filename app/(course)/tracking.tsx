@@ -1121,19 +1121,19 @@ export default function TrackingScreen() {
               with a double polyline (dark casing 14 UNDER lime fill 10 —
               render order = z-order). Behind stays a single dimmed lime
               (receded on purpose — no casing); alpha channel per T1's lesson. */}
-          {courseBehind.length > 1 && (
+          {courseBehind.length > 1 ? (
             <Polyline coordinates={courseBehind} strokeColor={routeStroke('dark') + '59'} strokeWidth={10} lineCap="round" lineJoin="round" />
-          )}
-          {courseAhead.length > 1 && (
-            <>
-              {/* 8/3 thin pre-run preview: idle = HALVED (14/10 → 7/5 —
-                  the halve branch chosen; "unify to the run ribbon" is the
-                  identity here since the ribbon IS 14/10). Run-time widths
-                  unchanged. */}
-              <Polyline coordinates={courseAhead} strokeColor="rgba(12,18,6,0.85)" strokeWidth={state === 'idle' ? 7 : 14} lineCap="round" lineJoin="round" />
-              <Polyline coordinates={courseAhead} strokeColor={routeStroke('dark')} strokeWidth={state === 'idle' ? 5 : 10} lineCap="round" lineJoin="round" />
-            </>
-          )}
+          ) : null}
+          {/* 8/3 thin pre-run preview: idle = HALVED (14/10 → 7/5). 8/3
+              crash-class sweep: the Fragment wrapper inside MapView is
+              DECOMPOSED to sibling ternaries (interop nil-insert candidate;
+              see real-map.tsx's conviction note). */}
+          {courseAhead.length > 1 ? (
+            <Polyline coordinates={courseAhead} strokeColor="rgba(12,18,6,0.85)" strokeWidth={state === 'idle' ? 7 : 14} lineCap="round" lineJoin="round" />
+          ) : null}
+          {courseAhead.length > 1 ? (
+            <Polyline coordinates={courseAhead} strokeColor={routeStroke('dark')} strokeWidth={state === 'idle' ? 5 : 10} lineCap="round" lineJoin="round" />
+          ) : null}
           {/* next-stretch white band — RESTORED 8/3 (owner + 지연 ruling:
               the original band design STANDS; the arrows were considered
               and retired same-day — only the band's LIGHT-MODE contrast
@@ -1143,12 +1143,12 @@ export default function TrackingScreen() {
               no new palette entry) — the dark edge separates band from
               course line at every luminance, both themes. NEXT_BAND_M
               shared with the turn overlay's approach window as before. */}
-          {courseNext.length > 1 && (
-            <>
-              <Polyline coordinates={courseNext} strokeColor="rgba(12,18,6,0.9)" strokeWidth={8} lineCap="round" lineJoin="round" />
-              <Polyline coordinates={courseNext} strokeColor="#FFFFFF" strokeWidth={5} lineCap="round" lineJoin="round" />
-            </>
-          )}
+          {courseNext.length > 1 ? (
+            <Polyline coordinates={courseNext} strokeColor="rgba(12,18,6,0.9)" strokeWidth={8} lineCap="round" lineJoin="round" />
+          ) : null}
+          {courseNext.length > 1 ? (
+            <Polyline coordinates={courseNext} strokeColor="#FFFFFF" strokeWidth={5} lineCap="round" lineJoin="round" />
+          ) : null}
           {/* v2 GO-TO-START chapter: unmissable start flag (bigger than
               turn chips) + dashed guidance line from the runner to the
               start — both dissolve on arrival (navPhase → 'nav') */}

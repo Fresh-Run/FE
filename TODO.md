@@ -1298,6 +1298,15 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 
 ## ~~🔼 (구) STAGED — a7599217 (커밋 4c9e337)~~ PROMOTED 위 참조 · 해시-타이 MATCH (J0E2-ihy… — 퍼블리시-타임 dist 기준; 수동-export 비결정성 잔존 온-레코드) · 마커: /kudos ×1·likes_disabled ×1 (스트링-프리)
 
+## 💥 첫 크래시 FIXED: AIRMap insertReactSubview nil (미스테이지 — 그녀 트리아지 8/3: AIRMap.m:138 · 레거시 인터롭 · 페이로드 nil 제로 = 클라 제조 nil · 스크린 = 34f2253f 프리뷰 개연; 체크포인트-앤-스톱; 스테이지 시 3e807557 대체 — 내비 게이트 캐리 + 크래시 실내 레그 추가)
+- **차일드 오딧 (프리뷰 = RealMap; 전 MapView 소유 4파일)**: real-map — ① marker&&center&&!line (오브젝트-&&, 0-리크 무) ② line&&!lineHidden **프래그먼트 랩** ③ 스타트핀 터너리 ④ 커스텀 엔드-닷 Marker (View 차일드 — **인터롭 최고-확률 서스펙트**) ⑤ crossings.map (프리뷰 미사용) · tracking — courseAhead/courseNext **프래그먼트 ×2** + && 조건 다수 (불리언-세이프) · start-picker — picked&&Marker (오브젝트-세이프) · place-pick-sheet — 차일드리스 (클린).
+- **컨빅션 (정직)**: 단일 차일드 확정 불가 (데스크; TF 콘솔 부재) — **최고-확률 = 커스텀 엔드-닷 마커의 View 차일드가 인터롭 (재)마운트에서 nil 해석, 프래그먼트 랩 = 구조적 공범** (인터롭 칠드런-워크의 언익스펙티드 래퍼). 픽스 클래스가 전 후보 커버.
+- **픽스 클래스 (3중)**: ① **파이나이트-가드**: RealMap line = null/NaN/비수치 버텍스 필터 (차일드 마운트 전 — "클라 제조 nil" 원천 차단) ② **터너리-투-널 전면** (real-map 5사이트·tracking 3·start-picker 1 — && 논-불리언 리크 클래스 사망) ③ **맵뷰-내 프래그먼트 전삭** (real-map 1·tracking 2 — 시블링 조건으로 분해).
+- **③ 캐노니컬 답**: 맵은 polyline만 소비 — wp 필드 차이는 차일드에 도달 불가; 데스크-렌더 양 셰이프 PASS (제너레이티드 192v·캐노니컬 ×3랩 60v + wp 엑스트라 필드) + 오염 주입 4종 전부 FILTERED + 전-오염 = line null = 제로 차일드.
+- **④ 리프로**: 34f2253f 정확 셰이프 (192 클린 버텍스) = 가드 통과·정상 마운트 — 크래시 경로는 페이로드가 아닌 마운트-타이밍/인터롭 측 (컨빅션 절 참조).
+- **타-스크린 스윕**: run-detail/crew-session/미니 = RealMap/MiniMap 경유 → RealMap 픽스가 커버 · tracking 직접-맵 = 픽스 적용 · place-pick-sheet = 클린 확인.
+- 스트링-프리 (파리티 931 불변) · tsc 0 · eslint 0 · 커밋-타이드 export 해시 L_9uJjeP….
+
 ## 🔼 밴드 케이싱 복귀 + 전체 캐리 STAGED — 3e807557 (커밋 6251751) · 해시-타이 MATCH (6ylFEhx_… — 체크포인트 커밋-타이드 동일) · **4d2296e6 대체 ([21:55] 실내 스탬프 캐리 지속)** · 프로덕션 = e000d257 플로어 불변 · **게이트: ⓪ 실내 — 라이트 모드: 밴드가 라임 라인과 명확 분리 (내비 줌) · 화살표 사망 · 프리뷰 씬 (7/5) · [캐리] 리센터 = 카드-상방 닷 + 코스 수직 → [프레시 코스런] 밴드 선도 재글랜스 + 기존 7레그** · 프로모션 = 실관찰 스탬프 + 원-컨펌
 
 ## ⛑️ 롤백+리스토어: 화살표 은퇴·밴드 케이싱 복귀 BUILT (STAGED 위 3e807557 — 오너+지연 룰링 8/3)

@@ -109,7 +109,21 @@ export function RealMap({ height, borderRadius = 0, polyline, center, marker = f
   // imagery under any app theme), so the stroke keys to the IMAGERY, not
   // the theme — hybrid always gets the dark-scheme lime.
   const stroke = mapType === 'hybrid' ? routeStroke('dark') : routeStroke(resolved);
-  const line = polyline && polyline.length >= 2 ? polyline : null;
+  // 8/3 CRASH CLASS (her triage: AIRMap insertReactSubview nil via the
+  // new-arch legacy interop — a MapView child resolving nil at mount; her
+  // payload sweep showed ZERO nils, so the nil is manufactured client-side):
+  // ① the line is FINITE-GUARDED — any malformed vertex (undefined/NaN
+  //   lat/lng from any payload shape, generated or owner-curated canonical)
+  //   is filtered BEFORE a Marker/Polyline can mount on it;
+  // ② every conditional child below is TERNARY-TO-NULL (never a bare &&
+  //   that could leak a non-boolean into native children);
+  // ③ the Fragment wrapper inside MapView is DECOMPOSED — under interop an
+  //   unexpected wrapper in the children walk is a nil-insert candidate.
+  const line = useMemo(() => {
+    if (!polyline || polyline.length < 2) return null;
+    const clean = polyline.filter(c => c != null && Number.isFinite(c.lat) && Number.isFinite(c.lng));
+    return clean.length >= 2 ? clean : null;
+  }, [polyline]);
   const mapRef = useRef<MapView>(null);
 
   const region = useMemo(() => {
@@ -171,41 +185,43 @@ export function RealMap({ height, borderRadius = 0, polyline, center, marker = f
         compassOffset={compassOffset}
         toolbarEnabled={false}
       >
-        {marker && center && !line && (
+        {marker && center && !line ? (
           <Marker coordinate={{ latitude: center.lat, longitude: center.lng }} />
-        )}
-        {line && !lineHidden && (
-          <>
-            <Polyline
-              coordinates={line.map(toLatLng)}
-              strokeColor={stroke}
-              strokeWidth={4}
-              lineCap="round"
-              lineJoin="round"
-            />
-            {startPin ? (
-              <Marker coordinate={toLatLng(line[0])} />
-            ) : (
-              <Marker coordinate={toLatLng(line[0])} anchor={{ x: 0.5, y: 0.5 }}>
-                <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: '#fff', borderWidth: 4, borderColor: stroke }} />
-              </Marker>
-            )}
-            <Marker coordinate={toLatLng(line[line.length - 1])} anchor={{ x: 0.5, y: 0.5 }}>
-              <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: stroke, borderWidth: 3, borderColor: '#fff' }} />
+        ) : null}
+        {line && !lineHidden ? (
+          <Polyline
+            coordinates={line.map(toLatLng)}
+            strokeColor={stroke}
+            strokeWidth={4}
+            lineCap="round"
+            lineJoin="round"
+          />
+        ) : null}
+        {line && !lineHidden ? (
+          startPin ? (
+            <Marker coordinate={toLatLng(line[0])} />
+          ) : (
+            <Marker coordinate={toLatLng(line[0])} anchor={{ x: 0.5, y: 0.5 }}>
+              <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: '#fff', borderWidth: 4, borderColor: stroke }} />
             </Marker>
-            {/* km markers — default tracksViewChanges (the dots' proven
-                config): the ={false} "optimization" snapshotted an EMPTY
-                bitmap at mount (the known iOS pitfall, convicted by the
-                in-file control group 2026-07-22) */}
-            {crossings.map(c => (
-              <Marker key={`km-${c.n}`} coordinate={{ latitude: c.lat, longitude: c.lng }} anchor={{ x: 0.5, y: 0.5 }}>
-                <View style={{ minWidth: 19, height: 19, borderRadius: 10, paddingHorizontal: 3, backgroundColor: markerFill, borderWidth: 2, borderColor: stroke, alignItems: 'center', justifyContent: 'center' }}>
-                  <Text style={{ fontSize: 10, fontWeight: '800', color: stroke }}>{c.n}</Text>
-                </View>
-              </Marker>
-            ))}
-          </>
-        )}
+          )
+        ) : null}
+        {line && !lineHidden ? (
+          <Marker coordinate={toLatLng(line[line.length - 1])} anchor={{ x: 0.5, y: 0.5 }}>
+            <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: stroke, borderWidth: 3, borderColor: '#fff' }} />
+          </Marker>
+        ) : null}
+        {/* km markers — default tracksViewChanges (the dots' proven config):
+            the ={false} "optimization" snapshotted an EMPTY bitmap at mount
+            (the known iOS pitfall, convicted by the in-file control group
+            2026-07-22) */}
+        {line && !lineHidden ? crossings.map(c => (
+          <Marker key={`km-${c.n}`} coordinate={{ latitude: c.lat, longitude: c.lng }} anchor={{ x: 0.5, y: 0.5 }}>
+            <View style={{ minWidth: 19, height: 19, borderRadius: 10, paddingHorizontal: 3, backgroundColor: markerFill, borderWidth: 2, borderColor: stroke, alignItems: 'center', justifyContent: 'center' }}>
+              <Text style={{ fontSize: 10, fontWeight: '800', color: stroke }}>{c.n}</Text>
+            </View>
+          </Marker>
+        )) : null}
       </MapView>
     </View>
   );

@@ -163,11 +163,11 @@ export default function StartPickerScreen() {
         showsPointsOfInterest={false}
         toolbarEnabled={false}
       >
-        {picked && (
+        {picked ? (
           <Marker coordinate={{ latitude: picked.lat, longitude: picked.lng }} anchor={{ x: 0.5, y: 0.5 }}>
             <View style={st.pickedMarker} />
           </Marker>
-        )}
+        ) : null}
       </MapView>
 
       {/* App bar (overlay): back + search field (S1) */}
