@@ -67,6 +67,11 @@ const typeMeta = (C: Tokens): Record<string, Meta> => ({
   run_kudoed:          { tag: 'ntf.tagKudos',   tone: C.accentGrn, icon: 'avatar', copy: 'ntf.runKudoed' },
   // 10th type, discovered live 2026-07-07 (ships with her run-comments batch)
   run_commented:       { tag: 'ntf.tagComment', tone: C.accentGrn, icon: 'avatar', copy: 'ntf.runCommented' },
+  // 8/4 forward-wire: IF 지연 ships a distinct type instead of a payload flag.
+  // (We asked for the flag — a new type leaves every un-updated client on
+  // FALLBACK_META with an INERT tap, since deepLink defaults to null. Wired
+  // here + in notif-routing so either choice works the day it deploys.)
+  reply_to_comment:    { tag: 'ntf.tagReply',   tone: C.accentGrn, icon: 'avatar', copy: 'ntf.runReplied' },
   user_followed:       { tag: 'ntf.tagFollow',  tone: CREW_BLUE,   icon: 'avatar', copy: 'ntf.userFollowed' },
   // v2 승인제 (BE 610c7f3) — was falling through to FALLBACK_META, generic
   // and inert (the dropped-type bug, 2026-07-13). payload is null by
@@ -101,8 +106,22 @@ const PB_LABEL: Record<string, string> = {
   longest_duration: 'pb.longestDur',
 };
 
+/** Is this row a REPLY TO MY COMMENT rather than a comment on MY run?
+    (owner finding 8/3): our own 8/1 reply contract sends the SAME
+    run_commented type to the PARENT COMMENTER — for a run they don't own —
+    so "…님이 내 러닝에 댓글을 남겼어요" is a lie on those rows.
+    PROBED 2026-08-04 (cross-account, both rows dumped): today's payload
+    carries NOTHING that separates the two cases — this returns false and the
+    copy is unchanged until 지연's additive lands. It then lights up on ANY of
+    the three shapes she might pick, no further FE change. */
+function isReplyNotif(n: AppNotification): boolean {
+  if (n.type === 'reply_to_comment') return true;
+  return n.payload?.is_reply === true || n.payload?.parent_comment_id != null;
+}
+
 /** Dynamic per-row copy for types whose text depends on payload; else null. */
 function dynamicCopy(n: AppNotification): string | null {
+  if (n.type === 'run_commented' && isReplyNotif(n)) return tx('ntf.runReplied');
   if (n.type === 'crew_invited') {
     const name = n.payload?.crew_name;
     // tf fills only {crew}; the {name} slot survives for the row's actor split
@@ -137,7 +156,7 @@ const TABS: { key: TabKey; label: string }[] = [
 ];
 
 const FOLLOW_TYPES = new Set(['user_followed', 'follow_requested', 'follow_request_approved']);
-const SOCIAL_TYPES = new Set(['run_kudoed', 'run_commented', 'route_liked', 'route_commented']);
+const SOCIAL_TYPES = new Set(['run_kudoed', 'run_commented', 'reply_to_comment', 'route_liked', 'route_commented']);
 const CREW_TYPES   = new Set(['crew_joined', 'join_requested', 'join_approved', 'crew_announcement', 'crew_invited']);
 // pb_achieved: 전체-only, mirroring challenge_completed (both self-achievements,
 // actorless). The rider said "러닝 tab" — no such tab exists; owner ruling
@@ -173,6 +192,8 @@ function NotifRow({ n, onPress, onDelete }: { n: AppNotification; onPress: () =>
   const C = useTokens();
   const st = useStyles(makeSt);
   const meta = typeMeta(C)[n.type] ?? fallbackMeta(C);
+  // the tag follows the copy: a reply row reads 답글, not 댓글
+  const tagKey = isReplyNotif(n) ? 'ntf.tagReply' : meta.tag;
   // sentence-subject fallback (v114 ruling): "A runner liked your run", not
   // "Runner liked…" — home.runner stays the label-position fallback elsewhere
   const actor = n.actor_nickname ?? T('ntf.actorFallback');
@@ -208,7 +229,7 @@ function NotifRow({ n, onPress, onDelete }: { n: AppNotification; onPress: () =>
       )}
       <View style={{ flex: 1, minWidth: 0 }}>
         <View style={st.rowHead}>
-          <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={[st.tag, { color: meta.tone }]}>{T(meta.tag as StringKey)}</Text>
+          <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={[st.tag, { color: meta.tone }]}>{T(tagKey as StringKey)}</Text>
           <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.ago}>{fmtAgo(n.created_at, lang)}</Text>
         </View>
         <Text style={st.body}>
