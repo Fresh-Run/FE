@@ -29,10 +29,19 @@ export function deepLink(n: DeepLinkTarget): (() => void) | null {
       // on the SOCIAL run detail (run-post) — the kudos/comment you were
       // notified about must be visible at the landing. The old 활동-상세
       // route was the misroute (its analytics view shows neither).
-      // own='1': these types only ever target MY run, and run-post derives
-      // own-mode from the param (the detail payload has no is_mine).
+      // 8/4 P1 (지연 repro, 짱아장아장's post opened as 지연's own): the
+      // own='1' this door used to hardcode was built on "these types only
+      // ever target MY run" — an assumption OUR OWN 8/1 reply contract
+      // invalidated. BE run_service.create_run_comment notifies the PARENT
+      // COMMENT AUTHOR with the same run_commented type and target=run, so a
+      // reply to your comment on someone else's run lands here for a run you
+      // do not own. The param asserted ownership the data never checked →
+      // viewer's identity painted as the author + 수정/삭제 offered on a
+      // stranger's post. The door now carries the id ONLY: run-post derives
+      // ownership from run.user_id === me (fail-closed) and hydrates the true
+      // author from that id.
       if (!n.target_id) return null;
-      return () => router.push({ pathname: '/run-post' as any, params: { runId: n.target_id!, own: '1' } });
+      return () => router.push({ pathname: '/run-post' as any, params: { runId: n.target_id! } });
     case 'crew_invited':
       // preview→join screen (payload.invite_code; the crew's shared code).
       // No invite record to accept/decline server-side — the code IS the invite.

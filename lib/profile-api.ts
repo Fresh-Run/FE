@@ -111,6 +111,15 @@ export function getSuggestedUsers(limit = 20): Promise<SuggestedUser[]> {
   return apiFetch<SuggestedUser[]>(`/api/users/suggested?limit=${limit}`);
 }
 
+/** Author identity by uid — nickname + avatar only (GET /users/{id}/profile,
+    re-probed live 2026-08-04 cross-account: 200 with both fields). The
+    seedless-door hydration source: a notification/push/deep-link tap carries
+    no author row, and the run detail serves NO identity (user_id only) — so
+    the author is fetched here and NEVER borrowed from the current user. */
+export function getUserIdentity(uid: string): Promise<{ nickname: string | null; avatar_url: string | null }> {
+  return apiFetch<{ nickname: string | null; avatar_url: string | null }>(`/api/users/${uid}/profile`);
+}
+
 export function searchUsers(q: string, limit = 20): Promise<UserSearchItem[]> {
   return apiFetch<UserSearchItem[]>(`/api/users/search?q=${encodeURIComponent(q.trim())}&limit=${limit}`);
 }

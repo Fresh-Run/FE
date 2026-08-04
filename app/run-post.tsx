@@ -1,8 +1,10 @@
 /**
  * 러닝 포스트 — social run detail (R3', canvas: FrRunPost).
- * Two modes at the entry point:
+ * Two modes — DERIVED FROM DATA since the 8/4 P1 hotfix (run.user_id === me,
+ * fail-closed); `own=1` survives only as a first-paint identity seed and
+ * gates no action:
  *  - others' runs (user-profile RunCard, !is_mine): kudos toggle + comments.
- *  - OWN runs (`own=1` — 내 프로필 💬 target, owner directive 2026-07-12):
+ *  - OWN runs (내 프로필 💬 target, owner directive 2026-07-12):
  *    author reads/replies to comments on their own run; ♥ toggles (self-
  *    kudos live since the 8/8 K2 restore — the 400 lifted 7/30 v120) +
  *    likers-sheet row; header inert (self-navigation loop). Card body
@@ -53,6 +55,7 @@ import { setRouteMap } from '@/store/route-map';
 import { Icon } from '@/components/ui';
 import { ScreenshotShareOffer } from '@/components/screenshot-share-offer';
 import { ApiError } from '@/lib/api';
+import { getUserIdentity } from '@/lib/profile-api';
 import { openProfile } from '@/lib/profile-nav';
 import { deleteRun } from '@/lib/runs-api';
 import { useRunTrack } from '@/lib/track-cache';
@@ -116,10 +119,27 @@ export default function RunPostScreen() {
     allowLikes?: string;
     allowComments?: string;
   }>();
-  const isOwn = params.own === '1';
   const units = useSettings(s => s.settings.units);
 
   const { run, loading, error, refetch } = useRunDetail(params.runId ?? null);
+  const myUid = useStore(s => s.session?.user.id);
+
+  // ── OWNERSHIP (8/4 P1 hotfix — 지연 repro: a notification door opened a
+  // stranger's post in own mode: viewer's pfp + "러너" AND 수정/삭제/공유).
+  // `own=1` was an ENTRY PARAM ASSERTION — whoever set it decided ownership,
+  // and the notif door hardcoded it (see notif-routing's conviction note).
+  // Authorization now derives from DATA and FAILS CLOSED: both sides must be
+  // explicitly present. Unknown user_id (thin/legacy payload) = NOT owner —
+  // never the reverse. Probed live 2026-08-04 cross-account: the sanitized
+  // others' detail DOES serve user_id (the older "omits user_id" note in
+  // this file was stale), so this is decidable on every door.
+  const isOwner = run?.user_id != null && myUid != null && run.user_id === myUid;
+  // Paint-only seed: the doors that KNOW they opened your own run (내 프로필,
+  // crew-chat's own card) still avoid a first-paint identity flash. It gates
+  // NO action — the moment the detail lands, data governs (the same two-phase
+  // rule the ♥ seed above uses).
+  const ownSeed = params.own === '1';
+  const identityOwn = run != null ? isOwner : ownSeed;
   // Silent SWR-lite refetch on focus — the 수정하기 return path (edited
   // title/notes repaint without a spinner; first load unaffected).
   useFocusEffect(useCallback(() => { refetch(); }, [refetch]));
@@ -301,9 +321,9 @@ export default function RunPostScreen() {
   const seedKudosOff = params.allowLikes === '0';
   const seedCommentsOff = params.allowComments === '0';
   const kudosOff = kudosOff403
-    || (!isOwn && (run != null ? (run.allow_likes === false || run.allow_likes === null) : seedKudosOff));
+    || (!identityOwn && (run != null ? (run.allow_likes === false || run.allow_likes === null) : seedKudosOff));
   const commentsOff = commentsOff403
-    || (!isOwn && (run != null ? (run.allow_comments === false || run.allow_comments === null) : seedCommentsOff));
+    || (!identityOwn && (run != null ? (run.allow_comments === false || run.allow_comments === null) : seedCommentsOff));
 
   function toggleKudos() {
     if (!run || kudosOff) return;
@@ -350,12 +370,32 @@ export default function RunPostScreen() {
     }
   }
 
-  const nickname = params.nickname ?? T('home.runner');
-  // Author photo: own runs read the store (always fresh); others use the
-  // entry seed from the tapped row (sanitized detail carries no identity)
+  // ── AUTHOR IDENTITY (8/4 P1, symptom ⓐ). The detail serves user_id but no
+  // nickname/avatar, and a notification/push/deep-link door seeds neither —
+  // the old fallback then landed on the CURRENT USER (own-mode pfp) + the
+  // "러너" default, i.e. the viewer wearing the author's post. The identity
+  // now comes from the run's OWN user_id: seed → hydrate → generic default,
+  // never the viewer. Fetch only when the door left it blank and the run is
+  // not mine; a failed fetch degrades to "러너" (honest, never borrowed).
+  const [author, setAuthor] = useState<{ nickname: string | null; avatarUrl: string | null } | null>(null);
+  useEffect(() => {
+    const uid = run?.user_id;
+    if (!uid || uid === myUid || params.nickname) return;
+    let cancelled = false;
+    getUserIdentity(uid)
+      .then(p => { if (!cancelled) setAuthor({ nickname: p.nickname, avatarUrl: p.avatar_url }); })
+      .catch(() => { /* generic default stands — never the viewer's identity */ });
+    return () => { cancelled = true; };
+  }, [run?.user_id, myUid, params.nickname]);
+
+  const myNickname = useStore(s => s.displayName);
   const ownPhotoUrl = useStore(s => s.photoUrl);
-  const authorPhotoUrl = isOwn ? ownPhotoUrl : (params.avatarUrl || null);
-  const myUid = useStore(s => s.session?.user.id);
+  const nickname = identityOwn
+    ? (params.nickname ?? myNickname ?? T('home.runner'))
+    : (params.nickname ?? author?.nickname ?? T('home.runner'));
+  const authorPhotoUrl = identityOwn
+    ? ownPhotoUrl
+    : (params.avatarUrl || author?.avatarUrl || null);
   // server count INCLUDES replies (contract) — read verbatim + local delta;
   // pre-detail fallback = loaded length (entry edge only)
   const commentCount = (run?.comment_count != null ? run.comment_count : (comments?.length ?? 0)) + countDelta;
@@ -393,11 +433,11 @@ export default function RunPostScreen() {
         <Text style={st.appBarTitle}>{T('rp.title')}</Text>
         {/* 공유 — the run-detail header idiom (활동 상세's icon; joined at
             the 2026-07-24 revision: card long-press RETIRED, every screen a
-            run opens on carries the header share instead). Own-runs-only:
-            isOwn (내 프로필 door passes own=1) OR detail user_id match —
-            feed/crew doors open OWN posts without own=1, and sanitized
-            others' detail omits user_id → hidden, honest. */}
-        {(isOwn || (run?.user_id != null && run.user_id === myUid)) && (
+            run opens on carries the header share instead). Own-runs-only,
+            and since the 8/4 hotfix that means the DERIVED owner on every
+            door — the own=1 half of this predicate was the assertion the
+            notification path abused. */}
+        {isOwner && (
           <Pressable
             onPress={() => router.push({ pathname: '/share-card' as never, params: { runId: params.runId } })}
             hitSlop={12}
@@ -423,9 +463,9 @@ export default function RunPostScreen() {
             {/* Author header — nickname from entry seed (sanitized detail has
                 none); inert on own runs (self-navigation loop) */}
             <Pressable
-              onPress={() => !isOwn && run.user_id && openProfile(run.user_id, nickname)}
-              disabled={isOwn}
-              style={({ pressed }) => [st.authorRow, pressed && !isOwn && { opacity: 0.7 }]}
+              onPress={() => !isOwner && run.user_id && openProfile(run.user_id, nickname)}
+              disabled={isOwner}
+              style={({ pressed }) => [st.authorRow, pressed && !isOwner && { opacity: 0.7 }]}
             >
               <Avatar name={nickname} size={42} photoUrl={authorPhotoUrl} />
               <View style={{ flex: 1, minWidth: 0 }}>
@@ -477,7 +517,7 @@ export default function RunPostScreen() {
 
               {/* 분석 보기 — own mode: analysis stays one tap from social
                   (활동 상세's 내 프로필 entry moved here, owner correction) */}
-              {isOwn && (
+              {isOwner && (
                 <Pressable
                   onPress={() => router.push({ pathname: '/(records)/activity' as never, params: { runId: run.id } })}
                   hitSlop={6}
@@ -664,8 +704,12 @@ export default function RunPostScreen() {
         <Pressable style={st.sheetOverlay} onPress={closeSheet}>
           <Pressable style={[st.sheet, { paddingBottom: Math.max(insets.bottom, 12) + 8 }]} onPress={() => {}}>
             <View style={st.sheetHandleRow}><View style={st.sheetHandle} /></View>
+            {/* 8/4 P1: the destructive rows are gated on the DERIVED owner —
+                and while the detail is still loading NEITHER branch renders
+                (fail-closed: an unknown owner offers no 삭제, and no 신고 on
+                what may be your own run). */}
             {sheetView === 'menu' ? (
-              isOwn ? (
+              isOwner ? (
                 <>
                   {/* own-run controls — 활동 상세's pair, sheet-row grammar */}
                   <Pressable
@@ -686,12 +730,12 @@ export default function RunPostScreen() {
                     <Text style={[st.sheetRowTxt, { color: C.danger }]}>{T('rp.delete')}</Text>
                   </Pressable>
                 </>
-              ) : (
+              ) : run != null ? (
               <Pressable onPress={() => setSheetView('report')} style={({ pressed }) => [st.sheetRow, pressed && { opacity: 0.7 }]}>
                 <Icon name="flag-outline" size={19} color={C.text} />
                 <Text style={st.sheetRowTxt}>{T('up.report')}</Text>
               </Pressable>
-              )
+              ) : null
             ) : (
               <>
                 <Text style={st.sheetTitle}>{T('up.report')}</Text>
@@ -758,7 +802,7 @@ export default function RunPostScreen() {
         </View>
       </Modal>
       {/* slice 3: screenshot offer — same own-guard as the header share */}
-      {(isOwn || (run?.user_id != null && run.user_id === myUid)) && params.runId && (
+      {isOwner && params.runId && (
         <ScreenshotShareOffer runId={params.runId} />
       )}
     </KeyboardAvoidingView>
