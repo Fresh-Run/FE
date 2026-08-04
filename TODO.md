@@ -1298,7 +1298,12 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 
 ## ~~🔼 (구) STAGED — a7599217 (커밋 4c9e337)~~ PROMOTED 위 참조 · 해시-타이 MATCH (J0E2-ihy… — 퍼블리시-타임 dist 기준; 수동-export 비결정성 잔존 온-레코드) · 마커: /kudos ×1·likes_disabled ×1 (스트링-프리)
 
-## 🚑 P1 HOTFIX v2 (인가/아이덴티티 + 고도 제거 + 답글 카피) STAGED — **af19f97c** (브랜치 hotfix/authz-run-post · 커밋 c57f76d · 기반 fa193bd = a1dfef2d 프로덕션 플로어) · **326e82d5 대체**
+## ✅ P1 HOTFIX v2 PROMOTED — **a6e44156** (스테이징 af19f97c → 프로덕션, 커밋 c57f76d) · **[16:15] 오너 스탬프 — 4레그 전수 PASSED** (지연 알림 신고만/작성자 정상 · 본인 알림 컨트롤 유지 · 내 프로필 무변화 · 런포스트 고도 부재 / 활동 상세 유지) · 원-컨펌 완료 · **프로모션 해시-타이 MATCH** (QnZBYw1p… 검증 바이트 동일) · **플로어 전진: a1dfef2d → a6e44156** · 지연 P1 인가/아이덴티티 종결 · 셰이프 독트린 (고도 = 레코드 온리) 프로덕션 착지
+- **잔여 (그녀 대기)**: 답글 알림 카피 = 다크 코드로 프로덕션 탑승 (`isReplyNotif` 3셰이프) — `payload.is_reply` 애디티브 도착 즉시 FE 변경 0으로 점등. 애스크 미발송 (오너 판단 대기) · 푸시 카피 서버 조립 동반 요청 포함.
+- **재스테이지**: 내비 그룹 = **4f74922f** (커밋 8b8554f, main HEAD) · 해시-타이 MATCH (Hlz7eRm1…) · 카고 확인 = courseTangentAt 1 · snapToCourse 1 · 출발점까지 1 (내비) **+** getUserIdentity 1 · isReplyNotif 1 (프로모션된 픽스 전부 동승) · **dee20da1 대체** · 게이트 불변 = [실내 캐리 스탬프 유지] + **프레시 코스런 아웃도어 7레그 + 밴드 선도**.
+- 롤백 프리암드 (내비 프로모션 시 대비): 현 프로덕션 = a6e44156.
+
+## ~~🚑 P1 HOTFIX v2 (인가/아이덴티티 + 고도 제거 + 답글 카피) STAGED — **af19f97c**~~ PROMOTED (위) (브랜치 hotfix/authz-run-post · 커밋 c57f76d · 기반 fa193bd = a1dfef2d 프로덕션 플로어) · **326e82d5 대체**
 - **폴드 A — 고도 오프 run-post**: `b4b8061` 체리-픽 **CLEAN** (충돌 0, 인가 헝크 바로 아래인데도) — run-post −5 (임포트+섹션) · elevation-chart +4/−2 = **독블록 온리, 무동작**. 활동 상세 존치 확인 (임포트+렌더), 번들에 컴포넌트 잔존 (바이트 1). **차트 폼은 v1** — v2 (어댑티브 Y + km 마크)는 내비 그룹 카고로 잔류.
 - **폴드 B — 답글 알림 카피 (오너 발견 8/3)**: 8/1 답글 계약이 부모 댓글 작성자에게도 `run_commented` 발송 → "내 러닝에 댓글" 이 거짓.
   - **프로브 판정 (8/4, 라이브 양 행 덤프): FE 구분 불가** — 오너-케이스와 답글-케이스 행이 type·target_id·target_type·payload `{run_id}` **완전 동일**, actor/id/시각만 상이 (BE 소스와 일치: recipient_id만 다름). "수신자≠런 주인" 추론은 리스트 행마다 `GET /runs/{id}` 필요 → 비현실적. **그녀 애디티브 필요.**
@@ -1320,7 +1325,7 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 - **게이트**: 지연이 **스크린샷을 만든 그 알림 재탭** (저자 = 짱아장아장 + 실 pfp · ⋯ = 신고만) + **내 런 알림 1건** (⋯ = 수정/삭제, 공유 존재) + **내 프로필 카드 → 포스트 무변경**. 프로모션 = 스탬프 + 원-컨펌. 롤백 프리암드: 현 프로덕션 = a1dfef2d.
 
 ## ✅ HOTFIX 크래시 클래스 PROMOTED — **a1dfef2d** (스테이징 9566bb7c → 프로덕션, 커밋 fa193bd) · **[15:35] 오너+지연 양측 스테이징 스탬프** (생성 코스 프리뷰 연타/재진입 무크래시 · 캐노니컬 정상 · 내비 부재 바이트 확인) · 원-컨펌 완료 · **프로모션 해시-타이 MATCH** (Oel9rrGC… 스테이징 바이트 동일 = 검증한 그 바이트) · **플로어 전진: e000d257 → a1dfef2d** · 그녀 P1 (크래시 ×3 / 유저 2 / ~70분) 종결
-- **재스테이지**: 내비 그룹 = **dee20da1** (커밋 ff6edc4, main HEAD — 내비 v5.2 + 밴드 케이싱 + 슬라이더 v2 + 고도 v2 + 크래시 클래스) · 해시-타이 MATCH (3s-V7ly…) · 내비-존재 바이트 확인 (courseTangentAt 1 · snapToCourse 1 · 출발점까지 1) · **faca179d 대체** · 게이트 불변 = [실내 캐리 스탬프 유지] + **프레시 코스런 아웃도어 7레그 + 밴드 선도**.
+- ~~**재스테이지**: 내비 그룹 = **dee20da1** (커밋 ff6edc4)~~ SUPERSEDED → 326e82d5 → af19f97c → **4f74922f** (위) · 해시-타이 MATCH (3s-V7ly…) · 내비-존재 바이트 확인 (courseTangentAt 1 · snapToCourse 1 · 출발점까지 1) · **faca179d 대체** · 게이트 불변 = [실내 캐리 스탬프 유지] + **프레시 코스런 아웃도어 7레그 + 밴드 선도**.
 - 롤백 프리암드 (내비 프로모션 시 대비): 현 프로덕션 = a1dfef2d.
 
 ## ~~🚑 HOTFIX 크래시 클래스 (내비 무동승) STAGED — 9566bb7c~~ PROMOTED (위) (브랜치 hotfix/airmap-nil · 커밋 fa193bd · 기반 89e63f5 = e000d257 프로덕션 플로어) — 그녀 P1 (크래시 ×3 / 유저 2 / ~70분 · 프로덕션 번들 제너레이트→프리뷰 차단)
