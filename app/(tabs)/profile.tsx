@@ -1,7 +1,7 @@
 import { useFocusEffect } from '@react-navigation/native';
 import Constants from 'expo-constants';
-import { router } from 'expo-router';
-import React, { useCallback, useEffect } from 'react';
+import { router, useNavigation } from 'expo-router';
+import React, { useCallback, useEffect, useRef } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -203,6 +203,19 @@ export default function ProfileScreen() {
   const C = useTokens();
   const st = useStyles(makeSt);
   const insets  = useSafeAreaInsets();
+  // 재탭 = 맨 위로 (owner-ruled 8/5, 홈 패턴 버바팀 — index.tsx의
+  // conviction 코멘트 참조): 자기 탭 tabPress만 수신, emit-타임 isFocused()
+  // 분기 (true = 재탭 → 스크롤 / false = 타-탭발 도착 → 무동작 = 위치 보존).
+  // SCROLL ONLY — 리페치 무동승 (refresh는 pull-to-refresh 소관).
+  const scrollRef = useRef<ScrollView>(null);
+  const navigation = useNavigation();
+  useEffect(() => {
+    return navigation.addListener('tabPress' as never, () => {
+      if (navigation.isFocused()) {
+        scrollRef.current?.scrollTo({ y: 0, animated: true });
+      }
+    });
+  }, [navigation]);
   const tabBarInset = useTabBarInset();
   const signOut = useStore(s => s.signOut);
   const { profile, stats, loading, error, signedOut, refetch } = useProfile();
@@ -316,6 +329,7 @@ export default function ProfileScreen() {
   return (
     <View style={[st.root, { paddingTop: insets.top }]}>
       <ScrollView
+        ref={scrollRef}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: tabBarInset }}
       >

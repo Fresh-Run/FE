@@ -180,6 +180,10 @@ const HERO_H = 210;
 // the smallest 0.5mi detent that COVERS the km floor (1.5mi ≥ 2.0km) — a
 // detent below it would still 422.
 const LOOP_MIN_MI = Math.ceil((LOOP_MIN_TARGET_KM / KM_PER_MI) * 2) / 2;
+// 8/5 cap (see the ruling comment above the form state): one constant pair
+// drives seed-clamp, feasibility ceiling, slider max, and the right label.
+const MAX_TARGET_KM = 13;
+const MAX_TARGET_MI = 8; // 12.87km — the 13km cap converted to a round mi detent
 
 export default function CreateScreen() {
   const C = useTokens();
@@ -189,10 +193,14 @@ export default function CreateScreen() {
 
   // ── Form state ──────────────────────────────────────────────────────────────
   // distanceKm stays km-internal (payload unit); the slider is UNIT-NATIVE
-  // (owner design change 2026-07-06): km mode 1–30km, mi mode 0.5–20mi with
-  // mi steps. Backend bound verified: target_distance_km gt=0 le=100 — 20mi
-  // (32.19km) fits, no clamp needed. Unit switches preserve physical distance
-  // because only the km value is stored.
+  // (owner design change 2026-07-06). Unit switches preserve physical
+  // distance because only the km value is stored.
+  // CAP 30→13km / 20→8mi (owner-ruled 2026-08-05): her n-lap ceiling data —
+  // the generator's lap geometry degrades beyond ~13km targets, so the
+  // slider stops selling distances the server can't honor well. LIFT
+  // CONDITION: her long-distance server work lands → raise MAX_TARGET_*
+  // here (one pair, every consumer follows). Backend hard bound unchanged
+  // (target_distance_km le=100 — the cap is UX honesty, not a 422 mirror).
   // Seed from settings.ai_course.default_distance_km: the server consults it
   // only when the body omits distance, and this form always sends it — so the
   // pref lands here as the slider's initial value instead. Clamped to the
@@ -224,7 +232,7 @@ export default function CreateScreen() {
     const { units: u, ai_course } = useSettings.getState().settings;
     // seed lo = the LOOP floor (the form mounts in loop mode; a sub-floor
     // pref/banner seed would land on an illegal detent)
-    const [lo, hi] = u === 'mi' ? [LOOP_MIN_MI * KM_PER_MI, 20 * KM_PER_MI] : [LOOP_MIN_TARGET_KM, 30];
+    const [lo, hi] = u === 'mi' ? [LOOP_MIN_MI * KM_PER_MI, MAX_TARGET_MI * KM_PER_MI] : [LOOP_MIN_TARGET_KM, MAX_TARGET_KM];
     const fromBanner = seedParam ? Number(seedParam) : NaN;
     const base = Number.isFinite(fromBanner) && fromBanner > 0 ? fromBanner : ai_course.default_distance_km;
     return Math.min(hi, Math.max(lo, base));
@@ -269,7 +277,7 @@ export default function CreateScreen() {
   const straightKm  = oneWay && endCoord ? haversineKm(startCoord, endCoord) : null;
   const minTargetKm = straightKm != null ? Math.ceil((straightKm / 0.8) * 10) / 10 : null;
   const endTooFar   = straightKm != null && straightKm > distanceKm * 0.8;
-  const sliderMaxKm = isMi ? 20 * KM_PER_MI : 30;
+  const sliderMaxKm = isMi ? MAX_TARGET_MI * KM_PER_MI : MAX_TARGET_KM;
 
   // ── Flow state ──────────────────────────────────────────────────────────────
   // auto mode opens ON the generating shell (single round-trip — nothing
@@ -599,7 +607,7 @@ export default function CreateScreen() {
             siteId="course-dist"
             style={st.slider}
             minimumValue={oneWay ? (isMi ? 0.5 : 1) : (isMi ? LOOP_MIN_MI : LOOP_MIN_TARGET_KM)}
-            maximumValue={isMi ? 20 : 30}
+            maximumValue={isMi ? MAX_TARGET_MI : MAX_TARGET_KM}
             step={0.5}
             value={distDisplay}
             onValueChange={v => setDistanceKm(isMi ? v * KM_PER_MI : v)}
@@ -611,7 +619,7 @@ export default function CreateScreen() {
             <Text style={st.sliderLabel}>
               {oneWay ? (isMi ? '0.5 mi' : '1 km') : (isMi ? `${LOOP_MIN_MI} mi` : `${LOOP_MIN_TARGET_KM} km`)}
             </Text>
-            <Text style={st.sliderLabel}>{isMi ? '20 mi' : '30 km'}</Text>
+            <Text style={st.sliderLabel}>{isMi ? `${MAX_TARGET_MI} mi` : `${MAX_TARGET_KM} km`}</Text>
           </View>
         </View>
 

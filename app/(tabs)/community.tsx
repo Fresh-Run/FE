@@ -4,7 +4,7 @@
 import { useFocusEffect } from '@react-navigation/native';
 import { errorMessage } from '@/lib/error-copy';
 import { regionName } from '@/lib/korea-regions';
-import { router } from 'expo-router';
+import { router, useNavigation } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -255,7 +255,7 @@ function MyCrewCard({ crew, onPress }: { crew: Crew; onPress: () => void }) {
 
 // ─── Discover tab ─────────────────────────────────────────────────────────────
 
-function DiscoverTab() {
+function DiscoverTab({ listRef }: { listRef: React.RefObject<FlatList<Crew> | null> }) {
   const C = useTokens();
   const st = useStyles(makeSt);
   const tabBarInset = useTabBarInset();
@@ -353,6 +353,7 @@ function DiscoverTab() {
 
   return (
     <FlatList
+      ref={listRef}
       data={visible}
       keyExtractor={c => c.id}
       renderItem={({ item }) => (
@@ -566,7 +567,7 @@ const makeIcs = (C: Tokens) => StyleSheet.create({
 
 // ─── My crews tab ─────────────────────────────────────────────────────────────
 
-function MyCrewsTab() {
+function MyCrewsTab({ scrollRef }: { scrollRef: React.RefObject<ScrollView | null> }) {
   const C = useTokens();
   const st = useStyles(makeSt);
   const tabBarInset = useTabBarInset();
@@ -598,7 +599,7 @@ function MyCrewsTab() {
     router.push({ pathname: '/(community)/crew-detail' as any, params: { crewId: c.id } });
 
   return (
-    <ScrollView contentContainerStyle={{ paddingBottom: tabBarInset }} showsVerticalScrollIndicator={false}>
+    <ScrollView ref={scrollRef} contentContainerStyle={{ paddingBottom: tabBarInset }} showsVerticalScrollIndicator={false}>
       {/* Owned crews — dashed create-placeholder is the empty state */}
       <View style={{ paddingHorizontal: S.gutter, paddingTop: S.xl }}>
         <View style={st.sectionHead}>
@@ -699,6 +700,26 @@ export default function CommunityScreen() {
   const insets = useSafeAreaInsets();
   const [tab, setTab] = useState<'crew' | 'discover'>('crew');
 
+  // 재탭 = 맨 위로 (owner-ruled 8/5, 홈 패턴 버바팀 — index.tsx의
+  // conviction 코멘트 참조): 자기 탭 tabPress만 수신, emit-타임 isFocused()
+  // 분기 (true = 재탭 → 스크롤 / false = 타-탭발 도착 → 무동작 = 위치 보존).
+  // SCROLL ONLY — 리페치 무동승 (refresh는 pull-to-refresh 소관).
+  // Dual-container twist: the two sub-views own their scrollables, so the
+  // root (the tab's focus owner) holds BOTH refs and branches on the active
+  // sub-view at press time. `tab` in deps re-subscribes on switch — the
+  // closure always sees the live branch.
+  const crewScrollRef = useRef<ScrollView>(null);
+  const discoverListRef = useRef<FlatList<Crew>>(null);
+  const navigation = useNavigation();
+  useEffect(() => {
+    return navigation.addListener('tabPress' as never, () => {
+      if (navigation.isFocused()) {
+        if (tab === 'crew') crewScrollRef.current?.scrollTo({ y: 0, animated: true });
+        else discoverListRef.current?.scrollToOffset({ offset: 0, animated: true });
+      }
+    });
+  }, [navigation, tab]);
+
   return (
     <View style={[st.root, { paddingTop: insets.top }]}>
       <View style={st.header}>
@@ -716,8 +737,8 @@ export default function CommunityScreen() {
 
       <View style={{ flex: 1 }}>
         {tab === 'crew'
-          ? <MyCrewsTab />
-          : <DiscoverTab />
+          ? <MyCrewsTab scrollRef={crewScrollRef} />
+          : <DiscoverTab listRef={discoverListRef} />
         }
       </View>
     </View>
