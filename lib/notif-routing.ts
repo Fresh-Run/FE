@@ -24,6 +24,9 @@ export function deepLink(n: DeepLinkTarget): (() => void) | null {
   switch (n.type) {
     case 'run_kudoed':
     case 'run_commented': // target_type "run", target_id = run id (probed)
+    case 'reply_to_comment': // 8/4 forward-wire (see notifications.tsx) —
+      // same landing by construction: the target is still the RUN the
+      // comment thread lives on, which may belong to a third party.
     case 'pb_achieved':
       // Slice B (지연 진단 + owner repro, ruled 2026-07-21): all three land
       // on the SOCIAL run detail (run-post) — the kudos/comment you were

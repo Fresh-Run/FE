@@ -36,6 +36,14 @@ export type AppNotification = {
     crew_name?: string | null;
     invite_code?: string | null;
     record_types?: string[] | null;
+    /** 8/4 FORWARD-WIRED, NOT YET SERVED (probed 2026-08-04 cross-account:
+        the owner-case and reply-case run_commented rows are IDENTICAL but for
+        actor/id/created_at — payload is {run_id} on both). 지연's additive
+        lands in EITHER shape and the copy branches with zero further FE work;
+        absent = today's behaviour, unchanged. See notifications.tsx's
+        isReplyNotif + the ask in TODO.md. */
+    is_reply?: boolean | null;
+    parent_comment_id?: string | null;
   } | null;
   is_read: boolean;
   created_at: string;
