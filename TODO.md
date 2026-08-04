@@ -1298,14 +1298,18 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 
 ## ~~🔼 (구) STAGED — a7599217 (커밋 4c9e337)~~ PROMOTED 위 참조 · 해시-타이 MATCH (J0E2-ihy… — 퍼블리시-타임 dist 기준; 수동-export 비결정성 잔존 온-레코드) · 마커: /kudos ×1·likes_disabled ×1 (스트링-프리)
 
-## 🚑 HOTFIX 크래시 클래스 (내비 무동승) STAGED — 9566bb7c (브랜치 hotfix/airmap-nil · 커밋 fa193bd · 기반 89e63f5 = e000d257 프로덕션 플로어) — 그녀 P1 (크래시 ×3 / 유저 2 / ~70분 · 프로덕션 번들 제너레이트→프리뷰 차단)
+## ✅ HOTFIX 크래시 클래스 PROMOTED — **a1dfef2d** (스테이징 9566bb7c → 프로덕션, 커밋 fa193bd) · **[15:35] 오너+지연 양측 스테이징 스탬프** (생성 코스 프리뷰 연타/재진입 무크래시 · 캐노니컬 정상 · 내비 부재 바이트 확인) · 원-컨펌 완료 · **프로모션 해시-타이 MATCH** (Oel9rrGC… 스테이징 바이트 동일 = 검증한 그 바이트) · **플로어 전진: e000d257 → a1dfef2d** · 그녀 P1 (크래시 ×3 / 유저 2 / ~70분) 종결
+- **재스테이지**: 내비 그룹 = **dee20da1** (커밋 ff6edc4, main HEAD — 내비 v5.2 + 밴드 케이싱 + 슬라이더 v2 + 고도 v2 + 크래시 클래스) · 해시-타이 MATCH (3s-V7ly…) · 내비-존재 바이트 확인 (courseTangentAt 1 · snapToCourse 1 · 출발점까지 1) · **faca179d 대체** · 게이트 불변 = [실내 캐리 스탬프 유지] + **프레시 코스런 아웃도어 7레그 + 밴드 선도**.
+- 롤백 프리암드 (내비 프로모션 시 대비): 현 프로덕션 = a1dfef2d.
+
+## ~~🚑 HOTFIX 크래시 클래스 (내비 무동승) STAGED — 9566bb7c~~ PROMOTED (위) (브랜치 hotfix/airmap-nil · 커밋 fa193bd · 기반 89e63f5 = e000d257 프로덕션 플로어) — 그녀 P1 (크래시 ×3 / 유저 2 / ~70분 · 프로덕션 번들 제너레이트→프리뷰 차단)
 - **체리-픽 판정 (정직)**: real-map.tsx + start-picker.tsx = d00a4bd에서 **클린 홀세일** (tsc 0 = 내비 의존 무 증명) · **tracking.tsx = 충돌** (내비-시대 드리프트 501라인) → 프로덕션-시대 셰이프에 클래스 **수적용**: courseBehind/courseNext/turnAhead/drawnPath 터너리-투-널 + courseAhead 프래그먼트 → 시블링 터너리 ×2. 내비 피처·씬 프리뷰 제로 탑승.
 - **해시-타이 MATCH** (Oel9rrGC… — 퍼블리시-타임 dist 동일) + **내비-부재 바이트-증명**: courseTangentAt 0 · snapToCourse 0 · 출발점까지(UTF-16LE) 0.
 - 프리플라이트: env-가드 staging URL OK · tsc 0 · eslint 0.
 - **게이트: 실내 크래시 레그 ONLY** — 제너레이티드 프리뷰 오픈/클로즈/재진입 해머 ×수회 + 캐노니컬 청라 솔빛 오픈 1회 = 무크래시 · **오너 AND 지연 양측 스테이징 검증** · 프로모션 = 스탬프 + 원-컨펌.
 - 프로모션 시: 프로덕션 언크래시 → **faca179d 내비 그룹은 이후 main HEAD에서 재스테이지** (아웃도어 코스런 게이트 불변). 롤백 프리암드: 현 프로덕션 = e000d257.
 
-## 🔼 크래시 픽스 + 전체 캐리 STAGED — faca179d (커밋 d00a4bd) · 해시-타이 MATCH (L_9uJjeP… — 체크포인트 커밋-타이드 동일) · **3e807557 대체 ([21:55] 실내 스탬프 캐리 지속)** · 프로덕션 = e000d257 플로어 불변 · **게이트: ⓪ 실내 크래시 레그 — 34f2253f-클래스 프리뷰 오픈 ×수회 + 캐노니컬 청라 솔빛 = 무크래시 · [실내 캐리] 밴드 라이트-모드 분리·화살표 사망·씬 프리뷰·리센터 닷+코스 수직 → [프레시 코스런] 기존 7레그 + 밴드 선도** · 프로모션 = 실관찰 스탬프 + 원-컨펌
+## ~~🔼 크래시 픽스 + 전체 캐리 STAGED — faca179d (커밋 d00a4bd)~~ SUPERSEDED by dee20da1 (핫픽스 프로모션 위 재스테이지) · 해시-타이 MATCH (L_9uJjeP… — 체크포인트 커밋-타이드 동일) · **3e807557 대체 ([21:55] 실내 스탬프 캐리 지속)** · 프로덕션 = e000d257 플로어 불변 · **게이트: ⓪ 실내 크래시 레그 — 34f2253f-클래스 프리뷰 오픈 ×수회 + 캐노니컬 청라 솔빛 = 무크래시 · [실내 캐리] 밴드 라이트-모드 분리·화살표 사망·씬 프리뷰·리센터 닷+코스 수직 → [프레시 코스런] 기존 7레그 + 밴드 선도** · 프로모션 = 실관찰 스탬프 + 원-컨펌
 
 ## 💥 첫 크래시 FIXED: AIRMap insertReactSubview nil (STAGED 위 faca179d — 그녀 트리아지 8/3)
 - **차일드 오딧 (프리뷰 = RealMap; 전 MapView 소유 4파일)**: real-map — ① marker&&center&&!line (오브젝트-&&, 0-리크 무) ② line&&!lineHidden **프래그먼트 랩** ③ 스타트핀 터너리 ④ 커스텀 엔드-닷 Marker (View 차일드 — **인터롭 최고-확률 서스펙트**) ⑤ crossings.map (프리뷰 미사용) · tracking — courseAhead/courseNext **프래그먼트 ×2** + && 조건 다수 (불리언-세이프) · start-picker — picked&&Marker (오브젝트-세이프) · place-pick-sheet — 차일드리스 (클린).
