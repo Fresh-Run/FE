@@ -1298,6 +1298,17 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 
 ## ~~🔼 (구) STAGED — a7599217 (커밋 4c9e337)~~ PROMOTED 위 참조 · 해시-타이 MATCH (J0E2-ihy… — 퍼블리시-타임 dist 기준; 수동-export 비결정성 잔존 온-레코드) · 마커: /kudos ×1·likes_disabled ×1 (스트링-프리)
 
+## 🚑 P1 HOTFIX 인가/아이덴티티 (알림 도어) STAGED — **326e82d5** (브랜치 hotfix/authz-run-post · 커밋 7f0179c · 기반 fa193bd = a1dfef2d 프로덕션 플로어) — 지연 리프로: 알림으로 짱아장아장 런 진입 시 뷰어 pfp + "러너" + 수정/삭제/공유/분석 노출
+- **루트 (라이브 컨빅션)**: `isOwn = params.own === '1'` = 도어의 **주장**, 파생 아님 · notif-routing이 `own:'1'` 하드코드 ("이 타입은 내 런만 타겟" — **우리의 8/1 답글 계약이 무효화**: BE create_run_comment가 **부모 댓글 작성자**에게도 동일 run_commented·target=run 발송 = 남의 런). 스테이징 리프로 성공 (test1 런 → test2 댓글 → test1 답글 → test2 인박스에 test1 런 타겟 run_commented). run_kudoed=owner_id·pb_achieved=self (교차 소유 없음).
+- **아이덴티티 붕괴 동근**: 알림 도어는 nickname/avatar 무시드 + `GET /runs/{id}`는 **아이덴티티 무서빙** → `isOwn ? ownPhotoUrl` 폴백이 **뷰어를 저자로** 렌더.
+- **스테일 코멘트 정정 (프로브 무기한 만료 없음)**: "sanitized others' detail omits user_id" = 거짓 — 크로스-어카운트 재프로브 8/4: **user_id 서빙됨** (nickname/avatar는 아님).
+- **픽스**: ① notif 도어 = id만 전달 ② `isOwner = run.user_id != null && me != null && 일치` (**페일-클로즈드** — 미상 user_id = FALSE, 9사이트 전환) ③ `own=1`은 **첫-페인트 시드로만** 잔존 (액션 무게이트, ♥ 시드와 동일 2-페이즈) ④ 저자 = `GET /users/{run.user_id}/profile` 하이드레이션 (실패 시 "러너" — **뷰어 차용 금지**) ⑤ 상세 도착 전 ⋯ = 양 브랜치 무렌더.
+- **엔트리 매트릭스 10종 데스크 실행**: 홀은 알림/푸시/딥링크 단 하나 · 부수 픽스 = **홈 피드의 내 포스트가 이제 수정/삭제 제공** (기존 신고).
+- **서버 방어 라이브 확인 (지연 공유용)**: 타인 런 DELETE 404 · PATCH 404 · 소유자 조회 무변경 · 코드 `.eq("user_id", user_id)` — **실제 데이터 손실은 불가능했음**. 잔여: deleteRun의 404=성공 (의도적 멱등) → 비소유자가 삭제 탭 시 **거짓 성공** 표시였음; 게이트 픽스로 UI 도달 불가 → 멱등 의미 보존 (판단 기록).
+- **해시-타이 MATCH** (-3ULefJeG… 커밋-타이드 export 동일) · 바이트-증명: getUserIdentity 1 · courseTangentAt 0 · snapToCourse 0 · 출발점까지 0 (내비 무동승) · **체리-픽 CLEAN** (충돌 0; 플로어-시대 ElevationChart 잔존 = main 카고 무동승 증명).
+- **dee20da1 (내비) 대체** — 내비는 이 프로모션 후 재스테이지, 아웃도어 게이트 불변.
+- **게이트**: 지연이 **스크린샷을 만든 그 알림 재탭** (저자 = 짱아장아장 + 실 pfp · ⋯ = 신고만) + **내 런 알림 1건** (⋯ = 수정/삭제, 공유 존재) + **내 프로필 카드 → 포스트 무변경**. 프로모션 = 스탬프 + 원-컨펌. 롤백 프리암드: 현 프로덕션 = a1dfef2d.
+
 ## ✅ HOTFIX 크래시 클래스 PROMOTED — **a1dfef2d** (스테이징 9566bb7c → 프로덕션, 커밋 fa193bd) · **[15:35] 오너+지연 양측 스테이징 스탬프** (생성 코스 프리뷰 연타/재진입 무크래시 · 캐노니컬 정상 · 내비 부재 바이트 확인) · 원-컨펌 완료 · **프로모션 해시-타이 MATCH** (Oel9rrGC… 스테이징 바이트 동일 = 검증한 그 바이트) · **플로어 전진: e000d257 → a1dfef2d** · 그녀 P1 (크래시 ×3 / 유저 2 / ~70분) 종결
 - **재스테이지**: 내비 그룹 = **dee20da1** (커밋 ff6edc4, main HEAD — 내비 v5.2 + 밴드 케이싱 + 슬라이더 v2 + 고도 v2 + 크래시 클래스) · 해시-타이 MATCH (3s-V7ly…) · 내비-존재 바이트 확인 (courseTangentAt 1 · snapToCourse 1 · 출발점까지 1) · **faca179d 대체** · 게이트 불변 = [실내 캐리 스탬프 유지] + **프레시 코스런 아웃도어 7레그 + 밴드 선도**.
 - 롤백 프리암드 (내비 프로모션 시 대비): 현 프로덕션 = a1dfef2d.
