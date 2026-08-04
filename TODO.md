@@ -1298,7 +1298,17 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 
 ## ~~🔼 (구) STAGED — a7599217 (커밋 4c9e337)~~ PROMOTED 위 참조 · 해시-타이 MATCH (J0E2-ihy… — 퍼블리시-타임 dist 기준; 수동-export 비결정성 잔존 온-레코드) · 마커: /kudos ×1·likes_disabled ×1 (스트링-프리)
 
-## 🚑 P1 HOTFIX 인가/아이덴티티 (알림 도어) STAGED — **326e82d5** (브랜치 hotfix/authz-run-post · 커밋 7f0179c · 기반 fa193bd = a1dfef2d 프로덕션 플로어) — 지연 리프로: 알림으로 짱아장아장 런 진입 시 뷰어 pfp + "러너" + 수정/삭제/공유/분석 노출
+## 🚑 P1 HOTFIX v2 (인가/아이덴티티 + 고도 제거 + 답글 카피) STAGED — **af19f97c** (브랜치 hotfix/authz-run-post · 커밋 c57f76d · 기반 fa193bd = a1dfef2d 프로덕션 플로어) · **326e82d5 대체**
+- **폴드 A — 고도 오프 run-post**: `b4b8061` 체리-픽 **CLEAN** (충돌 0, 인가 헝크 바로 아래인데도) — run-post −5 (임포트+섹션) · elevation-chart +4/−2 = **독블록 온리, 무동작**. 활동 상세 존치 확인 (임포트+렌더), 번들에 컴포넌트 잔존 (바이트 1). **차트 폼은 v1** — v2 (어댑티브 Y + km 마크)는 내비 그룹 카고로 잔류.
+- **폴드 B — 답글 알림 카피 (오너 발견 8/3)**: 8/1 답글 계약이 부모 댓글 작성자에게도 `run_commented` 발송 → "내 러닝에 댓글" 이 거짓.
+  - **프로브 판정 (8/4, 라이브 양 행 덤프): FE 구분 불가** — 오너-케이스와 답글-케이스 행이 type·target_id·target_type·payload `{run_id}` **완전 동일**, actor/id/시각만 상이 (BE 소스와 일치: recipient_id만 다름). "수신자≠런 주인" 추론은 리스트 행마다 `GET /runs/{id}` 필요 → 비현실적. **그녀 애디티브 필요.**
+  - **애스크 (선호안)**: `payload.is_reply: true` (부모-작성자 발송 건만). 별도 타입 반대 이유 = 구버전 클라 **탭 사망** (딥링크 unknown → inert) + 제네릭 카피 폴백. `parent_comment_id`도 수용. **푸시 카피도 서버 조립** (`push_service.py`) — 인앱만 고치면 문구 갈림, 동반 요청.
+  - **FE 빌드 (다크, 셰이프-어그노스틱)**: `isReplyNotif` = is_reply · parent_comment_id · 별도 타입 `reply_to_comment` **3셰이프 전부 수용** (타입은 typeMeta/SOCIAL_TYPES/deepLink 포워드-와이어) · 카피 '내 댓글에 답글을 남겼어요' / "replied to your comment" · **태그가 카피를 따름** (댓글→답글). 7 페이로드 셰이프 데스크 실행: 오늘 행·레거시 null·is_reply=false → **무변경**. 그녀 필드 전까지 스테이징에서 관측 불가 = **게이트 항목 아님**.
+- **④ 답글 노티 라우팅+하이드레이션 라이브 확인**: test2가 답글 노티 탭 → **test1의 런**으로 라우팅 (수신자 런 아님) → isOwner false → 저자 '테스트1' 하이드레이션. 인가 픽스가 이 케이스를 정확히 커버 (이것이 지연 스크린샷의 그 탭).
+- **해시-타이 MATCH** (QnZBYw1p… 커밋-타이드 export 동일) · 바이트: getUserIdentity 1 · isReplyNotif 1 · 답글 카피 1 · ElevationChart 1 · courseTangentAt 0 · snapToCourse 0 (**내비 무동승**) · 스트링 파리티 977/977 (+2 양측) · tsc 0 · eslint 0.
+- **게이트 (4레그)**: ① 지연이 **스크린샷을 만든 그 알림 재탭** (저자 = 짱아장아장 + 실 pfp · ⋯ = 신고만) ② **내 런 알림 1건** (⋯ = 수정/삭제 · 공유 존재) ③ **내 프로필 카드 → 포스트 무변경** ④ **run-post 고도 차트 무 (own·타인 양쪽) · 활동 상세는 존치**. 답글 카피 = 게이트 제외 (그녀 필드 대기). 프로모션 = 스탬프 + 원-컨펌. 롤백 프리암드: 현 프로덕션 = a1dfef2d.
+
+## ~~🚑 P1 HOTFIX 인가/아이덴티티 (알림 도어) STAGED — **326e82d5**~~ SUPERSEDED by af19f97c (진단·픽스 내역 아래 존치) (브랜치 hotfix/authz-run-post · 커밋 7f0179c · 기반 fa193bd = a1dfef2d 프로덕션 플로어) — 지연 리프로: 알림으로 짱아장아장 런 진입 시 뷰어 pfp + "러너" + 수정/삭제/공유/분석 노출
 - **루트 (라이브 컨빅션)**: `isOwn = params.own === '1'` = 도어의 **주장**, 파생 아님 · notif-routing이 `own:'1'` 하드코드 ("이 타입은 내 런만 타겟" — **우리의 8/1 답글 계약이 무효화**: BE create_run_comment가 **부모 댓글 작성자**에게도 동일 run_commented·target=run 발송 = 남의 런). 스테이징 리프로 성공 (test1 런 → test2 댓글 → test1 답글 → test2 인박스에 test1 런 타겟 run_commented). run_kudoed=owner_id·pb_achieved=self (교차 소유 없음).
 - **아이덴티티 붕괴 동근**: 알림 도어는 nickname/avatar 무시드 + `GET /runs/{id}`는 **아이덴티티 무서빙** → `isOwn ? ownPhotoUrl` 폴백이 **뷰어를 저자로** 렌더.
 - **스테일 코멘트 정정 (프로브 무기한 만료 없음)**: "sanitized others' detail omits user_id" = 거짓 — 크로스-어카운트 재프로브 8/4: **user_id 서빙됨** (nickname/avatar는 아님).
