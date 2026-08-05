@@ -337,7 +337,10 @@ export default function CrewCreateScreen() {
   };
 
   return (
-    <KeyboardAvoidingView style={[st.root, { paddingTop: insets.top }]} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    // +14: appBar's paddingVertical 12 puts content at insets.top+26 —
+    // the fix1 top-cutoff pattern (run-save/edit-run parity; KAV-루트
+    // 4형제 sweep, ruled 8/5)
+    <KeyboardAvoidingView style={[st.root, { paddingTop: insets.top + 14 }]} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <View style={st.appBar}>
         <Pressable onPress={() => router.back()} hitSlop={12} style={st.backBtn}>
           <Icon name="arrow-back" size={20} color={C.text} />

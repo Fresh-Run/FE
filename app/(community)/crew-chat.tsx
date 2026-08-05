@@ -509,7 +509,9 @@ export default function CrewChatScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={[st.root, { paddingTop: insets.top }]}
+      // +18: appBar's paddingVertical 8 puts content at insets.top+26 —
+      // the fix1 top-cutoff pattern (KAV-루트 4형제 sweep, ruled 8/5)
+      style={[st.root, { paddingTop: insets.top + 18 }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       {/* ── App bar: back · crew name · mute bell · member count ── */}

@@ -95,16 +95,25 @@ function StepperRow({ label, value, onChange }: {
     const next = Math.min(DIST_MAX, Math.max(DIST_MIN, Math.round(shown + dir)));
     if (next !== value) onChange(next);
   };
+  // 8/5 dim conviction: the old { opacity: 0.4 } predicate FIRED correctly
+  // but was sub-perceptual — the button's surface fill sits ON the surface
+  // group card (fill contrast 1.07:1 against its own background even fully
+  // lit, measured), so a whole-layer fade barely moves anything. The bound
+  // state now rides the ICON COLOR (text → faint — compositing-independent)
+  // + a real `disabled` (kills hitSlop taps) + the container fade kept as a
+  // secondary cue. Symmetric at both ends (floor and cap).
+  const atMin = shown <= DIST_MIN;
+  const atMax = shown >= DIST_MAX;
   return (
     <View style={st.row}>
       <Text style={[st.rowLabel, { flex: 1 }]}>{label}</Text>
       <View style={st.stepperCtrls}>
-        <Pressable onPress={() => bump(-1)} hitSlop={6} style={[st.stepBtn, shown <= DIST_MIN && { opacity: 0.4 }]}>
-          <Icon name="remove" size={16} color={C.text} />
+        <Pressable onPress={() => bump(-1)} disabled={atMin} hitSlop={6} style={[st.stepBtn, atMin && st.stepBtnOff]}>
+          <Icon name="remove" size={16} color={atMin ? C.faint : C.text} />
         </Pressable>
         <Text style={st.stepValue}>{Number.isInteger(shown) ? shown : shown.toFixed(1)} km</Text>
-        <Pressable onPress={() => bump(1)} hitSlop={6} style={[st.stepBtn, shown >= DIST_MAX && { opacity: 0.4 }]}>
-          <Icon name="add" size={16} color={C.text} />
+        <Pressable onPress={() => bump(1)} disabled={atMax} hitSlop={6} style={[st.stepBtn, atMax && st.stepBtnOff]}>
+          <Icon name="add" size={16} color={atMax ? C.faint : C.text} />
         </Pressable>
       </View>
     </View>
@@ -274,5 +283,6 @@ const makeSt = (C: Tokens) => StyleSheet.create({
 
   stepperCtrls: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   stepBtn:      { width: 34, height: 34, borderRadius: R.md, borderWidth: 1, borderColor: C.border, backgroundColor: C.surface, alignItems: 'center', justifyContent: 'center' },
+  stepBtnOff:   { opacity: 0.55, backgroundColor: C.surfaceAlt }, // secondary cue — the icon color carries the state
   stepValue:    { fontSize: 15.5, fontWeight: '700', color: C.text, minWidth: 56, textAlign: 'center', letterSpacing: -0.3, fontVariant: ['tabular-nums'] },
 });
