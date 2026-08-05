@@ -17,7 +17,7 @@
  * canvas affordance).
  */
 import { router } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -33,6 +33,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/avatar';
+import { ApiError } from '@/lib/api';
 import { MediaCarousel } from '@/components/media-carousel';
 import { MentionText } from '@/components/mention-text';
 import { Icon } from '@/components/ui';
@@ -46,7 +47,7 @@ import {
   type RouteComment,
 } from '@/lib/routes-api';
 import { fmtAgo, fmtWhen } from '@/lib/run-format';
-import { useLang } from '@/lib/i18n';
+import { t, tf, useLang, useT } from '@/lib/i18n';
 import { radius as R, shadows, spacing as S, type Tokens, DENSE_MAX_FONT_SCALE} from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { setPendingCourse } from '@/store/pending-course';
@@ -74,6 +75,7 @@ function StatTile({ label, value }: { label: string; value: string }) {
 
 export default function CoursePostScreen() {
   const C = useTokens();
+  const T = useT(); // reply UI rides rp.* keys (the rest of the screen = slice-7 territory)
   const lang = useLang(); // compiler-visible locale for the date formatter (2026-08-03 formatter-cache fix)
   const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
@@ -90,6 +92,40 @@ export default function CoursePostScreen() {
   const [draft, setDraft]       = useState('');
   const [posting, setPosting]   = useState(false);
   const myUid = useStore(s => s.session?.user.id);
+  // ── Replies (8/5, her route contract deployed — run-post's Instagram
+  // grammar ported per the ledgered port map; rp.* keys reused): expanded
+  // parents + the composer's reply target. getRouteComments is UNPAGINATED
+  // (full flat list) so the grouping is always complete — no orphan case.
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [replyTo, setReplyTo]   = useState<{ parentId: string; nickname: string } | null>(null);
+
+  const grouped = useMemo(() => {
+    const list = comments ?? [];
+    const parents: RouteComment[] = [];
+    const children = new Map<string, RouteComment[]>();
+    const parentIds = new Set(list.filter(c => !c.parent_comment_id).map(c => c.id));
+    for (const c of list) {
+      if (!c.parent_comment_id) parents.push(c);
+      else if (parentIds.has(c.parent_comment_id)) {
+        const arr = children.get(c.parent_comment_id) ?? [];
+        arr.push(c);
+        children.set(c.parent_comment_id, arr);
+      }
+    }
+    for (const arr of children.values()) arr.sort((a, b) => a.created_at.localeCompare(b.created_at));
+    return { parents, children };
+  }, [comments]);
+
+  /** 답글 on EVERY row (run-post ruling ③): a reply's 답글 targets its
+      PARENT thread with the "@{nickname} " prefill (that case only). */
+  function startReply(cm: RouteComment) {
+    const parentId = cm.parent_comment_id ?? cm.id;
+    setReplyTo({ parentId, nickname: cm.nickname ?? '' });
+    if (cm.parent_comment_id) {
+      const prefix = `@${cm.nickname ?? ''} `;
+      setDraft(d => d.startsWith(prefix) ? d : prefix + d);
+    }
+  }
 
   // Own-comment delete (S-batch #2): long-press an own row → destructive
   // confirm → DELETE → local filter (counts derive from comments.length)
@@ -100,7 +136,9 @@ export default function CoursePostScreen() {
         text: '삭제', style: 'destructive',
         onPress: () => {
           deleteRouteComment(route!.id, cm.id)
-            .then(() => setComments(prev => (prev ?? []).filter(c => c.id !== cm.id)))
+            // CASCADE mirror (contract probed 8/5: DB-level, count follows) —
+            // unpaginated list ⇒ the local filter removes ALL children, exact
+            .then(() => setComments(prev => (prev ?? []).filter(c => c.id !== cm.id && c.parent_comment_id !== cm.id)))
             .catch(() => Alert.alert('삭제 실패', '잠시 후 다시 시도해 주세요'));
         },
       },
@@ -152,11 +190,22 @@ export default function CoursePostScreen() {
     if (!content || posting) return;
     setPosting(true);
     try {
-      const created = await postRouteComment(route!.id, content);
+      const created = await postRouteComment(route!.id, content, replyTo?.parentId ?? null);
       setComments(prev => [...(prev ?? []), created]);
+      if (replyTo) setExpanded(prev => new Set(prev).add(replyTo.parentId)); // the new reply is visible
+      setReplyTo(null);
       setDraft('');
-    } catch {
-      Alert.alert('댓글 실패', '댓글을 게시하지 못했어요. 잠시 후 다시 시도해 주세요.');
+    } catch (e: unknown) {
+      if (e instanceof ApiError && e.code === 'comment_parent_invalid') {
+        // her CASCADE raced our reply — the thread is gone; drop reply mode
+        setReplyTo(null);
+        Alert.alert(t('rp.commentFailT'), t('rp.replyParentGone'));
+      } else if (e instanceof ApiError && e.code === 'reply_depth_exceeded') {
+        setReplyTo(null);
+        Alert.alert(t('rp.commentFailT'), t('rp.replyDepth'));
+      } else {
+        Alert.alert(t('rp.commentFailT'), t('rp.commentFailB'));
+      }
     } finally {
       setPosting(false);
     }
@@ -225,38 +274,80 @@ export default function CoursePostScreen() {
             <Text style={st.commentsEmpty}>{loadError ? '댓글을 불러오지 못했어요' : '첫 댓글을 남겨보세요.'}</Text>
           ) : (
             <View style={{ gap: 14, paddingBottom: 8 }}>
-              {comments.map(cm => (
-                <Pressable
-                  key={cm.id}
-                  style={st.commentRow}
-                  // Own rows only: long-press → destructive confirm
-                  onLongPress={cm.user_id === myUid ? () => confirmDeleteComment(cm) : undefined}
-                  delayLongPress={400}
-                >
-                  <Pressable onPress={() => openProfile(cm.user_id, cm.nickname)} hitSlop={6}>
-                    <Avatar name={cm.nickname} size={30} photoUrl={cm.avatar_url} />
-                  </Pressable>
-                  <View style={{ flex: 1, minWidth: 0 }}>
-                    {/* 8/5 timestamp parity with run-post (payload had it —
-                        baseline-after-nickname, time outside the tap target) */}
-                    <View style={st.commentHead}>
-                      <Pressable onPress={() => openProfile(cm.user_id, cm.nickname)} hitSlop={4}>
-                        <Text style={st.commentAuthor}>{cm.nickname ?? '러너'}</Text>
+              {/* Instagram-pattern threading — run-post grammar ported (8/5):
+                  parents in served order · replies COLLAPSED under a
+                  per-parent expander · 답글 on every row. */}
+              {grouped.parents.map(cm => {
+                const kids = grouped.children.get(cm.id) ?? [];
+                const open = expanded.has(cm.id);
+                const row = (c: RouteComment, child: boolean) => (
+                  <Pressable
+                    key={c.id}
+                    style={[st.commentRow, child && st.commentRowChild]}
+                    // Own rows only: long-press → destructive confirm
+                    onLongPress={c.user_id === myUid ? () => confirmDeleteComment(c) : undefined}
+                    delayLongPress={400}
+                  >
+                    <Pressable onPress={() => openProfile(c.user_id, c.nickname)} hitSlop={6}>
+                      <Avatar name={c.nickname} size={child ? 24 : 30} photoUrl={c.avatar_url} />
+                    </Pressable>
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <View style={st.commentHead}>
+                        <Pressable onPress={() => openProfile(c.user_id, c.nickname)} hitSlop={4}>
+                          <Text style={st.commentAuthor}>{c.nickname ?? T('home.runner')}</Text>
+                        </Pressable>
+                        <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.commentWhen}>{fmtAgo(c.created_at, lang)}</Text>
+                      </View>
+                      {/* 8/5: @멘션 탭-투-프로필 (run-post 트윈) */}
+                      <MentionText content={c.content} style={st.commentBody} mentionColor={C.accentGrn} />
+                      <Pressable onPress={() => startReply(c)} hitSlop={{ top: 6, bottom: 8, left: 8, right: 8 }} style={{ alignSelf: 'flex-start' }}>
+                        <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.replyBtnTxt}>{T('rp.replyBtn')}</Text>
                       </Pressable>
-                      <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.commentWhen}>{fmtAgo(cm.created_at, lang)}</Text>
                     </View>
-                    {/* 8/5: @멘션 탭-투-프로필 (run-post 트윈) */}
-                    <MentionText content={cm.content} style={st.commentBody} mentionColor={C.accentGrn} />
+                  </Pressable>
+                );
+                return (
+                  <View key={cm.id} style={{ gap: 10 }}>
+                    {row(cm, false)}
+                    {kids.length > 0 && (
+                      <Pressable
+                        onPress={() => setExpanded(prev => {
+                          const next = new Set(prev);
+                          if (next.has(cm.id)) next.delete(cm.id); else next.add(cm.id);
+                          return next;
+                        })}
+                        hitSlop={8}
+                        style={st.replyExpander}
+                      >
+                        <View style={st.replyExpanderRule} />
+                        <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.replyExpanderTxt}>
+                          {open ? T('rp.hideReplies') : tf('rp.viewReplies', { n: kids.length })}
+                        </Text>
+                      </Pressable>
+                    )}
+                    {open && kids.map(k => row(k, true))}
                   </View>
-                </Pressable>
-              ))}
+                );
+              })}
             </View>
           )}
         </View>
       </ScrollView>
 
-      {/* Composer — sticky bottom */}
-      <View style={[st.composer, { paddingBottom: Math.max(insets.bottom, S.sm) + 6 }]}>
+      {/* Composer — sticky bottom; reply-mode chip above (run-post ruling ④:
+          × cancels back to normal mode, the typed draft survives) */}
+      <View style={st.composerWrap}>
+        {replyTo && (
+          <View style={st.replyChip}>
+            <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.replyChipTxt} numberOfLines={1}>
+              {tf('rp.replyingTo', { name: replyTo.nickname || T('home.runner') })}
+            </Text>
+            <Pressable onPress={() => setReplyTo(null)} hitSlop={8}>
+              <Icon name="close" size={13} color={C.faint} />
+            </Pressable>
+          </View>
+        )}
+        <View style={[st.composer, { borderTopWidth: 0, paddingBottom: Math.max(insets.bottom, S.sm) + 6 }]}>
         <TextInput
           value={draft}
           onChangeText={setDraft}
@@ -275,6 +366,7 @@ export default function CoursePostScreen() {
             ? <ActivityIndicator size="small" color={C.accentText} />
             : <Text style={[st.sendTxt, !draft.trim() && { color: C.faint }]}>게시</Text>}
         </Pressable>
+        </View>
       </View>
     </KeyboardAvoidingView>
   );
@@ -315,6 +407,15 @@ const makeSt = (C: Tokens) => StyleSheet.create({
   commentAuthor: { fontSize: 12.5, fontWeight: '700', color: C.text, letterSpacing: -0.2 },
   commentHead:   { flexDirection: 'row', alignItems: 'baseline', gap: 6 },
   commentWhen:   { fontSize: 11, color: C.faint, letterSpacing: -0.1 },
+  // reply family — run-post makeSt verbatim (8/5 port)
+  commentRowChild:   { marginLeft: 39 }, // avatar 30 + gap 9 — one-level indent
+  replyBtnTxt:       { fontSize: 11.5, fontWeight: '700', color: C.faint, letterSpacing: -0.1, marginTop: 3 },
+  replyExpander:     { flexDirection: 'row', alignItems: 'center', gap: 8, marginLeft: 39 },
+  replyExpanderRule: { width: 24, height: 1, backgroundColor: C.border },
+  replyExpanderTxt:  { fontSize: 12, fontWeight: '700', color: C.sub, letterSpacing: -0.2 },
+  composerWrap:      { borderTopWidth: 1, borderTopColor: C.border, backgroundColor: C.surface },
+  replyChip:         { flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-start', marginTop: 8, marginHorizontal: S.gutter, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999, backgroundColor: C.surfaceAlt, borderWidth: 1, borderColor: C.border, maxWidth: '80%' },
+  replyChipTxt:      { flexShrink: 1, fontSize: 12, fontWeight: '600', color: C.sub, letterSpacing: -0.2 },
   commentBody:   { fontSize: 13.5, color: C.sub, letterSpacing: -0.2, lineHeight: 19, marginTop: 2 },
 
   composer:        { flexDirection: 'row', alignItems: 'flex-end', gap: 9, paddingHorizontal: S.gutter, paddingTop: 10, borderTopWidth: 1, borderTopColor: C.border, backgroundColor: C.surface },

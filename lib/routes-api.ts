@@ -32,6 +32,9 @@ export type RouteComment = {
   avatar_url: string | null; // BE 5009cbe (avatar wire-up)
   content: string;
   created_at: string;
+  /** 1-level replies (her route contract, deployed + probed 2026-08-05 —
+      the run-comment 8/1 grammar verbatim): null/absent = top-level. */
+  parent_comment_id?: string | null;
 };
 
 // getFeed retired 2026-07-17 (feed-triage slice): the 친구 tab now serves
@@ -140,10 +143,10 @@ export function copyRoute(id: string): Promise<CopiedRoute> {
 export function getRouteComments(routeId: string): Promise<RouteComment[]> {
   return apiFetch<RouteComment[]>(`/api/routes/${routeId}/comments`);
 }
-export function postRouteComment(routeId: string, content: string): Promise<RouteComment> {
+export function postRouteComment(routeId: string, content: string, parentCommentId: string | null = null): Promise<RouteComment> {
   return apiFetch<RouteComment>(`/api/routes/${routeId}/comments`, {
     method: 'POST',
-    body: { content },
+    body: { content, ...(parentCommentId ? { parent_comment_id: parentCommentId } : {}) },
   });
 }
 /** Own comments only (server-enforced; others' → 404). */

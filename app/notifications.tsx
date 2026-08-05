@@ -121,7 +121,11 @@ function isReplyNotif(n: AppNotification): boolean {
 
 /** Dynamic per-row copy for types whose text depends on payload; else null. */
 function dynamicCopy(n: AppNotification): string | null {
-  if (n.type === 'run_commented' && isReplyNotif(n)) return tx('ntf.runReplied');
+  // 8/5: her ROUTE reply contract deployed — same additive shape (probed:
+  // reply rows carry {route_id, is_reply, parent_comment_id}; PLAIN route
+  // comments have NO payload at all — absent-payload falls through
+  // isReplyNotif's optional chain to false, handled by construction).
+  if ((n.type === 'run_commented' || n.type === 'route_commented') && isReplyNotif(n)) return tx('ntf.runReplied');
   if (n.type === 'crew_invited') {
     const name = n.payload?.crew_name;
     // tf fills only {crew}; the {name} slot survives for the row's actor split
