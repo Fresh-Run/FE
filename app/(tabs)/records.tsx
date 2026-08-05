@@ -20,7 +20,7 @@ import { SafeImage } from '@/components/safe-image';
 import { MonthPicker } from '@/components/month-picker';
 import { Icon } from '@/components/ui';
 import { useRuns, type Run } from '@/hooks/use-runs';
-import { t, tf, useLang, useT, type StringKey } from '@/lib/i18n';
+import { t, tfIn, useLang, useT, type StringKey } from '@/lib/i18n';
 import { distUnit, fmtDate, fmtDist, fmtDuration, fmtPaceIn, fmtWhen, timeTitle } from '@/lib/run-format';
 import { radius as R, shadows, spacing as S, type Tokens, DENSE_MAX_FONT_SCALE} from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
@@ -56,6 +56,7 @@ function MonthStats() {
   const C = useTokens();
   const st = useStyles(makeSt);
   const T = useT(); // tab root world — long-lived mount
+  const mLang = useLang(); // compiler-visible locale for render-path tfIn (8/5 sweep)
   const units = useSettings(s => s.settings.units);
   // Server month stats (stats-api swap): client aggregation over fetched
   // runs went quietly wrong once cursor pagination landed (only page one
@@ -136,7 +137,7 @@ function MonthStats() {
           <Icon name="chevron-back" size={18} color={C.text} />
         </Pressable>
         <Pressable onPress={() => setPickerOpen(true)} hitSlop={8} style={st.monthLabelBtn}>
-          <Text style={st.monthLabel}>{tf('date.ym', { y: ym.year, m: ym.month, mon: T(('date.m' + ym.month) as StringKey) })}</Text>
+          <Text style={st.monthLabel}>{tfIn(mLang, 'date.ym', { y: ym.year, m: ym.month, mon: T(('date.m' + ym.month) as StringKey) })}</Text>
           <Icon name="chevron-down" size={15} color={C.sub} />
         </Pressable>
         <Pressable
@@ -170,7 +171,7 @@ function MonthStats() {
           {delta !== null && (
             <View style={[st.deltaBadge, { backgroundColor: delta >= 0 ? C.accentDim : C.danger + '16' }]}>
               <Text style={[st.deltaTxt, { color: delta >= 0 ? C.accentGrn : C.danger }]}>
-                {tf('rec.lastMonth', { v: `${delta >= 0 ? '+' : ''}${delta}` })}
+                {tfIn(mLang, 'rec.lastMonth', { v: `${delta >= 0 ? '+' : ''}${delta}` })}
               </Text>
             </View>
           )}

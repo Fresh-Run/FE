@@ -9,7 +9,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { KudosSheet } from '@/components/kudos-sheet';
 import { SuggestedRunnersRow, useSuggestedRunners } from '@/components/suggested-runners';
-import { t, tf, tfIn, tIn, useLang, useT } from '@/lib/i18n';
+import { tfIn, tIn, useLang, useT } from '@/lib/i18n';
 import { useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useNavigation } from 'expo-router';
@@ -289,6 +289,8 @@ function derivePace(runs: { distance_km: number; avg_pace_sec_per_km: number | n
 // premium-locked variant died with the one-quota ruling).
 function AIBanner({ onStart, onUpsell }: { onStart: (km: number) => void; onUpsell: () => void }) {
   const abt = useStyles(makeAbt);
+  const T = useT(); // 8/5 stale-locale sweep: render-path t/tf froze on flip
+  const bLang = useLang();
   const aiPrefs = useSettings(s => s.settings.ai_course);
   const quota = useQuota(s => s.aiGeneration);
   // pace rows — one-shot; failure = the 6.5 fallback, never blank
@@ -324,8 +326,8 @@ function AIBanner({ onStart, onUpsell }: { onStart: (km: number) => void; onUpse
   // reset weekday from server truth; the quota copy's own promise ("월요일에
   // 초기화") is the fallback when reset_at is absent
   const resetDay = quota.reset_at
-    ? t(DAY_KEYS[new Date(quota.reset_at).getDay()])
-    : t('day.mon');
+    ? T(DAY_KEYS[new Date(quota.reset_at).getDay()])
+    : T('day.mon');
   return (
     <Pressable onPress={exhausted ? onUpsell : () => onStart(km)} style={abt.banner}>
       <LinearGradient
@@ -339,18 +341,18 @@ function AIBanner({ onStart, onUpsell }: { onStart: (km: number) => void; onUpse
       <View style={{ position: 'relative' }}>
         <View style={abt.badge}>
           <Icon name={exhausted ? 'lock-closed-outline' : 'sparkles'} size={13} color="#fff" />
-          <RNText style={abt.badgeTxt}>{t('home.aiBadge')}</RNText>
+          <RNText style={abt.badgeTxt}>{T('home.aiBadge')}</RNText>
         </View>
         <RNText style={abt.title}>
           {exhausted
-            ? t('home.aiQuotaOut')
-            : tf('home.aiPromo', { km: fmtBannerKm(km), terrain: t(TERRAIN_BANNER_KEY[aiPrefs.terrain]) })}
+            ? T('home.aiQuotaOut')
+            : tfIn(bLang, 'home.aiPromo', { km: fmtBannerKm(km), terrain: T(TERRAIN_BANNER_KEY[aiPrefs.terrain]) })}
         </RNText>
         <View style={abt.sub}>
           <RNText style={abt.subTxt}>
             {exhausted
-              ? tf('home.aiResetSub', { day: resetDay })
-              : tf('home.aiEstMin', { min: estMin }) + (!quota.unlimited ? tf('home.aiRemaining', { n: quota.remaining ?? 0 }) : '')}
+              ? tfIn(bLang, 'home.aiResetSub', { day: resetDay })
+              : tfIn(bLang, 'home.aiEstMin', { min: estMin }) + (!quota.unlimited ? tfIn(bLang, 'home.aiRemaining', { n: quota.remaining ?? 0 }) : '')}
           </RNText>
           <View style={{ transform: [{ rotate: '-45deg' }] }}>
             <Icon name="arrow-forward-outline" size={15} color="#fff" />
@@ -516,7 +518,7 @@ export default function HomeScreen() {
     },
   ).current;
 
-  const name = displayName ?? t('home.runner');
+  const name = displayName ?? T('home.runner');
   const list: FeedRun[] = tab === '전체' ? nearby.items : feed.items;
 
   // ── 추천 러너 (friends v1.1) — 친구 tab only, conditional placement.

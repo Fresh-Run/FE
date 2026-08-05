@@ -41,7 +41,7 @@ import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { getCrewFilter, type CrewLocationFilter } from '@/store/crew-filter';
 import { useJoinRequests } from '@/store/join-requests';
 import { useQuota } from '@/store/use-quota';
-import { t, tf, type StringKey } from '@/lib/i18n';
+import { t, tfIn, useLang, useT, type StringKey } from '@/lib/i18n';
 
 const DAY_LABEL_KEY: Record<string, StringKey> = { '월': 'dayS.mon', '화': 'dayS.tue', '수': 'dayS.wed', '목': 'dayS.thu', '금': 'dayS.fri', '토': 'dayS.sat', '일': 'dayS.sun' };
 
@@ -57,13 +57,14 @@ function isFull(crew: Crew): boolean {
 function CommTabs({ active, onChange }: { active: string; onChange: (v: string) => void }) {
   const C = useTokens();
   const st = useStyles(makeSt);
+  const T = useT(); // 8/5 stale-locale fix: bare t() froze this tab's strings
   return (
     <View style={st.tabRow}>
-      {([{ id: 'crew', label: t('com.tabCrew') }, { id: 'discover', label: t('com.tabDiscover') }]).map(t => {
-        const on = active === t.id;
+      {([{ id: 'crew', label: T('com.tabCrew') }, { id: 'discover', label: T('com.tabDiscover') }]).map(tab => {
+        const on = active === tab.id;
         return (
-          <Pressable key={t.id} onPress={() => onChange(t.id)} style={st.tabBtn}>
-            <Text style={[st.tabTxt, { color: on ? C.text : C.faint }]}>{t.label}</Text>
+          <Pressable key={tab.id} onPress={() => onChange(tab.id)} style={st.tabBtn}>
+            <Text style={[st.tabTxt, { color: on ? C.text : C.faint }]}>{tab.label}</Text>
             {on && <View style={st.tabUnderline} />}
           </Pressable>
         );
@@ -81,8 +82,10 @@ function LocationCard({ filter, placeName, onPress }: {
 }) {
   const C = useTokens();
   const st = useStyles(makeSt);
+  const T = useT();
+  const lang = useLang(); // compiler-visible locale for render-path tfIn
   const label = filter.mode === 'current'
-    ? tf('com.currentLoc', { name: placeName ?? t('com.locating') })
+    ? tfIn(lang, 'com.currentLoc', { name: placeName ?? T('com.locating') })
     : `${regionName(filter.sido)}${filter.sigungu ? ` · ${regionName(filter.sigungu)}` : ''}`;
   return (
     <Pressable onPress={onPress} style={({ pressed }) => [st.locCard, shadows.sm, pressed && { opacity: 0.8 }]}>
@@ -90,7 +93,7 @@ function LocationCard({ filter, placeName, onPress }: {
         <Icon name={filter.mode === 'current' ? 'locate' : 'location'} size={16} color={C.accentGrn} />
       </View>
       <View style={{ flex: 1, minWidth: 0 }}>
-        <Text style={st.locLabel}>{t('com.searchLoc')}</Text>
+        <Text style={st.locLabel}>{T('com.searchLoc')}</Text>
         <Text style={st.locValue} numberOfLines={1}>{label}</Text>
       </View>
       <Icon name="chevron-forward" size={16} color={C.faint} />
@@ -111,15 +114,16 @@ function LoadingState() {
 }
 
 function ErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
+  const T = useT();
   const C = useTokens();
   const st = useStyles(makeSt);
   return (
     <View style={st.centered}>
       <Icon name="warning-outline" size={36} color={C.faint} />
-      <Text style={st.stateTitle}>{t('com.loadFail')}</Text>
+      <Text style={st.stateTitle}>{T('com.loadFail')}</Text>
       <Text style={[st.stateSub, { marginTop: 2 }]}>{message}</Text>
       <Pressable onPress={onRetry} style={st.retryBtn}>
-        <Text style={st.retryTxt}>{t('common.retry')}</Text>
+        <Text style={st.retryTxt}>{T('common.retry')}</Text>
       </Pressable>
     </View>
   );
@@ -152,10 +156,12 @@ function BrowseCrewCard({
   const full = isFull(crew);
   const tags = crew.active_days?.slice(0, 4) ?? [];
   // Badge state priority: member > pending (shared store) > full > policy label
-  const badgeLabel = isMember ? t('com.joined')
-    : pending ? t('com.pending')
-    : full ? t('com.closed')
-    : crew.join_policy === 'approval' ? t('com.apply') : t('com.join');
+  const T = useT();
+  const lang = useLang();
+  const badgeLabel = isMember ? T('com.joined')
+    : pending ? T('com.pending')
+    : full ? T('com.closed')
+    : crew.join_policy === 'approval' ? T('com.apply') : T('com.join');
   const badgeDisabled = isMember || pending || full;
 
   return (
@@ -170,7 +176,7 @@ function BrowseCrewCard({
         <View style={st.cardMeta}>
           <Icon name="people-outline" size={12} color={C.faint} />
           <Text style={st.cardMetaTxt} numberOfLines={1}>
-            {tf('com.nOfMax', { n: `${crew.member_count}${crew.max_members !== null ? `/${crew.max_members}` : ''}` })} · {crew.area ?? ''}
+            {tfIn(lang, 'com.nOfMax', { n: `${crew.member_count}${crew.max_members !== null ? `/${crew.max_members}` : ''}` })} · {crew.area ?? ''}
           </Text>
         </View>
         {/* 당근식 location line — distance only in lat/lng mode; location-
@@ -187,7 +193,7 @@ function BrowseCrewCard({
         {(tags.length > 0 || crew.level !== '무관') && (
           <View style={st.tagsRow}>
             {crew.level !== '무관' && <View style={st.tag}><Text style={st.tagTxt}>{levelLabel(crew.level)}</Text></View>}
-            {tags.map(d => <View key={d} style={st.tag}><Text style={st.tagTxt}>{t(DAY_LABEL_KEY[d] ?? 'dayS.mon')}</Text></View>)}
+            {tags.map(d => <View key={d} style={st.tag}><Text style={st.tagTxt}>{T(DAY_LABEL_KEY[d] ?? 'dayS.mon')}</Text></View>)}
           </View>
         )}
       </View>
@@ -217,6 +223,8 @@ function BrowseCrewCard({
 function MyCrewCard({ crew, onPress }: { crew: Crew; onPress: () => void }) {
   const C = useTokens();
   const st = useStyles(makeSt);
+  const T = useT();
+  const lang = useLang();
   return (
     <Pressable onPress={onPress} style={[st.card, shadows.sm]}>
       <View style={st.thumbWrap}>
@@ -231,13 +239,13 @@ function MyCrewCard({ crew, onPress }: { crew: Crew; onPress: () => void }) {
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
           <Text style={st.cardName} numberOfLines={1}>{crew.name}</Text>
           {crew.myRole === 'owner' && (
-            <View style={st.ownerBadge}><Text style={st.ownerTxt}>{t('crw.roleOwner')}</Text></View>
+            <View style={st.ownerBadge}><Text style={st.ownerTxt}>{T('crw.roleOwner')}</Text></View>
           )}
         </View>
         <View style={st.cardMeta}>
           <Icon name="people-outline" size={12} color={C.faint} />
           <Text style={st.cardMetaTxt} numberOfLines={1}>
-            {tf('crw.nMembers', { n: crew.member_count })} · {crew.area ?? ''}
+            {tfIn(lang, 'crw.nMembers', { n: crew.member_count })} · {crew.area ?? ''}
           </Text>
         </View>
         {(crew.level !== '무관' || crew.sport) && (
@@ -258,6 +266,8 @@ function MyCrewCard({ crew, onPress }: { crew: Crew; onPress: () => void }) {
 function DiscoverTab({ listRef }: { listRef: React.RefObject<FlatList<Crew> | null> }) {
   const C = useTokens();
   const st = useStyles(makeSt);
+  const T = useT();
+  const lang = useLang();
   const tabBarInset = useTabBarInset();
   const [showFull, setShowFull] = useState(false);
   // Location filter — set by the region picker (module store), read on focus
@@ -374,7 +384,7 @@ function DiscoverTab({ listRef }: { listRef: React.RefObject<FlatList<Crew> | nu
             <TextInput
               value={query}
               onChangeText={setQuery}
-              placeholder={t('com.searchPh')}
+              placeholder={T('com.searchPh')}
               placeholderTextColor={C.faint}
               autoCorrect={false}
               returnKeyType="search"
@@ -389,7 +399,7 @@ function DiscoverTab({ listRef }: { listRef: React.RefObject<FlatList<Crew> | nu
           {searching ? (
             <View style={st.toggleRow}>
               <Text style={st.toggleCount}>
-                {searchResults === null ? t('com.searching') : tf('com.nResults', { n: visible.length })}
+                {searchResults === null ? T('com.searching') : tfIn(lang, 'com.nResults', { n: visible.length })}
               </Text>
             </View>
           ) : (
@@ -400,10 +410,10 @@ function DiscoverTab({ listRef }: { listRef: React.RefObject<FlatList<Crew> | nu
                 onPress={() => router.push('/region-picker' as never)}
               />
               <View style={st.toggleRow}>
-                <Text style={st.toggleCount}>{tf('com.nCrews', { n: visible.length })}</Text>
+                <Text style={st.toggleCount}>{tfIn(lang, 'com.nCrews', { n: visible.length })}</Text>
                 <Pressable onPress={() => setShowFull(v => !v)} style={st.toggleBtn}>
                   <Text style={[st.toggleLabel, { color: showFull ? C.accentGrn : C.sub }]}>
-                    {showFull ? t('com.onlyOpen') : t('com.showFull')}
+                    {showFull ? T('com.onlyOpen') : T('com.showFull')}
                   </Text>
                   <View style={[st.switch, { backgroundColor: showFull ? C.accent : C.border }]}>
                     <View style={[st.switchThumb, { left: showFull ? 18 : 2 }]} />
@@ -417,7 +427,7 @@ function DiscoverTab({ listRef }: { listRef: React.RefObject<FlatList<Crew> | nu
       ListEmptyComponent={
         searching && searchResults === null
           ? <ActivityIndicator size="small" color={C.faint} style={{ paddingTop: 40 }} />
-          : <EmptyState text={searching ? t('region.noResults') : t('com.noMatch')} />
+          : <EmptyState text={searching ? T('region.noResults') : T('com.noMatch')} />
       }
       contentContainerStyle={{ paddingHorizontal: S.gutter, paddingBottom: tabBarInset }}
       ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
@@ -439,6 +449,8 @@ function InviteCodeSheet({
 }) {
   const C = useTokens();
   const ics = useStyles(makeIcs);
+  const T = useT();
+  const lang = useLang();
   const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
   const [code, setCode]       = useState('');
@@ -486,15 +498,15 @@ function InviteCodeSheet({
       <Pressable style={ics.overlay} onPress={close}>
         <Pressable style={[ics.sheet, { paddingBottom: Math.max(insets.bottom, 12) + 12 }]} onPress={() => {}}>
           <View style={ics.handleRow}><View style={ics.handle} /></View>
-          <Text style={ics.title}>{t('com.codeTitle')}</Text>
-          <Text style={ics.sub}>{t('com.codeSub8')}</Text>
+          <Text style={ics.title}>{T('com.codeTitle')}</Text>
+          <Text style={ics.sub}>{T('com.codeSub8')}</Text>
 
           {!preview ? (
             <>
               <TextInput
                 value={code}
                 onChangeText={t => { setCode(t.toUpperCase()); setError(null); }}
-                placeholder={t('com.codePh')}
+                placeholder={T('com.codePh')}
                 placeholderTextColor={C.faint}
                 autoCapitalize="characters"
                 autoCorrect={false}
@@ -509,7 +521,7 @@ function InviteCodeSheet({
               >
                 {busy
                   ? <ActivityIndicator size="small" color={C.accentText} />
-                  : <Text style={ics.primaryTxt}>{t('com.confirm')}</Text>}
+                  : <Text style={ics.primaryTxt}>{T('com.confirm')}</Text>}
               </Pressable>
             </>
           ) : (
@@ -525,7 +537,7 @@ function InviteCodeSheet({
                   <View style={st.cardMeta}>
                     <Icon name="people-outline" size={12} color={C.faint} />
                     <Text style={st.cardMetaTxt} numberOfLines={1}>
-                      {tf('crw.nMembers', { n: preview.member_count })} · {preview.area ?? ''}{preview.is_public ? '' : t('com.privateSuffix')}
+                      {tfIn(lang, 'crw.nMembers', { n: preview.member_count })} · {preview.area ?? ''}{preview.is_public ? '' : T('com.privateSuffix')}
                     </Text>
                   </View>
                 </View>
@@ -534,10 +546,10 @@ function InviteCodeSheet({
               <Pressable onPress={handleJoin} disabled={busy} style={[ics.primaryBtn, { opacity: busy ? 0.6 : 1 }]}>
                 {busy
                   ? <ActivityIndicator size="small" color={C.accentText} />
-                  : <Text style={ics.primaryTxt}>{t('com.joinThis')}</Text>}
+                  : <Text style={ics.primaryTxt}>{T('com.joinThis')}</Text>}
               </Pressable>
               <Pressable onPress={() => { setPreview(null); setError(null); }} style={ics.secondaryBtn}>
-                <Text style={ics.secondaryTxt}>{t('com.otherCode')}</Text>
+                <Text style={ics.secondaryTxt}>{T('com.otherCode')}</Text>
               </Pressable>
             </>
           )}
@@ -570,6 +582,7 @@ const makeIcs = (C: Tokens) => StyleSheet.create({
 function MyCrewsTab({ scrollRef }: { scrollRef: React.RefObject<ScrollView | null> }) {
   const C = useTokens();
   const st = useStyles(makeSt);
+  const T = useT();
   const tabBarInset = useTabBarInset();
   const { crews, loading, error, signedOut, refetch } = useMyCrews();
   const [codeSheetOpen, setCodeSheetOpen] = useState(false);
@@ -587,7 +600,7 @@ function MyCrewsTab({ scrollRef }: { scrollRef: React.RefObject<ScrollView | nul
   }, [refetch]));
 
   if (loading)   return <LoadingState />;
-  if (signedOut) return <EmptyState text={t('com.loginNeeded')} />;
+  if (signedOut) return <EmptyState text={T('com.loginNeeded')} />;
   if (error)     return <ErrorState message={error} onRetry={refetch} />;
 
   // Split by ownership (myRole is derived from crews.owner_id — the backend's
@@ -603,7 +616,7 @@ function MyCrewsTab({ scrollRef }: { scrollRef: React.RefObject<ScrollView | nul
       {/* Owned crews — dashed create-placeholder is the empty state */}
       <View style={{ paddingHorizontal: S.gutter, paddingTop: S.xl }}>
         <View style={st.sectionHead}>
-          <Text style={st.sectionTitle}>{t('com.myCrews')}</Text>
+          <Text style={st.sectionTitle}>{T('com.myCrews')}</Text>
           {(() => {
             // Lock only when free tier already owns a crew (guide: 무료 1개 한도)
             const createLocked = !isPremium && owned.length >= 1;
@@ -618,7 +631,7 @@ function MyCrewsTab({ scrollRef }: { scrollRef: React.RefObject<ScrollView | nul
                 style={({ pressed }) => [st.createBtn, { opacity: pressed ? 0.7 : createLocked ? 0.45 : 1 }]}
               >
                 <Icon name={createLocked ? 'lock-closed-outline' : 'add'} size={13} color={C.accentGrn} />
-                <Text style={st.createTxt}>{t('crw.title')}</Text>
+                <Text style={st.createTxt}>{T('crw.title')}</Text>
               </Pressable>
             );
           })()}
@@ -635,8 +648,8 @@ function MyCrewsTab({ scrollRef }: { scrollRef: React.RefObject<ScrollView | nul
               <Icon name="people-outline" size={20} color={C.accentGrn} />
             </View>
             <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={st.emptyDashedTitle}>{t('com.makeCrew')}</Text>
-              <Text style={st.emptyDashedSub}>{t('com.makeCrewSub')}</Text>
+              <Text style={st.emptyDashedTitle}>{T('com.makeCrew')}</Text>
+              <Text style={st.emptyDashedSub}>{T('com.makeCrewSub')}</Text>
             </View>
             <Icon name="chevron-forward" size={16} color={C.faint} />
           </Pressable>
@@ -659,8 +672,8 @@ function MyCrewsTab({ scrollRef }: { scrollRef: React.RefObject<ScrollView | nul
             <Icon name="ticket-outline" size={18} color={C.accentGrn} />
           </View>
           <View style={{ flex: 1, minWidth: 0 }}>
-            <Text style={st.codeTitle}>{t('com.codeTitle')}</Text>
-            <Text style={st.codeSub}>{t('com.codeSub')}</Text>
+            <Text style={st.codeTitle}>{T('com.codeTitle')}</Text>
+            <Text style={st.codeSub}>{T('com.codeSub')}</Text>
           </View>
           <Icon name="chevron-forward" size={16} color={C.faint} />
         </Pressable>
@@ -677,9 +690,9 @@ function MyCrewsTab({ scrollRef }: { scrollRef: React.RefObject<ScrollView | nul
 
       {/* Joined crews */}
       <View style={{ paddingHorizontal: S.gutter, paddingTop: S.xl }}>
-        <Text style={[st.sectionTitle, { marginBottom: 13 }]}>{t('com.joinedCrews')}</Text>
+        <Text style={[st.sectionTitle, { marginBottom: 13 }]}>{T('com.joinedCrews')}</Text>
         {joined.length === 0 ? (
-          <EmptyState text={t('com.noJoined')} />
+          <EmptyState text={T('com.noJoined')} />
         ) : (
           <View style={{ gap: 13 }}>
             {joined.map(c => (
@@ -696,6 +709,7 @@ function MyCrewsTab({ scrollRef }: { scrollRef: React.RefObject<ScrollView | nul
 
 export default function CommunityScreen() {
   const C = useTokens();
+  const T = useT();
   const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
   const [tab, setTab] = useState<'crew' | 'discover'>('crew');
@@ -724,8 +738,8 @@ export default function CommunityScreen() {
     <View style={[st.root, { paddingTop: insets.top }]}>
       <View style={st.header}>
         <View style={{ flex: 1, minWidth: 0 }}>
-          <Text style={st.title}>{t('com.title')}</Text>
-          <Text style={st.subtitle}>{t('com.subtitle')}</Text>
+          <Text style={st.title}>{T('com.title')}</Text>
+          <Text style={st.subtitle}>{T('com.subtitle')}</Text>
         </View>
         {/* 검색 (canvas FrUserSearch entry) — 유저/크루 통합 검색 */}
         <Pressable onPress={() => router.push('/(community)/user-search' as never)} hitSlop={10} style={st.searchIconBtn}>
