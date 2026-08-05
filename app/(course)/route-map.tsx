@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { RealMap } from '@/components/real-map';
 import { Icon } from '@/components/ui';
+import { useT } from '@/lib/i18n';
 import { getRunTrack } from '@/lib/run-social-api';
 import { shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
@@ -21,6 +22,7 @@ import { takeRouteMap } from '@/store/route-map';
 
 export default function RouteMapScreen() {
   const C = useTokens();
+  const T = useT();
   const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
   const { height: winH } = useWindowDimensions();
@@ -90,7 +92,7 @@ export default function RouteMapScreen() {
       ) : (
         <View style={st.empty}>
           <Icon name="map-outline" size={36} color={C.faint} />
-          <Text style={st.emptyTxt}>경로를 불러올 수 없어요</Text>
+          <Text style={st.emptyTxt}>{T('rm.loadFail')}</Text>
         </View>
       )}
 
@@ -111,7 +113,7 @@ export default function RouteMapScreen() {
           onPress={() => setLayer(l => l === 'labeled' ? 'clean' : l === 'clean' ? 'satellite' : 'labeled')}
           hitSlop={12}
           style={st.roundBtn}
-          accessibilityLabel={layer === 'clean' ? '지도: 기본' : layer === 'labeled' ? '지도: 라벨' : '지도: 위성'}
+          accessibilityLabel={layer === 'clean' ? T('rm.layerClean') : layer === 'labeled' ? T('rm.layerLabeled') : T('rm.layerSat')}
         >
           <Icon name={layer === 'clean' ? 'layers-outline' : layer === 'labeled' ? 'layers' : 'globe-outline'} size={19} color={C.text} />
         </Pressable>

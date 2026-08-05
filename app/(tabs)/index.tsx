@@ -120,6 +120,7 @@ const makeGst = (C: Tokens) => StyleSheet.create({
 function WeatherStrip({ onPress }: { onPress: () => void }) {
   const C = useTokens();
   const wst = useStyles(makeWst);
+  const wT = useT();
   // W2: live data (shared useWeather cache/TTL; quiet dashes; Seoul fallback).
   // SINGLE ROW, FIXED-SIZE (⑥ final, owner ruling 2026-07-16): every text
   // in THIS strip is allowFontScaling={false} — a deliberate one-component
@@ -141,7 +142,7 @@ function WeatherStrip({ onPress }: { onPress: () => void }) {
       <Icon name={icon.name as any} size={26} color={icon.color} />
       <View style={wst.tempGroup}>
         <RNText style={wst.temp} allowFontScaling={false}>{w ? `${Math.round(w.temp_c)}°` : '--°'}</RNText>
-        <RNText style={wst.area} numberOfLines={1} ellipsizeMode="tail" allowFontScaling={false}>{placeName ?? '위치 확인 중'}</RNText>
+        <RNText style={wst.area} numberOfLines={1} ellipsizeMode="tail" allowFontScaling={false}>{placeName ?? wT('wx.locating')}</RNText>
       </View>
       <View style={wst.divider} />
       <View style={wst.metrics}>
@@ -210,19 +211,22 @@ function FeedTabs({ tab, setTab }: { tab: string; setTab: (v: string) => void })
   // overseas runs, the SeYoon-NY example): scope-neutral label (hardcoded
   // ko, slice-7 file — census note). Content stays 20km-bounded until her
   // deploy (expected, ledgered).
-  const radiusLabel = '모든 러너';
+  const T = useT();
+  const radiusLabel = T('home.allRunners');
   return (
     <View style={ftt.row}>
       <View style={ftt.seg}>
-        {['친구', '전체'].map((id) => (
+        {/* ids = SENTINEL VALUES (~12 comparison sites key on them — the
+            region-'전체' pattern); display resolves through keys */}
+        {([['친구', 'home.tabFriends'], ['전체', 'home.tabAll']] as const).map(([id, labelKey]) => (
           <Pressable key={id} onPress={() => setTab(id)} style={[ftt.btn, tab === id && ftt.btnActive, tab === id && shadows.sm]}>
-            <RNText style={[ftt.btnTxt, { color: tab === id ? C.text : C.faint }]}>{id}</RNText>
+            <RNText style={[ftt.btnTxt, { color: tab === id ? C.text : C.faint }]}>{T(labelKey)}</RNText>
           </Pressable>
         ))}
       </View>
       <View style={ftt.loc}>
         <Icon name="location-outline" size={13} color={C.faint} />
-        <RNText style={ftt.locTxt}>{tab === '전체' ? radiusLabel : '팔로잉'}</RNText>
+        <RNText style={ftt.locTxt}>{tab === '전체' ? radiusLabel : T('home.followingLabel')}</RNText>
       </View>
     </View>
   );
@@ -396,12 +400,13 @@ function ListState({ icon, title, sub, btn, onBtn }: { icon: string; title: stri
 function ErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
   const C = useTokens();
   const lst = useStyles(makeLst);
+  const T = useT();
   return (
     <View style={lst.wrap}>
       <Icon name="warning-outline" size={36} color={C.faint} />
       <RNText style={lst.title}>{message}</RNText>
       <Pressable onPress={onRetry} style={lst.retryBtn}>
-        <RNText style={lst.retryTxt}>다시 시도</RNText>
+        <RNText style={lst.retryTxt}>{T('common.retry')}</RNText>
       </Pressable>
     </View>
   );
@@ -640,15 +645,15 @@ export default function HomeScreen() {
                 ? <ListState icon="globe-outline" title={T('home.nearbyKoreaOnly')} sub={T('home.nearbyKoreaOnlySub')} />
                 : <ErrorState message={error} onRetry={tab === '전체' ? () => setNearbyKey(k => k + 1) : feed.refresh} />
               : tab === '친구'
-                ? <ListState icon="people-outline" title="팔로우한 러너들의 러닝이 여기에 보여요" sub="전체 탭에서 주변 러닝을 둘러보세요" />
+                ? <ListState icon="people-outline" title={T('home.friendsEmpty')} sub={T('home.friendsEmptySub')} />
                 : locStatus === 'denied'
                   // the honest permission state — DISTINCT from genuine-empty
-                  ? <ListState icon="location-outline" title="위치 권한이 필요해요" sub="주변 러너들의 러닝을 보려면 위치 접근을 허용해 주세요." btn="설정 열기" onBtn={() => Linking.openSettings()} />
+                  ? <ListState icon="location-outline" title={T('trk.locPermTitle')} sub={T('home.locPermSub')} btn={T('common.openSettings')} onBtn={() => Linking.openSettings()} />
                   : !nearby.fetched
                     ? <View style={lst.wrap}><ActivityIndicator size="large" color={C.accent} /></View>
                     // 8/4 nationwide: one honest empty state (the 10→20
                     // wider-retry pair died with the radius machine)
-                    : <ListState icon="walk-outline" title="아직 공개된 러닝이 없어요" sub="당겨서 새로고침할 수 있어요" />
+                    : <ListState icon="walk-outline" title={T('home.nearbyEmpty')} sub={T('home.nearbyEmptySub')} />
         }
         ListFooterComponent={
           <View>

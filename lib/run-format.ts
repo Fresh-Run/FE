@@ -109,7 +109,7 @@ export type CourseStatsInput = {
 /** Assumed pace when a course card carries no pace/duration (e.g. 인기 코스). */
 const EST_PACE_SEC_PER_KM = 320;
 
-export function courseStats(item: CourseStatsInput) {
+export function courseStats(item: CourseStatsInput, lang: Lang = getLang()) {
   const dist = Number(item.dist) || 0;
   const pace = item.pace ?? fmtPace(EST_PACE_SEC_PER_KM);
   const dur  = item.dur  ?? fmtDuration(Math.round(dist * EST_PACE_SEC_PER_KM));
@@ -117,7 +117,7 @@ export function courseStats(item: CourseStatsInput) {
     dist,
     pace,
     dur,
-    area:  item.area ?? '서울',
+    area:  item.area ?? tIn(lang, 'fmt.seoulFallback'), // slice 7: the seam-noted 서울 fallback
     tags:  item.tags ?? [],
     title: item.title,
     seed:  item.seed,

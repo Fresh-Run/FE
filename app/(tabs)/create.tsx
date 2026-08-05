@@ -12,6 +12,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useTabBarInset } from '@/components/fresh-tab-bar';
+import { t, tf, tfIn, useLang, useT } from '@/lib/i18n';
 import { MiniMap } from '@/components/mini-map';
 import { RealMap } from '@/components/real-map';
 import { setRouteMap } from '@/store/route-map';
@@ -44,6 +45,8 @@ function getWeekBounds(): [Date, Date] {
 }
 
 export default function CreateTabScreen() {
+  const T = useT(); // tab = long-lived mount
+  const lang = useLang();
   const C = useTokens();
   const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
@@ -63,10 +66,7 @@ export default function CreateTabScreen() {
   function handleAiPress() {
     if (!aiLocked) { router.push('/(course)/create'); return; }
     // TODO(PR-2): push the premium upsell screen once it exists
-    Alert.alert(
-      '이번 주 무료 생성을 모두 사용했어요',
-      `무료 플랜은 주 ${quota.limit ?? 3}회까지 AI 코스를 만들 수 있어요. 월요일에 초기화됩니다.`,
-    );
+    Alert.alert(t('ct.quotaOutT'), tf('ct.quotaOutB', { n: quota.limit ?? 3 }));
   }
 
   // 저장된 코스 entry card — live count + recent titles (canvas: FrRunChoice
@@ -81,10 +81,10 @@ export default function CreateTabScreen() {
       .catch(() => setSavedError(true));
   }, []));
   const savedSub = savedError && !saved
-    ? '불러오지 못했어요 · 다시 열면 재시도돼요'
+    ? T('ct.savedLoadFail')
     : !saved || saved.length === 0
-      ? '피드에서 마음에 드는 코스를 북마크해보세요'
-      : saved.slice(0, 2).map(r => r.summary).join(', ') || `${saved.length}개 코스`;
+      ? T('ct.savedEmpty')
+      : saved.slice(0, 2).map(r => r.summary).join(', ') || tfIn(lang, 'ct.nCourses', { n: saved.length });
 
   const weeklyKm = useMemo(() => {
     if (signedOut) return 0;
@@ -102,8 +102,8 @@ export default function CreateTabScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* ── Title ─────────────────────────────────────────────────── */}
-        <Text style={st.title}>오늘 어떻게 달릴까요?</Text>
-        <Text style={st.subtitle}>당신의 컨디션에 맞는 완벽한 코스를 선택하세요.</Text>
+        <Text style={st.title}>{T('ct.title')}</Text>
+        <Text style={st.subtitle}>{T('ct.subtitle')}</Text>
 
         {/* ── Card 1: AI course (PREMIUM badge for premium users; locked
                only when a free user's weekly quota is exhausted) ────── */}
@@ -121,13 +121,13 @@ export default function CreateTabScreen() {
           <View style={st.iconSq}>
             <Icon name="sparkles" size={26} color={C.accentText} />
           </View>
-          <Text style={st.cardTitle}>AI 맞춤 코스로 시작</Text>
+          <Text style={st.cardTitle}>{T('ct.aiCard')}</Text>
           <Text style={st.cardDesc}>
-            현재 위치, 날씨, 개인 체력을 분석하여 가장 쾌적한 최적의 코스를 제안합니다.
+            {T('ct.aiCardSub')}
           </Text>
           <View style={st.cardCta}>
             {aiLocked && <Icon name="lock-closed" size={13} color={C.accentGrn} />}
-            <Text style={st.cardCtaTxt}>{aiLocked ? '프리미엄으로 잠금 해제' : '추천 코스 보기'}</Text>
+            <Text style={st.cardCtaTxt}>{aiLocked ? T('ct.unlockPremium') : T('ct.seeCourses')}</Text>
             <Icon name="chevron-forward" size={14} color={C.accentGrn} />
           </View>
         </Pressable>
@@ -140,12 +140,12 @@ export default function CreateTabScreen() {
           <View style={st.iconSq}>
             <Icon name="walk" size={26} color={C.accentText} />
           </View>
-          <Text style={st.cardTitle}>지금 바로 자유 러닝</Text>
+          <Text style={st.cardTitle}>{T('ct.freeCard')}</Text>
           <Text style={st.cardDesc}>
-            익숙한 나만의 경로를 따라 자유롭게 달리세요. 거리와 시간을 실시간으로 기록합니다.
+            {T('ct.freeCardSub')}
           </Text>
           <View style={st.cardCta}>
-            <Text style={st.cardCtaTxt}>트래킹 시작하기</Text>
+            <Text style={st.cardCtaTxt}>{T('ct.startTracking')}</Text>
             <Icon name="chevron-forward" size={14} color={C.accentGrn} />
           </View>
         </Pressable>
@@ -153,13 +153,13 @@ export default function CreateTabScreen() {
         {/* ── Stats row: two separate cards ────────────────────────── */}
         <View style={st.statsRow}>
           <View style={[st.statCard, shadows.sm]}>
-            <Text style={st.statLabel}>주간 누적 거리</Text>
+            <Text style={st.statLabel}>{T('ct.weeklyDist')}</Text>
             <Text style={st.statVal}>
               {fmtDist(weeklyKm, units, 1)}<Text style={st.statUnit}> {distUnit(units)}</Text>
             </Text>
           </View>
           <View style={[st.statCard, shadows.sm]}>
-            <Text style={st.statLabel}>현재 온도</Text>
+            <Text style={st.statLabel}>{T('ct.currentTemp')}</Text>
             <View style={st.tempRow}>
               {/* icon from the SAME source/mapping the 홈 banner uses (one
                   source of truth — the hardcoded sun was a decoration bug,
@@ -186,7 +186,7 @@ export default function CreateTabScreen() {
             // same as run-card maps. (Was meet-map user-mode: labels
             // suppressed, no cycle — rerouted; meet-map keeps the crew pin.)
             <Pressable onPress={() => {
-              setRouteMap({ title: placeName ?? '현재 위치', center: coordinate, showsUser: true });
+              setRouteMap({ title: placeName ?? t('ct.currentLoc'), center: coordinate, showsUser: true });
               router.push('/(course)/route-map' as never);
             }}>
               <RealMap key={`${coordinate.lat},${coordinate.lng}`} height={164} borderRadius={R.xl} center={coordinate} showsUser cache={false} />
@@ -197,9 +197,9 @@ export default function CreateTabScreen() {
           <View style={st.locationPill}>
             <Icon name="location" size={13} color={C.accentGrn} />
             <Text style={st.locationTxt} numberOfLines={1}>
-              {locStatus === 'granted' ? `현재 위치: ${placeName}`
-                : locStatus === 'denied' ? '위치 권한 필요'
-                : '위치 확인 중…'}
+              {locStatus === 'granted' ? tfIn(lang, 'ct.currentLocIs', { name: placeName ?? '' })
+                : locStatus === 'denied' ? T('trk.locPermTitle')
+                : T('wx.locating')}
             </Text>
           </View>
         </View>
@@ -213,12 +213,12 @@ export default function CreateTabScreen() {
             <Icon name={saved && saved.length > 0 ? 'bookmark' : 'bookmark-outline'} size={20} color={C.accentGrn} />
           </View>
           <View style={st.savedBody}>
-            <Text style={st.savedTitle}>저장된 코스들</Text>
+            <Text style={st.savedTitle}>{T('sc.title')}</Text>
             <Text style={st.savedSub} numberOfLines={1}>{savedSub}</Text>
           </View>
           {saved !== null && saved.length > 0 && (
             <View style={st.savedCountPill}>
-              <Text style={st.savedCountTxt}>{saved.length}개</Text>
+              <Text style={st.savedCountTxt}>{tfIn(lang, 'sc.nCount', { n: saved.length })}</Text>
             </View>
           )}
           <Icon name="chevron-forward" size={18} color={C.faint} />

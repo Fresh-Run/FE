@@ -25,6 +25,7 @@ import { MiniMap } from '@/components/mini-map';
 import { RealMap } from '@/components/real-map';
 import { Icon } from '@/components/ui';
 import { errorMessage } from '@/lib/error-copy';
+import { t, tfIn, useLang, useT } from '@/lib/i18n';
 import { copyRoute } from '@/lib/routes-api';
 import { courseStats, distUnit, fmtDist, fmtDuration, fmtPace, fmtPaceIn, paceUnit, type CourseStatsInput } from '@/lib/run-format';
 import { useSettings } from '@/store/use-settings';
@@ -43,6 +44,8 @@ function parseItem(raw: string | string[] | undefined): CourseStatsInput {
 }
 
 export default function CoursePreviewScreen() {
+  const T = useT();
+  const lang = useLang();
   const C = useTokens();
   const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
@@ -69,10 +72,10 @@ export default function CoursePreviewScreen() {
         title: pending.summary,
         seed:  pending.id,
         name:  pending.owner_nickname ?? undefined,
-      });
+      }, lang);
     }
-    return courseStats(parseItem(params.item));
-  }, [pending, params.item]);
+    return courseStats(parseItem(params.item), lang);
+  }, [pending, params.item, lang]);
 
   const [starting, setStarting] = useState(false);
 
@@ -84,7 +87,7 @@ export default function CoursePreviewScreen() {
     if (starting) return;
     // Legacy param-only path (no feed handoff) has no route id to copy/link.
     if (!pending) {
-      Alert.alert('준비 중', '이 코스는 아직 달리기를 지원하지 않아요.');
+      Alert.alert(t('pv.soonT'), t('pv.soonB'));
       return;
     }
     setStarting(true);
@@ -113,7 +116,7 @@ export default function CoursePreviewScreen() {
       // replace: back from tracking-idle should land on the feed, not here
       router.replace('/(course)/tracking' as any);
     } catch (e: unknown) {
-      Alert.alert('시작할 수 없어요', errorMessage(e));
+      Alert.alert(t('pv.startFailT'), errorMessage(e));
       setStarting(false);
     }
   };
@@ -146,20 +149,20 @@ export default function CoursePreviewScreen() {
             </Pressable>
             <View style={st.heroPill}>
               <Icon name="navigate-outline" size={14} color="#7CF03D" />
-              <Text style={st.heroPillTxt}>코스 미리보기</Text>
+              <Text style={st.heroPillTxt}>{T('pv.pill')}</Text>
             </View>
             <View style={{ width: 42 }} />
           </View>
           <View style={st.authorChip}>
             {/* initials-only: preview's payload carries no avatar_url */}
             <Avatar name={s.name} size={26} letterSpacing={-0.3} />
-            <Text style={st.authorTxt}>{s.name ? `${s.name}님의 코스` : '추천 코스'}</Text>
+            <Text style={st.authorTxt}>{s.name ? tfIn(lang, 'pv.byName', { name: s.name }) : T('pv.suggested')}</Text>
           </View>
         </View>
 
         {/* ── Body ─────────────────────────────────────────────────── */}
         <View style={st.body}>
-          <Text style={st.title}>{s.title ?? '추천 코스'}</Text>
+          <Text style={st.title}>{s.title ?? T('pv.suggested')}</Text>
           {s.tags.length > 0 && (
             <View style={st.tags}>
               {s.tags.map(t => (
@@ -170,16 +173,16 @@ export default function CoursePreviewScreen() {
 
           {/* Reference stats */}
           <View style={st.refHead}>
-            <Text style={st.refTitle}>코스 기준 기록</Text>
-            <Text style={st.refNote}>원작자 기준 · 내 기록 아님</Text>
+            <Text style={st.refTitle}>{T('pv.refTitle')}</Text>
+            <Text style={st.refNote}>{T('pv.refNote')}</Text>
           </View>
           <View style={st.statsRow}>
             {([
-              ['resize-outline',      fmtDist(s.dist, units, 1), distUnit(units), '거리'],
-              ['time-outline',        s.dur,                     '',              '예상 시간'],
+              ['resize-outline',      fmtDist(s.dist, units, 1), distUnit(units), T('cp.dist')],
+              ['time-outline',        s.dur,                     '',              T('cp.estTime')],
               paceSecPerKm != null
-                ? ['speedometer-outline', fmtPaceIn(paceSecPerKm, units), paceUnit(units), '페이스']
-                : ['speedometer-outline', s.pace,                         '/km',           '페이스'],
+                ? ['speedometer-outline', fmtPaceIn(paceSecPerKm, units), paceUnit(units), T('pv.pace')]
+                : ['speedometer-outline', s.pace,                         '/km',           T('pv.pace')],
             ] as [string, string, string, string][]).map(([icon, val, unit, label], i) => (
               <View key={i} style={[st.statTile, shadows.sm]}>
                 <Icon name={icon} size={17} color={C.sub} />
@@ -197,7 +200,7 @@ export default function CoursePreviewScreen() {
               <Icon name="location" size={18} color={C.accentGrn} />
             </View>
             <View style={{ minWidth: 0 }}>
-              <Text style={st.startLbl}>출발지</Text>
+              <Text style={st.startLbl}>{T('pv.start')}</Text>
               <Text style={st.startVal} numberOfLines={1}>{s.area}</Text>
             </View>
           </View>
@@ -207,7 +210,7 @@ export default function CoursePreviewScreen() {
 
       {/* ── Confirm footer ─────────────────────────────────────────── */}
       <View style={[st.footer, { paddingBottom: Math.max(insets.bottom + 10, 26) }]}>
-        <Text style={st.confirmTxt}>이 코스로 뛰시겠습니까?</Text>
+        <Text style={st.confirmTxt}>{T('pv.confirmAsk')}</Text>
         <View style={st.actionRow}>
           <Pressable
             onPress={confirmRun}
@@ -219,13 +222,13 @@ export default function CoursePreviewScreen() {
               : (
                 <>
                   <Icon name="play" size={19} color={C.accentText} />
-                  <Text style={st.runTxt}>네, 뛸게요</Text>
+                  <Text style={st.runTxt}>{T('pv.yes')}</Text>
                 </>
               )}
           </Pressable>
         </View>
         <Pressable onPress={() => router.back()} style={({ pressed }) => [st.cancelBtn, { opacity: pressed ? 0.7 : 1 }]}>
-          <Text style={st.cancelTxt}>취소</Text>
+          <Text style={st.cancelTxt}>{T('common.cancel')}</Text>
         </Pressable>
       </View>
     </View>

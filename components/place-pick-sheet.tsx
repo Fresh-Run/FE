@@ -19,6 +19,7 @@ import MapView, { type Region } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CurrentLocationButton } from '@/components/current-location-button';
+import { useT } from '@/lib/i18n';
 import { Icon } from '@/components/ui';
 import { SEOUL_FALLBACK } from '@/hooks/use-current-location';
 import { searchPlaces, type Place } from '@/lib/places-api';
@@ -41,6 +42,7 @@ export function PlacePickSheet({ visible, initial, onClose, onPick }: {
   onClose: () => void;
   onPick: (coords: { lat: number; lng: number }) => void;
 }) {
+  const T = useT();
   const C = useTokens();
   const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
@@ -123,7 +125,7 @@ export function PlacePickSheet({ visible, initial, onClose, onPick }: {
         {startRegion === null ? (
           <View style={st.resolving}>
             <ActivityIndicator size="large" color={C.accent} />
-            <Text style={st.resolvingTxt}>내 위치 찾는 중…</Text>
+            <Text style={st.resolvingTxt}>{T('pp.resolving')}</Text>
           </View>
         ) : (
         <MapView
@@ -153,7 +155,7 @@ export function PlacePickSheet({ visible, initial, onClose, onPick }: {
           <Pressable onPress={onClose} hitSlop={12} style={st.roundBtn}>
             <Icon name="close" size={20} color={C.text} />
           </Pressable>
-          <View style={st.titlePill}><Text style={st.titleTxt}>집결 장소 선택</Text></View>
+          <View style={st.titlePill}><Text style={st.titleTxt}>{T('pp.title')}</Text></View>
           {/* shared 현재 위치 affordance (moves the view; the center pin is
               the map center, so the pick follows the recenter here by design
               — the center-pin idiom's semantics, unlike tap-to-place) */}
@@ -172,7 +174,7 @@ export function PlacePickSheet({ visible, initial, onClose, onPick }: {
             <TextInput
               value={query}
               onChangeText={setQuery}
-              placeholder="주소·장소 검색"
+              placeholder={T('pp.searchPh')}
               placeholderTextColor={C.faint}
               style={st.searchInput}
             />
@@ -185,7 +187,7 @@ export function PlacePickSheet({ visible, initial, onClose, onPick }: {
           {results !== null && (
             <View style={[st.resultsCard, shadows.md]}>
               {results.length === 0 ? (
-                <Text style={st.resultsEmpty}>주소를 찾지 못했어요 — 지도를 움직여 선택해 주세요</Text>
+                <Text style={st.resultsEmpty}>{T('pp.noResults')}</Text>
               ) : (
                 <ScrollView keyboardShouldPersistTaps="handled" style={{ maxHeight: 264 }}>
                   {results.map((pl, i) => (
@@ -212,14 +214,14 @@ export function PlacePickSheet({ visible, initial, onClose, onPick }: {
         {/* confirm bar */}
         <View style={[st.bottomBar, { paddingBottom: Math.max(insets.bottom, 12) + 8 }]}>
           {!valid && (
-            <Text style={st.bboxWarn}>한국 내 위치만 선택할 수 있어요</Text>
+            <Text style={st.bboxWarn}>{T('pp.koreaOnly')}</Text>
           )}
           <Pressable
             onPress={valid ? () => onPick(center) : undefined}
             disabled={!valid}
             style={[st.pickBtn, !valid && st.pickBtnOff]}
           >
-            <Text style={[st.pickTxt, !valid && { color: C.faint }]}>이 위치로 선택</Text>
+            <Text style={[st.pickTxt, !valid && { color: C.faint }]}>{T('pp.pick')}</Text>
           </Pressable>
         </View>
       </View>

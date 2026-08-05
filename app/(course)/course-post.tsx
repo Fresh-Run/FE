@@ -47,7 +47,7 @@ import {
   type RouteComment,
 } from '@/lib/routes-api';
 import { fmtAgo, fmtWhen } from '@/lib/run-format';
-import { t, tf, useLang, useT } from '@/lib/i18n';
+import { t, tfIn, useLang, useT } from '@/lib/i18n';
 import { radius as R, shadows, spacing as S, type Tokens, DENSE_MAX_FONT_SCALE} from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { setPendingCourse } from '@/store/pending-course';
@@ -56,11 +56,11 @@ import { useStore } from '@/store/use-store';
 
 const HERO_H = 210;
 
-function fmtEstMin(min: number | null): string {
+function fmtEstMin(min: number | null, lang: 'ko' | 'en'): string {
   if (min == null) return '—';
-  if (min < 60) return `약 ${min}분`;
+  if (min < 60) return tfIn(lang, 'cp.estMin', { m: min });
   const h = Math.floor(min / 60), m = min % 60;
-  return m === 0 ? `약 ${h}시간` : `약 ${h}시간 ${m}분`;
+  return m === 0 ? tfIn(lang, 'cp.estH', { h }) : tfIn(lang, 'cp.estHM', { h, m });
 }
 
 function StatTile({ label, value }: { label: string; value: string }) {
@@ -130,16 +130,16 @@ export default function CoursePostScreen() {
   // Own-comment delete (S-batch #2): long-press an own row → destructive
   // confirm → DELETE → local filter (counts derive from comments.length)
   function confirmDeleteComment(cm: RouteComment) {
-    Alert.alert('댓글 삭제', '이 댓글을 삭제할까요?', [
-      { text: '취소', style: 'cancel' },
+    Alert.alert(t('rp.cmDelAsk'), t('rp.cmDelSub'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: '삭제', style: 'destructive',
+        text: t('common.delete'), style: 'destructive',
         onPress: () => {
           deleteRouteComment(route!.id, cm.id)
             // CASCADE mirror (contract probed 8/5: DB-level, count follows) —
             // unpaginated list ⇒ the local filter removes ALL children, exact
             .then(() => setComments(prev => (prev ?? []).filter(c => c.id !== cm.id && c.parent_comment_id !== cm.id)))
-            .catch(() => Alert.alert('삭제 실패', '잠시 후 다시 시도해 주세요'));
+            .catch(() => Alert.alert(t('annd.delFailT'), t('auth.tryLater')));
         },
       },
     ]);
@@ -162,10 +162,10 @@ export default function CoursePostScreen() {
           <Pressable onPress={() => router.back()} hitSlop={12} style={st.backBtn}>
             <Icon name="arrow-back" size={20} color={C.text} />
           </Pressable>
-          <Text style={st.appBarTitle}>코스</Text>
+          <Text style={st.appBarTitle}>{t('cp.title')}</Text>
           <View style={{ width: 36 }} />
         </View>
-        <Text style={st.emptyTxt}>코스를 찾을 수 없어요</Text>
+        <Text style={st.emptyTxt}>{t('ntfr.courseGoneT')}</Text>
       </View>
     );
   }
@@ -222,7 +222,7 @@ export default function CoursePostScreen() {
         <Pressable onPress={() => router.back()} hitSlop={12} style={st.backBtn}>
           <Icon name="arrow-back" size={20} color={C.text} />
         </Pressable>
-        <Text style={st.appBarTitle}>코스</Text>
+        <Text style={st.appBarTitle}>{t('cp.title')}</Text>
         <View style={{ width: 36 }} />
       </View>
 
@@ -234,7 +234,7 @@ export default function CoursePostScreen() {
         >
           <Avatar name={route.owner_nickname} size={42} photoUrl={route.owner_avatar_url} />
           <View style={{ flex: 1, minWidth: 0 }}>
-            <Text style={st.authorName} numberOfLines={1}>{route.owner_nickname ?? '러너'}</Text>
+            <Text style={st.authorName} numberOfLines={1}>{route.owner_nickname ?? T('home.runner')}</Text>
             <Text style={st.authorSub}>{fmtWhen(route.created_at, lang)}</Text>
           </View>
         </Pressable>
@@ -249,9 +249,9 @@ export default function CoursePostScreen() {
 
           {/* Stat tiles */}
           <View style={st.statsRow}>
-            <StatTile label="거리" value={`${route.total_distance_km.toFixed(1)} km`} />
-            <StatTile label="예상 시간" value={fmtEstMin(route.estimated_duration_min)} />
-            <StatTile label="달린 횟수" value={`${route.copy_count ?? 0}회`} />
+            <StatTile label={T('cp.dist')} value={`${route.total_distance_km.toFixed(1)} km`} />
+            <StatTile label={T('cp.estTime')} value={fmtEstMin(route.estimated_duration_min, lang)} />
+            <StatTile label={T('cp.runCount')} value={tfIn(lang, 'cp.nTimes', { n: route.copy_count ?? 0 })} />
           </View>
 
           {/* ♥ + 이 코스 달리기 */}
@@ -262,16 +262,16 @@ export default function CoursePostScreen() {
             </Pressable>
             <Pressable onPress={runThisCourse} style={({ pressed }) => [st.runBtn, pressed && { opacity: 0.85 }]}>
               <Icon name="navigate-outline" size={16} color={C.accentText} />
-              <Text style={st.runTxt}>이 코스 달리기</Text>
+              <Text style={st.runTxt}>{T('cp.runThis')}</Text>
             </Pressable>
           </View>
 
           {/* Comments */}
-          <Text style={st.commentsHead}>댓글 {commentCount}</Text>
+          <Text style={st.commentsHead}>{tfIn(lang, 'rp.commentsN', { n: commentCount })}</Text>
           {comments === null ? (
             <ActivityIndicator size="small" color={C.faint} style={{ paddingVertical: 16 }} />
           ) : comments.length === 0 ? (
-            <Text style={st.commentsEmpty}>{loadError ? '댓글을 불러오지 못했어요' : '첫 댓글을 남겨보세요.'}</Text>
+            <Text style={st.commentsEmpty}>{loadError ? T('rp.cmLoadFail') : T('rp.cmEmpty')}</Text>
           ) : (
             <View style={{ gap: 14, paddingBottom: 8 }}>
               {/* Instagram-pattern threading — run-post grammar ported (8/5):
@@ -321,7 +321,7 @@ export default function CoursePostScreen() {
                       >
                         <View style={st.replyExpanderRule} />
                         <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.replyExpanderTxt}>
-                          {open ? T('rp.hideReplies') : tf('rp.viewReplies', { n: kids.length })}
+                          {open ? T('rp.hideReplies') : tfIn(lang, 'rp.viewReplies', { n: kids.length })}
                         </Text>
                       </Pressable>
                     )}
@@ -340,7 +340,7 @@ export default function CoursePostScreen() {
         {replyTo && (
           <View style={st.replyChip}>
             <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.replyChipTxt} numberOfLines={1}>
-              {tf('rp.replyingTo', { name: replyTo.nickname || T('home.runner') })}
+              {tfIn(lang, 'rp.replyingTo', { name: replyTo.nickname || T('home.runner') })}
             </Text>
             <Pressable onPress={() => setReplyTo(null)} hitSlop={8}>
               <Icon name="close" size={13} color={C.faint} />
@@ -351,7 +351,7 @@ export default function CoursePostScreen() {
         <TextInput
           value={draft}
           onChangeText={setDraft}
-          placeholder="댓글 달기..."
+          placeholder={T('rp.cmPh')}
           placeholderTextColor={C.faint}
           style={st.composerInput}
           maxLength={500}
@@ -364,7 +364,7 @@ export default function CoursePostScreen() {
         >
           {posting
             ? <ActivityIndicator size="small" color={C.accentText} />
-            : <Text style={[st.sendTxt, !draft.trim() && { color: C.faint }]}>게시</Text>}
+            : <Text style={[st.sendTxt, !draft.trim() && { color: C.faint }]}>{T('rp.post')}</Text>}
         </Pressable>
         </View>
       </View>

@@ -53,6 +53,7 @@ import {
   type PublicRoute,
   type StoredRoute,
 } from '@/lib/routes-api';
+import { t, tfIn, useLang, useT, type StringKey } from '@/lib/i18n';
 import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { setPendingCourse } from '@/store/pending-course';
@@ -82,6 +83,8 @@ function Chip({ label, active, onPress }: { label: string; active: boolean; onPr
 // ─── Row (canvas: FrSavedCourseCard) ──────────────────────────────────────────
 
 function CourseRow({ route, onOpen, onUnsave }: { route: PublicRoute; onOpen: () => void; onUnsave: () => void }) {
+  const T = useT();
+  const lang = useLang();
   const C = useTokens();
   const st = useStyles(makeSt);
   const s = courseStats({
@@ -90,7 +93,7 @@ function CourseRow({ route, onOpen, onUnsave }: { route: PublicRoute; onOpen: ()
     title: route.summary,
     name:  route.owner_nickname ?? undefined,
   });
-  const owner = route.owner_nickname ?? '러너';
+  const owner = route.owner_nickname ?? T('home.runner');
   return (
     <Pressable onPress={onOpen} style={({ pressed }) => [st.row, shadows.sm, pressed && { opacity: 0.8 }]}>
       <View style={{ width: 82 }}>
@@ -116,7 +119,7 @@ function CourseRow({ route, onOpen, onUnsave }: { route: PublicRoute; onOpen: ()
           style={({ pressed }) => [st.ownerLine, pressed && { opacity: 0.7 }]}
         >
           <Avatar name={owner} size={18} photoUrl={route.owner_avatar_url} upper />
-          <Text style={st.ownerTxt} numberOfLines={1}>{owner} 코스</Text>
+          <Text style={st.ownerTxt} numberOfLines={1}>{tfIn(lang, 'sc.ownerCourse', { name: owner })}</Text>
         </Pressable>
       </View>
       {/* filled bookmark = unsave (canvas top-right) */}
@@ -133,6 +136,7 @@ function CourseRow({ route, onOpen, onUnsave }: { route: PublicRoute; onOpen: ()
 function MyCourseRow({ route, onOpen, onTogglePublic, onDelete }: {
   route: StoredRoute; onOpen: () => void; onTogglePublic: () => void; onDelete: () => void;
 }) {
+  const T = useT();
   const C = useTokens();
   const st = useStyles(makeSt);
   return (
@@ -153,7 +157,7 @@ function MyCourseRow({ route, onOpen, onTogglePublic, onDelete }: {
           {/* 편도 badge (is_one_way windfall rider — go-forward: pre-column
               rows were backfilled false) */}
           {route.is_one_way && (
-            <View style={st.oneWayBadge}><Text style={st.oneWayTxt}>편도</Text></View>
+            <View style={st.oneWayBadge}><Text style={st.oneWayTxt}>{T('sc.oneWay')}</Text></View>
           )}
         </View>
         <View style={st.statsLine}>
@@ -168,7 +172,7 @@ function MyCourseRow({ route, onOpen, onTogglePublic, onDelete }: {
         {/* 공개 state pill — tap toggles (confirm Alert owns the honesty copy) */}
         <Pressable onPress={onTogglePublic} hitSlop={8} style={({ pressed }) => [st.pubPill, route.is_public && st.pubPillOn, pressed && { opacity: 0.7 }]}>
           <Icon name={route.is_public ? 'globe-outline' : 'lock-closed-outline'} size={12} color={route.is_public ? C.accentGrn : C.faint} />
-          <Text style={[st.pubPillTxt, route.is_public && { color: C.accentGrn }]}>{route.is_public ? '공개' : '비공개'}</Text>
+          <Text style={[st.pubPillTxt, route.is_public && { color: C.accentGrn }]}>{route.is_public ? T('sc.pub') : T('sc.priv')}</Text>
         </Pressable>
       </View>
     </Pressable>
@@ -180,6 +184,8 @@ function MyCourseRow({ route, onOpen, onTogglePublic, onDelete }: {
 type Undo = { route: PublicRoute; index: number } | null;
 
 export default function SavedCoursesScreen() {
+  const T = useT();
+  const lang = useLang();
   const C = useTokens();
   const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
@@ -243,7 +249,7 @@ export default function SavedCoursesScreen() {
         next.splice(Math.min(index, next.length), 0, route);
         return next;
       });
-      Alert.alert('해제 실패', '저장 해제에 실패했어요. 잠시 후 다시 시도해 주세요.');
+      Alert.alert(t('sc.unsaveFailT'), t('sc.unsaveFailB'));
     });
     setUndo({ route, index });
     undoTimer.current = setTimeout(() => setUndo(null), 4000);
@@ -260,7 +266,7 @@ export default function SavedCoursesScreen() {
     });
     bookmarkRoute(route.id).catch(() => {
       setAll(prev => (prev ?? []).filter(r => r.id !== route.id));
-      Alert.alert('되돌리기 실패', '다시 저장하지 못했어요. 피드에서 다시 북마크해 주세요.');
+      Alert.alert(t('sc.undoFailT'), t('sc.undoFailB'));
     });
   }
 
@@ -298,18 +304,18 @@ export default function SavedCoursesScreen() {
   // Removal is request-then-remove (no optimistic row kill on a hard delete).
   function onDeleteMine(r: StoredRoute) {
     Alert.alert(
-      '이 코스를 삭제할까요?',
-      '북마크·좋아요·댓글이 함께 삭제돼요. 연결된 러닝 기록은 남아요. 되돌릴 수 없어요.',
+      t('sc.delAsk'),
+      t('sc.delBody'),
       [
-        { text: '취소', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: '삭제하기',
+          text: t('sc.delCta'),
           style: 'destructive',
           onPress: () => {
             deleteRoute(r.id)
               .then(() => setMine(prev => (prev ?? []).filter(x => x.id !== r.id)))
               .catch((e: unknown) =>
-                Alert.alert('삭제 실패', errorMessage(e)));
+                Alert.alert(t('annd.delFailT'), errorMessage(e)));
           },
         },
       ],
@@ -323,21 +329,19 @@ export default function SavedCoursesScreen() {
     const publishing = !r.is_public;
     const privateAcct = me?.visibility === 'private';
     Alert.alert(
-      publishing ? '코스를 공개할까요?' : '코스를 비공개로 되돌릴까요?',
+      publishing ? t('sc.pubAsk') : t('sc.privAsk'),
       publishing
-        ? (privateAcct
-            ? '계정이 비공개라서 공개한 코스는 팔로워에게만 보여요 (둘러보기·검색에는 나오지 않아요). 경로와 출발 지점이 함께 보여요. 언제든 비공개로 되돌릴 수 있어요.'
-            : '코스가 공개돼요. 경로와 출발 지점이 다른 러너들에게 보여요. 언제든 비공개로 되돌릴 수 있어요.')
-        : '공개를 해제하면 다른 러너들에게 더 이상 보이지 않아요.',
+        ? (privateAcct ? t('sc.pubBodyLocked') : t('sc.pubBody'))
+        : t('sc.privBody'),
       [
-        { text: '취소', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: publishing ? '공개하기' : '비공개로 전환',
+          text: publishing ? t('sc.pubCta') : t('sc.privCta'),
           onPress: () => {
             setRoutePublic(r.id, publishing)
               .then(updated => setMine(prev => (prev ?? []).map(x => (x.id === updated.id ? updated : x))))
               .catch((e: unknown) =>
-                Alert.alert(publishing ? '공개 실패' : '전환 실패', errorMessage(e)));
+                Alert.alert(publishing ? t('sc.pubFailT') : t('sc.privFailT'), errorMessage(e)));
           },
         },
       ],
@@ -375,7 +379,7 @@ export default function SavedCoursesScreen() {
         <Pressable onPress={() => router.back()} hitSlop={12} style={st.appBarBtn}>
           <Icon name="chevron-back" size={22} color={C.text} />
         </Pressable>
-        <Text style={st.appBarTitle}>저장된 코스들</Text>
+        <Text style={st.appBarTitle}>{T('sc.title')}</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -383,9 +387,9 @@ export default function SavedCoursesScreen() {
           design for 내 코스, per the ledgered divergence) */}
       <View style={st.tabRow}>
         <View style={st.tabSeg}>
-          {([['saved', '저장된 코스'], ['mine', '내 코스']] as const).map(([v, l]) => (
+          {([['saved', 'sc.tabSaved'], ['mine', 'sc.tabMine']] as [('saved' | 'mine'), StringKey][]).map(([v, l]) => (
             <Pressable key={v} onPress={() => setTab(v)} style={[st.tabBtn, tab === v && [st.sortBtnOn, shadows.sm]]}>
-              <Text style={[st.tabTxt, tab === v && { color: C.text }]}>{l}</Text>
+              <Text style={[st.tabTxt, tab === v && { color: C.text }]}>{T(l)}</Text>
             </Pressable>
           ))}
         </View>
@@ -395,19 +399,19 @@ export default function SavedCoursesScreen() {
         <View style={st.filterHead}>
           <View style={st.sortRow}>
             <View style={st.sortSeg}>
-              {([['recent', '최신순'], ['dist', '거리순']] as const).map(([v, l]) => (
+              {([['recent', 'sc.sortRecent'], ['dist', 'sc.sortDist']] as [('recent' | 'dist'), StringKey][]).map(([v, l]) => (
                 <Pressable key={v} onPress={() => setSort(v)} style={[st.sortBtn, sort === v && [st.sortBtnOn, shadows.sm]]}>
-                  <Text style={[st.sortTxt, sort === v && { color: C.text }]}>{l}</Text>
+                  <Text style={[st.sortTxt, sort === v && { color: C.text }]}>{T(l)}</Text>
                 </Pressable>
               ))}
             </View>
             {anyFilter ? (
               <Pressable onPress={clearFilters} hitSlop={8} style={st.clearBtn}>
                 <Icon name="close" size={14} color={C.danger} />
-                <Text style={st.clearTxt}>초기화</Text>
+                <Text style={st.clearTxt}>{T('sc.reset')}</Text>
               </Pressable>
             ) : (
-              <Text style={st.countTxt}>{activeCount}개</Text>
+              <Text style={st.countTxt}>{tfIn(lang, 'sc.nCount', { n: activeCount })}</Text>
             )}
           </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={st.chipsRow}>
@@ -428,20 +432,20 @@ export default function SavedCoursesScreen() {
         ) : error ? (
           <View style={st.centered}>
             <Icon name="warning-outline" size={36} color={C.faint} />
-            <Text style={st.stateTxt}>저장된 코스를 불러올 수 없어요</Text>
-            <Pressable onPress={load} style={st.retryBtn}><Text style={st.retryTxt}>다시 시도</Text></Pressable>
+            <Text style={st.stateTxt}>{T('sc.loadFail')}</Text>
+            <Pressable onPress={load} style={st.retryBtn}><Text style={st.retryTxt}>{T('common.retry')}</Text></Pressable>
           </View>
         ) : (all ?? []).length === 0 ? (
           <View style={st.emptyCard}>
             <View style={st.emptyIcon}><Icon name="bookmark-outline" size={24} color={C.faint} /></View>
-            <Text style={st.emptyTxt}>아직 저장된 코스가 없어요.{'\n'}피드에서 마음에 드는 코스를 북마크해보세요.</Text>
+            <Text style={st.emptyTxt}>{T('sc.emptySaved')}</Text>
           </View>
         ) : list.length === 0 ? (
           <View style={st.centered}>
             <View style={st.emptyIcon}><Icon name="locate-outline" size={24} color={C.faint} /></View>
-            <Text style={st.stateTxt}>조건에 맞는 코스가 없어요.</Text>
+            <Text style={st.stateTxt}>{T('sc.noMatch')}</Text>
             <Pressable onPress={clearFilters} style={st.filterResetBtn}>
-              <Text style={st.filterResetTxt}>필터 초기화</Text>
+              <Text style={st.filterResetTxt}>{T('sc.filterReset')}</Text>
             </Pressable>
           </View>
         ) : (
@@ -462,23 +466,23 @@ export default function SavedCoursesScreen() {
         ) : mineError ? (
           <View style={st.centered}>
             <Icon name="warning-outline" size={36} color={C.faint} />
-            <Text style={st.stateTxt}>내 코스를 불러올 수 없어요</Text>
-            <Pressable onPress={loadMine} style={st.retryBtn}><Text style={st.retryTxt}>다시 시도</Text></Pressable>
+            <Text style={st.stateTxt}>{T('sc.loadFailMine')}</Text>
+            <Pressable onPress={loadMine} style={st.retryBtn}><Text style={st.retryTxt}>{T('common.retry')}</Text></Pressable>
           </View>
         ) : (mine ?? []).length === 0 ? (
           <View style={st.emptyCard}>
             <View style={st.emptyIcon}><Icon name="sparkles-outline" size={24} color={C.faint} /></View>
-            <Text style={st.emptyTxt}>아직 만든 코스가 없어요.{'\n'}AI가 생성한 코스는 여기에 자동 저장돼요.</Text>
+            <Text style={st.emptyTxt}>{T('sc.emptyMine')}</Text>
             <Pressable onPress={() => router.push('/(course)/create' as any)} style={st.filterResetBtn}>
-              <Text style={st.filterResetTxt}>AI 코스 만들기</Text>
+              <Text style={st.filterResetTxt}>{T('sc.makeAi')}</Text>
             </Pressable>
           </View>
         ) : mineList.length === 0 ? (
           <View style={st.centered}>
             <View style={st.emptyIcon}><Icon name="locate-outline" size={24} color={C.faint} /></View>
-            <Text style={st.stateTxt}>조건에 맞는 코스가 없어요.</Text>
+            <Text style={st.stateTxt}>{T('sc.noMatch')}</Text>
             <Pressable onPress={clearFilters} style={st.filterResetBtn}>
-              <Text style={st.filterResetTxt}>필터 초기화</Text>
+              <Text style={st.filterResetTxt}>{T('sc.filterReset')}</Text>
             </Pressable>
           </View>
         ) : (
@@ -499,9 +503,9 @@ export default function SavedCoursesScreen() {
           Saved tab only (unsave lives there). */}
       {undo && tab === 'saved' && (
         <View style={[st.snackbar, shadows.sm, { bottom: insets.bottom + 18 }]}>
-          <Text style={st.snackTxt} numberOfLines={1}>코스 저장을 해제했어요</Text>
+          <Text style={st.snackTxt} numberOfLines={1}>{T('sc.unsaved')}</Text>
           <Pressable onPress={onUndo} hitSlop={10}>
-            <Text style={st.snackUndo}>되돌리기</Text>
+            <Text style={st.snackUndo}>{T('sc.undo')}</Text>
           </Pressable>
         </View>
       )}

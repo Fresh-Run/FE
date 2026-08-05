@@ -26,6 +26,7 @@ import MapView, { Marker } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CurrentLocationButton } from '@/components/current-location-button';
+import { t, useT } from '@/lib/i18n';
 import { Icon } from '@/components/ui';
 import { SEOUL_FALLBACK } from '@/hooks/use-current-location';
 import { searchPlaces, type Place } from '@/lib/places-api';
@@ -44,6 +45,7 @@ const inKorea = (lat: number, lng: number) =>
   lng >= KOREA_BOUNDS.lngMin && lng <= KOREA_BOUNDS.lngMax;
 
 export default function StartPickerScreen() {
+  const T = useT();
   const C = useTokens();
   const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
@@ -125,9 +127,9 @@ export default function StartPickerScreen() {
         if (geocodeSeq.current !== seq) return;
         const name = [geo?.city, geo?.district ?? geo?.street ?? geo?.subregion]
           .filter(Boolean).join(' ');
-        setLabel(name || '선택한 위치');
+        setLabel(name || t('sp.pickedLoc'));
       })
-      .catch(() => { if (geocodeSeq.current === seq) setLabel('선택한 위치'); });
+      .catch(() => { if (geocodeSeq.current === seq) setLabel(t('sp.pickedLoc')); });
   }
 
   const outOfBounds = picked !== null && !inKorea(picked.lat, picked.lng);
@@ -136,7 +138,7 @@ export default function StartPickerScreen() {
   function confirm() {
     if (!picked) return;
     const store = isEnd ? useEndPoint : useStartPoint;
-    store.getState().setPoint({ ...picked, label: label ?? '선택한 위치' });
+    store.getState().setPoint({ ...picked, label: label ?? t('sp.pickedLoc') });
     router.back();
   }
 
@@ -180,7 +182,7 @@ export default function StartPickerScreen() {
           <TextInput
             value={query}
             onChangeText={setQuery}
-            placeholder="장소·주소 검색"
+            placeholder={T('sp.searchPh')}
             placeholderTextColor={C.faint}
             style={st.searchInput}
             autoCorrect={false}
@@ -198,7 +200,7 @@ export default function StartPickerScreen() {
       {results !== null && (
         <View style={[st.resultsCard, shadows.md, { top: insets.top + 58 }]}>
           {results.length === 0 ? (
-            <Text style={st.resultsEmpty}>검색 결과가 없어요</Text>
+            <Text style={st.resultsEmpty}>{T('region.noResults')}</Text>
           ) : (
             <ScrollView keyboardShouldPersistTaps="handled" style={{ maxHeight: 264 }}>
               {results.map((p, i) => (
@@ -240,13 +242,13 @@ export default function StartPickerScreen() {
         {picked === null ? (
           <View style={st.hintRow}>
             <Icon name="locate" size={16} color={C.accentGrn} />
-            <Text style={st.hintTxt}>{isEnd ? '지도를 탭해서 도착지를 선택하세요' : '지도를 탭해서 출발지를 선택하세요'}</Text>
+            <Text style={st.hintTxt}>{isEnd ? T('sp.tapEnd') : T('sp.tapStart')}</Text>
           </View>
         ) : (
           <View style={st.hintRow}>
             <Icon name="location" size={16} color={outOfBounds ? C.danger : C.accentGrn} />
             <Text style={[st.pickedTxt, outOfBounds && { color: C.danger }]} numberOfLines={1}>
-              {outOfBounds ? '국내 위치만 지원해요' : (label ?? '주소 확인 중...')}
+              {outOfBounds ? T('sp.koreaOnly') : (label ?? T('sp.resolving'))}
             </Text>
           </View>
         )}
@@ -255,7 +257,7 @@ export default function StartPickerScreen() {
           disabled={!canConfirm}
           style={({ pressed }) => [st.confirmBtn, !canConfirm && st.confirmBtnDisabled, pressed && canConfirm && { opacity: 0.85 }]}
         >
-          <Text style={[st.confirmTxt, !canConfirm && { color: C.faint }]}>{isEnd ? '이 위치로 도착' : '이 위치에서 출발'}</Text>
+          <Text style={[st.confirmTxt, !canConfirm && { color: C.faint }]}>{isEnd ? T('sp.confirmEnd') : T('sp.confirmStart')}</Text>
         </Pressable>
       </View>
     </View>
