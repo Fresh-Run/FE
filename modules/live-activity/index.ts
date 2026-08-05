@@ -14,6 +14,7 @@ type LiveActivityNative = {
     distanceM: number,
     paceSecPerKm: number | null,
     kcal: number | null,
+    pauseSource: string | null,
     route: number[],
   ): Promise<void>;
   endActivity(): Promise<void>;
@@ -41,6 +42,9 @@ export function updateLiveActivity(state: {
   distanceM: number;
   paceSecPerKm?: number | null;
   kcal?: number | null;
+  /** Build 11: why paused — 'auto' | 'manual'; null while running. Drives
+      the widget badge caption (자동 일시정지 vs 일시정지). */
+  pauseSource?: 'auto' | 'manual' | null;
   route?: number[];
 }): void {
   native?.updateActivity(
@@ -49,6 +53,7 @@ export function updateLiveActivity(state: {
     state.distanceM,
     state.paceSecPerKm ?? null,
     state.kcal ?? null,
+    state.pauseSource ?? null,
     state.route ?? [],
   ).catch(() => {});
 }

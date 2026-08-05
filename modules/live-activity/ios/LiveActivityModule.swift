@@ -59,7 +59,8 @@ public class LiveActivityModule: Module {
         guard ActivityAuthorizationInfo().areActivitiesEnabled else { return false }
         let state = RunActivityAttributes.ContentState(
           startedAt: Date(timeIntervalSince1970: startedAtMs / 1000),
-          pausedAt: nil, updatedAt: Date(), distanceM: 0, paceSecPerKm: nil, kcal: nil, route: [])
+          pausedAt: nil, updatedAt: Date(), distanceM: 0, paceSecPerKm: nil, kcal: nil,
+          pauseSource: nil, route: [])
         do {
           _ = try Activity.request(
             attributes: RunActivityAttributes(),
@@ -76,13 +77,14 @@ public class LiveActivityModule: Module {
     /// freezes the clock (④c). route = normalized interleaved pairs ≤100.
     AsyncFunction("updateActivity") {
       (startedAtMs: Double, pausedAtMs: Double?, distanceM: Int,
-       paceSecPerKm: Int?, kcal: Int?, route: [Double]) in
+       paceSecPerKm: Int?, kcal: Int?, pauseSource: String?, route: [Double]) in
       if #available(iOS 16.2, *) {
         let state = RunActivityAttributes.ContentState(
           startedAt: Date(timeIntervalSince1970: startedAtMs / 1000),
           pausedAt: pausedAtMs.map { Date(timeIntervalSince1970: $0 / 1000) },
           updatedAt: Date(),
           distanceM: distanceM, paceSecPerKm: paceSecPerKm, kcal: kcal,
+          pauseSource: pauseSource,
           route: Array(route.prefix(100)))
         for activity in Activity<RunActivityAttributes>.activities {
           await activity.update(.init(state: state, staleDate: Date().addingTimeInterval(STALE_AFTER_S)))

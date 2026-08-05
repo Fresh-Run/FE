@@ -26,6 +26,10 @@ struct RunActivityAttributes: ActivityAttributes {
     var paceSecPerKm: Int?
     /// MET×weight estimate; nil = no saved weight → row hidden (honest-kcal).
     var kcal: Int?
+    /// Build 11: why the run is paused — "auto" | "manual" | nil (running).
+    /// Drives the badge caption (자동 일시정지 vs 일시정지); the truth source
+    /// is run-session's pauseSource, passed on every push.
+    var pauseSource: String?
     /// Downsampled route as interleaved normalized pairs [x0,y0,x1,y1,…] in
     /// 0…1 SCREEN space (y grows downward — the JS side flips latitude).
     /// ≤50 points (100 floats): ActivityKit caps a content state at 4 KB —

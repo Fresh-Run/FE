@@ -444,11 +444,14 @@ function pushLiveActivity(now: number, force = false): void {
     startedAtMs: now - elapsedMsNow(),
     pausedAtMs: state === 'paused' ? now : null,
     distanceM: Math.round(distanceM),
+    // Build 11: the pause badge tells WHY (자동 일시정지 vs 일시정지) — the
+    // module-level pauseSource is this file's truth, sent on every push.
+    pauseSource: state === 'paused' ? (pauseSource ?? 'manual') : null,
     // 8/4 owner ruling: the banner shows 평균 페이스 (total-time) — the run
     // screen's exact math/clock/floor/rounding, so banner = run screen 평균
     // = saved value, always. Avg persists through stops where the 30s window
-    // nulls — the better lock-screen face. Swift's generic "페이스" label
-    // reads honestly; build 11 sharpens it to 평균 페이스 (batch ledgered).
+    // nulls — the better lock-screen face. [Build 11: the Swift label now
+    // reads 평균 페이스 — the ledgered sharpening, done.]
     paceSecPerKm: distanceM >= 50 && elapsedMsNow() > 0
       ? Math.round((elapsedMsNow() / 1000) / (distanceM / 1000))
       : null,

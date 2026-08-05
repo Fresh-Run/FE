@@ -65,12 +65,18 @@ private struct LogoBox: View {
 
 private struct LiveBadge: View {
   var isStale: Bool = false
+  /// Build 11: non-nil while paused — "auto" shows 자동 일시정지, anything
+  /// else 일시정지. Stale outranks paused (a dead app's pause claim would
+  /// be the staleness lie wearing new copy).
+  var pauseSource: String? = nil
   var body: some View {
+    let paused = pauseSource != nil
+    let dim = Color(white: 0.65)
     HStack(spacing: 5) {
-      Circle().fill(isStale ? Color(white: 0.55) : lime).frame(width: 7, height: 7)
-      Text(isStale ? "업데이트 끊김" : "러닝 중")
+      Circle().fill(isStale || paused ? Color(white: 0.55) : lime).frame(width: 7, height: 7)
+      Text(isStale ? "업데이트 끊김" : paused ? (pauseSource == "auto" ? "자동 일시정지" : "일시정지") : "러닝 중")
         .font(.system(size: 11, weight: .bold))
-        .foregroundStyle(isStale ? Color(white: 0.65) : lime)
+        .foregroundStyle(isStale || paused ? dim : lime)
     }
   }
 }
@@ -187,15 +193,20 @@ private struct StatCol: View {
   var unit: String? = nil
   var body: some View {
     VStack(alignment: .leading, spacing: 3) {
-      Text(label).font(.system(size: 10.5, weight: .semibold)).foregroundStyle(textLo)
+      // Build 11 type ramp, option (a) (owner-ruled 8/1): label 10.5→11.5 ·
+      // value 19→22 bold (the conservative end of the ruled 22-23 — StatCol
+      // is SHARED with the tighter DI expanded row) · unit 12→13. Funded by
+      // the lock card's section padding (15/14→12, below).
+      Text(label).font(.system(size: 11.5, weight: .semibold)).foregroundStyle(textLo)
       HStack(alignment: .firstTextBaseline, spacing: 2) {
         // Expanded-LA crunch fix (build 9, ruled 2026-07-26): the trailing
         // stat pair absorbed all the row's squeeze and TRUNCATED ("0… km").
         // Scale-down beats truncation; priority keeps the value whole.
-        Text(value).font(.system(size: 19, weight: .semibold)).monospacedDigit()
+        // minimumScaleFactor 0.6 SURVIVES the ramp (the build-9 lesson).
+        Text(value).font(.system(size: 22, weight: .bold)).monospacedDigit()
           .foregroundStyle(textHi)
           .lineLimit(1).minimumScaleFactor(0.6).layoutPriority(1)
-        if let unit { Text(unit).font(.system(size: 12, weight: .semibold)).foregroundStyle(unitLo) }
+        if let unit { Text(unit).font(.system(size: 13, weight: .semibold)).foregroundStyle(unitLo) }
       }
     }
   }
@@ -211,7 +222,7 @@ private struct LockScreenView: View {
         LogoBox()
         Text("FreshRun").font(.system(size: 13, weight: .bold)).foregroundStyle(textHi)
         Spacer()
-        LiveBadge(isStale: isStale)
+        LiveBadge(isStale: isStale, pauseSource: state.pausedAt != nil ? (state.pauseSource ?? "manual") : nil)
       }
       // Lock card = 지연's canvas 1:1 (owner ruling, build #7): header ·
       // hero · mini-route · stats. NO buttons here — her design never had
@@ -233,15 +244,15 @@ private struct LockScreenView: View {
             .clipShape(RoundedRectangle(cornerRadius: 14))
         }
       }
-      .padding(.top, 15)
+      .padding(.top, 12) // 15→12: type-ramp funding (option (a))
       HStack(spacing: 26) {
         StatCol(label: "거리", value: fmtKm(state.distanceM), unit: "km")
-        StatCol(label: "페이스", value: fmtPace(state.paceSecPerKm), unit: "/km")
+        StatCol(label: "평균 페이스", value: fmtPace(state.paceSecPerKm), unit: "/km")
         if let kcal = state.kcal { // honest-kcal: hidden without saved weight
           StatCol(label: "칼로리", value: "\(kcal)", unit: "kcal")
         }
       }
-      .padding(.top, 14)
+      .padding(.top, 12) // 14→12: type-ramp funding (option (a))
       .overlay(Rectangle().fill(.white.opacity(0.10)).frame(height: 0.5), alignment: .top)
     }
     .padding(EdgeInsets(top: 16, leading: 18, bottom: 17, trailing: 18))
@@ -260,7 +271,7 @@ struct RunLiveActivity: Widget {
       DynamicIsland {
         // Expanded (canvas frame 4, stats-only in ④a — buttons arrive at ④c)
         DynamicIslandExpandedRegion(.leading) { LogoBox().padding(.leading, 4) }
-        DynamicIslandExpandedRegion(.trailing) { LiveBadge(isStale: context.isStale).padding(.trailing, 4) }
+        DynamicIslandExpandedRegion(.trailing) { LiveBadge(isStale: context.isStale, pauseSource: context.state.pausedAt != nil ? (context.state.pauseSource ?? "manual") : nil).padding(.trailing, 4) }
         DynamicIslandExpandedRegion(.bottom) {
           // Physical truth (build #8): the WHOLE expanded presentation caps
           // at the DOCUMENTED ~160pt — 지연's expanded mock draws ~1.6× that
@@ -285,7 +296,7 @@ struct RunLiveActivity: Widget {
               Spacer(minLength: 0)
               HStack(spacing: 14) {
                 StatCol(label: "거리", value: fmtKm(context.state.distanceM), unit: "km")
-                StatCol(label: "페이스", value: fmtPace(context.state.paceSecPerKm), unit: "/km")
+                StatCol(label: "평균 페이스", value: fmtPace(context.state.paceSecPerKm), unit: "/km")
               }
             }
             RunActionsRow(paused: context.state.pausedAt != nil)
