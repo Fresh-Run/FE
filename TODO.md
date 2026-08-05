@@ -1300,7 +1300,9 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 
 ## ✅ 빌드-11 온-디바이스 필드 수락 (오너 버딕트, 8/5 — [HH:MM] 미동봉, as-arrived): **잠금화면 위젯 PASSED** — 타입 램프 **22pt 확정** (23 불요 룰링 — 보수단 초이스 비준) · 평균 페이스 라벨 정상 · 일시정지/자동 일시정지 캡션 **양쪽 확인** · **배치 ①②③ 필드 수락 = 빌드-11 아크 클로즈** (잔여: 지연 폰 설치 → 이중-퍼블리시 윈도우 종료)
 
-## 🌐 i18n 슬라이스 6 — 설정 허브 BUILT (커밋 7d19259, 미스테이지 — 오너 워드 8/5 언파크, 슬라이스-5 심에서 리줌)
+## 🔼 i18n 슬라이스 6 양-레인 STAGED — 1.0.6 = **e9cb8e82** (스트레이트) · 1.0.5 = **f7c5dea8** (플립, 리버트 ✓) · **양 레인 TIE MATCH + 크로스-레인 수렴 MATCH (ikxjkU2s… 3중 일치: 커밋-타이드 export = 양 퍼블리시-타임 dist = 양 서빙)** — 퍼-퍼블리시 dist 캡처 표준 첫 실행 (전회 실패의 재발 방지 절차 작동; 수렴했으므로 샘-커밋 근거 불요) · 플로어 bdec4fc8/2137f29c 불변 · **게이트 (실내, 빌드-11)**: 설정 허브 워크 **양 언어** — 언어 플립 → 12스크린 전환 확인 (프로필 탭 라이브 재렌더 = 롱-리브드 마운트 리액티브 증명) · 성별 라벨 en + 저장 값 불변 · 엔도님/아이덴티티 라인 무전환 확인 · 프로모션 = 스탬프 + 원-컨펌 (양 레인)
+
+## 🌐 (동커밋) i18n 슬라이스 6 — 설정 허브 BUILT (커밋 7d19259 — 오너 워드 8/5 언파크, 슬라이스-5 심에서 리줌)
 - **스코프 (12파일, 라이브 히트 ~209 리터럴 + JSX 텍스트)**: profile 탭 · profile-settings · personal-info · notification-settings · ai-course-prefs · delete-account · premium · audio-coach · theme · units · lang · region-picker. **슬라이스-7 경계 클린** (코스 월드 파일 제로 접촉 — saved-courses/course-post/preview/create/start-picker/place-pick-sheet/홈 잔여는 다음 세션).
 - **컨벤션 = lib/i18n.ts 헤더 독** (슬라이스 1-5 동일): 딕셔너리 키-보유 배열 (notifications.tsx TABS 패턴) · JSX = useT() 리액티브 (**profile 탭 = 롱-리브드 마운트, community 베어-t 교훈 적용**) · 임퍼러티브 (Alert/핸들러) = 베어 t() · 인터폴레이션 = tf() (pset.nWaiting {n}).
 - **파리티: 1205/1205** (+224쌍: prof 40·pset 24·pi 32·nset 33·acp 25·da 17·prem 17·ac 12·thm 11·units 6·lang 2·region 1 + set.saveFailT/B 공용쌍 — 저장-실패 4중복이 1쌍으로 디둡). 커밋-포인트 러닝 카운트: D 1002 → C 1073 → B 1166 → A 1205, 매 배치 양 로케일 동수 · 듀프-키 가드 0.
