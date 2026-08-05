@@ -49,6 +49,8 @@ import {
   useGenerateRoute,
   type GeneratedRoute,
   type Waypoint,
+  MAX_TARGET_KM,
+  MAX_TARGET_MI,
 } from '@/hooks/use-generate-route';
 import { radius as R, shadows, spacing as S, type Tokens, DENSE_MAX_FONT_SCALE} from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
@@ -180,10 +182,8 @@ const HERO_H = 210;
 // the smallest 0.5mi detent that COVERS the km floor (1.5mi ≥ 2.0km) — a
 // detent below it would still 422.
 const LOOP_MIN_MI = Math.ceil((LOOP_MIN_TARGET_KM / KM_PER_MI) * 2) / 2;
-// 8/5 cap (see the ruling comment above the form state): one constant pair
-// drives seed-clamp, feasibility ceiling, slider max, and the right label.
-const MAX_TARGET_KM = 13;
-const MAX_TARGET_MI = 8; // 12.87km — the 13km cap converted to a round mi detent
+// 8/5 cap: MAX_TARGET_KM/MI moved to use-generate-route (shared with
+// ai-course-prefs' stepper — one pair, every consumer follows).
 
 export default function CreateScreen() {
   const C = useTokens();

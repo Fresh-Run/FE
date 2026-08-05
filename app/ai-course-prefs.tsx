@@ -6,8 +6,14 @@
  * omits a field (guide priority: body > 내 설정 > 서버 기본값); the create
  * form seeds its distance slider from default_distance_km for the same reason.
  *
- * Deviation (owner-approved 2026-07-09): stepper capped at 32 km, not the
- * canvas 42 — backend bound is default_distance_km le=32.2 (422 above it).
+ * Deviation (owner-approved 2026-07-09): stepper capped below the canvas 42
+ * — was 32 (the BE le=32.2 bound); since 8/5 the cap is MAX_TARGET_KM (13),
+ * aligned with course-create's ruled ceiling (her n-lap data; the shared
+ * constant pair in use-generate-route — lift lands everywhere at once).
+ * Legacy over-cap prefs (14–32) DISPLAY-clamp here (no silent auto-PATCH —
+ * an instant-apply screen must not write on mount); the first user
+ * interaction persists a legal value, and create's seed clamp already
+ * guards generation regardless.
  */
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect } from 'react';
@@ -19,6 +25,7 @@ import { Toggle } from '@/components/toggle';
 import type { AiCourseSettings } from '@/lib/settings-api';
 import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
+import { MAX_TARGET_KM } from '@/hooks/use-generate-route';
 import { useSettings } from '@/store/use-settings';
 
 const TERRAINS: { value: AiCourseSettings['terrain']; label: string; sub: string }[] = [
@@ -33,9 +40,9 @@ const SURFACES: { value: AiCourseSettings['surface']; label: string }[] = [
   { value: 'trail', label: '트레일·흙길' },
 ];
 
-// Backend bound: default_distance_km 1.0–32.2 → integer stepper 1–32
+// Floor: BE bound 1.0 · ceiling: the shared 13km cap (see docblock)
 const DIST_MIN = 1;
-const DIST_MAX = 32;
+const DIST_MAX = MAX_TARGET_KM;
 
 // ─── Row primitives (bundle: FrSelectRow / FrToggleRow / FrStepperRow) ────────
 
@@ -80,20 +87,23 @@ function StepperRow({ label, value, onChange }: {
 }) {
   const C = useTokens();
   const st = useStyles(makeSt);
+  // 8/5: legacy over-cap prefs (stored 14–32 under the old ceiling) clamp at
+  // DISPLAY — shown ≤13, no write until the user acts (see docblock).
+  const shown = Math.min(DIST_MAX, Math.max(DIST_MIN, value));
   const bump = (dir: 1 | -1) => {
     // Integer steps; a stored fractional value (e.g. 5.5) rounds toward the grid
-    const next = Math.min(DIST_MAX, Math.max(DIST_MIN, Math.round(value + dir)));
+    const next = Math.min(DIST_MAX, Math.max(DIST_MIN, Math.round(shown + dir)));
     if (next !== value) onChange(next);
   };
   return (
     <View style={st.row}>
       <Text style={[st.rowLabel, { flex: 1 }]}>{label}</Text>
       <View style={st.stepperCtrls}>
-        <Pressable onPress={() => bump(-1)} hitSlop={6} style={[st.stepBtn, value <= DIST_MIN && { opacity: 0.4 }]}>
+        <Pressable onPress={() => bump(-1)} hitSlop={6} style={[st.stepBtn, shown <= DIST_MIN && { opacity: 0.4 }]}>
           <Icon name="remove" size={16} color={C.text} />
         </Pressable>
-        <Text style={st.stepValue}>{Number.isInteger(value) ? value : value.toFixed(1)} km</Text>
-        <Pressable onPress={() => bump(1)} hitSlop={6} style={[st.stepBtn, value >= DIST_MAX && { opacity: 0.4 }]}>
+        <Text style={st.stepValue}>{Number.isInteger(shown) ? shown : shown.toFixed(1)} km</Text>
+        <Pressable onPress={() => bump(1)} hitSlop={6} style={[st.stepBtn, shown >= DIST_MAX && { opacity: 0.4 }]}>
           <Icon name="add" size={16} color={C.text} />
         </Pressable>
       </View>

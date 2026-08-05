@@ -76,6 +76,13 @@ export class LoopTooShortError extends Error {
     the UI stops selling sub-floor loops; the 422 above stays the
     authoritative backstop if the server floor ever drifts. */
 export const LOOP_MIN_TARGET_KM = 2.0;
+/** 8/5 owner cap (her n-lap ceiling — lap geometry degrades past ~13km
+    targets; lift condition = her long-distance server work). ONE pair drives
+    course-create (seed clamp · slider · label) AND ai-course-prefs' stepper
+    — imported, never copied. BE hard bounds untouched (target le=100,
+    default_distance_km le=32.2 — the cap is UX honesty, not a 422 mirror). */
+export const MAX_TARGET_KM = 13;
+export const MAX_TARGET_MI = 8; // 12.87km — the km cap on a round mi detent
 
 // ─── generate ─────────────────────────────────────────────────────────────────
 
