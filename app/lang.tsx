@@ -13,7 +13,7 @@
  */
 import { router } from 'expo-router';
 import React from 'react';
-import { useT } from '@/lib/i18n';
+import { t, useT } from '@/lib/i18n';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -39,7 +39,7 @@ export default function LangScreen() {
   async function pick(value: UserSettings['lang']) {
     if (value === lang) return;
     const ok = await setLang(value); // optimistic; rolls back on failure
-    if (!ok) Alert.alert('저장 실패', '설정을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.');
+    if (!ok) Alert.alert(t('set.saveFailT'), t('set.saveFailB'));
   }
 
   return (
@@ -48,12 +48,12 @@ export default function LangScreen() {
         <Pressable onPress={() => router.back()} hitSlop={12} style={st.backBtn}>
           <Icon name="arrow-back" size={20} color={C.text} />
         </Pressable>
-        <Text style={st.appBarTitle}>언어</Text>
+        <Text style={st.appBarTitle}>{T('lang.title')}</Text>
         <View style={{ width: 36 }} />
       </View>
 
       <View style={{ paddingHorizontal: S.gutter }}>
-        <Text style={st.groupTitle}>앱 언어</Text>
+        <Text style={st.groupTitle}>{T('lang.group')}</Text>
         <View style={[st.groupCard, shadows.sm]}>
           {OPTIONS.map((o, i) => (
             <React.Fragment key={o.value}>

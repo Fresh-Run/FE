@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/avatar';
 import { useTabBarInset } from '@/components/fresh-tab-bar';
+import { t, useT } from '@/lib/i18n';
 import { Icon } from '@/components/ui';
 import { Toggle } from '@/components/toggle';
 import { useProfile, type Profile, type RunStats } from '@/hooks/use-profile';
@@ -127,10 +128,11 @@ function IdentityCard({ profile, stats, units, premium, onEdit }: { profile: Pro
   const runs     = String(stats.totalRuns);
   const bestPace = stats.bestPaceSec != null ? fmtPaceIn(stats.bestPaceSec, units) : '--';
 
+  const T = useT();
   const quickStats: [string, string][] = [
-    [`${dist} ${distUnit(units)}`, '누적 거리'],
-    [runs,                         '러닝'],
-    [bestPace,                     '최고 페이스'],
+    [`${dist} ${distUnit(units)}`, T('prof.statDist')],
+    [runs,                         T('prof.statRuns')],
+    [bestPace,                     T('prof.statBestPace')],
   ];
 
   return (
@@ -154,7 +156,7 @@ function IdentityCard({ profile, stats, units, premium, onEdit }: { profile: Pro
               </View>
             )}
           </View>
-          <Text style={st.identityHint}>탭하여 개인 정보 편집</Text>
+          <Text style={st.identityHint}>{T('prof.editHint')}</Text>
         </View>
         <Icon name="chevron-forward" size={18} color={C.faint} />
       </Pressable>
@@ -180,6 +182,7 @@ function IdentityCard({ profile, stats, units, premium, onEdit }: { profile: Pro
 function PremiumBanner() {
   const C = useTokens();
   const st = useStyles(makeSt);
+  const T = useT();
   return (
     <Pressable
       onPress={() => router.push('/premium' as never)}
@@ -188,7 +191,7 @@ function PremiumBanner() {
       <Icon name="trophy-outline" size={22} color={C.accent} />
       <View style={{ flex: 1 }}>
         <Text style={st.premiumTitle}>FreshRun Premium</Text>
-        <Text style={st.premiumSub}>AI 코스 · 심층 분석 · 오디오 코치</Text>
+        <Text style={st.premiumSub}>{T('prof.premiumSub')}</Text>
       </View>
       <Icon name="chevron-forward" size={18} color={C.faint} />
     </Pressable>
@@ -228,6 +231,7 @@ function bundleIdentity(): string {
 
 
 export default function ProfileScreen() {
+  const T = useT(); // reactive — long-lived tab mount (the community bare-t lesson)
   const C = useTokens();
   const st = useStyles(makeSt);
   const insets  = useSafeAreaInsets();
@@ -265,10 +269,10 @@ export default function ProfileScreen() {
   // permission itself lives in 건강 앱 > 공유 — stated in the copy).
   async function handleHealthRow() {
     if (healthOn) {
-      Alert.alert('Apple 건강', '연결됨 — 저장하는 러닝이 건강 앱에 운동으로 기록돼요.', [
-        { text: '닫기', style: 'cancel' },
+      Alert.alert(t('prof.hkTitle'), t('prof.hkOnBody'), [
+        { text: t('prof.close'), style: 'cancel' },
         {
-          text: '연결 해제',
+          text: t('prof.hkDisconnect'),
           style: 'destructive',
           onPress: () => setHealthOn(false),
         },
@@ -276,16 +280,13 @@ export default function ProfileScreen() {
       return;
     }
     if (!healthAvailable()) {
-      Alert.alert('사용할 수 없어요', '이 기기에서는 Apple 건강을 사용할 수 없어요.');
+      Alert.alert(t('prof.hkUnavailT'), t('prof.hkUnavailB'));
       return;
     }
     const ok = await requestHealthAuthorization();
-    if (!ok) { Alert.alert('연결 실패', '잠시 후 다시 시도해 주세요.'); return; }
+    if (!ok) { Alert.alert(t('prof.hkConnFailT'), t('auth.tryLater')); return; }
     setHealthOn(true);
-    Alert.alert(
-      'Apple 건강 연결됨',
-      '이제 저장하는 러닝이 건강 앱에 운동으로 기록돼요. 권한을 나중에 바꾸려면 건강 앱 > 공유 > 앱에서 조정할 수 있어요.',
-    );
+    Alert.alert(t('prof.hkConnOkT'), t('prof.hkConnOkB'));
   }
   const hydrate       = useSettings(s => s.hydrate);
   const setRunSetting = useSettings(s => s.setRunSetting);
@@ -298,7 +299,7 @@ export default function ProfileScreen() {
 
   async function toggleRun(key: keyof RunSettings, value: boolean) {
     const ok = await setRunSetting(key, value); // optimistic; rolls back on failure
-    if (!ok) Alert.alert('저장 실패', '설정을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.');
+    if (!ok) Alert.alert(t('set.saveFailT'), t('set.saveFailB'));
   }
 
   // Refetch on focus so a nickname saved in 개인 정보 shows immediately
@@ -307,9 +308,9 @@ export default function ProfileScreen() {
   }, [refetch]));
 
   function handleSignOut() {
-    Alert.alert('로그아웃', '정말 로그아웃하시겠어요?', [
-      { text: '취소', style: 'cancel' },
-      { text: '로그아웃', style: 'destructive', onPress: () => signOut() },
+    Alert.alert(t('prof.signOut'), t('prof.signOutAsk'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('prof.signOut'), style: 'destructive', onPress: () => signOut() },
     ]);
   }
 
@@ -328,10 +329,10 @@ export default function ProfileScreen() {
   if (signedOut) {
     return (
       <View style={[st.root, { paddingTop: insets.top }]}>
-        <Text style={[st.screenTitle, st.headerPad]}>프로필</Text>
+        <Text style={[st.screenTitle, st.headerPad]}>{T('prof.title')}</Text>
         <View style={st.centeredState}>
           <Icon name="person-outline" size={36} color={C.faint} />
-          <Text style={st.stateTxt}>로그인이 필요해요</Text>
+          <Text style={st.stateTxt}>{T('prof.needLogin')}</Text>
         </View>
       </View>
     );
@@ -341,12 +342,12 @@ export default function ProfileScreen() {
   if (error || !profile) {
     return (
       <View style={[st.root, { paddingTop: insets.top }]}>
-        <Text style={[st.screenTitle, st.headerPad]}>프로필</Text>
+        <Text style={[st.screenTitle, st.headerPad]}>{T('prof.title')}</Text>
         <View style={st.centeredState}>
           <Icon name="warning-outline" size={36} color={C.faint} />
-          <Text style={st.stateTxt}>{error ?? '프로필을 불러올 수 없어요'}</Text>
+          <Text style={st.stateTxt}>{error ?? T('prof.loadFail')}</Text>
           <Pressable onPress={refetch} style={st.retryBtn}>
-            <Text style={st.retryTxt}>다시 시도</Text>
+            <Text style={st.retryTxt}>{T('common.retry')}</Text>
           </Pressable>
         </View>
       </View>
@@ -361,7 +362,7 @@ export default function ProfileScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: tabBarInset }}
       >
-        <Text style={[st.screenTitle, st.headerPad]}>프로필</Text>
+        <Text style={[st.screenTitle, st.headerPad]}>{T('prof.title')}</Text>
 
         {/* Identity card */}
         <View style={{ paddingHorizontal: S.gutter, paddingTop: S.lg }}>
@@ -385,11 +386,11 @@ export default function ProfileScreen() {
             guide line 270: settings UI open to all, 차등은 쿼터로); 오디오
             코치 stays premium (coach-script 403 premium_required, guide line
             65) and design-ahead (FrAudioCoach has no code screen yet) */}
-        <SettingGroup title="러닝 & AI">
+        <SettingGroup title={T('prof.gRunAi')}>
           <SettingRow
             icon={<Icon name="sparkles-outline" size={19} color={C.blue} />}
             iconBg={C.blue + '18'}
-            label="AI 코스 선호도"
+            label={T('acp.title')}
             onPress={() => router.push('/ai-course-prefs' as any)}
           />
           {/* 오디오 코치 v1 (2026-07-14): premium → settings screen; free →
@@ -397,7 +398,7 @@ export default function ProfileScreen() {
           <SettingRow
             icon={<Icon name="volume-high-outline" size={19} color={C.accentGrn} />}
             iconBg={C.accentDim}
-            label="오디오 코치 설정"
+            label={T('prof.rowAudioCoach')}
             badge="Premium"
             locked={!isPremium}
             onPress={() => router.push((isPremium ? '/audio-coach' : '/premium') as never)}
@@ -414,18 +415,18 @@ export default function ProfileScreen() {
             tappable 준비-중 alert NOW, wired when 지연's social-links
             backend lands (the return condition, ledgered). 알림 stays in
             설정 (ruling ②). */}
-        <SettingGroup title="연결">
+        <SettingGroup title={T('prof.gConn')}>
           <SettingRow
             icon={<Icon name="heart-outline" size={19} color={C.danger} />}
             iconBg={C.danger + '18'}
-            label="Apple 건강"
-            value={healthOn ? '연결됨' : '연결 안 됨'}
+            label={T('prof.hkTitle')}
+            value={healthOn ? T('prof.hkOn') : T('prof.hkOff')}
             onPress={handleHealthRow}
           />
           <SettingRow
             icon={<Icon name="link-outline" size={19} color={C.sub} />}
-            label="소셜 계정"
-            onPress={() => Alert.alert('준비 중이에요', '소셜 계정 연결은 다음 업데이트에서 지원돼요.')}
+            label={T('prof.rowSocial')}
+            onPress={() => Alert.alert(t('prof.soonT'), t('prof.soonB'))}
           />
         </SettingGroup>
 
@@ -441,31 +442,31 @@ export default function ProfileScreen() {
             mid-run readers). The setting persists server-side untouched;
             the row returns WITH the real feature (post-gate item, must
             route through togglePause). */}
-        <SettingGroup title="러닝 동작">
+        <SettingGroup title={T('prof.gRunBehavior')}>
           {/* RESTORED 8/2 with the real feature (the 7/23 dead-switch removal
               ruling's own return condition — routes through togglePause).
               Ships ON: the server default (true) stands, owner-ruled; this
               toggle is the opt-out. */}
-          <ToggleRow label="자동 일시정지"  on={runSettings.auto_pause}     onChange={v => toggleRun('auto_pause',     v)} caption="멈추면 자동으로 쉬고, 움직이면 이어서 기록해요" />
-          <ToggleRow label="음성 안내"      on={runSettings.voice_cue}      onChange={v => toggleRun('voice_cue',      v)} />
-          <ToggleRow label="햅틱 피드백"    on={runSettings.haptics}        onChange={v => toggleRun('haptics',        v)} caption="기기 햅틱 설정이 꺼져 있으면 진동이 울리지 않아요" />
-          <ToggleRow label="화면 항상 켜기" on={runSettings.keep_screen_on} onChange={v => toggleRun('keep_screen_on', v)} />
+          <ToggleRow label={T('prof.autoPause')} on={runSettings.auto_pause} onChange={v => toggleRun('auto_pause', v)} caption={T('prof.autoPauseCap')} />
+          <ToggleRow label={T('prof.voiceCue')} on={runSettings.voice_cue} onChange={v => toggleRun('voice_cue', v)} />
+          <ToggleRow label={T('prof.haptics')} on={runSettings.haptics} onChange={v => toggleRun('haptics', v)} caption={T('prof.hapticsCap')} />
+          <ToggleRow label={T('prof.keepScreen')} on={runSettings.keep_screen_on} onChange={v => toggleRun('keep_screen_on', v)} />
         </SettingGroup>
 
         {/* 설정 */}
-        <SettingGroup title="설정">
+        <SettingGroup title={T('prof.gSettings')}>
           {/* Push-notification SETTINGS (canvas: value "푸시 알림 설정") —
               NOT the inbox; the inbox lives behind the home bell. */}
           <SettingRow
             icon={<Icon name="notifications-outline" size={19} color={C.sub} />}
-            label="알림"
-            value="푸시 알림 설정"
+            label={T('prof.rowNotif')}
+            value={T('prof.valPush')}
             onPress={() => router.push('/notification-settings' as any)}
           />
           <SettingRow
             icon={<Icon name="resize-outline" size={19} color={C.sub} />}
-            label="단위"
-            value={units === 'mi' ? 'mi (마일)' : 'km (킬로미터)'}
+            label={T('units.title')}
+            value={units === 'mi' ? T('units.mi') : T('units.km')}
             onPress={() => router.push('/units' as any)}
           />
           {/* 테마 row RESTORED (Phase 5, 2026-07-21) — the epic's end-state:
@@ -473,13 +474,13 @@ export default function ProfileScreen() {
               mode + server sync on explicit picks.
               Persist plumbing (useSettings.theme, /theme screen, server
               field) intact by design. */}
-          <SettingRow icon={<Icon name="moon-outline"          size={19} color={C.sub} />} label="테마"       value={themeMode === 'system' ? '시스템' : themeMode === 'dark' ? '다크' : '라이트'} onPress={() => router.push('/theme' as any)} />
-          <SettingRow icon={<Icon name="globe-outline"         size={19} color={C.sub} />} label="언어"       value={lang === 'en' ? 'English' : '한국어'} onPress={() => router.push('/lang' as any)} />
+          <SettingRow icon={<Icon name="moon-outline"          size={19} color={C.sub} />} label={T('thm.title')} value={themeMode === 'system' ? T('thm.system') : themeMode === 'dark' ? T('thm.dark') : T('thm.light')} onPress={() => router.push('/theme' as any)} />
+          <SettingRow icon={<Icon name="globe-outline"         size={19} color={C.sub} />} label={T('lang.title')} value={lang === 'en' ? 'English' : '한국어'} onPress={() => router.push('/lang' as any)} />
           {/* 도움말/약관 — LIVE screens (help-center.tsx / terms.tsx); the old
               "don't exist yet" note outlived their shipping (comment fixed
               2026-07-20, Phase-0 ride-along). */}
-          <SettingRow icon={<Icon name="headset-outline"       size={19} color={C.sub} />} label="도움말 센터" onPress={() => router.push('/help-center' as any)} />
-          <SettingRow icon={<Icon name="document-text-outline" size={19} color={C.sub} />} label="서비스 약관" onPress={() => router.push('/terms' as any)} />
+          <SettingRow icon={<Icon name="headset-outline"       size={19} color={C.sub} />} label={T('prof.rowHelp')} onPress={() => router.push('/help-center' as any)} />
+          <SettingRow icon={<Icon name="document-text-outline" size={19} color={C.sub} />} label={T('prof.rowTerms')} onPress={() => router.push('/terms' as any)} />
         </SettingGroup>
 
         {/* Logout — standalone row outside a group */}
@@ -487,7 +488,7 @@ export default function ProfileScreen() {
           <SettingRow
             icon={<Icon name="log-out-outline" size={19} color={C.danger} />}
             iconBg={C.danger + '12'}
-            label="로그아웃"
+            label={T('prof.signOut')}
             danger
             onPress={handleSignOut}
           />

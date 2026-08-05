@@ -12,18 +12,21 @@ import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/ui';
+import { t, useT, type StringKey } from '@/lib/i18n';
 import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { useScheme, type Mode } from '@/store/use-scheme';
 import { useSettings } from '@/store/use-settings';
 
-const OPTIONS: { value: Mode; label: string; sub: string }[] = [
-  { value: 'system', label: '시스템', sub: '기기 설정을 따라요' },
-  { value: 'light',  label: '라이트', sub: '밝은 배경' },
-  { value: 'dark',   label: '다크',   sub: '어두운 배경' },
+// labels/subs hold KEYS (slice-6; the notifications.tsx TABS convention)
+const OPTIONS: { value: Mode; label: StringKey; sub: StringKey }[] = [
+  { value: 'system', label: 'thm.system', sub: 'thm.systemSub' },
+  { value: 'light',  label: 'thm.light',  sub: 'thm.lightSub' },
+  { value: 'dark',   label: 'thm.dark',   sub: 'thm.darkSub' },
 ];
 
 export default function ThemeScreen() {
+  const T = useT(); // reactive — the picker itself re-renders on lang flip
   const C = useTokens();
   const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
@@ -37,7 +40,7 @@ export default function ThemeScreen() {
     if (value !== 'system') {
       // keep the server contract in sync for explicit picks (light|dark enum)
       const ok = await setTheme(value);
-      if (!ok) Alert.alert('저장 실패', '기기에는 적용됐지만 서버 동기화에 실패했어요.');
+      if (!ok) Alert.alert(t('set.saveFailT'), t('thm.syncFailB'));
     }
   }
 
@@ -47,20 +50,20 @@ export default function ThemeScreen() {
         <Pressable onPress={() => router.back()} hitSlop={12} style={st.backBtn}>
           <Icon name="arrow-back" size={20} color={C.text} />
         </Pressable>
-        <Text style={st.appBarTitle}>테마</Text>
+        <Text style={st.appBarTitle}>{T('thm.title')}</Text>
         <View style={{ width: 36 }} />
       </View>
 
       <View style={{ paddingHorizontal: S.gutter }}>
-        <Text style={st.groupTitle}>화면 테마</Text>
+        <Text style={st.groupTitle}>{T('thm.group')}</Text>
         <View style={[st.groupCard, shadows.sm]}>
           {OPTIONS.map((o, i) => (
             <React.Fragment key={o.value}>
               {i > 0 && <View style={st.divider} />}
               <Pressable onPress={() => pick(o.value)} style={st.row}>
                 <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text style={st.rowLabel}>{o.label}</Text>
-                  <Text style={st.rowSub}>{o.sub}</Text>
+                  <Text style={st.rowLabel}>{T(o.label)}</Text>
+                  <Text style={st.rowSub}>{T(o.sub)}</Text>
                 </View>
                 <View style={[st.radioOuter, mode === o.value && { borderColor: C.accent }]}>
                   {mode === o.value && <View style={st.radioInner} />}

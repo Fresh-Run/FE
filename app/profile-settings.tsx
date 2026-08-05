@@ -28,15 +28,16 @@ import { Icon } from '@/components/ui';
 import { Toggle } from '@/components/toggle';
 import { errorMessage } from '@/lib/error-copy';
 import { getMyProfile, listFollowRequests, updateProfile, type ProfileVisibility } from '@/lib/profile-api';
+import { t, tf, useT, type StringKey } from '@/lib/i18n';
 import { useStore } from '@/store/use-store';
 import { shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { useSettings } from '@/store/use-settings';
 
-const VISIBILITY_OPTS: { value: ProfileVisibility; label: string; sub: string }[] = [
-  { value: 'public',    label: '전체 공개', sub: '누구나 내 프로필과 게시한 러닝을 볼 수 있어요' },
-  { value: 'followers', label: '팔로워만',  sub: '팔로워에게만 게시한 러닝이 보여요' },
-  { value: 'private',   label: '비공개',    sub: '아무에게도 보이지 않아요' },
+const VISIBILITY_OPTS: { value: ProfileVisibility; label: StringKey; sub: StringKey }[] = [
+  { value: 'public',    label: 'pset.visPublic',    sub: 'pset.visPublicSub' },
+  { value: 'followers', label: 'pset.visFollowers', sub: 'pset.visFollowersSub' },
+  { value: 'private',   label: 'pset.visPrivate',   sub: 'pset.visPrivateSub' },
 ];
 
 function Group({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
@@ -76,6 +77,7 @@ function NavRow({ icon, label, value, onPress }: {
 const VIS_TIMEOUT_MS = 10_000; // optimistic-write clock (timeout rider)
 
 export default function ProfileSettingsScreen() {
+  const T = useT();
   const C = useTokens();
   const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
@@ -87,7 +89,7 @@ export default function ProfileSettingsScreen() {
 
   async function toggleFeed(key: 'auto_publish' | 'allow_likes' | 'allow_comments', v: boolean) {
     const ok = await setFeedSetting(key, v);
-    if (!ok) Alert.alert('변경 실패', '설정을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.');
+    if (!ok) Alert.alert(t('pset.changeFailT'), t('set.saveFailB'));
   }
 
   // ── 공개 범위 — server truth on mount; default-select public on a failed
@@ -125,7 +127,7 @@ export default function ProfileSettingsScreen() {
       getMyProfile(VIS_TIMEOUT_MS)
         .then(p => setApproval(p.follow_approval ?? false))
         .catch(() => {});
-      Alert.alert('변경 실패', errorMessage(e));
+      Alert.alert(t('pset.changeFailT'), errorMessage(e));
     }
   }
 
@@ -146,7 +148,7 @@ export default function ProfileSettingsScreen() {
       getMyProfile(VIS_TIMEOUT_MS)
         .then(p => setVisibility(p.visibility ?? 'public'))
         .catch(() => { /* still offline — prev stands; next mount re-reads */ });
-      Alert.alert('변경 실패', errorMessage(e));
+      Alert.alert(t('pset.changeFailT'), errorMessage(e));
     } finally {
       setVisBusy(false);
     }
@@ -158,15 +160,15 @@ export default function ProfileSettingsScreen() {
         <Pressable onPress={() => router.back()} hitSlop={12} style={st.backBtn}>
           <Icon name="arrow-back" size={20} color={C.text} />
         </Pressable>
-        <Text style={st.appBarTitle}>프로필 설정</Text>
+        <Text style={st.appBarTitle}>{T('pset.title')}</Text>
         <View style={{ width: 36 }} />
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
         {/* ── 공개 범위 — canvas top section (⑨ wire-up) ── */}
         <Group
-          title="프로필 공개 범위"
-          hint="비공개로 하면 팔로워가 아닌 사람에게는 게시한 러닝이 보이지 않아요."
+          title={T('pset.gVis')}
+          hint={T('pset.gVisHint')}
         >
           {VISIBILITY_OPTS.map(o => {
             const on = visibility === o.value;
@@ -178,8 +180,8 @@ export default function ProfileSettingsScreen() {
                 style={({ pressed }) => [st.row, pressed && { opacity: 0.7 }]}
               >
                 <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text style={st.rowLabel}>{o.label}</Text>
-                  <Text style={st.rowSub}>{o.sub}</Text>
+                  <Text style={st.rowLabel}>{T(o.label)}</Text>
+                  <Text style={st.rowSub}>{T(o.sub)}</Text>
                 </View>
                 <View style={[st.radioOuter, on && { borderColor: C.accent, backgroundColor: C.accent }]}>
                   {on && <Icon name="checkmark" size={13} color={C.accentText} />}
@@ -189,57 +191,57 @@ export default function ProfileSettingsScreen() {
           })}
         </Group>
         <Group
-          title="피드"
-          hint="자동 게시를 끄면 새 러닝의 공개 범위가 비공개로 시작해요. 좋아요·댓글을 끄면 다른 러너의 시도가 거절돼요."
+          title={T('pset.gFeed')}
+          hint={T('pset.gFeedHint')}
         >
           <View style={st.row}>
             <View style={st.rowIcon}><Icon name="megaphone-outline" size={18} color={C.sub} /></View>
             <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={st.rowLabel}>러닝 자동 게시</Text>
-              <Text style={st.rowSub}>러닝 저장 시 프로필 피드에 자동 공개</Text>
+              <Text style={st.rowLabel}>{T('pset.autoPub')}</Text>
+              <Text style={st.rowSub}>{T('pset.autoPubSub')}</Text>
             </View>
             <Toggle on={feed.auto_publish} onChange={v => toggleFeed('auto_publish', v)} />
           </View>
           <View style={st.row}>
             <View style={st.rowIcon}><Icon name="heart-outline" size={18} color={C.sub} /></View>
             <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={st.rowLabel}>좋아요 허용</Text>
-              <Text style={st.rowSub}>다른 러너가 내 러닝에 좋아요를 남길 수 있어요</Text>
+              <Text style={st.rowLabel}>{T('pset.allowLikes')}</Text>
+              <Text style={st.rowSub}>{T('pset.allowLikesSub')}</Text>
             </View>
             <Toggle on={feed.allow_likes} onChange={v => toggleFeed('allow_likes', v)} />
           </View>
           <View style={st.row}>
             <View style={st.rowIcon}><Icon name="chatbubble-outline" size={18} color={C.sub} /></View>
             <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={st.rowLabel}>댓글 허용</Text>
-              <Text style={st.rowSub}>내 러닝에 댓글을 남길 수 있어요</Text>
+              <Text style={st.rowLabel}>{T('pset.allowComments')}</Text>
+              <Text style={st.rowSub}>{T('pset.allowCommentsSub')}</Text>
             </View>
             <Toggle on={feed.allow_comments} onChange={v => toggleFeed('allow_comments', v)} />
           </View>
         </Group>
 
-        <Group title="팔로우">
+        <Group title={T('pset.gFollow')}>
           <View style={st.row}>
             <View style={st.rowIcon}><Icon name="person-add-outline" size={18} color={C.sub} /></View>
             <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={st.rowLabel}>팔로우 승인제</Text>
-              <Text style={st.rowSub}>새 팔로워를 직접 승인해요</Text>
+              <Text style={st.rowLabel}>{T('pset.approval')}</Text>
+              <Text style={st.rowSub}>{T('pset.approvalSub')}</Text>
             </View>
             <Toggle on={approval} onChange={toggleApproval} />
           </View>
           <NavRow
             icon="mail-unread-outline"
-            label="팔로우 요청"
-            value={reqCount > 0 ? `${reqCount}건 대기` : undefined}
+            label={T('pset.followReq')}
+            value={reqCount > 0 ? tf('pset.nWaiting', { n: reqCount }) : undefined}
             onPress={() => router.push('/follow-requests' as any)}
           />
         </Group>
 
-        <Group title="관리">
+        <Group title={T('pset.gManage')}>
           {/* param seed (7/31): the paramless push shipped a blank name field
               since 4948e12 (personal-info seeds from params only) — both doors
               now pass nickname; the screen's own store fallback is the belt. */}
-          <NavRow icon="person-outline" label="프로필 편집" value="이름 · 소개 · 신체 정보" /* 8/2 트림의 복원 조건 발화 — 소개 필드 8/4 도입 */ onPress={() => router.push({ pathname: '/personal-info' as any, params: displayName ? { nickname: displayName } : undefined })} />
+          <NavRow icon="person-outline" label={T('pset.editProfile')} value={T('pset.editProfileSub')} /* 8/2 트림의 복원 조건 발화 — 소개 필드 8/4 도입 */ onPress={() => router.push({ pathname: '/personal-info' as any, params: displayName ? { nickname: displayName } : undefined })} />
           {/* 앱 설정 row DELETED (owner ruling 7/31): its href pointed at
               app/settings.tsx, deleted in 5237b7d as an "orphan" WITH this
               live consumer — the unmatched→코스설정 trap. Contents live in
@@ -247,7 +249,7 @@ export default function ProfileSettingsScreen() {
               if wanted. Lesson: route deletions grep ROUTE-STRINGS
               ('/settings'), not filenames. */}
           {/* 차단 관리 — goes live with 지연's block stack (was a server gap) */}
-          <NavRow icon="ban-outline" label="차단 관리" value="차단한 사용자" onPress={() => router.push('/block-list' as any)} />
+          <NavRow icon="ban-outline" label={T('pset.blocks')} value={T('pset.blocksSub')} onPress={() => router.push('/block-list' as any)} />
         </Group>
 
         {/* 회원 탈퇴 — canvas bottom danger button; destination is the shipped
@@ -257,7 +259,7 @@ export default function ProfileSettingsScreen() {
             onPress={() => router.push('/delete-account' as any)}
             style={({ pressed }) => [st.deleteBtn, pressed && { opacity: 0.7 }]}
           >
-            <Text style={st.deleteTxt}>회원탈퇴</Text>
+            <Text style={st.deleteTxt}>{T('pset.deleteAccount')}</Text>
           </Pressable>
         </View>
       </ScrollView>

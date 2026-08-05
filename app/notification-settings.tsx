@@ -19,49 +19,51 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/ui';
+import { useT, type StringKey } from '@/lib/i18n';
 import { Toggle } from '@/components/toggle';
 import type { NotifSettings } from '@/lib/settings-api';
 import { shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { useSettings } from '@/store/use-settings';
 
-const GROUPS: { title: string; hint?: string; rows: { key: keyof NotifSettings; label: string; sub: string }[] }[] = [
+const GROUPS: { title: StringKey; hint?: StringKey; rows: { key: keyof NotifSettings; label: StringKey; sub: StringKey }[] }[] = [
   {
-    title: '크루 · 커뮤니티',
+    title: 'nset.gCrew',
     rows: [
-      { key: 'crewChallenge', label: '새 챌린지',     sub: '내 크루에 새 챌린지가 시작되면' },
-      { key: 'crewNotice',    label: '크루 공지',     sub: '크루장·운영진이 공지를 올리면' },
-      { key: 'crewChat',      label: '크루 채팅',     sub: '새 채팅 메시지가 오면' },
-      { key: 'crewJoin',      label: '가입 요청·승인', sub: '가입 요청이 오거나 승인되면' },
+      { key: 'crewChallenge', label: 'nset.challenge', sub: 'nset.challengeSub' },
+      { key: 'crewNotice',    label: 'nset.notice',    sub: 'nset.noticeSub' },
+      { key: 'crewChat',      label: 'nset.chat',      sub: 'nset.chatSub' },
+      { key: 'crewJoin',      label: 'nset.join',      sub: 'nset.joinSub' },
     ],
   },
   {
-    title: '소셜',
+    title: 'nset.gSocial',
     rows: [
-      { key: 'likes',     label: '좋아요',    sub: '내 러닝에 좋아요가 달리면' },
-      { key: 'comments',  label: '댓글',      sub: '내 러닝에 댓글이 달리면' },
-      { key: 'followers', label: '새 팔로워', sub: '누군가 나를 팔로우하면' },
+      { key: 'likes',     label: 'nset.likes',     sub: 'nset.likesSub' },
+      { key: 'comments',  label: 'nset.comments',  sub: 'nset.commentsSub' },
+      { key: 'followers', label: 'nset.followers', sub: 'nset.followersSub' },
     ],
   },
   {
-    title: '러닝',
-    hint: '리마인더·주간 리포트·기록 축하 발송은 준비 중이에요 — 설정은 지금 저장돼요.',
+    title: 'nset.gRun',
+    hint: 'nset.gRunHint',
     rows: [
-      { key: 'runReminder', label: '러닝 리마인더',  sub: '정기 러닝 시간 전에 미리 알림' },
-      { key: 'weekly',      label: '주간 리포트',    sub: '매주 월요일 지난주 러닝 요약' },
-      { key: 'pb',          label: '개인 기록 달성', sub: '새 개인 기록(PB)을 세우면' },
+      { key: 'runReminder', label: 'nset.reminder', sub: 'nset.reminderSub' },
+      { key: 'weekly',      label: 'nset.weekly',   sub: 'nset.weeklySub' },
+      { key: 'pb',          label: 'nset.pb',       sub: 'nset.pbSub' },
     ],
   },
   {
-    title: '기타',
-    hint: '이벤트·프로모션 소식은 언제든 다시 끌 수 있어요.',
+    title: 'nset.gEtc',
+    hint: 'nset.gEtcHint',
     rows: [
-      { key: 'marketing', label: '이벤트·프로모션', sub: '챌린지 이벤트, 프리미엄 혜택 소식' },
+      { key: 'marketing', label: 'nset.marketing', sub: 'nset.marketingSub' },
     ],
   },
 ];
 
 export default function NotificationSettingsScreen() {
+  const T = useT();
   const C = useTokens();
   const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
@@ -75,7 +77,7 @@ export default function NotificationSettingsScreen() {
         <Pressable onPress={() => router.back()} hitSlop={12} style={st.backBtn}>
           <Icon name="arrow-back" size={20} color={C.text} />
         </Pressable>
-        <Text style={st.appBarTitle}>알림 설정</Text>
+        <Text style={st.appBarTitle}>{T('nset.title')}</Text>
         <View style={{ width: 36 }} />
       </View>
 
@@ -87,16 +89,13 @@ export default function NotificationSettingsScreen() {
               <Icon name="notifications-outline" size={20} color={C.accentGrn} />
             </View>
             <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={st.masterTitle}>푸시 알림</Text>
-              <Text style={st.masterSub}>끄면 모든 알림이 오지 않아요</Text>
+              <Text style={st.masterTitle}>{T('nset.master')}</Text>
+              <Text style={st.masterSub}>{T('nset.masterSub')}</Text>
             </View>
             <Toggle on={notif.master} onChange={v => { setNotifSetting('master', v); }} />
           </View>
           {/* the delivery truth — store-now, push-later, in-app unaffected */}
-          <Text style={st.deliveryNote}>
-            푸시 알림은 정식 앱 버전부터 발송돼요 — 설정은 지금 저장되고 그때 그대로 적용돼요.
-            앱 안의 알림 목록은 이 설정과 무관하게 계속 쌓여요.
-          </Text>
+          <Text style={st.deliveryNote}>{T('nset.deliveryNote')}</Text>
         </View>
 
         {/* ── Category groups — dim + inert under master OFF (canvas) ── */}
@@ -106,22 +105,22 @@ export default function NotificationSettingsScreen() {
         >
           {GROUPS.map(g => (
             <View key={g.title} style={{ paddingHorizontal: S.gutter, paddingTop: 22 }}>
-              <Text style={st.groupTitle}>{g.title}</Text>
+              <Text style={st.groupTitle}>{T(g.title)}</Text>
               <View style={[st.groupCard, shadows.sm]}>
                 {g.rows.map((r, i) => (
                   <React.Fragment key={r.key}>
                     {i > 0 && <View style={st.divider} />}
                     <View style={st.row}>
                       <View style={{ flex: 1, minWidth: 0 }}>
-                        <Text style={st.rowLabel}>{r.label}</Text>
-                        <Text style={st.rowSub}>{r.sub}</Text>
+                        <Text style={st.rowLabel}>{T(r.label)}</Text>
+                        <Text style={st.rowSub}>{T(r.sub)}</Text>
                       </View>
                       <Toggle on={notif[r.key]} onChange={v => { setNotifSetting(r.key, v); }} />
                     </View>
                   </React.Fragment>
                 ))}
               </View>
-              {g.hint ? <Text style={st.groupHint}>{g.hint}</Text> : null}
+              {g.hint ? <Text style={st.groupHint}>{T(g.hint)}</Text> : null}
             </View>
           ))}
         </View>

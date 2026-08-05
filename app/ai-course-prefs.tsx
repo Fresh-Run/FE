@@ -21,6 +21,7 @@ import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/ui';
+import { t, useT, type StringKey } from '@/lib/i18n';
 import { Toggle } from '@/components/toggle';
 import type { AiCourseSettings } from '@/lib/settings-api';
 import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
@@ -28,16 +29,16 @@ import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { MAX_TARGET_KM } from '@/hooks/use-generate-route';
 import { useSettings } from '@/store/use-settings';
 
-const TERRAINS: { value: AiCourseSettings['terrain']; label: string; sub: string }[] = [
-  { value: 'flat',  label: '평지 우선', sub: '한강·공원 등 평탄한 길' },
-  { value: 'mixed', label: '균형',      sub: '평지와 언덕을 적절히' },
-  { value: 'hill',  label: '언덕 훈련', sub: '오르막 위주의 강한 코스' },
+const TERRAINS: { value: AiCourseSettings['terrain']; label: StringKey; sub: StringKey }[] = [
+  { value: 'flat',  label: 'acp.flat',  sub: 'acp.flatSub' },
+  { value: 'mixed', label: 'acp.mixed', sub: 'acp.mixedSub' },
+  { value: 'hill',  label: 'acp.hill',  sub: 'acp.hillSub' },
 ];
 
-const SURFACES: { value: AiCourseSettings['surface']; label: string }[] = [
-  { value: 'any',   label: '상관 없음' },
-  { value: 'paved', label: '포장도로' },
-  { value: 'trail', label: '트레일·흙길' },
+const SURFACES: { value: AiCourseSettings['surface']; label: StringKey }[] = [
+  { value: 'any',   label: 'acp.sAny' },
+  { value: 'paved', label: 'acp.sPaved' },
+  { value: 'trail', label: 'acp.sTrail' },
 ];
 
 // Floor: BE bound 1.0 · ceiling: the shared 13km cap (see docblock)
@@ -141,6 +142,7 @@ function Group({ title, children }: { title: string; children: React.ReactNode }
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function AiCoursePrefsScreen() {
+  const T = useT();
   const C = useTokens();
   const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
@@ -157,7 +159,7 @@ export default function AiCoursePrefsScreen() {
 
   async function save(patch: Partial<AiCourseSettings>) {
     const ok = await setAiCourse(patch); // optimistic; rolls back on failure
-    if (!ok) Alert.alert('저장 실패', '설정을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.');
+    if (!ok) Alert.alert(t('set.saveFailT'), t('set.saveFailB'));
   }
 
   return (
@@ -166,7 +168,7 @@ export default function AiCoursePrefsScreen() {
         <Pressable onPress={() => router.back()} hitSlop={12} style={st.backBtn}>
           <Icon name="arrow-back" size={20} color={C.text} />
         </Pressable>
-        <Text style={st.appBarTitle}>AI 코스 선호도</Text>
+        <Text style={st.appBarTitle}>{T('acp.title')}</Text>
         <View style={{ width: 36 }} />
       </View>
 
@@ -175,7 +177,7 @@ export default function AiCoursePrefsScreen() {
           <View style={{ paddingHorizontal: S.gutter, paddingTop: S.sm }}>
             <View style={st.infoBanner}>
               <Icon name="flag-outline" size={18} color={C.accentGrn} />
-              <Text style={st.infoTxt}>첫 코스 전에 취향을 알려주세요 — 프로필 탭에서 언제든 바꿀 수 있어요</Text>
+              <Text style={st.infoTxt}>{T('acp.firstRunBanner')}</Text>
             </View>
           </View>
         )}
@@ -183,57 +185,57 @@ export default function AiCoursePrefsScreen() {
         <View style={{ paddingHorizontal: S.gutter, paddingTop: S.sm }}>
           <View style={st.infoBanner}>
             <Icon name="sparkles-outline" size={18} color={C.accentGrn} />
-            <Text style={st.infoTxt}>AI가 새 코스를 추천할 때 이 설정을 기본값으로 사용해요.</Text>
+            <Text style={st.infoTxt}>{T('acp.infoBanner')}</Text>
           </View>
         </View>
 
-        <Group title="지형">
+        <Group title={T('acp.gTerrain')}>
           {TERRAINS.map(t => (
             <SelectRow
               key={t.value}
-              label={t.label}
-              sub={t.sub}
+              label={T(t.label)}
+              sub={T(t.sub)}
               selected={ai.terrain === t.value}
               onSelect={() => { if (ai.terrain !== t.value) save({ terrain: t.value }); }}
             />
           ))}
         </Group>
 
-        <Group title="기본 거리">
+        <Group title={T('acp.gDist')}>
           <StepperRow
-            label="추천 거리"
+            label={T('acp.distLabel')}
             value={ai.default_distance_km}
             onChange={v => save({ default_distance_km: v })}
           />
         </Group>
 
-        <Group title="노면">
+        <Group title={T('acp.gSurface')}>
           {SURFACES.map(o => (
             <SelectRow
               key={o.value}
-              label={o.label}
+              label={T(o.label)}
               selected={ai.surface === o.value}
               onSelect={() => { if (ai.surface !== o.value) save({ surface: o.value }); }}
             />
           ))}
         </Group>
 
-        <Group title="선호">
+        <Group title={T('acp.gPref')}>
           <ToggleRow
-            label="경치 좋은 길 우선"
-            sub="강변·공원·녹지를 우선 경유"
+            label={T('acp.scenic')}
+            sub={T('acp.scenicSub')}
             on={ai.scenic}
             onChange={v => save({ scenic: v })}
           />
           <ToggleRow
-            label="순환 코스 선호"
-            sub="출발지로 돌아오는 루프"
+            label={T('acp.loop')}
+            sub={T('acp.loopSub')}
             on={ai.prefer_loop}
             onChange={v => save({ prefer_loop: v })}
           />
           <ToggleRow
-            label="급경사 회피"
-            sub="가파른 오르막 제외"
+            label={T('acp.avoidHills')}
+            sub={T('acp.avoidHillsSub')}
             on={ai.avoid_hills}
             onChange={v => save({ avoid_hills: v })}
           />
@@ -243,10 +245,10 @@ export default function AiCoursePrefsScreen() {
             {/* two labels, ONE action (ruled): configured vs skipped both
                 proceed — the choice is psychological. Both back to create. */}
             <Pressable onPress={() => router.back()} style={st.frPrimary}>
-              <Text style={st.frPrimaryTxt}>이대로 생성하러 가기</Text>
+              <Text style={st.frPrimaryTxt}>{T('acp.frGo')}</Text>
             </Pressable>
             <Pressable onPress={() => router.back()} style={st.frSkip}>
-              <Text style={st.frSkipTxt}>나중에 — 바로 생성하기</Text>
+              <Text style={st.frSkipTxt}>{T('acp.frSkip')}</Text>
             </Pressable>
           </View>
         )}

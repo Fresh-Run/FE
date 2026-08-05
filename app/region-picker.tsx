@@ -20,13 +20,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/ui';
 import { regionName, SIDO_LIST, SIGUNGU, type Sido } from '@/lib/korea-regions';
-import { t, tf } from '@/lib/i18n';
+import { t, tf, useT } from '@/lib/i18n';
 import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { setCrewFilter } from '@/store/crew-filter';
 import { setPendingCrewRegion } from '@/store/pending-crew-region';
 
 export default function RegionPickerScreen() {
+  const T = useT();
   const C = useTokens();
   const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
@@ -79,7 +80,7 @@ export default function RegionPickerScreen() {
         >
           <Icon name="chevron-back" size={22} color={C.text} />
         </Pressable>
-        <Text style={st.appBarTitle}>{drill ?? '시·도 선택'}</Text>
+        <Text style={st.appBarTitle}>{drill ?? T('region.pickSido')}</Text>
         <View style={{ width: 40 }} />
       </View>
 

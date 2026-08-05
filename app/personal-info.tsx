@@ -41,10 +41,15 @@ import { avatarBg } from '@/lib/fr-hash';
 import { getMyProfile, updateNickname, updateProfile } from '@/lib/profile-api';
 import { accentShadow, radius as R, shadows, spacing as S, type Tokens, DENSE_MAX_FONT_SCALE} from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
+import { t, useT, type StringKey } from '@/lib/i18n';
 import { useLocalProfile, type Gender } from '@/store/use-local-profile';
 import { useStore } from '@/store/use-store';
 
 const GENDERS: Gender[] = ['여성', '남성', '선택 안 함'];
+// Display-only label map (slice 6): the Gender VALUES are the store's typed
+// contract (server-mapped in use-local-profile G_TO_EN) — never translate
+// the values, only the labels.
+const GENDER_LABEL: Record<Gender, StringKey> = { '여성': 'pi.gFemale', '남성': 'pi.gMale', '선택 안 함': 'pi.gNone' };
 
 // ─── Row primitives (FrField / FrSelectRow; steppers → wheel sheets, wave B) ──
 
@@ -111,6 +116,7 @@ function Group({ title, hint, children }: { title: string; hint?: string; childr
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function PersonalInfoScreen() {
+  const T = useT();
   const C = useTokens();
   const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
@@ -212,7 +218,7 @@ export default function PersonalInfoScreen() {
         quality: 0.8,
       });
     } catch {
-      Alert.alert('사진 선택 실패', '사진 선택 화면을 열지 못했어요. 다시 시도해 주세요.');
+      Alert.alert(t('pi.pickFailT'), t('pi.pickFailB'));
       return;
     } finally {
       setOpeningPicker(false);
@@ -233,7 +239,7 @@ export default function PersonalInfoScreen() {
       await updateProfile({ avatar_url: url }); // single-field (partial-PATCH standard)
       setPhotoUrl(url); // write-through: 홈/프로필 paint it immediately
     } catch (e: unknown) {
-      Alert.alert('사진 업로드 실패', errorMessage(e));
+      Alert.alert(t('pi.uploadFailT'), errorMessage(e));
     } finally {
       setUploadingPhoto(false);
     }
@@ -249,7 +255,7 @@ export default function PersonalInfoScreen() {
       await updateProfile({ avatar_url: null }); // null-as-removal, single-field (probed)
       setPhotoUrl(null); // write-through — initials return everywhere
     } catch (e: unknown) {
-      Alert.alert('사진 삭제 실패', errorMessage(e));
+      Alert.alert(t('pi.photoDelFailT'), errorMessage(e));
     } finally {
       setUploadingPhoto(false);
     }
@@ -294,11 +300,11 @@ export default function PersonalInfoScreen() {
     if (saving) return;
     const trimmed = name.trim();
     if (trimmed.length < 2 || trimmed.length > 20) {
-      setNameError('이름은 2~20자로 입력해 주세요');
+      setNameError(t('pi.nameLen'));
       return;
     }
     if (birthYear && birthYear.length !== 4) {
-      Alert.alert('출생 연도', '출생 연도는 4자리로 입력해 주세요.');
+      Alert.alert(t('pi.birthYear'), t('pi.birthYear4'));
       return;
     }
     setSaving(true);
@@ -324,9 +330,9 @@ export default function PersonalInfoScreen() {
       flashTimer.current = setTimeout(() => setSavedFlash(false), 1600);
     } catch (e: unknown) {
       if (e instanceof ApiError && e.status === 409) {
-        setNameError('이미 사용 중인 닉네임이에요');
+        setNameError(t('pi.nameTaken'));
       } else {
-        Alert.alert('저장 실패', errorMessage(e));
+        Alert.alert(t('set.saveFailT'), errorMessage(e));
       }
     } finally {
       setSaving(false);
@@ -343,7 +349,7 @@ export default function PersonalInfoScreen() {
         <Pressable onPress={() => router.back()} hitSlop={12} style={st.backBtn}>
           <Icon name="arrow-back" size={20} color={C.text} />
         </Pressable>
-        <Text style={st.appBarTitle}>개인 정보</Text>
+        <Text style={st.appBarTitle}>{T('pi.title')}</Text>
         <View style={{ width: 36 }} />
       </View>
 
@@ -364,15 +370,15 @@ export default function PersonalInfoScreen() {
                   style={st.avatar}
                 />
               ) : (
-                <View style={[st.avatar, { backgroundColor: avatarBg(name || '러너'), alignItems: 'center', justifyContent: 'center' }]}>
-                  <Text style={st.avatarTxt}>{(name.trim() || '러').trim()[0].toUpperCase()}</Text>
+                <View style={[st.avatar, { backgroundColor: avatarBg(name || t('home.runner')), alignItems: 'center', justifyContent: 'center' }]}>
+                  <Text style={st.avatarTxt}>{(name.trim() || t('home.runner')).trim()[0].toUpperCase()}</Text>
                 </View>
               )}
             </Pressable>
             {(uploadingPhoto || openingPicker) && (
               <View style={[st.avatar, st.avatarBusy]} pointerEvents="none">
                 <ActivityIndicator color="#fff" />
-                {openingPicker && <Text style={st.avatarBusyTxt}>사진 불러오는 중</Text>}
+                {openingPicker && <Text style={st.avatarBusyTxt}>{T('pi.photoLoading')}</Text>}
               </View>
             )}
             <Pressable onPress={onAvatarPress} hitSlop={8} style={st.pencilBadge}>
@@ -382,18 +388,18 @@ export default function PersonalInfoScreen() {
         </View>
 
         {/* ── 기본 정보 ── */}
-        <Group title="기본 정보">
-          <FieldRow label="이름" value={name} onChange={v => { setName(v); setNameError(null); }} placeholder="이름" error={nameError} />
+        <Group title={T('pi.gBasic')}>
+          <FieldRow label={T('pi.name')} value={name} onChange={v => { setName(v); setNameError(null); }} placeholder={T('pi.name')} error={nameError} />
           {/* 소개 — multiline + live counter. Input scales FREE (composer
               class per the 8/3 clamp ruling); the counter is dense. ko
               placeholder hardcoded — slice-6 census note. */}
           <View style={st.bioBlock}>
-            <Text style={st.fieldLabel}>소개</Text>
+            <Text style={st.fieldLabel}>{T('pi.bio')}</Text>
             <View style={{ flex: 1, minWidth: 0 }}>
               <TextInput
                 value={bio}
                 onChangeText={v => { bioDirtyRef.current = true; setBio(v.slice(0, BIO_MAX)); }}
-                placeholder="나를 소개하는 한두 줄 (선택)"
+                placeholder={T('pi.bioPh')}
                 placeholderTextColor={C.faint}
                 multiline
                 maxLength={BIO_MAX}
@@ -402,19 +408,19 @@ export default function PersonalInfoScreen() {
               <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={[st.bioCount, bio.length >= BIO_MAX && { color: C.danger }]}>{bio.length}/{BIO_MAX}</Text>
             </View>
           </View>
-          <FieldRow label="이메일" value={email} editable={false} />
+          <FieldRow label={T('pi.email')} value={email} editable={false} />
           <FieldRow
-            label="출생 연도"
+            label={T('pi.birthYear')}
             value={birthYear}
             onChange={v => setBirthYear(v.replace(/\D/g, '').slice(0, 4))}
-            placeholder="예: 1995"
+            placeholder={T('pi.birthYearPh')}
             keyboardType="number-pad"
           />
         </Group>
 
         {/* ── 신체 정보 ── */}
-        <Group title="신체 정보" hint="신체 정보는 칼로리와 페이스 추정의 정확도를 높여요.">
-          <NumberWheelRow label="체중" value={weightKg} min={30} max={150} step={0.5} suffix=" kg" onChange={setWeightKg} />
+        <Group title={T('pi.gBody')} hint={T('pi.gBodyHint')}>
+          <NumberWheelRow label={T('pi.weight')} value={weightKg} min={30} max={150} step={0.5} suffix=" kg" onChange={setWeightKg} />
           {/* ③: 건강에서 체중 가져오기 — visible only after the Apple 건강
               opt-in (설정). Sets the wheel; 저장 still commits it (no silent
               writes). Honest empty state when 건강 has no record. */}
@@ -423,7 +429,7 @@ export default function PersonalInfoScreen() {
               onPress={async () => {
                 const kg = await fetchBodyMassKg();
                 if (kg == null) {
-                  Alert.alert('기록 없음', '건강 앱에 체중 기록이 없거나 접근 권한이 없어요.');
+                  Alert.alert(t('pi.hkEmptyT'), t('pi.hkEmptyB'));
                   return;
                 }
                 setWeightKg(Math.min(150, Math.max(30, Math.round(kg * 2) / 2)));
@@ -432,16 +438,16 @@ export default function PersonalInfoScreen() {
               hitSlop={6}
             >
               <Icon name="heart-outline" size={14} color={C.accentGrn} />
-              <Text style={st.healthPullTxt}>건강에서 체중 가져오기</Text>
+              <Text style={st.healthPullTxt}>{T('pi.hkPull')}</Text>
             </Pressable>
           )}
-          <NumberWheelRow label="키" value={heightCm} min={120} max={220} step={1} suffix=" cm" onChange={setHeightCm} />
+          <NumberWheelRow label={T('pi.height')} value={heightCm} min={120} max={220} step={1} suffix=" cm" onChange={setHeightCm} />
         </Group>
 
         {/* ── 성별 ── */}
-        <Group title="성별">
+        <Group title={T('pi.gGender')}>
           {GENDERS.map(g => (
-            <SelectRow key={g} label={g} selected={gender === g} onSelect={() => setGender(g)} />
+            <SelectRow key={g} label={T(GENDER_LABEL[g])} selected={gender === g} onSelect={() => setGender(g)} />
           ))}
         </Group>
       </ScrollView>
@@ -463,10 +469,10 @@ export default function PersonalInfoScreen() {
               ? (
                 <>
                   <Icon name="checkmark" size={18} color={C.accentGrn} />
-                  <Text style={[st.saveTxt, { color: C.accentGrn }]}>저장됨</Text>
+                  <Text style={[st.saveTxt, { color: C.accentGrn }]}>{T('pi.saved')}</Text>
                 </>
               )
-              : <Text style={st.saveTxt}>저장</Text>}
+              : <Text style={st.saveTxt}>{T('pi.save')}</Text>}
         </Pressable>
       </View>
 
@@ -477,19 +483,19 @@ export default function PersonalInfoScreen() {
           <Pressable style={st.sheetBackdrop} onPress={() => setChooserOpen(false)} />
           <View style={[st.sheet, { paddingBottom: Math.max(insets.bottom, 12) + 8 }]}>
             <View style={st.grabBar} />
-            <Text style={st.sheetTitle}>프로필 사진</Text>
+            <Text style={st.sheetTitle}>{T('pi.photoSheetT')}</Text>
             <View style={st.sheetGroup}>
               <Pressable onPress={() => chooseThenRun(changePhoto)} style={({ pressed }) => [st.sheetRow, pressed && { opacity: 0.6 }]}>
-                <Text style={st.sheetRowTxt}>사진 변경</Text>
+                <Text style={st.sheetRowTxt}>{T('pi.photoChange')}</Text>
               </Pressable>
               <View style={st.sheetDivider} />
               <Pressable onPress={() => chooseThenRun(deletePhoto)} style={({ pressed }) => [st.sheetRow, pressed && { opacity: 0.6 }]}>
-                <Text style={[st.sheetRowTxt, { color: C.danger }]}>사진 삭제</Text>
+                <Text style={[st.sheetRowTxt, { color: C.danger }]}>{T('pi.photoDelete')}</Text>
               </Pressable>
             </View>
             {/* Detached cancel per iOS convention */}
             <Pressable onPress={() => setChooserOpen(false)} style={({ pressed }) => [st.sheetCancel, pressed && { opacity: 0.6 }]}>
-              <Text style={[st.sheetRowTxt, { fontWeight: '700' }]}>취소</Text>
+              <Text style={[st.sheetRowTxt, { fontWeight: '700' }]}>{T('common.cancel')}</Text>
             </Pressable>
           </View>
         </View>

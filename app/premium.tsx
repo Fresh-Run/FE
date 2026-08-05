@@ -21,17 +21,19 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/ui';
+import { useT, type StringKey } from '@/lib/i18n';
 import { shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { useQuota } from '@/store/use-quota';
 
-const FEATURES: { icon: string; title: string; desc: string; soon?: boolean }[] = [
-  { icon: 'sparkles-outline', title: 'AI 맞춤 코스 무제한', desc: '거리·경유지에 최적화된 코스 생성 — 횟수 제한 없이' },
-  { icon: 'stats-chart-outline', title: 'AI 월간 인사이트', desc: '월간 통계·페이스 추이와 함께 AI 분석 리포트를 받아보세요' },
-  { icon: 'volume-high-outline', title: 'AI 오디오 코치', desc: '러닝 중 실시간 음성 페이스 안내', soon: true },
+const FEATURES: { icon: string; title: StringKey; desc: StringKey; soon?: boolean }[] = [
+  { icon: 'sparkles-outline', title: 'prem.f1T', desc: 'prem.f1D' },
+  { icon: 'stats-chart-outline', title: 'prem.f2T', desc: 'prem.f2D' },
+  { icon: 'volume-high-outline', title: 'prem.f3T', desc: 'prem.f3D', soon: true },
 ];
 
 export default function PremiumScreen() {
+  const T = useT();
   const C = useTokens();
   const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
@@ -56,7 +58,7 @@ export default function PremiumScreen() {
           </View>
         </View>
         <Text style={st.title}>FreshRun Premium</Text>
-        <Text style={st.sub}>프로 러너를 위한 AI 코칭과 심층 분석을 잠금 해제하세요.</Text>
+        <Text style={st.sub}>{T('prem.sub')}</Text>
 
         {/* features — truthful to today's server */}
         <View style={{ gap: 12, marginTop: 24 }}>
@@ -65,10 +67,10 @@ export default function PremiumScreen() {
               <View style={st.featIcon}><Icon name={f.icon} size={20} color={C.accentGrn} /></View>
               <View style={{ flex: 1, minWidth: 0 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
-                  <Text style={st.featTitle}>{f.title}</Text>
-                  {f.soon && <View style={st.soonChip}><Text style={st.soonTxt}>출시 예정</Text></View>}
+                  <Text style={st.featTitle}>{T(f.title)}</Text>
+                  {f.soon && <View style={st.soonChip}><Text style={st.soonTxt}>{T('prem.soon')}</Text></View>}
                 </View>
-                <Text style={st.featDesc}>{f.desc}</Text>
+                <Text style={st.featDesc}>{T(f.desc)}</Text>
               </View>
             </View>
           ))}
@@ -78,15 +80,15 @@ export default function PremiumScreen() {
           /* already premium — active state, no upsell tail */
           <View style={[st.activeCard, shadows.sm]}>
             <Icon name="checkmark-circle" size={20} color={C.accentGrn} />
-            <Text style={st.activeTxt}>Premium 이용 중이에요</Text>
+            <Text style={st.activeTxt}>{T('prem.active')}</Text>
           </View>
         ) : (
           <>
             {/* plan cards — INFORMATION (canvas prices), not selectable */}
             <View style={{ flexDirection: 'row', gap: 11, marginTop: 26 }}>
-              {([['월간', '₩9,900', '/월', false], ['연간', '₩79,000', '/년', true]] as [string, string, string, boolean][]).map(([nm, price, per, badge]) => (
+              {([[T('prem.monthly'), '₩9,900', T('prem.perMo'), false], [T('prem.yearly'), '₩79,000', T('prem.perYr'), true]] as [string, string, string, boolean][]).map(([nm, price, per, badge]) => (
                 <View key={nm} style={[st.planCard, shadows.sm]}>
-                  {badge && <View style={st.planBadge}><Text style={st.planBadgeTxt}>33% 할인</Text></View>}
+                  {badge && <View style={st.planBadge}><Text style={st.planBadgeTxt}>{T('prem.discount')}</Text></View>}
                   <Text style={st.planName}>{nm}</Text>
                   <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 2, marginTop: 6 }}>
                     <Text style={st.planPrice}>{price}</Text>
@@ -100,8 +102,8 @@ export default function PremiumScreen() {
             <View style={st.noticeCard}>
               <Icon name="time-outline" size={18} color={C.accentGrn} />
               <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={st.noticeTitle}>출시 시 구독 가능</Text>
-                <Text style={st.noticeSub}>정식 출시와 함께 구독이 열려요. 지금은 모든 기본 기능을 무료로 사용할 수 있어요.</Text>
+                <Text style={st.noticeTitle}>{T('prem.noticeT')}</Text>
+                <Text style={st.noticeSub}>{T('prem.noticeB')}</Text>
               </View>
             </View>
           </>

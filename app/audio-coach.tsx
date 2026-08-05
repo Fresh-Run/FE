@@ -19,6 +19,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/ui';
+import { useT, type StringKey } from '@/lib/i18n';
 import { Toggle } from '@/components/toggle';
 import { composeIntervalSample, composeRateSample, speakCue } from '@/lib/audio-coach';
 import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
@@ -48,6 +49,7 @@ function SliderRow({ siteId, label, value, min, max, step, fmt, onChange }: {
 }
 
 export default function AudioCoachScreen() {
+  const T = useT();
   const C = useTokens();
   const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
@@ -63,7 +65,7 @@ export default function AudioCoachScreen() {
         <Pressable onPress={() => router.back()} hitSlop={12} style={st.backBtn}>
           <Icon name="chevron-back" size={22} color={C.text} />
         </Pressable>
-        <Text style={st.appBarTitle}>오디오 코치</Text>
+        <Text style={st.appBarTitle}>{T('ac.title')}</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -72,8 +74,8 @@ export default function AudioCoachScreen() {
         <View style={[st.masterCard, shadows.sm]}>
           <View style={st.masterIcon}><Icon name="volume-high-outline" size={20} color={C.accentGrn} /></View>
           <View style={{ flex: 1, minWidth: 0 }}>
-            <Text style={st.masterTitle}>실시간 음성 코칭</Text>
-            <Text style={st.masterSub}>러닝 중 구간마다 음성으로 안내해요</Text>
+            <Text style={st.masterTitle}>{T('ac.masterTitle')}</Text>
+            <Text style={st.masterSub}>{T('ac.masterSub')}</Text>
           </View>
           <Toggle on={voiceCue} onChange={v => { void setRunSetting('voice_cue', v); }} />
         </View>
@@ -84,7 +86,7 @@ export default function AudioCoachScreen() {
                 line — 속도는 새 rate로, 간격은 값을 읽어줘서 귀로 확인 */}
             <SliderRow
               siteId="coach-rate"
-              label="말하기 속도" value={coach.rate} min={0.6} max={1.6} step={0.1}
+              label={T('ac.rate')} value={coach.rate} min={0.6} max={1.6} step={0.1}
               fmt={v => `${v.toFixed(1)}x`}
               onChange={v => {
                 const rate = Math.round(v * 10) / 10;
@@ -95,7 +97,7 @@ export default function AudioCoachScreen() {
             <View style={st.divider} />
             <SliderRow
               siteId="coach-interval"
-              label="안내 간격" value={coach.cue_interval_km} min={0.5} max={3} step={0.5}
+              label={T('ac.interval')} value={coach.cue_interval_km} min={0.5} max={3} step={0.5}
               fmt={v => `${v} km`}
               onChange={v => {
                 void setAudioCoach({ cue_interval_km: v });
@@ -104,19 +106,19 @@ export default function AudioCoachScreen() {
             />
           </View>
 
-          <Text style={st.groupTitle}>안내 항목</Text>
+          <Text style={st.groupTitle}>{T('ac.itemsGroup')}</Text>
           <View style={[st.card, shadows.sm]}>
             {([
-              ['announce_distance', '거리 안내', '구간 지점과 경과 시간'],
-              ['announce_pace', '페이스 안내', '현재 킬로미터당 페이스'],
-              ['announce_calories', '칼로리 안내', '체중 정보가 있을 때만 안내돼요'],
-            ] as ['announce_distance' | 'announce_pace' | 'announce_calories', string, string][]).map(([k, label, sub], i) => (
+              ['announce_distance', 'ac.itemDist', 'ac.itemDistSub'],
+              ['announce_pace', 'ac.itemPace', 'ac.itemPaceSub'],
+              ['announce_calories', 'ac.itemKcal', 'ac.itemKcalSub'],
+            ] as ['announce_distance' | 'announce_pace' | 'announce_calories', StringKey, StringKey][]).map(([k, label, sub], i) => (
               <React.Fragment key={k}>
                 {i > 0 && <View style={st.divider} />}
                 <View style={st.toggleRow}>
                   <View style={{ flex: 1, minWidth: 0 }}>
-                    <Text style={st.rowLabel}>{label}</Text>
-                    <Text style={st.rowSub}>{sub}</Text>
+                    <Text style={st.rowLabel}>{T(label)}</Text>
+                    <Text style={st.rowSub}>{T(sub)}</Text>
                   </View>
                   <Toggle on={coach[k]} onChange={v => { void setAudioCoach({ [k]: v }); }} />
                 </View>

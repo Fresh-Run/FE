@@ -9,17 +9,19 @@ import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/ui';
+import { t, useT, type StringKey } from '@/lib/i18n';
 import type { UserSettings } from '@/lib/settings-api';
 import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { useSettings } from '@/store/use-settings';
 
-const OPTIONS: { value: UserSettings['units']; label: string; sub: string }[] = [
-  { value: 'km', label: '킬로미터 (km)', sub: '페이스 분/킬로미터' },
-  { value: 'mi', label: '마일 (mi)',     sub: '페이스 분/마일' },
+const OPTIONS: { value: UserSettings['units']; label: StringKey; sub: StringKey }[] = [
+  { value: 'km', label: 'units.km', sub: 'units.kmSub' },
+  { value: 'mi', label: 'units.mi', sub: 'units.miSub' },
 ];
 
 export default function UnitsScreen() {
+  const T = useT();
   const C = useTokens();
   const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
@@ -29,7 +31,7 @@ export default function UnitsScreen() {
   async function pick(value: UserSettings['units']) {
     if (value === units) return;
     const ok = await setUnits(value); // optimistic; rolls back on failure
-    if (!ok) Alert.alert('저장 실패', '설정을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.');
+    if (!ok) Alert.alert(t('set.saveFailT'), t('set.saveFailB'));
   }
 
   return (
@@ -38,21 +40,21 @@ export default function UnitsScreen() {
         <Pressable onPress={() => router.back()} hitSlop={12} style={st.backBtn}>
           <Icon name="arrow-back" size={20} color={C.text} />
         </Pressable>
-        <Text style={st.appBarTitle}>단위</Text>
+        <Text style={st.appBarTitle}>{T('units.title')}</Text>
         <View style={{ width: 36 }} />
       </View>
 
       <View style={{ paddingHorizontal: S.gutter }}>
-        <Text style={st.groupTitle}>거리 단위</Text>
-        <Text style={st.groupHint}>앱 전체의 거리·페이스 표기에 적용돼요.</Text>
+        <Text style={st.groupTitle}>{T('units.group')}</Text>
+        <Text style={st.groupHint}>{T('units.hint')}</Text>
         <View style={[st.groupCard, shadows.sm]}>
           {OPTIONS.map((o, i) => (
             <React.Fragment key={o.value}>
               {i > 0 && <View style={st.divider} />}
               <Pressable onPress={() => pick(o.value)} style={st.row}>
                 <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text style={st.rowLabel}>{o.label}</Text>
-                  <Text style={st.rowSub}>{o.sub}</Text>
+                  <Text style={st.rowLabel}>{T(o.label)}</Text>
+                  <Text style={st.rowSub}>{T(o.sub)}</Text>
                 </View>
                 <View style={[st.radioOuter, units === o.value && { borderColor: C.accent }]}>
                   {units === o.value && <View style={st.radioInner} />}

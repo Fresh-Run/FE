@@ -30,20 +30,22 @@ import { Icon } from '@/components/ui';
 import { ApiError } from '@/lib/api';
 import { listMyCrews, mapCrew, type Crew } from '@/lib/crews-api';
 import { errorMessage } from '@/lib/error-copy';
+import { t, useT, type StringKey } from '@/lib/i18n';
 import { deleteAccount } from '@/lib/profile-api';
 import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { useStore } from '@/store/use-store';
 
-const CONSEQUENCES: [string, string][] = [
-  ['footsteps-outline', '모든 러닝 기록·경로·사진이 영구 삭제돼요'],
-  ['chatbubble-outline', '댓글·좋아요·팔로우 관계가 사라져요'],
-  ['people-outline', '가입한 크루에서 나가지고, 혼자인 내 크루는 함께 삭제돼요'],
-  ['time-outline', '백업에서도 최대 90일 안에 완전히 사라져요 · 복구 불가'],
-  ['mail-outline', '같은 이메일로 다시 가입할 수 있어요 (새 계정, 데이터 없음)'],
+const CONSEQUENCES: [string, StringKey][] = [
+  ['footsteps-outline', 'da.c1'],
+  ['chatbubble-outline', 'da.c2'],
+  ['people-outline', 'da.c3'],
+  ['time-outline', 'da.c4'],
+  ['mail-outline', 'da.c5'],
 ];
 
 export default function DeleteAccountScreen() {
+  const T = useT();
   const C = useTokens();
   const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
@@ -71,18 +73,18 @@ export default function DeleteAccountScreen() {
         const ids = Array.isArray(e.detail?.crew_ids) ? (e.detail.crew_ids as string[]) : [];
         setBlockingIds(ids); // the path panel takes over
       } else if (e instanceof ApiError && e.code === 'demo_account') {
-        Alert.alert('데모 계정', '데모 계정은 탈퇴할 수 없어요.');
+        Alert.alert(t('da.demoT'), t('da.demoB'));
       } else {
-        Alert.alert('탈퇴 실패', errorMessage(e));
+        Alert.alert(t('da.failT'), errorMessage(e));
       }
     }
   }
 
   // Guide rule ①: 2-step confirm — this screen is step 1, the Alert is step 2
   function confirmDelete() {
-    Alert.alert('정말 탈퇴할까요?', '모든 기록이 영구 삭제됩니다. 되돌릴 수 없어요.', [
-      { text: '취소', style: 'cancel' },
-      { text: '탈퇴하기', style: 'destructive', onPress: runDelete },
+    Alert.alert(t('da.confirmT'), t('da.confirmB'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('da.cta'), style: 'destructive', onPress: runDelete },
     ]);
   }
 
@@ -96,7 +98,7 @@ export default function DeleteAccountScreen() {
         <Pressable onPress={() => router.back()} hitSlop={12} style={st.backBtn}>
           <Icon name="arrow-back" size={20} color={C.text} />
         </Pressable>
-        <Text style={st.appBarTitle}>회원 탈퇴</Text>
+        <Text style={st.appBarTitle}>{T('da.title')}</Text>
         <View style={{ width: 36 }} />
       </View>
 
@@ -104,7 +106,7 @@ export default function DeleteAccountScreen() {
         <View style={st.heroIcon}>
           <Icon name="person-remove-outline" size={30} color={C.danger} />
         </View>
-        <Text style={st.title}>탈퇴하면 이렇게 돼요</Text>
+        <Text style={st.title}>{T('da.heroTitle')}</Text>
 
         <View style={[st.card, shadows.sm]}>
           {CONSEQUENCES.map(([icon, txt], i) => (
@@ -112,7 +114,7 @@ export default function DeleteAccountScreen() {
               {i > 0 && <View style={st.divider} />}
               <View style={st.row}>
                 <Icon name={icon} size={17} color={C.sub} />
-                <Text style={st.rowTxt}>{txt}</Text>
+                <Text style={st.rowTxt}>{T(txt)}</Text>
               </View>
             </React.Fragment>
           ))}
@@ -123,12 +125,10 @@ export default function DeleteAccountScreen() {
           <View style={[st.blockCard, shadows.sm]}>
             <View style={st.blockHead}>
               <Icon name="alert-circle-outline" size={17} color={C.sun} />
-              <Text style={st.blockTitle}>먼저 크루를 정리해 주세요</Text>
+              <Text style={st.blockTitle}>{T('da.blockT')}</Text>
             </View>
-            <Text style={st.blockBody}>
-              크루원이 있는 크루의 크루장이에요. 크루를 양도하거나 삭제한 후 탈퇴할 수 있어요.
-            </Text>
-            {(blockingCrews.length > 0 ? blockingCrews : blockingIds.map(id => ({ id, name: '내 크루' } as Crew))).map(c => (
+            <Text style={st.blockBody}>{T('da.blockB')}</Text>
+            {(blockingCrews.length > 0 ? blockingCrews : blockingIds.map(id => ({ id, name: T('da.myCrewFallback') } as Crew))).map(c => (
               <Pressable
                 key={c.id}
                 onPress={() => router.push({ pathname: '/(community)/crew-detail' as never, params: { crewId: c.id } })}
@@ -136,7 +136,7 @@ export default function DeleteAccountScreen() {
               >
                 <Icon name="people-outline" size={15} color={C.accentGrn} />
                 <Text style={st.blockCrewName} numberOfLines={1}>{c.name}</Text>
-                <Text style={st.blockCrewGo}>크루 관리로 →</Text>
+                <Text style={st.blockCrewGo}>{T('da.blockGo')}</Text>
               </Pressable>
             ))}
           </View>
@@ -145,10 +145,10 @@ export default function DeleteAccountScreen() {
         <Pressable onPress={confirmDelete} disabled={busy} style={[st.deleteBtn, busy && { opacity: 0.6 }]}>
           {busy
             ? <ActivityIndicator size="small" color="#fff" />
-            : <Text style={st.deleteTxt}>탈퇴하기</Text>}
+            : <Text style={st.deleteTxt}>{T('da.cta')}</Text>}
         </Pressable>
         <Pressable onPress={() => router.back()} style={st.keepBtn}>
-          <Text style={st.keepTxt}>계속 사용하기</Text>
+          <Text style={st.keepTxt}>{T('da.keep')}</Text>
         </Pressable>
       </ScrollView>
     </View>
