@@ -1300,7 +1300,12 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 
 ## ✅ 빌드-11 온-디바이스 필드 수락 (오너 버딕트, 8/5 — [HH:MM] 미동봉, as-arrived): **잠금화면 위젯 PASSED** — 타입 램프 **22pt 확정** (23 불요 룰링 — 보수단 초이스 비준) · 평균 페이스 라벨 정상 · 일시정지/자동 일시정지 캡션 **양쪽 확인** · **배치 ①②③ 필드 수락 = 빌드-11 아크 클로즈** (잔여: 지연 폰 설치 → 이중-퍼블리시 윈도우 종료)
 
-## 🔼 i18n 슬라이스 8 (에픽 클로즈) 양-레인 STAGED — 1.0.6 = **b4c83c61** (bNaATWil…) · 1.0.5 = **bf5cd800** (fJyk8oJJ… — **크로스-레인 발산, 비결정성 클래스**; 퍼-레인 타이는 양쪽 MATCH — 캡처 표준이 각자 증명) · 커밋 00f05e8
+## 🏆 i18n 에픽 CLOSED — 슬라이스 8 양-레인 PROMOTED (2026-08-06) — **[00:50] 오너 스탬프, 빌드 11** (탭바/크루상세/도움말/휠 AM·PM/쿼터 얼럿/백스윕 잔존 사이트 ko↔en 왕복 정상 · **웰컴 en 헤드라인 유지 확정** — "New roads every time — run your today.") · 원-컨펌 · **1.0.5 = 오너 same-commit 룰링** (00f05e8, copy/plumbing only — 저지먼트로 기록, 전례 = 폴리시 페어) · **프로모션 ×2 퍼-레인 해시-타이 MATCH**: 1.0.6 = b4c83c61 → **0ffad19c** (bNaATWil…) · 1.0.5 = bf5cd800 → **3188a51a** (fJyk8oJJ…) · **플로어 전진: fdbd9009 → 0ffad19c · 8f7c78bd → 3188a51a**
+- **에픽 토탈 (7/27 슬라이스-1 컷 → 8/6 클로즈)**: 8슬라이스 · ~90파일 · ~1,530히트 → **딕셔너리 1,366키쌍** (en 완전성 = tsc-강제) · **최종 잔존 135라인 = 8클래스 전수 분류, 미분류 렌더 카피 0** (센티널+키맵 · ko-포매터-브랜치 · TTS 도켓 11 · 리걸 (terms 바디) · 엔도님 · 미세먼지 픽스처 · 진단 · ko-유틸). 레거시 무소비 발견 2 (quota-message · runs-api 피드백-태그 배열).
+- **캐리-포워드 도켓 2**: ① TTS-lang (expo-speech language + 오디오-코치 컴포저 + tracking 큐 3 — 보이스 도메인 룰링 선행, S-M) ② 미세먼지 스트립 재픽스처 (en 라벨 = 폭 실측 재작업, S).
+- 롤백 프리암드: 1.0.6 = fdbd9009 · 1.0.5 = 8f7c78bd.
+
+## ~~🔼 i18n 슬라이스 8 (에픽 클로즈) 양-레인 STAGED~~ PROMOTED (위) — 1.0.6 = b4c83c61 (bNaATWil…) · 1.0.5 = bf5cd800 (fJyk8oJJ… — 크로스-레인 발산, 퍼-레인 타이 양 MATCH) · 커밋 00f05e8
 - **크로스-레인 스탬프 룰 이 페어 적용 불가** (해시 상이) → 퍼-레인 게이트 or 오너 샘-커밋 룰링 (전례: 폴리시 페어 8/5 — 이 슬라이스도 카피-온리 + 리액티비티 플럼빙, 로직 경로 무).
 - **컨버전**: lib/hooks 스로우·에러 전환 (api 7 · use-generate-route 15 · 업로드·리커버리·훅 폴백 12파일) · welcome (**en 헤드라인 제안 적용**: "New roads every time — run your today.") · 탭 타이틀 5 · wheel-sheet (시간 휠 AM/PM·캘린더 lang-브랜치) · avatar-crop · help-center FAQ 키잉 · terms 크롬 (**바디 = 리걸 ko, 플래그**) · crew-create 첫 챌린지 · crew-runs/session 칩 · run-post 좋아요 {n}개 · **crew-detail 리액티비티 71사이트** (T/Tf — 레저드 30-플래그의 완결).
 - **렌더-tf 백-스윕 (아이템 2): 79사이트/33파일 → tfIn(lang)** — 컴포넌트 = lang 앵커 자동 주입 (tsc-드리븐) · 헬퍼 fn = getLang() 콜-타임 (파라미터 리플 회피, 구동작 동일) · user-search 1사이트 = 임퍼러티브 재분류 (tf 유지). 커뮤니티-클래스의 전면 소멸.
