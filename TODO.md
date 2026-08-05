@@ -1300,7 +1300,9 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 
 ## ✅ 빌드-11 온-디바이스 필드 수락 (오너 버딕트, 8/5 — [HH:MM] 미동봉, as-arrived): **잠금화면 위젯 PASSED** — 타입 램프 **22pt 확정** (23 불요 룰링 — 보수단 초이스 비준) · 평균 페이스 라벨 정상 · 일시정지/자동 일시정지 캡션 **양쪽 확인** · **배치 ①②③ 필드 수락 = 빌드-11 아크 클로즈** (잔여: 지연 폰 설치 → 이중-퍼블리시 윈도우 종료)
 
-## 🏗️ 스몰-프라이 페어 — 스테퍼 정렬 BUILT · **코스-포스트 답글 패리티 BLOCKED (프로브 판정, 미빌드)** (미스테이지)
+## 🔼 스테퍼 정렬 솔로 STAGED — **9e170bdd** (커밋 f2d07d2* · **1.0.5 레인** — 버전-플립 메카닉 첫 실행: 퍼블리시-타임 워킹트리 1.0.5 → 즉시 리버트, 커밋 무영향) · 서빙 runtimeVersion **1.0.5 확인** · **해시-타이 MATCH** (KUgUvOQp… — 프리-플립 커밋-타이드 export와 동일 = 버전 플립은 번들 바이트 무영향 증명) · 플로어 e824e6cd 불변 · **게이트: 실내 — 프리퍼런스 스테퍼 13 상한 + 레거시 오버-캡 계정 13 표시** · 프로모션 = 스탬프 + 원-컨펌 · 1.0.6 레인 미러는 첫 1.0.6 기기 활성 시 일괄 (스탠딩)
+
+## 🏗️ (동커밋) 코스-포스트 답글 패리티 BLOCKED (프로브 판정, 미빌드)
 - **① 스테퍼 정렬 (플래그드 라이더 집행)**: MAX_TARGET_KM/MI **use-generate-route로 이동** (LOOP_MIN 옆 — 공유 홈; create.tsx 로컬 페어 → 임포트, ai-course-prefs 임포트: **복사 0**). DIST_MAX 32→13. **레거시 오버-캡 프리퍼런스 (14-32 저장분) = 디스플레이-클램프** — 인스턴트-어플라이 화면이 마운트에 무단 PATCH하면 안 됨 (자체 클램프 필요 판정: **필요, 디스플레이-온리로**); 첫 유저 조작이 합법값 영속, create 시드 클램프는 무관하게 방어 지속. 데스크 5케이스 PASS (20→13 표시 · 32→13 · 5.5 소수 유지 · 13 상한 비활성 · 1 하한 비활성).
 - **② 코스-포스트 답글 패리티 — BLOCKED**: 오너 전제 "그녀 §replies 계약이 route 댓글도 커버" **반증**. 레포 (cf8b784): `RunCommentCreate`만 parent_comment_id, 베이스 `CommentCreate` 무필드 + **"route 댓글은 무접촉" 명문** · route `CommentResponse` 무필드. **라이브 프로브 (8/5, 테스트1 소유 퍼블릭 루트, 월드 복원 204×3 잔존 0)**: parent_comment_id 동봉 POST → **201, 필드 사일런트 드롭** (응답·GET 양쪽 부재) · **보거스 parent도 201** (comment_parent_invalid 미발화 — 파이단틱이 언노운 키 폐기). **레포·라이브 일치.** 빌드 시 = 답글 UI가 플랫 댓글을 만드는 **사일런트 라이** (스레딩이 다음 로드에 붕괴) → 스키마-갭 스톱 룰 적용, 미빌드.
 - **그녀 애스크 (드래프트, 발송 대기)**: route 댓글 1-레벨 답글 — run 계약 동형 (CommentCreate에 parent_comment_id · CommentResponse에 필드 · comment_parent_invalid/reply_depth_exceeded 동일 코드 · 부모-작성자 route_commented 알림은 그녀 재량). 그녀 랜딩 시 FE = run-post 머시너리 포팅 (grouped/expander/startReply — 이번 리콘으로 포팅 맵 완성: course-post 플랫 227-251 라인이 대상).
