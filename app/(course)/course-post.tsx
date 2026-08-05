@@ -34,6 +34,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/avatar';
 import { MediaCarousel } from '@/components/media-carousel';
+import { MentionText } from '@/components/mention-text';
 import { Icon } from '@/components/ui';
 import { openProfile } from '@/lib/profile-nav';
 import {
@@ -244,7 +245,8 @@ export default function CoursePostScreen() {
                       </Pressable>
                       <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.commentWhen}>{fmtAgo(cm.created_at, lang)}</Text>
                     </View>
-                    <Text style={st.commentBody}>{cm.content}</Text>
+                    {/* 8/5: @멘션 탭-투-프로필 (run-post 트윈) */}
+                    <MentionText content={cm.content} style={st.commentBody} mentionColor={C.accentGrn} />
                   </View>
                 </Pressable>
               ))}

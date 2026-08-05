@@ -745,6 +745,8 @@ export const en: Record<keyof typeof ko, string> = {
   'rp.replyBtn': 'Reply',
   'rp.replyingTo': 'Replying to {name}',
   'rp.replyParentGone': 'The original comment is gone',
+  'cm.mentionGoneT': 'Runner not found',
+  'cm.mentionGoneB': 'They may have changed their nickname or left.',
   'rp.replyDepth': "Replies can't be replied to",
   'rp.moreComments': 'More comments',
   'rp.cmDelAsk': 'Delete comment',

@@ -757,6 +757,8 @@ export const ko = {
   'rp.replyBtn': '답글',
   'rp.replyingTo': '{name}에게 답글',
   'rp.replyParentGone': '원 댓글을 찾을 수 없어요',
+  'cm.mentionGoneT': '러너를 찾을 수 없어요',
+  'cm.mentionGoneB': '닉네임이 바뀌었거나 탈퇴한 러너일 수 있어요',
   'rp.replyDepth': '답글에는 답글을 달 수 없어요',
   'rp.moreComments': '댓글 더 보기',
   'rp.cmDelAsk': '댓글 삭제',

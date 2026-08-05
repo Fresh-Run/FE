@@ -48,6 +48,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Avatar } from '@/components/avatar';
 import { KudosSheet } from '@/components/kudos-sheet';
 import { MediaCarousel } from '@/components/media-carousel';
+import { MentionText } from '@/components/mention-text';
 import { PhotoViewer } from '@/components/photo-viewer';
 import { errorMessage } from '@/lib/error-copy';
 import { setRouteMap } from '@/store/route-map';
@@ -597,7 +598,9 @@ export default function RunPostScreen() {
                             </Pressable>
                             <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.commentWhen}>{fmtAgo(c.created_at, lang)}</Text>
                           </View>
-                          <Text style={st.commentBody}>{c.content}</Text>
+                          {/* 8/5: @멘션 탭-투-프로필 (visual link + tap-time
+                              resolve — see mention-text.tsx) */}
+                          <MentionText content={c.content} style={st.commentBody} mentionColor={C.accentGrn} />
                           {!commentsOff && (
                             <Pressable onPress={() => startReply(c)} hitSlop={{ top: 6, bottom: 8, left: 8, right: 8 }} style={{ alignSelf: 'flex-start' }}>
                               <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.replyBtnTxt}>{T('rp.replyBtn')}</Text>
