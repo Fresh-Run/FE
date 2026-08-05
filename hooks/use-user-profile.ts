@@ -13,6 +13,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useState } from 'react';
 
 import { apiFetch } from '@/lib/api';
+import { t } from '@/lib/i18n';
 import { errorMessage } from '@/lib/error-copy';
 
 // identity-only cache (#8 correction): nickname/avatar are lock-served to
@@ -79,7 +80,7 @@ export function useUserProfile(uid: string | null) {
   const [key, setKey]         = useState(0);
 
   useEffect(() => {
-    if (!uid) { setLoading(false); setError('프로필을 찾을 수 없어요'); return; }
+    if (!uid) { setLoading(false); setError(t('prof.loadFail')); return; }
     let cancelled = false;
     setLoading(true);
     setError(null);

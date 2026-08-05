@@ -39,7 +39,7 @@ import {
 import { errorMessage } from '@/lib/error-copy';
 import { radius as R, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
-import { t } from '@/lib/i18n';
+import { t, useT } from '@/lib/i18n';
 
 function partsFromIso(iso: string | null): { date: string; time: string } {
   if (!iso) return { date: '', time: '' };
@@ -52,6 +52,7 @@ function partsFromIso(iso: string | null): { date: string; time: string } {
 }
 
 export default function AnnouncementComposeScreen() {
+  const T = useT();
   const C = useTokens();
   const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
@@ -201,7 +202,7 @@ export default function AnnouncementComposeScreen() {
           {scheduled && (
             <View style={st.sessionNudge}>
               <Icon name="people-outline" size={12} color={C.accentGrn} />
-              <Text style={st.sessionNudgeTxt}>공지로 시작한 크루 러닝은 피드에 하나의 세션으로 묶여요</Text>
+              <Text style={st.sessionNudgeTxt}>{T('annc.sessionNudge')}</Text>
             </View>
           )}
 

@@ -18,7 +18,7 @@ import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { useRunTrack } from '@/lib/track-cache';
 import type { UserRun } from '@/hooks/use-user-profile';
 import type { useSettings } from '@/store/use-settings';
-import { tf, useLang, useT } from '@/lib/i18n';
+import { useLang, useT, tfIn } from '@/lib/i18n';
 
 // Course affordances (이 코스 달리기 CTA + header bookmark, canvas card B)
 // REMOVED 2026-07-21 — owner step-back ruling; the feature returns
@@ -70,7 +70,7 @@ export function RunCard({ run, units, mapLive, onKudos, kudosOff, onOpen, onAvat
                 (her (b) in-crew tier) — the mirror reflects strangers,
                 not crewmates. */}
           {run.crew_name && run.show_crew !== false ? (
-            <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.cardCrew} numberOfLines={1}>{tf('rc.withCrew', { name: run.crew_name })}</Text>
+            <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.cardCrew} numberOfLines={1}>{tfIn(lang, 'rc.withCrew', { name: run.crew_name })}</Text>
           ) : null}
         </View>
       </View>

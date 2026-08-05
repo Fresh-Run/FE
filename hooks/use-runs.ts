@@ -7,6 +7,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { ApiError, apiFetch } from '@/lib/api';
+import { t } from '@/lib/i18n';
 import { errorMessage } from '@/lib/error-copy';
 import { supabase } from '@/lib/supabase';
 
@@ -200,7 +201,7 @@ export function useRunDetail(runId: string | null) {
       .catch((e: unknown) => {
         if (cancelled) return;
         setError(e instanceof ApiError && e.status === 404
-          ? '기록을 찾을 수 없어요'
+          ? t('rp.notFound')
           : errorMessage(e));
       })
       .finally(() => { if (!cancelled) setLoading(false); });

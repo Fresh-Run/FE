@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/ui';
 import { spacing as S, type Tokens } from '@/lib/theme';
+import { t, getLang } from '@/lib/i18n';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 
 // ─── Sheet housing ────────────────────────────────────────────────────────────
@@ -37,7 +38,7 @@ function WheelSheet({ visible, title, onClose, onDone, children }: {
           <Text style={st.title}>{title}</Text>
           <View style={st.wheelRow}>{children}</View>
           <Pressable onPress={onDone} style={({ pressed }) => [st.doneBtn, pressed && { opacity: 0.85 }]}>
-            <Text style={st.doneTxt}>확인</Text>
+            <Text style={st.doneTxt}>{t('crop.confirm')}</Text>
           </Pressable>
         </Pressable>
       </Pressable>
@@ -115,12 +116,13 @@ export function fmtTimeKo(v: string): string {
   const m = /^(\d{1,2}):(\d{2})$/.exec(v.trim());
   if (!m) return '';
   const { pm, h12, min } = parse24(v);
-  return `${pm ? '오후' : '오전'} ${h12}:${String(min).padStart(2, '0')}`;
+  return getLang() === 'en' ? `${h12}:${String(min).padStart(2, '0')} ${pm ? 'PM' : 'AM'}` : `${pm ? '오후' : '오전'} ${h12}:${String(min).padStart(2, '0')}`;
 }
 
-export function TimeWheelRow({ label = '시간', value, onChange }: {
+export function TimeWheelRow({ label, value, onChange }: {
   label?: string; value: string; onChange: (v24: string) => void;
 }) {
+  const rowLabel = label ?? t('whl.time');
   const st = useStyles(makeSt);
   const [open, setOpen] = useState(false);
   const [sel, setSel] = useState(() => parse24(value));
@@ -128,12 +130,12 @@ export function TimeWheelRow({ label = '시간', value, onChange }: {
   return (
     <>
       <TriggerRow
-        label={label}
-        display={value.trim() ? fmtTimeKo(value) : '선택'}
+        label={rowLabel}
+        display={value.trim() ? fmtTimeKo(value) : t('whl.pick')}
         onPress={() => { setSel(parse24(value)); setOpen(true); }}
       />
       <WheelSheet
-        visible={open} title="모임 시간"
+        visible={open} title={t('whl.meetTime')}
         onClose={() => setOpen(false)}
         onDone={() => { onChange(to24(sel)); setOpen(false); }}
       >
@@ -142,22 +144,22 @@ export function TimeWheelRow({ label = '시간', value, onChange }: {
           onValueChange={(v: number) => setSel(s => ({ ...s, pm: v === 1 }))}
           style={[st.col, { flex: 0.9 }]} itemStyle={st.item}
         >
-          <Picker.Item label="오전" value={0} />
-          <Picker.Item label="오후" value={1} />
+          <Picker.Item label={t('whl.am')} value={0} />
+          <Picker.Item label={t('whl.pm')} value={1} />
         </Picker>
         <Picker
           selectedValue={sel.h12}
           onValueChange={(v: number) => setSel(s => ({ ...s, h12: v }))}
           style={st.col} itemStyle={st.item}
         >
-          {HOURS12.map(h => <Picker.Item key={h} label={`${h}시`} value={h} />)}
+          {HOURS12.map(h => <Picker.Item key={h} label={getLang() === 'en' ? String(h) : `${h}시`} value={h} />)}
         </Picker>
         <Picker
           selectedValue={sel.min}
           onValueChange={(v: number) => setSel(s => ({ ...s, min: v }))}
           style={st.col} itemStyle={st.item}
         >
-          {MINS.map(m => <Picker.Item key={m} label={`${String(m).padStart(2, '0')}분`} value={m} />)}
+          {MINS.map(m => <Picker.Item key={m} label={getLang() === 'en' ? String(m).padStart(2, '0') : `${String(m).padStart(2, '0')}분`} value={m} />)}
         </Picker>
       </WheelSheet>
     </>
@@ -179,7 +181,7 @@ function fmtYmd(y: number, m: number, d: number): string {
   return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
 }
 
-const WEEKDAYS_KO = ['일', '월', '화', '수', '목', '금', '토'];
+const WEEKDAYS_KO = ['일', '월', '화', '수', '목', '금', '토']; // display resolves via dayS keys below
 
 export function DateWheelRow({ label, value, onChange }: {
   label: string;
@@ -225,7 +227,7 @@ export function DateWheelRow({ label, value, onChange }: {
     <>
       <TriggerRow
         label={label}
-        display={value.trim() ? value : '선택'}
+        display={value.trim() ? value : t('whl.pick')}
         onPress={() => { const p = parse(value); setSel(p); setView({ y: p.y, m: p.m }); setOpen(true); }}
       />
       <WheelSheet
@@ -238,14 +240,14 @@ export function DateWheelRow({ label, value, onChange }: {
             <Pressable onPress={() => step(-1)} disabled={viewIdx <= minIdx} hitSlop={10} style={[st.calArrow, viewIdx <= minIdx && { opacity: 0.25 }]}>
               <Icon name="chevron-back" size={17} color={C.text} />
             </Pressable>
-            <Text style={st.calMonth}>{view.y}년 {view.m}월</Text>
+            <Text style={st.calMonth}>{getLang() === 'en' ? `${view.m}/${view.y}` : `${view.y}년 ${view.m}월`}</Text>
             <Pressable onPress={() => step(1)} disabled={viewIdx >= maxIdx} hitSlop={10} style={[st.calArrow, viewIdx >= maxIdx && { opacity: 0.25 }]}>
               <Icon name="chevron-forward" size={17} color={C.text} />
             </Pressable>
           </View>
           <View style={st.calWeekRow}>
             {WEEKDAYS_KO.map((w, i) => (
-              <Text key={w} style={[st.calWeekTxt, i === 0 && { color: C.danger }]}>{w}</Text>
+              <Text key={w} style={[st.calWeekTxt, i === 0 && { color: C.danger }]}>{getLang() === 'en' ? ['S','M','T','W','T','F','S'][i] : w}</Text>
             ))}
           </View>
           <View style={st.calGrid}>

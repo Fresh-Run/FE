@@ -32,9 +32,10 @@ import { createChallenge, dateToKstIsoDay, kstDateStr } from '@/lib/challenges-a
 import { errorMessage } from '@/lib/error-copy';
 import { radius as R, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
-import { t, tf } from '@/lib/i18n';
+import { t, tfIn, useLang } from '@/lib/i18n';
 
 export default function ChallengeCreateScreen() {
+  const lang = useLang(); // 8/6 back-sweep: render tfIn anchor
   const C = useTokens();
   const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
@@ -103,7 +104,7 @@ export default function ChallengeCreateScreen() {
           <View style={st.divider} />
           <NumberWheelRow label={t('crw.chPeriod')} value={periodDays} min={3} max={90} step={1} suffix={t('unit.days')} onChange={setPeriodDays} />
         </View>
-        <Text style={st.periodPreview}>{tf('chc.preview', { n: periodDays, date: kstDateStr(periodDays - 1) })}</Text>
+        <Text style={st.periodPreview}>{tfIn(lang, 'chc.preview', { n: periodDays, date: kstDateStr(periodDays - 1) })}</Text>
 
         <View style={st.noteCard}>
           <Icon name="information-circle-outline" size={14} color={C.accentGrn} />

@@ -12,7 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '@/components/ui';
 import { type Tokens, DENSE_MAX_FONT_SCALE} from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
-import { tf, useT, type StringKey } from '@/lib/i18n';
+import { useT, type StringKey, tfIn, useLang } from '@/lib/i18n';
 
 export function MonthPicker({ visible, year, month, isEnabled, onSelect, onClose }: {
   visible: boolean;
@@ -24,6 +24,7 @@ export function MonthPicker({ visible, year, month, isEnabled, onSelect, onClose
   onSelect: (year: number, month: number) => void;
   onClose: () => void;
 }) {
+  const lang = useLang(); // 8/6 back-sweep
   const C = useTokens();
   const st = useStyles(makeSt);
   const T = useT(); // junction — monthly-insight + records both render this sheet
@@ -47,7 +48,7 @@ export function MonthPicker({ visible, year, month, isEnabled, onSelect, onClose
             <Pressable onPress={() => setYr(y => y - 1)} hitSlop={6} style={st.yearBtn}>
               <Icon name="chevron-back" size={18} color={C.text} />
             </Pressable>
-            <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.yearTxt}>{tf('date.yearN', { n: yr })}</Text>
+            <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.yearTxt}>{tfIn(lang, 'date.yearN', { n: yr })}</Text>
             <Pressable onPress={() => setYr(y => y + 1)} hitSlop={6} style={st.yearBtn}>
               <Icon name="chevron-forward" size={18} color={C.text} />
             </Pressable>

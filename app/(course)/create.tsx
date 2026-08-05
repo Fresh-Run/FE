@@ -17,7 +17,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { errorMessage } from '@/lib/error-copy';
-import { t, tf } from '@/lib/i18n';
+import { t, tfIn, useLang, getLang } from '@/lib/i18n';
 import {
   ActivityIndicator,
   Pressable,
@@ -89,10 +89,10 @@ function fmtShortfall(km: number, units: 'km' | 'mi'): string {
 }
 
 function fmtMin(min: number): string {
-  if (min < 60) return tf('crt.min', { n: min });
+  if (min < 60) return tfIn(getLang(), 'crt.min', { n: min });
   const h = Math.floor(min / 60);
   const m = min % 60;
-  return m === 0 ? tf('crt.hour', { h }) : tf('crt.hourMin', { h, m });
+  return m === 0 ? tfIn(getLang(), 'crt.hour', { h }) : tfIn(getLang(), 'crt.hourMin', { h, m });
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -186,6 +186,7 @@ const LOOP_MIN_MI = Math.ceil((LOOP_MIN_TARGET_KM / KM_PER_MI) * 2) / 2;
 // ai-course-prefs' stepper — one pair, every consumer follows).
 
 export default function CreateScreen() {
+  const lang = useLang(); // 8/6 back-sweep: render tfIn anchor
   const C = useTokens();
   const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
@@ -346,12 +347,12 @@ export default function CreateScreen() {
       if (e instanceof OneWayTooFarError) {
         // Server min is authoritative (guide: feed it into the slider
         // suggestion) — the inline warn row's 설정 chip carries the fix.
-        setGenError(tf('crt.oneWayTooFar', { d: `${fmtDist(e.minTargetKm, units, 1)}${distUnit(units)}` }));
+        setGenError(tfIn(lang, 'crt.oneWayTooFar', { d: `${fmtDist(e.minTargetKm, units, 1)}${distUnit(units)}` }));
       } else if (e instanceof LoopTooShortError) {
         // Loop floor — the slider floor already mirrors the server gate, so
         // this fires only on drift (server raised its floor). Copy composed
         // here, unit-aware, from the server's authoritative min.
-        setGenError(tf('crt.loopTooShort', { d: `${fmtDist(e.minTargetKm, units, 1)}${distUnit(units)}` }));
+        setGenError(tfIn(lang, 'crt.loopTooShort', { d: `${fmtDist(e.minTargetKm, units, 1)}${distUnit(units)}` }));
       } else {
         setGenError(errorMessage(e));
       }
@@ -391,7 +392,7 @@ export default function CreateScreen() {
           <Text style={st.genSub}>{t('crt.genSub')}</Text>
           {/* tap-direct: the derived params, visible (M build spec) */}
           {autoMode && (
-            <Text style={st.genSub}>{tf('crt.genAuto', { d: `${fmtDist(distanceKm, units, 1)}${distUnit(units)}` })}</Text>
+            <Text style={st.genSub}>{tfIn(getLang(), 'crt.genAuto', { d: `${fmtDist(distanceKm, units, 1)}${distUnit(units)}` })}</Text>
           )}
         </View>
       </View>
@@ -453,7 +454,7 @@ export default function CreateScreen() {
             <View style={st.statsDivider} />
             <StatTile label={t('crt.estTime')} value={fmtMin(estMin)} />
             <View style={st.statsDivider} />
-            <StatTile label={t('crt.pitstops')} value={tf('crt.nPlaces', { n: pitstopCount })} />
+            <StatTile label={t('crt.pitstops')} value={tfIn(getLang(), 'crt.nPlaces', { n: pitstopCount })} />
           </View>
 
           {/* ── 거리 보장 안내 — ±0.5km 계약(BE)의 "정직한 표시" 절반: 전패
@@ -469,8 +470,8 @@ export default function CreateScreen() {
                       (fmtShortfall). Overshoot keeps the factual delta line. */}
                   <Text style={st.missSub}>
                     {deltaKm < 0
-                      ? tf('crt.missShort', { d: fmtShortfall(-deltaKm, units) })
-                      : tf('crt.missOver', { req: `${fmtDist(genTargetKm, units, 1)}${distUnit(units)}`, got: `${fmtDist(route.total_distance_km, units, 1)}${distUnit(units)}`, delta: `${fmtDist(deltaKm, units, 1)}${distUnit(units)}` })}
+                      ? tfIn(getLang(), 'crt.missShort', { d: fmtShortfall(-deltaKm, units) })
+                      : tfIn(getLang(), 'crt.missOver', { req: `${fmtDist(genTargetKm, units, 1)}${distUnit(units)}`, got: `${fmtDist(route.total_distance_km, units, 1)}${distUnit(units)}`, delta: `${fmtDist(deltaKm, units, 1)}${distUnit(units)}` })}
                   </Text>
                 </View>
                 <Pressable onPress={handleGenerate} hitSlop={6} style={({ pressed }) => [st.missRetryBtn, pressed && { opacity: 0.7 }]}>
@@ -596,7 +597,7 @@ export default function CreateScreen() {
               {distDisplay.toFixed(1)}
               <Text style={st.distanceUnit}> {isMi ? 'mi' : 'km'}</Text>
             </Text>
-            <Text style={st.distanceEst}>{tf('crt.estAbout', { t: fmtMin(estMinForm) })}</Text>
+            <Text style={st.distanceEst}>{tfIn(getLang(), 'crt.estAbout', { t: fmtMin(estMinForm) })}</Text>
           </View>
           {/* Route-type-scoped floor (checkpoint resolution 2026-07-23):
               loop mode mirrors the server's loop gate (LOOP_MIN_TARGET_KM —
@@ -717,11 +718,11 @@ export default function CreateScreen() {
                 <View style={st.feasWarn}>
                   <Icon name="alert-circle-outline" size={14} color={C.sun} />
                   <Text style={st.feasWarnTxt} numberOfLines={2}>
-                    {tf('crt.feasWarn', { d: `${fmtDist(minTargetKm, units, 1)}${distUnit(units)}` })}
+                    {tfIn(getLang(), 'crt.feasWarn', { d: `${fmtDist(minTargetKm, units, 1)}${distUnit(units)}` })}
                   </Text>
                   {minTargetKm <= sliderMaxKm && (
                     <Pressable onPress={() => setDistanceKm(minTargetKm)} hitSlop={6} style={({ pressed }) => [st.feasFixBtn, pressed && { opacity: 0.7 }]}>
-                      <Text style={st.feasFixTxt}>{tf('crt.feasFix', { d: `${fmtDist(minTargetKm, units, 1)}${distUnit(units)}` })}</Text>
+                      <Text style={st.feasFixTxt}>{tfIn(getLang(), 'crt.feasFix', { d: `${fmtDist(minTargetKm, units, 1)}${distUnit(units)}` })}</Text>
                     </Pressable>
                   )}
                 </View>
@@ -764,7 +765,7 @@ export default function CreateScreen() {
               {/* 회피 — per-request avoid_hills override + notes-append hint */}
               <AdvToggleRow
                 label={t('crt.avoidHills')}
-                sub={tf('crt.myDefault', { v: seedAvoidHills ? t('common.on') : t('common.off') })}
+                sub={tfIn(getLang(), 'crt.myDefault', { v: seedAvoidHills ? t('common.on') : t('common.off') })}
                 on={avoidHills}
                 onChange={setAvoidHills}
               />

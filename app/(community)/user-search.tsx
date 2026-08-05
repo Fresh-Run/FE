@@ -42,7 +42,7 @@ import { searchUsers, type UserSearchItem } from '@/lib/profile-api';
 import { openProfile } from '@/lib/profile-nav';
 import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
-import { t, tf } from '@/lib/i18n';
+import { t, tf, tfIn, useLang } from '@/lib/i18n';
 
 const MIN_Q = 2;
 const DEBOUNCE_MS = 400;
@@ -50,6 +50,7 @@ type Seg = 'user' | 'crew';
 type InviteState = 'idle' | 'sending' | 'sent' | 'member';
 
 export default function UserSearchScreen() {
+  const lang = useLang(); // 8/6 back-sweep: render tfIn anchor
   const C = useTokens();
   const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
@@ -97,7 +98,7 @@ export default function UserSearchScreen() {
     try {
       const code = (await getInviteCode(crewId)) ?? (await issueInviteCode(crewId));
       await Share.share({
-        message: tf('usr.inviteMsgFlex', { name: crewName ? ` '${crewName}'` : '', code }),
+        message: tf('usr.inviteMsgFlex', { name: crewName ? ` '${crewName}'` : '', code }), // imperative — share-sheet fire time
       }).catch(() => {}); // user-cancelled sheet — quiet
     } catch {
       Alert.alert(
@@ -173,7 +174,7 @@ export default function UserSearchScreen() {
           <View style={{ flex: 1, minWidth: 0 }}>
             <Text style={st.rowName} numberOfLines={1}>{c.name}</Text>
             <Text style={st.rowSub} numberOfLines={1}>
-              {tf('crw.nMembers', { n: c.member_count })}{c.area ? ` · ${c.area}` : ''}
+              {tfIn(lang, 'crw.nMembers', { n: c.member_count })}{c.area ? ` · ${c.area}` : ''}
             </Text>
           </View>
           <Icon name="chevron-forward" size={16} color={C.faint} />

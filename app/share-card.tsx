@@ -38,7 +38,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { t, tf, useLang } from '@/lib/i18n';
+import { t, useLang, tfIn } from '@/lib/i18n';
 import { Image, Pressable, ScrollView, Share, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Reanimated, { runOnJS, useAnimatedProps, useAnimatedStyle, useSharedValue, type SharedValue } from 'react-native-reanimated';
@@ -944,7 +944,7 @@ export default function ShareCardScreen() {
               <GestureDetector gesture={layerFor.crew.gesture}>
                 <Reanimated.View onLayout={layerFor.crew.onLayout} style={[st.crewLayer, layerFor.crew.style]}>
                   <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.crewTxt} onLayout={layerFor.crew.onValueLayout} numberOfLines={1}>
-                    {run.crew_name}{showCrewCount && run.session_participant_count != null ? ` · ${tf('crw.nJoined', { n: run.session_participant_count })}` : ''}
+                    {run.crew_name}{showCrewCount && run.session_participant_count != null ? ` · ${tfIn(lang, 'crw.nJoined', { n: run.session_participant_count })}` : ''}
                   </Text>
                   {selected === 'crew' && <View pointerEvents="none" style={st.selBorder}><View style={st.selHandle} /></View>}
                 </Reanimated.View>
@@ -1006,7 +1006,7 @@ export default function ShareCardScreen() {
                   <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={[st.chipTxt, bgAdjustMode && st.chipTxtOn]}>{bgAdjustMode ? t('shr.adjustDone') : t('shr.adjustBg')}</Text>
                 </Pressable>
                 <View style={st.dimSlider}>
-                  <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.dimLbl}>{tf('shr.dim', { p: Math.round(bgDim * 100) })}</Text>
+                  <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.dimLbl}>{tfIn(lang, 'shr.dim', { p: Math.round(bgDim * 100) })}</Text>
                   <SeededSlider
                     siteId="share-dim"
                     style={{ flex: 1 }}

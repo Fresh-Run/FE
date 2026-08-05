@@ -48,7 +48,7 @@ import { activateRunAudioSession, deactivateRunAudioSession } from '@/lib/audio-
 import { useQuota } from '@/store/use-quota';
 import { addLiveActivityActionListener } from '@/modules/live-activity';
 import { clearActiveCourse, getActiveCourse } from '@/store/active-course';
-import { t, tf } from '@/lib/i18n';
+import { t, tfIn, useLang } from '@/lib/i18n';
 import { getPendingRun, refreshPendingRun, setPendingRun } from '@/store/pending-run';
 import { useLocalProfile } from '@/store/use-local-profile';
 import { useSettings } from '@/store/use-settings';
@@ -410,6 +410,7 @@ function fmtElapsed(sec: number): string {
 }
 
 export default function TrackingScreen() {
+  const lang = useLang(); // 8/6 back-sweep: render tfIn anchor
   const C = useTokens();
   const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
@@ -1224,7 +1225,7 @@ export default function TrackingScreen() {
             <View style={st.toStartChip}>
               <Icon name="flag-outline" size={13} color="#7CF03D" />
               <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.toStartTxt}>
-                {tf('trk.toStart', { d: toStartM >= 1000 ? `${(toStartM / 1000).toFixed(1)}km` : `${Math.round(toStartM)}m` })}
+                {tfIn(lang, 'trk.toStart', { d: toStartM >= 1000 ? `${(toStartM / 1000).toFixed(1)}km` : `${Math.round(toStartM)}m` })}
               </Text>
             </View>
           </View>
@@ -1273,7 +1274,7 @@ export default function TrackingScreen() {
             {offCourse && (
               <View style={[st.gpsChip, { backgroundColor: 'rgba(180,40,40,0.72)' }]}>
                 <Icon name="navigate-outline" size={11} color="#fff" />
-                <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.gpsChipTxt}>{tf('trk.offCourse', { m: rejoinM })}</Text>
+                <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.gpsChipTxt}>{tfIn(lang, 'trk.offCourse', { m: rejoinM })}</Text>
               </View>
             )}
           </View>
@@ -1354,7 +1355,7 @@ export default function TrackingScreen() {
                 const etaMin = avgPace != null ? Math.round(((remainM / 1000) * avgPace) / 60) : null;
                 return ([
                   [fmtDist(remainM / 1000, units, 2), distUnit(units), t('trk.remaining')],
-                  [etaMin != null ? tf('trk.etaMin', { n: etaMin }) : '—', '', t('trk.eta')],
+                  [etaMin != null ? tfIn(lang, 'trk.etaMin', { n: etaMin }) : '—', '', t('trk.eta')],
                 ] as [string, string, string][]).map(([val, unit, label], i) => (
                   <View key={label} style={[st.metricCol, i > 0 && st.metricColDivider]}>
                     <View style={st.metricValRow}>

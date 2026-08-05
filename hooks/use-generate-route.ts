@@ -1,6 +1,7 @@
 // Types mirror the backend RouteRequest / RouteResponse in schemas.py exactly.
 // Calls the partner FastAPI backend (EXPO_PUBLIC_API_URL) — see .env.example.
 
+import { t, tf } from '@/lib/i18n';
 import { quotaExceededMessage } from '@/lib/quota-message';
 import { supabase } from '@/lib/supabase';
 
@@ -94,11 +95,11 @@ const TIMEOUT_MS = 45_000;
 
 async function generate(input: RouteInput, signal?: AbortSignal): Promise<GeneratedRoute> {
   if (!API_URL) {
-    throw new Error('백엔드 주소가 설정되지 않았어요. .env.local의 EXPO_PUBLIC_API_URL을 확인해 주세요.');
+    throw new Error(t('err.config'));
   }
 
   const { data: { session } } = await supabase.auth.getSession();
-  if (!session) throw new Error('로그인이 필요해요');
+  if (!session) throw new Error(t('err.loginNeeded'));
 
   // One controller drives fetch; aborted by either the timeout or the caller.
   const controller = new AbortController();
@@ -126,16 +127,16 @@ async function generate(input: RouteInput, signal?: AbortSignal): Promise<Genera
       signal: controller.signal,
     });
   } catch {
-    if (signal?.aborted) throw new Error('생성이 취소됐어요');
-    if (controller.signal.aborted) throw new Error('요청 시간이 초과됐어요. 다시 시도해 주세요.');
-    throw new Error('서버에 연결할 수 없어요. 백엔드 서버가 실행 중인지 확인해 주세요.');
+    if (signal?.aborted) throw new Error(t('gen.cancelled'));
+    if (controller.signal.aborted) throw new Error(t('err.timeout'));
+    throw new Error(t('err.serverDown'));
   } finally {
     clearTimeout(timer);
     signal?.removeEventListener('abort', onCallerAbort);
   }
 
   if (!res.ok) {
-    if (res.status === 401) throw new Error('로그인이 필요해요');
+    if (res.status === 401) throw new Error(t('err.loginNeeded'));
     if (res.status === 429) {
       // honest quota copy with the real reset time (B8) — this frozen fetch
       // keeps its own error mapping, so the shared formatter is imported.
@@ -153,12 +154,12 @@ async function generate(input: RouteInput, signal?: AbortSignal): Promise<Genera
         d = body?.detail && typeof body.detail === 'object' ? body.detail : null;
       } catch { /* non-JSON 422 */ }
       if (d?.error === 'one_way_end_too_far' && typeof d.min_target_km === 'number') {
-        throw new OneWayTooFarError('도착지가 목표 거리에 비해 너무 멀어요', d.min_target_km);
+        throw new OneWayTooFarError(t('gen.endTooFar'), d.min_target_km);
       }
       if (d?.error === 'loop_target_too_short' && typeof d.min_target_km === 'number') {
-        throw new LoopTooShortError('순환 코스 최소 거리보다 짧아요', d.min_target_km);
+        throw new LoopTooShortError(t('gen.loopTooShort'), d.min_target_km);
       }
-      throw new Error('입력값을 확인해 주세요 (422)');
+      throw new Error(t('gen.badInput'));
     }
     if (res.status === 503) {
       // Honest-503 (지연 batch 2026-07-23): route_generation_unavailable =
@@ -171,9 +172,9 @@ async function generate(input: RouteInput, signal?: AbortSignal): Promise<Genera
         code = typeof body?.detail?.error === 'string' ? body.detail.error : null;
       } catch { /* non-JSON 503 — generic fallback */ }
       if (code === 'route_generation_unavailable') {
-        throw new Error('코스 생성 서비스가 잠시 불안정해요. 조건은 그대로 두고 잠시 후 다시 시도해 주세요.');
+        throw new Error(t('gen.unstable'));
       }
-      throw new Error('서버가 잠시 응답하지 않아요. 잠시 후 다시 시도해 주세요.');
+      throw new Error(t('gen.noResponse'));
     }
     if (res.status === 502) {
       // v2.1 계약 (BE routes.py 502 detail.error): route_generation_failed =
@@ -185,16 +186,16 @@ async function generate(input: RouteInput, signal?: AbortSignal): Promise<Genera
         code = typeof body?.detail?.error === 'string' ? body.detail.error : null;
       } catch { /* non-JSON 502 — generic fallback */ }
       if (code === 'route_generation_failed') {
-        throw new Error('조건에 맞는 코스를 찾지 못했어요. 쿼터는 소모되지 않았어요 — 조건을 바꿔 다시 시도해 주세요.');
+        throw new Error(t('gen.notFound'));
       }
-      throw new Error('코스 생성에 실패했어요 (502)');
+      throw new Error(t('gen.failed502'));
     }
     let detail: string | null = null;
     try {
       const body = await res.json();
       detail = typeof body?.detail === 'string' ? body.detail : null;
     } catch { /* non-JSON error body */ }
-    throw new Error(detail ?? `코스 생성에 실패했어요 (${res.status})`);
+    throw new Error(detail ?? tf('gen.failedN', { s: res.status }));
   }
 
   return (await res.json()) as GeneratedRoute;

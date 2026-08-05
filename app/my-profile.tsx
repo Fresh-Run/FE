@@ -41,7 +41,7 @@ import { radius as R, shadows, spacing as S, type Tokens, DENSE_MAX_FONT_SCALE} 
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { prewarmTracks, useRunTrack } from '@/lib/track-cache';
 import { useSettings } from '@/store/use-settings';
-import { t, tf, useLang, useT } from '@/lib/i18n';
+import { t, useLang, useT, tfIn, getLang } from '@/lib/i18n';
 
 // Own-list visibility is never null (legacy rows = 'followers' server-side)
 // key-holding (static-capture rule) — resolved at render inside the card
@@ -84,7 +84,7 @@ function RunCard({ run, name, photoUrl, units, mapLive, kudosOff, onKudos, onCou
               view (an OFF run bannering here reads as "still public");
               RECORD-SHAPED surfaces (기록, 활동 상세) always know their crew. */}
           {run.crew_name && run.show_crew !== false ? (
-            <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.cardCrew} numberOfLines={1}>{tf('rc.withCrew', { name: run.crew_name })}</Text>
+            <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.cardCrew} numberOfLines={1}>{tfIn(lang, 'rc.withCrew', { name: run.crew_name })}</Text>
           ) : null}
         </View>
       </View>
@@ -248,7 +248,7 @@ export default function MyProfileScreen() {
           run visibility exists server-side) */}
       <View style={st.sectionHead}>
         <Text style={st.sectionTitle}>{T('mp.myRuns')}</Text>
-        <Text style={st.sectionCount}>{tf('mp.nCount', { n: profile.runCount })}</Text>
+        <Text style={st.sectionCount}>{tfIn(getLang(), 'mp.nCount', { n: profile.runCount })}</Text>
       </View>
     </View>
   );

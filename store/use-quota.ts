@@ -6,6 +6,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 
+import { t } from '@/lib/i18n';
 import { getQuota, type AiGenerationQuota } from '@/lib/quota-api';
 import { supabase } from '@/lib/supabase';
 
@@ -70,7 +71,7 @@ export const useQuota = create<QuotaStore>((set, get) => ({
         });
         AsyncStorage.setItem(cacheKey(uid), JSON.stringify(server)).catch(() => {});
       } catch (e) {
-        const msg = e instanceof Error ? e.message : '티어 정보를 불러오지 못했어요';
+        const msg = e instanceof Error ? e.message : t('err.tierLoad');
         // Visible, never silent: keep last-known/cached tier, record the failure.
         console.warn(`[quota] sync FAILED — holding last-known tier '${get().tier}': ${msg}`);
         set({ syncError: msg });

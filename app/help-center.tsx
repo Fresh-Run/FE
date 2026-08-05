@@ -19,17 +19,19 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/ui';
 import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
+import { useT, type StringKey } from '@/lib/i18n';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 
-const FAQ: [string, string][] = [
-  ['AI 코스는 어떻게 만들어지나요?', '거리·경유지 선호도와 실시간 날씨를 분석해 최적의 경로를 생성해요. 선호도는 프로필 > AI 코스 선호도에서 조정할 수 있어요.'],
-  ['GPS가 부정확해요.', '실외에서 하늘이 트인 곳에서 시작하고, 위치 권한을 "항상 허용"으로 설정하면 정확도가 높아져요.'],
-  ['Premium은 어떤 기능을 제공하나요?', 'AI 코스 무제한 생성, AI 월간 인사이트, 실시간 오디오 코치를 사용할 수 있어요.'],
-  ['내 러닝은 누구에게 보이나요?', '러닝을 저장할 때마다 공개 범위(전체 공개·팔로워만·비공개)를 정할 수 있어요. 프로필 설정에서 계정 공개 범위와 팔로우 승인제도 관리할 수 있어요.'],
+const FAQ: [StringKey, StringKey][] = [
+  ['hc.q1', 'hc.a1'],
+  ['hc.q2', 'hc.a2'],
+  ['hc.q3', 'hc.a3'],
+  ['hc.q4', 'hc.a4'],
 ];
 
 export default function HelpCenterScreen() {
   const C = useTokens();
+  const T = useT();
   const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
   const [open, setOpen] = useState(-1);
@@ -40,28 +42,28 @@ export default function HelpCenterScreen() {
         <Pressable onPress={() => router.back()} hitSlop={12} style={st.backBtn}>
           <Icon name="chevron-back" size={22} color={C.text} />
         </Pressable>
-        <Text style={st.appBarTitle}>도움말 센터</Text>
+        <Text style={st.appBarTitle}>{T('prof.rowHelp')}</Text>
         <View style={{ width: 40 }} />
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: S.gutter, paddingBottom: 28 }}>
-        <Text style={st.groupTitle}>자주 묻는 질문</Text>
+        <Text style={st.groupTitle}>{T('hc.faq')}</Text>
         <View style={[st.card, shadows.sm]}>
           {FAQ.map(([q, a], i) => (
             <React.Fragment key={q}>
               {i > 0 && <View style={st.divider} />}
               <Pressable onPress={() => setOpen(open === i ? -1 : i)} style={({ pressed }) => [st.qRow, pressed && { opacity: 0.7 }]}>
-                <Text style={st.qTxt}>{q}</Text>
+                <Text style={st.qTxt}>{T(q)}</Text>
                 <View style={{ transform: [{ rotate: open === i ? '90deg' : '0deg' }] }}>
                   <Icon name="chevron-forward" size={17} color={C.faint} />
                 </View>
               </Pressable>
-              {open === i && <Text style={st.aTxt}>{a}</Text>}
+              {open === i && <Text style={st.aTxt}>{T(a)}</Text>}
             </React.Fragment>
           ))}
         </View>
 
-        <Text style={st.groupTitle}>문의</Text>
+        <Text style={st.groupTitle}>{T('hc.contact')}</Text>
         <View style={[st.card, shadows.sm]}>
           <Pressable
             onPress={() => Linking.openURL('mailto:freshrun0609@gmail.com').catch(() => {})}
@@ -70,7 +72,7 @@ export default function HelpCenterScreen() {
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
               <Icon name="mail-outline" size={18} color={C.sub} />
               <View>
-                <Text style={st.qTxt}>이메일 문의</Text>
+                <Text style={st.qTxt}>{T('hc.emailUs')}</Text>
                 <Text style={st.mailSub}>freshrun0609@gmail.com</Text>
               </View>
             </View>

@@ -12,7 +12,7 @@
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import { errorMessage } from '@/lib/error-copy';
-import { t, tf } from '@/lib/i18n';
+import { t, tfIn, getLang } from '@/lib/i18n';
 import { ActivityIndicator, Alert, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Icon } from '@/components/ui';
@@ -63,7 +63,7 @@ export function CrewDeleteModal({ visible, crewId, crewName, memberCount, onClos
           <Text style={st.title}>{t('crw.disbandAsk')}</Text>
           <Text style={st.body}>
             <Text style={{ fontWeight: '700', color: C.text }}>{crewName}</Text>
-            {tf('crw.disbandBody', { n: memberCount })}
+            {tfIn(getLang(), 'crw.disbandBody', { n: memberCount })}
           </Text>
 
           {/* 양도 alternative — for an owner who wants out but not to destroy it */}

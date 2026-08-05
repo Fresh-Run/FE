@@ -45,7 +45,7 @@ import {
 import { fmtAgo } from '@/lib/run-format';
 import { radius as R, shadows, spacing as S, type Tokens, DENSE_MAX_FONT_SCALE} from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
-import { t as tx, tf, useLang, useT, type StringKey } from '@/lib/i18n';
+import { t as tx, useLang, useT, type StringKey, tfIn, getLang } from '@/lib/i18n';
 
 // ─── Type mapping (owner-approved 2026-07-07; no design source) ──────────────
 
@@ -129,12 +129,12 @@ function dynamicCopy(n: AppNotification): string | null {
   if (n.type === 'crew_invited') {
     const name = n.payload?.crew_name;
     // tf fills only {crew}; the {name} slot survives for the row's actor split
-    return name ? tf('ntf.crewInvitedTo', { crew: name }) : tx('ntf.crewInvited');
+    return name ? tfIn(getLang(), 'ntf.crewInvitedTo', { crew: name }) : tx('ntf.crewInvited');
   }
   if (n.type === 'pb_achieved') {
     const types = n.payload?.record_types ?? [];
-    if (types.length === 1) return tf('ntf.pbOne', { label: PB_LABEL[types[0]] ? tx(PB_LABEL[types[0]] as StringKey) : tx('ntf.pbPersonal') });
-    if (types.length > 1) return tf('ntf.pbMany', { n: types.length });
+    if (types.length === 1) return tfIn(getLang(), 'ntf.pbOne', { label: PB_LABEL[types[0]] ? tx(PB_LABEL[types[0]] as StringKey) : tx('ntf.pbPersonal') });
+    if (types.length > 1) return tfIn(getLang(), 'ntf.pbMany', { n: types.length });
     return tx('ntf.pbZero'); // defensive: missing/empty record_types
   }
   return null;

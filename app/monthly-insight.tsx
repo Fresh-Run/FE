@@ -32,7 +32,7 @@ import { Icon } from '@/components/ui';
 import { ApiError } from '@/lib/api';
 import { errorMessage } from '@/lib/error-copy';
 import { getMonthlyInsight, type MonthlyInsight, type MonthRank, type PaceTrendPoint } from '@/lib/insights-api';
-import { getLang, t, tf, useT, type StringKey } from '@/lib/i18n';
+import { getLang, t, tf, useT, type StringKey, tfIn, useLang } from '@/lib/i18n';
 import { distUnit, fmtDist, fmtDuration, fmtPaceIn, paceUnit } from '@/lib/run-format';
 import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
@@ -152,6 +152,7 @@ function PaceTrendChart({ points, units }: { points: PaceTrendPoint[]; units: 'k
 export default function MonthlyInsightScreen() {
   const C = useTokens();
   const st = useStyles(makeSt);
+  const lang = useLang();
   const T = useT();
   const insets = useSafeAreaInsets();
   const units = useSettings(s => s.settings.units);
@@ -202,15 +203,15 @@ export default function MonthlyInsightScreen() {
   function shareReport() {
     if (!s) return;
     const lines = [
-      tf('mi.shareTitle', { m: ym.month, mon: t(monthKey(ym.month)) }),
-      tf('mi.shareLine1', { d: `${fmtDist(s.total_distance_km, units, 1)}${distUnit(units)}`, n: s.run_count }),
-      tf('mi.shareLine2', { p: s.avg_pace_sec_per_km != null ? `${fmtPaceIn(s.avg_pace_sec_per_km, units)}${paceUnit(units)}` : '—', l: `${fmtDist(s.longest_run_km, units, 1)}${distUnit(units)}` }),
+      tfIn(lang, 'mi.shareTitle', { m: ym.month, mon: t(monthKey(ym.month)) }),
+      tfIn(lang, 'mi.shareLine1', { d: `${fmtDist(s.total_distance_km, units, 1)}${distUnit(units)}`, n: s.run_count }),
+      tfIn(lang, 'mi.shareLine2', { p: s.avg_pace_sec_per_km != null ? `${fmtPaceIn(s.avg_pace_sec_per_km, units)}${paceUnit(units)}` : '—', l: `${fmtDist(s.longest_run_km, units, 1)}${distUnit(units)}` }),
     ];
     if (s.delta_distance_km != null) {
       const d = s.delta_distance_km;
       lines.push(d === 0
         ? t('mi.shareSame')
-        : tf('mi.shareDelta', { sd: `${d > 0 ? '+' : '−'}${fmtDist(Math.abs(d), units, 1)}${distUnit(units)}` }));
+        : tfIn(lang, 'mi.shareDelta', { sd: `${d > 0 ? '+' : '−'}${fmtDist(Math.abs(d), units, 1)}${distUnit(units)}` }));
     }
     Share.share({ message: lines.join('\n') }).catch(() => {}); // dismiss = clean
   }
@@ -242,7 +243,7 @@ export default function MonthlyInsightScreen() {
           <Icon name="chevron-back" size={18} color={C.text} />
         </Pressable>
         <Pressable onPress={() => setPickerOpen(true)} hitSlop={8} style={st.stepperLabelBtn}>
-          <Text style={st.stepperLabel}>{ym.year} · {ym.month}월</Text>
+          <Text style={st.stepperLabel}>{lang === 'en' ? `${ym.year} · ${ym.month}` : `${ym.year} · ${ym.month}월`}</Text>
           <Icon name="chevron-down" size={15} color={C.sub} />
         </Pressable>
         <Pressable
@@ -279,7 +280,7 @@ export default function MonthlyInsightScreen() {
       ) : emptyMonth ? (
         <View style={st.centered}>
           <View style={st.emptyIcon}><Icon name="walk-outline" size={26} color={C.faint} /></View>
-          <Text style={st.stateTxt}>{tf('mi.emptyMonth', { m: ym.month, mon: T(monthKey(ym.month)) })}</Text>
+          <Text style={st.stateTxt}>{tfIn(lang, 'mi.emptyMonth', { m: ym.month, mon: T(monthKey(ym.month)) })}</Text>
           <Text style={st.emptySub}>{T('mi.emptySub')}</Text>
         </View>
       ) : (
@@ -290,7 +291,7 @@ export default function MonthlyInsightScreen() {
               <View style={st.heroCircle} pointerEvents="none" />
               <View style={st.heroPill}>
                 <Icon name="sparkles" size={11} color={C.accent} />
-                <Text style={st.heroPillTxt}>{tf('mi.heroPill', { m: ym.month, mon: T(monthKey(ym.month)) })}</Text>
+                <Text style={st.heroPillTxt}>{tfIn(lang, 'mi.heroPill', { m: ym.month, mon: T(monthKey(ym.month)) })}</Text>
               </View>
               <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6 }}>
                 <Text style={st.heroDist}>{fmtDist(s!.total_distance_km, units, 1)}</Text>
@@ -298,7 +299,7 @@ export default function MonthlyInsightScreen() {
               </View>
               <Text style={st.heroSub}>
                 {s!.delta_distance_km != null
-                  ? tf('mi.deltaVs', { sd: `${s!.delta_distance_km >= 0 ? '+' : '−'}${fmtDist(Math.abs(s!.delta_distance_km), units, 1)}${distUnit(units)}` })
+                  ? tfIn(lang, 'mi.deltaVs', { sd: `${s!.delta_distance_km >= 0 ? '+' : '−'}${fmtDist(Math.abs(s!.delta_distance_km), units, 1)}${distUnit(units)}` })
                   : T('mi.heroCum')}
               </Text>
             </View>
@@ -348,7 +349,7 @@ export default function MonthlyInsightScreen() {
                       {r.all_time_best && <Icon name="trending-up" size={12} color={C.accentGrn} />}
                     </View>
                     <Text style={st.prValue}>{fmtRecordValue(r.type, r.value, units)}</Text>
-                    <Text style={st.prSub}>{tf('date.md', { m: new Date(r.ran_at).getMonth() + 1, mon: T(monthKey(new Date(r.ran_at).getMonth() + 1)), d: new Date(r.ran_at).getDate() })} · {fmtDist(r.distance_km, units, 1)}{distUnit(units)}</Text>
+                    <Text style={st.prSub}>{tfIn(lang, 'date.md', { m: new Date(r.ran_at).getMonth() + 1, mon: T(monthKey(new Date(r.ran_at).getMonth() + 1)), d: new Date(r.ran_at).getDate() })} · {fmtDist(r.distance_km, units, 1)}{distUnit(units)}</Text>
                   </View>
                 ))}
               </View>
@@ -365,7 +366,7 @@ export default function MonthlyInsightScreen() {
                   <View key={w.index} style={{ flex: 1, alignItems: 'center', gap: 7 }}>
                     <Text style={st.weekVal}>{fmtDist(w.distance_km, units, 1)}</Text>
                     <View style={[st.weekBar, { height: h }, last ? { backgroundColor: C.accent, borderWidth: 0 } : null]} />
-                    <Text style={st.weekLbl}>{w.index}주</Text>
+                    <Text style={st.weekLbl}>{tfIn(lang, 'mi.weekN', { n: w.index })}</Text>
                   </View>
                 );
               })}
@@ -389,7 +390,7 @@ export default function MonthlyInsightScreen() {
             {/* run_days lead (꾸준함 지표) — served, probed 2026-07-13 */}
             <View style={st.runDaysRow}>
               <Icon name="calendar-outline" size={14} color={C.accentGrn} />
-              <Text style={st.runDaysTxt}>{T('mi.runDaysBefore')}<Text style={st.runDaysNum}>{tf('mi.days', { n: data.pattern.run_days })}</Text>{T('mi.runDaysAfter')}</Text>
+              <Text style={st.runDaysTxt}>{T('mi.runDaysBefore')}<Text style={st.runDaysNum}>{tfIn(lang, 'mi.days', { n: data.pattern.run_days })}</Text>{T('mi.runDaysAfter')}</Text>
             </View>
             <View style={st.patternFoot}>
               <View style={st.patternCell}>
@@ -406,7 +407,7 @@ export default function MonthlyInsightScreen() {
                 <View style={st.patternIcon}><Icon name="flame-outline" size={15} color={C.accentGrn} /></View>
                 <View style={{ minWidth: 0 }}>
                   <Text style={st.patternLbl}>{T('mi.streakLabel')}</Text>
-                  <Text style={st.patternVal}>{tf('mi.days', { n: data.pattern.longest_streak_days })}</Text>
+                  <Text style={st.patternVal}>{tfIn(lang, 'mi.days', { n: data.pattern.longest_streak_days })}</Text>
                 </View>
               </View>
             </View>

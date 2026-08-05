@@ -16,7 +16,7 @@
  */
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
-import { t, tf } from '@/lib/i18n';
+import { t, tfIn, useLang } from '@/lib/i18n';
 import {
   ActivityIndicator,
   Pressable,
@@ -36,6 +36,7 @@ import { useStyles, useTokens } from '@/hooks/use-tokens';
 type Preview = { id: string; name: string; description: string | null; area: string | null; member_count: number; max_members: number | null; icon_url: string | null; color: string | null; owner_nickname: string | null };
 
 export default function CrewInviteScreen() {
+  const lang = useLang(); // 8/6 back-sweep: render tfIn anchor
   const C = useTokens();
   const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
@@ -110,7 +111,7 @@ export default function CrewInviteScreen() {
             <View style={st.metaRow}>
               <Icon name="people-outline" size={13} color={C.faint} />
               <Text style={st.metaTxt}>
-                {tf('crw.nMembers', { n: preview.member_count })}{preview.max_members != null ? tf('crw.maxN', { n: preview.max_members }) : ''}
+                {tfIn(lang, 'crw.nMembers', { n: preview.member_count })}{preview.max_members != null ? tfIn(lang, 'crw.maxN', { n: preview.max_members }) : ''}
               </Text>
               {preview.area ? (
                 <>
@@ -119,7 +120,7 @@ export default function CrewInviteScreen() {
                 </>
               ) : null}
             </View>
-            {preview.owner_nickname ? <Text style={st.ownerTxt}>{tf('crw.ownerIs', { name: preview.owner_nickname })}</Text> : null}
+            {preview.owner_nickname ? <Text style={st.ownerTxt}>{tfIn(lang, 'crw.ownerIs', { name: preview.owner_nickname })}</Text> : null}
             {preview.description ? <Text style={st.descTxt} numberOfLines={3}>{preview.description}</Text> : null}
           </View>
           <Text style={st.hint}>{t('crw.invHint')}</Text>

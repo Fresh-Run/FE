@@ -6,6 +6,7 @@ import Svg, { Circle, Path, Text as SvgText } from 'react-native-svg';
 
 import { Button, Text } from '@/components/ui';
 import { useTokens } from '@/hooks/use-tokens';
+import { useT } from '@/lib/i18n';
 import { useStore } from '@/store/use-store';
 
 const ROUTE_PATH =
@@ -14,6 +15,7 @@ const START = { cx: 18,  cy: 195 };
 const END   = { cx: 372, cy: 70  };
 
 export default function WelcomeScreen() {
+  const T = useT();
   const C = useTokens();
   const _devBypassAuth = useStore((s) => s._devBypassAuth);
 
@@ -64,17 +66,17 @@ export default function WelcomeScreen() {
           fill={C.sub}
           textAnchor="end"
         >
-          5.2 km · 28분
+          {`5.2 km · ${T('wel.demoMin')}`}
         </SvgText>
       </Svg>
 
       {/* Headline + subtitle */}
       <View style={styles.copy}>
         <Text variant="headlineXl" weight="700">
-          매번 새로운 길로,{'\n'}오늘을 달리세요
+          {T('wel.headline')}
         </Text>
         <Text variant="bodyMd" color="sub" style={styles.subtitle}>
-          AI가 거리·경유지에 맞춰 한 번도{'\n'}달려본 적 없는 코스를 만들어 드려요.
+          {T('wel.sub')}
         </Text>
       </View>
 
@@ -83,12 +85,12 @@ export default function WelcomeScreen() {
       {/* CTAs */}
       <View style={styles.ctas}>
         <Button
-          label="이메일로 시작하기"
+          label={T('wel.emailStart')}
           onPress={() => router.push('/(auth)/sign-up')}
           large
         />
         <Pressable onPress={() => router.push('/(auth)/sign-in')} style={styles.loginLink}>
-          <Text variant="bodyMd" color="sub" center>로그인</Text>
+          <Text variant="bodyMd" color="sub" center>{T('wel.login')}</Text>
         </Pressable>
       </View>
 

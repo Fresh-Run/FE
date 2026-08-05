@@ -40,7 +40,7 @@ import { useUserProfile, type UserRun } from '@/hooks/use-user-profile';
 import { usePendingFollows } from '@/store/pending-follows';
 import { useSettings } from '@/store/use-settings';
 import { useStore } from '@/store/use-store';
-import { t, tf, useT } from '@/lib/i18n';
+import { t, tf, useT, tfIn, getLang } from '@/lib/i18n';
 
 // Run card — other-user variant: ♥ is a real toggle (my_kudos), no 💬,
 // no visibility caption (approved deltas). Card tap → 러닝 포스트 (R3',
@@ -283,7 +283,7 @@ export default function UserProfileScreen() {
       {!profile?.locked && (
         <View style={st.sectionHead}>
           <Text style={st.sectionTitle}>{T('up.postedRuns')}</Text>
-          <Text style={st.sectionCount}>{tf('up.publicN', { n: runs.length })}</Text>
+          <Text style={st.sectionCount}>{tfIn(getLang(), 'up.publicN', { n: runs.length })}</Text>
         </View>
       )}
     </View>
@@ -377,7 +377,7 @@ export default function UserProfileScreen() {
               </View>
               <Text style={st.lockTitle}>{T('up.lockTitle')}</Text>
               <Text style={st.lockSub}>
-                {tf('up.lockSub', { name: profile.nickname })}
+                {tfIn(getLang(), 'up.lockSub', { name: profile.nickname })}
               </Text>
             </View>
           ) : (

@@ -24,7 +24,7 @@ import { PaceChart, SplitsTable } from '@/components/run-splits';
 import { Icon } from '@/components/ui';
 // MiniMap fallback now lives inside MediaCarousel (no polyline → seed map)
 import { useRunDetail } from '@/hooks/use-runs';
-import { t, tf, useLang, useT } from '@/lib/i18n';
+import { t, useLang, useT, tfIn } from '@/lib/i18n';
 import { deleteRun } from '@/lib/runs-api';
 import { useRunTrack } from '@/lib/track-cache';
 import { distUnit, fmtDist, fmtDuration, fmtPaceIn, fmtWhen, timeTitle } from '@/lib/run-format';
@@ -246,7 +246,7 @@ export default function ActivityScreen() {
               my-profile twin) mirror the stranger's view instead. */}
           {run.crew_name ? (
             <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.crewLine} numberOfLines={1}>
-              {run.crew_name} · {T('act.crewSession')}{run.session_participant_count != null ? ` · ${tf('crw.nJoined', { n: run.session_participant_count })}` : ''}
+              {run.crew_name} · {T('act.crewSession')}{run.session_participant_count != null ? ` · ${tfIn(lang, 'crw.nJoined', { n: run.session_participant_count })}` : ''}
             </Text>
           ) : null}
 
@@ -274,7 +274,7 @@ export default function ActivityScreen() {
               <Icon name="information-circle-outline" size={13} color={C.faint} />
               <Text style={st.flaggedTxt}>
                 {T('act.adjusted')}
-                {run.distance_km_reported != null ? tf('act.adjustedVal', { v: `${fmtDist(run.distance_km_reported, units, 2)}${distUnit(units)}` }) : ''}
+                {run.distance_km_reported != null ? tfIn(lang, 'act.adjustedVal', { v: `${fmtDist(run.distance_km_reported, units, 2)}${distUnit(units)}` }) : ''}
               </Text>
             </View>
           ) : null}

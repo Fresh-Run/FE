@@ -12,6 +12,7 @@
 
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 
+import { tf } from '@/lib/i18n';
 import { apiFetch } from '@/lib/api';
 
 export const MAX_RUN_PHOTOS = 3;
@@ -57,7 +58,7 @@ export async function uploadRunPhotoToSlot(runId: string, localUri: string, slot
     headers: { 'Content-Type': 'image/jpeg' },
     body: bytes,
   });
-  if (!put.ok) throw new Error(`사진 업로드 실패 (${put.status})`);
+  if (!put.ok) throw new Error(tf('err.photoUpload', { s: put.status }));
   return path;
 }
 
@@ -80,7 +81,7 @@ export async function uploadRunPhotos(
       headers: { 'Content-Type': 'image/jpeg' },
       body: bytes,
     });
-    if (!put.ok) throw new Error(`사진 업로드 실패 (${put.status})`);
+    if (!put.ok) throw new Error(tf('err.photoUpload', { s: put.status }));
     paths.push(path);
   }
   onProgress?.(uris.length, uris.length);

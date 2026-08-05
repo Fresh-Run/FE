@@ -43,7 +43,7 @@ import { errorMessage } from '@/lib/error-copy';
 import { distUnit, fmtDist, fmtDuration, fmtPaceIn, fmtWhen, paceUnit, timeTitle } from '@/lib/run-format';
 import { MAX_RUN_PHOTOS, reencodeForUpload } from '@/lib/run-photos';
 import { maybeWriteRunToHealth } from '@/lib/health';
-import { t, tf, useLang, useT } from '@/lib/i18n';
+import { t, useLang, useT, tfIn } from '@/lib/i18n';
 import { runSession } from '@/store/run-session';
 import { saveRun, type RunVisibility } from '@/lib/runs-api';
 import { radius as R, spacing as S, type Tokens, DENSE_MAX_FONT_SCALE} from '@/lib/theme';
@@ -318,7 +318,7 @@ export default function RunSaveScreen() {
                     {T('runSave.crewTag.before')}<Text style={st.tagStrong}>{crewSession.crewName}</Text>{T('runSave.crewTag.after')}
                   </Text>
                   {crewSession.announcementTitle ? (
-                    <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.tagSub} numberOfLines={1}>{tf('runSave.crewMeeting', { title: crewSession.announcementTitle })}</Text>
+                    <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.tagSub} numberOfLines={1}>{tfIn(lang, 'runSave.crewMeeting', { title: crewSession.announcementTitle })}</Text>
                   ) : null}
                 </View>
                 <Pressable onPress={() => { setTagKept(false); updatePendingDraft({ tagKept: false }); }} hitSlop={8} style={st.tagRemove}>

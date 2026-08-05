@@ -73,7 +73,7 @@ import { supabase } from '@/lib/supabase';
 import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { useSettings } from '@/store/use-settings';
-import { t, tf, useLang } from '@/lib/i18n';
+import { t, useLang, tfIn } from '@/lib/i18n';
 
 const POLL_MS = 20_000; // guide §214: 20~30s while the room is active
 
@@ -523,7 +523,7 @@ export default function CrewChatScreen() {
         <Pressable onPress={toggleMute} hitSlop={8} style={[st.bellBtn, !muted && { backgroundColor: C.accentDim }]}>
           <Icon name={muted ? 'notifications-off-outline' : 'notifications-outline'} size={16} color={muted ? C.faint : C.accentGrn} />
         </Pressable>
-        {memberCount ? <Text style={st.memberCount}>{tf('crw.nMembers', { n: memberCount })}</Text> : null}
+        {memberCount ? <Text style={st.memberCount}>{tfIn(lang, 'crw.nMembers', { n: memberCount })}</Text> : null}
       </View>
 
       {toast && <View style={st.toast}><Text style={st.toastTxt}>{toast}</Text></View>}

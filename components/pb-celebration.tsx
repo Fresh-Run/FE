@@ -18,7 +18,7 @@ import {
 
 import { Icon } from '@/components/ui';
 import { frHash } from '@/lib/fr-hash';
-import { t, tf, useT, type StringKey } from '@/lib/i18n';
+import { t, useT, type StringKey, tfIn, useLang } from '@/lib/i18n';
 import type { NewRecord } from '@/lib/runs-api';
 import {
   distUnit,
@@ -124,6 +124,7 @@ export function PbCelebration({
   const C = useTokens();
   const st = useStyles(makeSt);
   const T = useT(); // modal hosted by long-lived parents (run-result, records)
+  const lang = useLang(); // 8/6 back-sweep
   const pop = useRef(new Animated.Value(0.8)).current;
   useEffect(() => {
     if (!records) return;
@@ -153,7 +154,7 @@ export function PbCelebration({
 
           <Text style={st.title}>{T('pbc.title')}</Text>
           <Text style={st.subtitle}>{T(SUBTITLE_KEY[main.type])}</Text>
-          {extra > 0 && <Text style={st.extraCaption}>{tf('pbc.multi', { n: extra })}</Text>}
+          {extra > 0 && <Text style={st.extraCaption}>{tfIn(lang, 'pbc.multi', { n: extra })}</Text>}
 
           {/* 이전 / 현재 comparison */}
           <View style={st.compareRow}>
@@ -177,7 +178,7 @@ export function PbCelebration({
           <View style={st.chipRow}>
             <View style={st.chip}>
               <Icon name="flash" size={14} color={C.accentGrn} />
-              <Text style={st.chipTxt}>{tf('pbc.improved', { n: main.improvement_pct })}</Text>
+              <Text style={st.chipTxt}>{tfIn(lang, 'pbc.improved', { n: main.improvement_pct })}</Text>
             </View>
           </View>
 
@@ -190,7 +191,7 @@ export function PbCelebration({
               session docket, this is the honest interim. */}
           <Pressable
             onPress={() => Share.share({
-              message: tf('pbc.shareMsg', { sub: t(SUBTITLE_KEY[main.type]), val: `${cur.text}${cur.caption ? ` ${cur.caption}` : ''}`, prev: prev.text, pct: main.improvement_pct }),
+              message: tfIn(lang, 'pbc.shareMsg', { sub: t(SUBTITLE_KEY[main.type]), val: `${cur.text}${cur.caption ? ` ${cur.caption}` : ''}`, prev: prev.text, pct: main.improvement_pct }),
             }).catch(() => {})}
             style={({ pressed }) => [st.shareBtn, { opacity: pressed ? 0.7 : 1 }]}
           >

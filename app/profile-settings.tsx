@@ -28,7 +28,7 @@ import { Icon } from '@/components/ui';
 import { Toggle } from '@/components/toggle';
 import { errorMessage } from '@/lib/error-copy';
 import { getMyProfile, listFollowRequests, updateProfile, type ProfileVisibility } from '@/lib/profile-api';
-import { t, tf, useT, type StringKey } from '@/lib/i18n';
+import { t, useT, type StringKey, tfIn, useLang } from '@/lib/i18n';
 import { useStore } from '@/store/use-store';
 import { shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
@@ -77,6 +77,7 @@ function NavRow({ icon, label, value, onPress }: {
 const VIS_TIMEOUT_MS = 10_000; // optimistic-write clock (timeout rider)
 
 export default function ProfileSettingsScreen() {
+  const lang = useLang(); // 8/6 back-sweep: render tfIn anchor
   const T = useT();
   const C = useTokens();
   const st = useStyles(makeSt);
@@ -232,7 +233,7 @@ export default function ProfileSettingsScreen() {
           <NavRow
             icon="mail-unread-outline"
             label={T('pset.followReq')}
-            value={reqCount > 0 ? tf('pset.nWaiting', { n: reqCount }) : undefined}
+            value={reqCount > 0 ? tfIn(lang, 'pset.nWaiting', { n: reqCount }) : undefined}
             onPress={() => router.push('/follow-requests' as any)}
           />
         </Group>

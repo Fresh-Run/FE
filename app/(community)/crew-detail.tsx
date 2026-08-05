@@ -7,7 +7,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import React, { useCallback, useRef, useState } from 'react';
 import { errorMessage } from '@/lib/error-copy';
-import { t, tf, useLang, type StringKey } from '@/lib/i18n';
+import { t, useLang, type StringKey, useT, tfIn } from '@/lib/i18n';
 import {
   ActivityIndicator,
   Alert,
@@ -71,6 +71,7 @@ function CtaButton({
 }) {
   const C = useTokens();
   const st = useStyles(makeSt);
+  const T = useT(); // 8/6 reactivity conversion (the ledgered bare-t flag)
   // Pending join request (approval crew) — cancellable
   if (requestPending) {
     return (
@@ -84,7 +85,7 @@ function CtaButton({
           : (
             <>
               <Icon name="hourglass-outline" size={18} color={C.accentGrn} />
-              <Text style={[st.ctaTxt, { color: C.accentGrn }]}>{t('crw.applied')}</Text>
+              <Text style={[st.ctaTxt, { color: C.accentGrn }]}>{T('crw.applied')}</Text>
             </>
           )
         }
@@ -96,7 +97,7 @@ function CtaButton({
     return (
       <View style={[st.ctaBtn, st.ctaDisabled]} pointerEvents="none">
         <Icon name="people-outline" size={18} color={C.faint} />
-        <Text style={[st.ctaTxt, { color: C.faint }]}>{t('crw.full')}</Text>
+        <Text style={[st.ctaTxt, { color: C.faint }]}>{T('crw.full')}</Text>
       </View>
     );
   }
@@ -113,7 +114,7 @@ function CtaButton({
         : (
           <>
             <Icon name="people-outline" size={18} color={C.accentText} />
-            <Text style={st.ctaTxt}>{crew.join_policy === 'approval' ? t('crw.joinApply') : t('crw.join')}</Text>
+            <Text style={st.ctaTxt}>{crew.join_policy === 'approval' ? T('crw.joinApply') : T('crw.join')}</Text>
           </>
         )
       }
@@ -126,8 +127,10 @@ function CtaButton({
 const HERO_H = 220;
 
 export default function CrewDetailScreen() {
+  const T = useT(); // 8/6 reactivity conversion (the ledgered bare-t 30-site flag)
   const C = useTokens();
   const lang = useLang(); // compiler-visible locale for fmtAgo (2026-08-03 formatter-cache fix)
+  const Tf = (k: StringKey, v: Record<string, string | number>) => tfIn(lang, k, v); // reactive tf — lang is a visible dep
   const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
   const { crewId } = useLocalSearchParams<{ crewId: string }>();
@@ -193,7 +196,7 @@ export default function CrewDetailScreen() {
     try {
       res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: 'images', quality: 1 });
     } catch {
-      Alert.alert(t('onb.photoFailTitle'), t('onb.photoFailBody'));
+      Alert.alert(T('onb.photoFailTitle'), T('onb.photoFailBody'));
       return;
     }
     if (res.canceled || !res.assets[0]) return;
@@ -210,7 +213,7 @@ export default function CrewDetailScreen() {
       await uploadCrewImage(crew!.id, kind, croppedUri); // crop output = re-encoded, EXIF-free
       refetch();
     } catch (e: unknown) {
-      Alert.alert(kind === 'cover' ? t('crw.coverFail') : t('crw.iconFail'), errorMessage(e));
+      Alert.alert(kind === 'cover' ? T('crw.coverFail') : T('crw.iconFail'), errorMessage(e));
     } finally {
       setImgBusy(null);
     }
@@ -245,7 +248,7 @@ export default function CrewDetailScreen() {
   function beginCrewRun(announcementId: string | null, announcementTitle: string | null) {
     if (!crew) return;
     setActiveCourse({
-      id: null, title: tf('crw.crewRunOf', { name: crew.name }), distanceKm: 0, polyline: null,
+      id: null, title: Tf('crw.crewRunOf', { name: crew.name }), distanceKm: 0, polyline: null,
       crewSession: { crewId: crew.id, crewName: crew.name, announcementId, announcementTitle },
     });
     router.push('/(course)/tracking' as never);
@@ -264,12 +267,12 @@ export default function CrewDetailScreen() {
         Math.abs(new Date(a.run_at!).getTime() - Date.now()) - Math.abs(new Date(b.run_at!).getTime() - Date.now()))[0];
     if (near) {
       Alert.alert(
-        t('crw.startTitle'),
-        tf('crw.startAsk', { title: near.title }),
+        T('crw.startTitle'),
+        Tf('crw.startAsk', { title: near.title }),
         [
-          { text: t('common.cancel'), style: 'cancel' },
-          { text: t('crw.plainRun'), onPress: () => beginCrewRun(null, null) },
-          { text: t('crw.withMeet'), onPress: () => beginCrewRun(near.id, near.title) },
+          { text: T('common.cancel'), style: 'cancel' },
+          { text: T('crw.plainRun'), onPress: () => beginCrewRun(null, null) },
+          { text: T('crw.withMeet'), onPress: () => beginCrewRun(near.id, near.title) },
         ],
       );
     } else {
@@ -284,7 +287,7 @@ export default function CrewDetailScreen() {
       pathname: '/run-post' as never,
       params: {
         runId: run.run_id,
-        nickname: run.nickname ?? t('home.runner'),
+        nickname: run.nickname ?? T('home.runner'),
         avatarUrl: run.avatar_url ?? '',
         allowLikes: run.allow_likes === true ? '1' : '0',
         allowComments: run.allow_comments === true ? '1' : '0',
@@ -299,9 +302,9 @@ export default function CrewDetailScreen() {
     try {
       const result = await joinCrew(crew.id);
       if (result === 'pending') {
-        Alert.alert(t('crw.appliedDone'), t('crw.appliedDoneSub'));
+        Alert.alert(T('crw.appliedDone'), T('crw.appliedDoneSub'));
       } else if (result === 'already_member') {
-        setMutErr(t('crw.alreadyJoined'));
+        setMutErr(T('crw.alreadyJoined'));
       }
       refetch();
     } catch (e: unknown) {
@@ -313,10 +316,10 @@ export default function CrewDetailScreen() {
 
   function handleCancelRequest() {
     if (!crew) return;
-    Alert.alert(t('crw.cancelApplyTitle'), t('crw.cancelApplyAsk'), [
-      { text: t('crw.no'), style: 'cancel' },
+    Alert.alert(T('crw.cancelApplyTitle'), T('crw.cancelApplyAsk'), [
+      { text: T('crw.no'), style: 'cancel' },
       {
-        text: t('crw.cancelApply'),
+        text: T('crw.cancelApply'),
         style: 'destructive',
         onPress: async () => {
           setBusy(true);
@@ -340,12 +343,12 @@ export default function CrewDetailScreen() {
   function handleLeave() {
     if (!crew) return;
     Alert.alert(
-      t('crw.leaveTitle'),
-      tf('crw.leaveAsk', { name: crew.name }),
+      T('crw.leaveTitle'),
+      Tf('crw.leaveAsk', { name: crew.name }),
       [
-        { text: t('common.cancel'), style: 'cancel' },
+        { text: T('common.cancel'), style: 'cancel' },
         {
-          text: t('crw.leave'),
+          text: T('crw.leave'),
           style: 'destructive',
           onPress: async () => {
             setBusy(true);
@@ -381,9 +384,9 @@ export default function CrewDetailScreen() {
         </Pressable>
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 }}>
           <Icon name="warning-outline" size={36} color={C.faint} />
-          <Text style={st.errTxt}>{error ?? t('crw.notFound')}</Text>
+          <Text style={st.errTxt}>{error ?? T('crw.notFound')}</Text>
           <Pressable onPress={refetch} style={st.retryBtn}>
-            <Text style={st.retryTxt}>{t('common.retry')}</Text>
+            <Text style={st.retryTxt}>{T('common.retry')}</Text>
           </Pressable>
         </View>
       </View>
@@ -434,7 +437,7 @@ export default function CrewDetailScreen() {
                   style={st.managePill}
                 >
                   <Icon name="settings-outline" size={14} color="#fff" />
-                  <Text style={st.managePillTxt}>{t('crw.manage')}</Text>
+                  <Text style={st.managePillTxt}>{T('crw.manage')}</Text>
                   {crew.myRole === 'owner' && pendingReqCount > 0 && <View style={st.managePillDot} />}
                 </Pressable>
               ) : isMember ? (
@@ -480,7 +483,7 @@ export default function CrewDetailScreen() {
                     {imgBusy === 'cover'
                       ? <ActivityIndicator size="small" color="#fff" />
                       : <Icon name="camera-outline" size={13} color="#fff" />}
-                    <Text style={st.coverChipTxt}>{t('crw.coverChange')}</Text>
+                    <Text style={st.coverChipTxt}>{T('crw.coverChange')}</Text>
                   </Pressable>
                 )}
               </View>
@@ -489,12 +492,12 @@ export default function CrewDetailScreen() {
                 {/* Role badge (canvas: 크루장 amber / 운영진 accent) */}
                 {crew.myRole === 'owner' && (
                   <View style={[st.roleBadge, { backgroundColor: C.crown }]}>
-                    <Text style={st.roleBadgeTxt}>{t('crw.roleOwner')}</Text>
+                    <Text style={st.roleBadgeTxt}>{T('crw.roleOwner')}</Text>
                   </View>
                 )}
                 {crew.myRole === 'admin' && (
                   <View style={[st.roleBadge, { backgroundColor: C.accent }]}>
-                    <Text style={st.roleBadgeTxt}>{t('crw.roleAdmin')}</Text>
+                    <Text style={st.roleBadgeTxt}>{T('crw.roleAdmin')}</Text>
                   </View>
                 )}
                 <View style={st.levelBadge}>
@@ -502,7 +505,7 @@ export default function CrewDetailScreen() {
                 </View>
                 <Icon name="people-outline" size={13} color="rgba(255,255,255,0.72)" />
                 <Text style={st.heroMetaTxt}>
-                  {tf('crw.nMembers', { n: crew.member_count })}{crew.max_members !== null ? tf('crw.maxN', { n: crew.max_members }) : ''}
+                  {Tf('crw.nMembers', { n: crew.member_count })}{crew.max_members !== null ? Tf('crw.maxN', { n: crew.max_members }) : ''}
                 </Text>
                 {crew.area ? <Text style={st.heroMetaTxt}>· {crew.area}</Text> : null}
               </View>
@@ -527,7 +530,7 @@ export default function CrewDetailScreen() {
                 style={({ pressed }) => [st.quickTile, shadows.sm, pressed && { opacity: 0.8 }]}
               >
                 <Icon name="megaphone-outline" size={19} color={C.accentGrn} />
-                <Text style={st.quickTxt}>{t('crw.qAnnounce')}</Text>
+                <Text style={st.quickTxt}>{T('crw.qAnnounce')}</Text>
               </Pressable>
             )}
             {can('manage_admins') && (
@@ -539,7 +542,7 @@ export default function CrewDetailScreen() {
                 style={({ pressed }) => [st.quickTile, shadows.sm, pressed && { opacity: 0.8 }]}
               >
                 <Icon name="shield-outline" size={19} color={C.accentGrn} />
-                <Text style={st.quickTxt}>{t('crw.qAdmins')}</Text>
+                <Text style={st.quickTxt}>{T('crw.qAdmins')}</Text>
               </Pressable>
             )}
             {can('challenges') && (
@@ -551,7 +554,7 @@ export default function CrewDetailScreen() {
                 style={({ pressed }) => [st.quickTile, shadows.sm, pressed && { opacity: 0.8 }]}
               >
                 <Icon name="trophy-outline" size={19} color={C.accentGrn} />
-                <Text style={st.quickTxt}>{t('crw.qChallenge')}</Text>
+                <Text style={st.quickTxt}>{T('crw.qChallenge')}</Text>
               </Pressable>
             )}
           </View>
@@ -563,7 +566,7 @@ export default function CrewDetailScreen() {
         {isMember && (
           <View style={{ paddingHorizontal: S.gutter, paddingTop: S.xl }}>
             <View style={st.sectionHead}>
-              <Text style={st.sectionTitle}>{t('crw.sAnn')}</Text>
+              <Text style={st.sectionTitle}>{T('crw.sAnn')}</Text>
               <Pressable
                 onPress={() => router.push({
                   pathname: '/(community)/announcements' as never,
@@ -571,7 +574,7 @@ export default function CrewDetailScreen() {
                 })}
                 hitSlop={8}
               >
-                <Text style={st.annMoreTxt}>{t('crw.viewAll')}</Text>
+                <Text style={st.annMoreTxt}>{T('crw.viewAll')}</Text>
               </Pressable>
             </View>
 
@@ -586,7 +589,7 @@ export default function CrewDetailScreen() {
                 style={st.emptyBox}
               >
                 <Text style={st.emptyTxt}>
-                  {can('announcements') ? t('crw.annEmptyCan') : t('crw.annEmpty')}
+                  {can('announcements') ? T('crw.annEmptyCan') : T('crw.annEmpty')}
                 </Text>
               </Pressable>
             ) : (
@@ -604,7 +607,7 @@ export default function CrewDetailScreen() {
                       <Icon name="megaphone-outline" size={16} color={C.accentGrn} />
                       <View style={{ flex: 1, minWidth: 0 }}>
                         <Text style={st.annTitle} numberOfLines={1}>{a.title}</Text>
-                        {a.run_at ? <Text style={st.annSub}>{tf('crw.annSub', { n: a.rsvp.going })}</Text> : null}
+                        {a.run_at ? <Text style={st.annSub}>{Tf('crw.annSub', { n: a.rsvp.going })}</Text> : null}
                       </View>
                       <Icon name="chevron-forward" size={15} color={C.faint} />
                     </Pressable>
@@ -624,7 +627,7 @@ export default function CrewDetailScreen() {
         {isMember && (crew.meet_place_name != null || hasSchedule) && (
           <View style={{ paddingHorizontal: S.gutter, paddingTop: S.xl }}>
             <View style={st.sectionHead}>
-              <Text style={st.sectionTitle}>{t('crw.sMeet')}</Text>
+              <Text style={st.sectionTitle}>{T('crw.sMeet')}</Text>
             </View>
             <View style={[st.meetCard, shadows.sm]}>
               {crew.meet_lat != null && crew.meet_lng != null && (
@@ -658,7 +661,7 @@ export default function CrewDetailScreen() {
                     <Text style={[st.meetSchedule, crew.meet_place_name == null && { marginTop: 0 }]} numberOfLines={1}>
                       {crew.sigungu ? `${crew.sigungu}` : ''}
                       {crew.sigungu && hasSchedule ? ' · ' : ''}
-                      {activeDays.length > 0 ? tf('crw.weekly', { days: activeDays.map(d => t(DAY_LABEL_KEY[d] ?? 'dayS.mon')).join('·') }) : ''}
+                      {activeDays.length > 0 ? Tf('crw.weekly', { days: activeDays.map(d => t(DAY_LABEL_KEY[d] ?? 'dayS.mon')).join('·') }) : ''}
                       {activeDays.length > 0 && crew.active_time ? ' ' : ''}
                       {crew.active_time ?? ''}
                     </Text>
@@ -678,7 +681,7 @@ export default function CrewDetailScreen() {
         {isMember && challenge !== undefined && (
           <View style={{ paddingHorizontal: S.gutter, paddingTop: S.xl }}>
             <View style={st.sectionHead}>
-              <Text style={st.sectionTitle}>{t('crw.sChallenge')}</Text>
+              <Text style={st.sectionTitle}>{T('crw.sChallenge')}</Text>
             </View>
             {challenge === null ? (
               can('challenges') ? (
@@ -689,7 +692,7 @@ export default function CrewDetailScreen() {
                   })}
                   style={({ pressed }) => [st.emptyBox, pressed && { opacity: 0.8 }]}
                 >
-                  <Text style={st.emptyTxt}>{t('crw.chEmpty')}</Text>
+                  <Text style={st.emptyTxt}>{T('crw.chEmpty')}</Text>
                 </Pressable>
               ) : null
             ) : (
@@ -698,7 +701,7 @@ export default function CrewDetailScreen() {
                   <Text style={st.chTitle} numberOfLines={1}>{challenge.title}</Text>
                   <View style={[st.chPct, challenge.is_completed && { backgroundColor: C.crown }]}>
                     <Text style={st.chPctTxt}>
-                      {challenge.is_completed ? t('crw.chDone') : `${Math.round(challenge.progress_pct)}%`}
+                      {challenge.is_completed ? T('crw.chDone') : `${Math.round(challenge.progress_pct)}%`}
                     </Text>
                   </View>
                 </View>
@@ -711,11 +714,11 @@ export default function CrewDetailScreen() {
                   </Text>
                   <Text style={st.chMeta}>
                     {challenge.is_active
-                      ? tf('crw.chDaysLeft', { n: Math.max(0, Math.ceil((new Date(challenge.ends_at).getTime() - Date.now()) / 86400000)) })
-                      : new Date(challenge.starts_at).getTime() > Date.now() ? t('crw.chUpcoming') : t('crw.chEnded')}
+                      ? Tf('crw.chDaysLeft', { n: Math.max(0, Math.ceil((new Date(challenge.ends_at).getTime() - Date.now()) / 86400000)) })
+                      : new Date(challenge.starts_at).getTime() > Date.now() ? T('crw.chUpcoming') : T('crw.chEnded')}
                   </Text>
                 </View>
-                <Text style={st.chCaption}>{t('crw.chGps')}</Text>
+                <Text style={st.chCaption}>{T('crw.chGps')}</Text>
               </View>
             )}
           </View>
@@ -730,7 +733,7 @@ export default function CrewDetailScreen() {
               style={({ pressed }) => [st.crewRunBtn, accentShadow(C.accent), pressed && { opacity: 0.9 }]}
             >
               <Icon name="walk-outline" size={20} color={C.accentText} />
-              <Text style={st.crewRunTxt}>{t('crw.startTitle')}</Text>
+              <Text style={st.crewRunTxt}>{T('crw.startTitle')}</Text>
             </Pressable>
           </View>
         )}
@@ -760,9 +763,9 @@ export default function CrewDetailScreen() {
                 )}
               </View>
               <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={st.chatTitle}>{t('crw.chatTitle')}</Text>
+                <Text style={st.chatTitle}>{T('crw.chatTitle')}</Text>
                 <Text style={st.chatSub} numberOfLines={1}>
-                  {chatUnread > 0 ? tf('crw.chatNew', { n: chatUnread }) : t('crw.chatSub')}
+                  {chatUnread > 0 ? Tf('crw.chatNew', { n: chatUnread }) : T('crw.chatSub')}
                 </Text>
               </View>
               <Icon name="chevron-forward" size={16} color={C.faint} />
@@ -781,8 +784,8 @@ export default function CrewDetailScreen() {
                 honest weekly-reset semantics (KST 월요일, verified-GPS only). */}
             {ranking !== null && (
               <View style={st.sectionHead}>
-                <Text style={st.sectionTitle}>{t('crw.sRank')}</Text>
-                <Text style={st.memberCount}>{t('crw.rankCaption')}</Text>
+                <Text style={st.sectionTitle}>{T('crw.sRank')}</Text>
+                <Text style={st.memberCount}>{T('crw.rankCaption')}</Text>
               </View>
             )}
             {ranking !== null && ranking.length === 0 && (
@@ -790,8 +793,8 @@ export default function CrewDetailScreen() {
                 <View style={st.rankEmptyIcon}>
                   <Icon name="trophy-outline" size={22} color={C.faint} />
                 </View>
-                <Text style={st.rankEmptyTitle}>{t('crw.rankEmpty')}</Text>
-                <Text style={st.rankEmptySub}>{t('crw.rankEmptySub')}</Text>
+                <Text style={st.rankEmptyTitle}>{T('crw.rankEmpty')}</Text>
+                <Text style={st.rankEmptySub}>{T('crw.rankEmptySub')}</Text>
               </View>
             )}
             {ranking !== null && ranking.length > 0 && (
@@ -809,11 +812,11 @@ export default function CrewDetailScreen() {
                           <Avatar name={r.nickname} size={30} photoUrl={r.avatar_url} letterSpacing={-0.3} />
                           <View style={{ flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                             <Text style={[st.rankName, r.me && { fontWeight: '700' }]} numberOfLines={1}>
-                              {r.nickname ?? t('home.runner')}
+                              {r.nickname ?? T('home.runner')}
                             </Text>
-                            {r.me && <View style={st.meBadge}><Text style={st.meBadgeTxt}>{t('crw.me')}</Text></View>}
-                            {role === 'owner' && <View style={st.ownerBadge}><Text style={st.ownerTxt}>{t('crw.roleOwner')}</Text></View>}
-                            {role === 'admin' && <View style={st.adminBadge}><Text style={st.adminTxt}>{t('crw.roleAdmin')}</Text></View>}
+                            {r.me && <View style={st.meBadge}><Text style={st.meBadgeTxt}>{T('crw.me')}</Text></View>}
+                            {role === 'owner' && <View style={st.ownerBadge}><Text style={st.ownerTxt}>{T('crw.roleOwner')}</Text></View>}
+                            {role === 'admin' && <View style={st.adminBadge}><Text style={st.adminTxt}>{T('crw.roleAdmin')}</Text></View>}
                           </View>
                           <Text style={st.rankKm}>{r.distance_km.toFixed(1)} km</Text>
                         </View>
@@ -833,8 +836,8 @@ export default function CrewDetailScreen() {
               style={({ pressed }) => [st.rosterBtn, shadows.sm, pressed && { opacity: 0.8 }]}
             >
               <View style={st.rosterIcon}><Icon name="people-outline" size={18} color={C.accentGrn} /></View>
-              <Text style={st.rosterTxt}>{t('crw.rosterAll')}</Text>
-              <Text style={st.rosterCount}>{tf('crw.nMembers', { n: crew.member_count })}</Text>
+              <Text style={st.rosterTxt}>{T('crw.rosterAll')}</Text>
+              <Text style={st.rosterCount}>{Tf('crw.nMembers', { n: crew.member_count })}</Text>
               <Icon name="chevron-forward" size={16} color={C.faint} />
             </Pressable>
           </View>
@@ -846,13 +849,13 @@ export default function CrewDetailScreen() {
         {isMember && feedPreview !== null && (
           <View style={{ paddingHorizontal: S.gutter, paddingTop: S.xl }}>
             <View style={st.sectionHead}>
-              <Text style={st.sectionTitle}>{t('crw.sFeed')}</Text>
+              <Text style={st.sectionTitle}>{T('crw.sFeed')}</Text>
               {feedPreview.length > 0 && (
                 <Pressable
                   onPress={() => router.push({ pathname: '/(community)/crew-runs' as never, params: { crewId: crew.id, crewName: crew.name } })}
                   hitSlop={8}
                 >
-                  <Text style={st.annMoreTxt}>{t('crw.viewAll')}</Text>
+                  <Text style={st.annMoreTxt}>{T('crw.viewAll')}</Text>
                 </Pressable>
               )}
             </View>
@@ -860,8 +863,8 @@ export default function CrewDetailScreen() {
               // Session-only feed's normal early state. No CTA button here —
               // the 크루 러닝 시작 primary button is on this same screen, above.
               <View style={st.emptyBox}>
-                <Text style={st.emptyTxt}>{t('crw.feedEmpty')}</Text>
-                <Text style={st.emptyBoxSub}>{t('crw.feedEmptySub')}</Text>
+                <Text style={st.emptyTxt}>{T('crw.feedEmpty')}</Text>
+                <Text style={st.emptyBoxSub}>{T('crw.feedEmptySub')}</Text>
               </View>
             ) : (
               <View style={[st.feedList, shadows.sm]}>
@@ -888,12 +891,12 @@ export default function CrewDetailScreen() {
                       <View style={{ flex: 1, minWidth: 0 }}>
                         <View style={st.feedHeadRow}>
                           <Avatar name={run.nickname} size={18} initialsRatio={0.5} />
-                          <Text style={st.feedName} numberOfLines={1}>{run.nickname ?? t('home.runner')}</Text>
+                          <Text style={st.feedName} numberOfLines={1}>{run.nickname ?? T('home.runner')}</Text>
                           {/* Every card is a 정기런 now (session_only) — the word
                               is redundant; the 참여 count is the informative part. */}
                           {run.session_participant_count != null && (
                             <View style={st.feedSessionChip}>
-                              <Text style={st.feedSessionTxt}>{tf('crw.nJoined', { n: run.session_participant_count })}</Text>
+                              <Text style={st.feedSessionTxt}>{Tf('crw.nJoined', { n: run.session_participant_count })}</Text>
                             </View>
                           )}
                           <Text style={st.feedWhen}>{fmtAgo(run.ran_at, lang)}</Text>

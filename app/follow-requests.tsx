@@ -29,7 +29,7 @@ import { openProfile } from '@/lib/profile-nav';
 import { fmtWhen } from '@/lib/run-format';
 import { radius as R, shadows, spacing as S, type Tokens, DENSE_MAX_FONT_SCALE} from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
-import { t, tf, useLang, useT } from '@/lib/i18n';
+import { t, useLang, useT, tfIn } from '@/lib/i18n';
 
 export default function FollowRequestsScreen() {
   const T = useT(); // reactive anchor — stack-mounted beneath 설정, repaints on lang flip
@@ -67,7 +67,7 @@ export default function FollowRequestsScreen() {
           <Icon name="arrow-back" size={20} color={C.text} />
         </Pressable>
         <Text style={st.appBarTitle}>{T('fq.title')}</Text>
-        <Text style={st.appBarCount}>{rows ? tf('fq.nCount', { n: rows.length }) : ''}</Text>
+        <Text style={st.appBarCount}>{rows ? tfIn(lang, 'fq.nCount', { n: rows.length }) : ''}</Text>
       </View>
 
       {rows === null ? (

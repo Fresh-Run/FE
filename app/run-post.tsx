@@ -82,7 +82,7 @@ import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { useRunDetail } from '@/hooks/use-runs';
 import { useSettings } from '@/store/use-settings';
 import { useStore } from '@/store/use-store';
-import { t, tf, useLang, useT } from '@/lib/i18n';
+import { t, useLang, useT, tfIn } from '@/lib/i18n';
 
 const COMMENT_PAGE = 20; // reply-slice pagination (follow-list pattern)
 
@@ -561,13 +561,13 @@ export default function RunPostScreen() {
                   onPress={() => setLikersOpen(true)}
                   style={({ pressed }) => [st.likersRow, pressed && { opacity: 0.6 }]}
                 >
-                  <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.likersRowTxt}>좋아요 {likeCount}개</Text>
+                  <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.likersRowTxt}>{tfIn(lang, 'rp.nLikes', { n: likeCount })}</Text>
                   <Icon name="chevron-forward" size={13} color={C.faint} />
                 </Pressable>
               )}
 
               {/* Comments */}
-              <Text style={st.commentsHead}>{tf('rp.commentsN', { n: commentCount })}</Text>
+              <Text style={st.commentsHead}>{tfIn(lang, 'rp.commentsN', { n: commentCount })}</Text>
               {comments === null ? (
                 <ActivityIndicator size="small" color={C.faint} style={{ paddingVertical: 16 }} />
               ) : comments.length === 0 ? (
@@ -624,7 +624,7 @@ export default function RunPostScreen() {
                           >
                             <View style={st.replyExpanderRule} />
                             <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.replyExpanderTxt}>
-                              {open ? T('rp.hideReplies') : tf('rp.viewReplies', { n: kids.length })}
+                              {open ? T('rp.hideReplies') : tfIn(lang, 'rp.viewReplies', { n: kids.length })}
                             </Text>
                           </Pressable>
                         )}
@@ -662,7 +662,7 @@ export default function RunPostScreen() {
               {replyTo && (
                 <View style={st.replyChip}>
                   <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.replyChipTxt} numberOfLines={1}>
-                    {tf('rp.replyingTo', { name: replyTo.nickname || T('home.runner') })}
+                    {tfIn(lang, 'rp.replyingTo', { name: replyTo.nickname || T('home.runner') })}
                   </Text>
                   <Pressable onPress={() => setReplyTo(null)} hitSlop={8}>
                     <Icon name="close" size={13} color={C.faint} />

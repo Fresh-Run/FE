@@ -43,7 +43,7 @@ import { fmtWhen } from '@/lib/run-format';
 import { supabase } from '@/lib/supabase';
 import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
-import { getLang, t, tf, useLang } from '@/lib/i18n';
+import { getLang, t, useLang, tfIn } from '@/lib/i18n';
 
 const RSVP_OPTS: { value: RsvpStatus; label: string }[] = [
   { value: 'going',     label: 'annd.going' },
@@ -228,7 +228,7 @@ export default function AnnouncementDetailScreen() {
                     <View style={{ flex: 1, minWidth: 0 }}>
                       <Text style={st.meetName} numberOfLines={1}>{ann.place_name ?? t('meet.name')}</Text>
                       {ann.run_at != null && (
-                        <Text style={st.meetSub} numberOfLines={1}>{tf('annd.meetAt', { when: fmtRunAt(ann.run_at) })}</Text>
+                        <Text style={st.meetSub} numberOfLines={1}>{tfIn(lang, 'annd.meetAt', { when: fmtRunAt(ann.run_at) })}</Text>
                       )}
                     </View>
                     <Pressable onPress={openInMaps} hitSlop={10}>
@@ -266,7 +266,7 @@ export default function AnnouncementDetailScreen() {
               {/* 참석 roster */}
               {ann.going_members.length > 0 && (
                 <View style={st.rosterWrap}>
-                  <Text style={st.rosterHead}>{tf('annd.goingN', { n: ann.going_members.length })}</Text>
+                  <Text style={st.rosterHead}>{tfIn(lang, 'annd.goingN', { n: ann.going_members.length })}</Text>
                   <View style={st.rosterRow}>
                     {ann.going_members.map(m => {
                       const name = m.nickname ?? t('home.runner');

@@ -23,6 +23,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/ui';
 import { accentShadow, type Tokens } from '@/lib/theme';
+import { useT } from '@/lib/i18n';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 
 export type CropSource = { uri: string; width: number; height: number };
@@ -44,6 +45,7 @@ export function AvatarCrop({ src, aspect = 1, onClose, onConfirm, onRetake }: {
   onRetake: () => void;
 }) {
   const C = useTokens();
+  const T = useT();
   const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
   const [saving, setSaving] = useState(false);
@@ -171,20 +173,20 @@ export function AvatarCrop({ src, aspect = 1, onClose, onConfirm, onRetake }: {
           <Pressable onPress={onClose} hitSlop={12} style={st.closeBtn}>
             <Icon name="close" size={22} color="#fff" />
           </Pressable>
-          <Text style={st.title}>사진 위치 조정</Text>
+          <Text style={st.title}>{T('crop.title')}</Text>
           <View style={{ width: 40 }} />
         </View>
-        <Text style={[st.hint, { marginTop: CH / 2 + 18 }]} pointerEvents="none">핀치로 확대 · 드래그로 이동</Text>
+        <Text style={[st.hint, { marginTop: CH / 2 + 18 }]} pointerEvents="none">{T('crop.hint')}</Text>
 
         {/* Footer actions */}
         <View style={[st.footer, { paddingBottom: Math.max(insets.bottom, 16) + 8 }]}>
           <Pressable onPress={handleRetake} disabled={saving} style={st.retakeBtn}>
-            <Text style={st.retakeTxt}>다시 선택</Text>
+            <Text style={st.retakeTxt}>{T('crop.retake')}</Text>
           </Pressable>
           <Pressable onPress={confirmCrop} disabled={saving} style={[st.confirmBtn, accentShadow(C.accent)]}>
             {saving
               ? <ActivityIndicator color={C.accentText} />
-              : <Text style={st.confirmTxt}>확인</Text>}
+              : <Text style={st.confirmTxt}>{T('crop.confirm')}</Text>}
           </Pressable>
         </View>
       </GestureHandlerRootView>

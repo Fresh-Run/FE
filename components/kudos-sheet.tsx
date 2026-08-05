@@ -23,7 +23,7 @@ import { openProfile } from '@/lib/profile-nav';
 import { fmtAgo } from '@/lib/run-format';
 import { shadows, type Tokens, DENSE_MAX_FONT_SCALE} from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
-import { tf, useLang, useT } from '@/lib/i18n';
+import { useLang, useT, tfIn } from '@/lib/i18n';
 import { useStore } from '@/store/use-store';
 
 export function KudosSheet({ runId, kudosCount, onClose }: {
@@ -56,7 +56,7 @@ export function KudosSheet({ runId, kudosCount, onClose }: {
         <View style={st.sheet}>
           <View style={st.sheetHead}>
             <View style={st.grabBar} />
-            <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.sheetTitle}>{tf('kd.count', { n: kudosCount })}</Text>
+            <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.sheetTitle}>{tfIn(lang, 'kd.count', { n: kudosCount })}</Text>
           </View>
           {failed ? (
             <View style={st.sheetState}>

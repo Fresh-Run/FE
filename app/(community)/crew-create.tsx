@@ -15,7 +15,7 @@ import * as Location from 'expo-location';
 import { router } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { errorMessage } from '@/lib/error-copy';
-import { t, tf, type StringKey } from '@/lib/i18n';
+import { t, type StringKey, tfIn, useLang } from '@/lib/i18n';
 import {
   ActivityIndicator,
   Alert,
@@ -212,6 +212,7 @@ function CreatedModal({ crew, onInvite, onLater, onDismiss }: {
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function CrewCreateScreen() {
+  const lang = useLang(); // 8/6 back-sweep: render tfIn anchor
   const C = useTokens();
   const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
@@ -301,7 +302,7 @@ export default function CrewCreateScreen() {
       if (challengeOn) {
         try {
           await createChallenge(crew.id, {
-            title: '첫 챌린지',
+            title: t('crw.firstChallenge'),
             goal_km: challengeGoalKm,
             starts_at: dateToKstIsoDay(kstDateStr(0), 'start')!,
             ends_at: dateToKstIsoDay(kstDateStr(challengePeriod - 1), 'end')!,
@@ -487,7 +488,7 @@ export default function CrewCreateScreen() {
               <NumberWheelRow label={t('crt.targetDist')} value={challengeGoalKm} min={5} max={100} step={1} suffix="km" onChange={setChallengeGoalKm} />
               <View style={st.divider} />
               <NumberWheelRow label={t('crw.chPeriod')} value={challengePeriod} min={3} max={60} step={1} suffix={t('unit.days')} onChange={setChallengePeriod} />
-              <Text style={st.challengePreview}>{tf('crw.chPreview', { n: challengePeriod, date: kstDateStr(challengePeriod - 1) })}</Text>
+              <Text style={st.challengePreview}>{tfIn(lang, 'crw.chPreview', { n: challengePeriod, date: kstDateStr(challengePeriod - 1) })}</Text>
             </>
           )}
         </Group>

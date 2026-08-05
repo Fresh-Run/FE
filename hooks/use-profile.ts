@@ -9,6 +9,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { ApiError, apiFetch } from '@/lib/api';
+import { t } from '@/lib/i18n';
 import { errorMessage } from '@/lib/error-copy';
 import { supabase } from '@/lib/supabase';
 
@@ -72,7 +73,7 @@ export function useProfile() {
       if (profileRes.status === 'fulfilled') {
         const p = profileRes.value;
         setProfile(p
-          ? { nickname: p.nickname ?? '사용자', avatar_url: p.avatar_url, bio: p.bio }
+          ? { nickname: p.nickname ?? t('prof.userFallback'), avatar_url: p.avatar_url, bio: p.bio }
           : FALLBACK_PROFILE);
         hasDataRef.current = true;
       } else if (profileRes.reason instanceof ApiError && profileRes.reason.status === 404) {

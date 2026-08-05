@@ -24,11 +24,12 @@ import { listAnnouncements, type Announcement } from '@/lib/announcements-api';
 import { fmtWhen } from '@/lib/run-format';
 import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
-import { t, tf, useLang } from '@/lib/i18n';
+import { getLang, t, useLang, tfIn } from '@/lib/i18n';
 
 function fmtRunAt(iso: string): string {
   const d = new Date(iso);
-  return `${d.getMonth() + 1}월 ${d.getDate()}일 ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  const hm = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  return getLang() === 'en' ? `${d.getMonth() + 1}/${d.getDate()} ${hm}` : `${d.getMonth() + 1}월 ${d.getDate()}일 ${hm}`;
 }
 
 export default function AnnouncementsScreen() {
@@ -96,7 +97,7 @@ export default function AnnouncementsScreen() {
                   <Avatar name={item.author_nickname ?? t('ann.leaderFallback')} photoUrl={item.author_avatar_url} size={16} initialsRatio={0.5} />
                   <Text style={st.metaTxt}>
                     {item.author_nickname ?? t('ann.leaderFallback')} · {fmtWhen(item.created_at, lang)}
-                    {item.run_at ? tf('ann.going', { n: item.rsvp.going }) : ''}
+                    {item.run_at ? tfIn(lang, 'ann.going', { n: item.rsvp.going }) : ''}
                   </Text>
                 </View>
               </View>

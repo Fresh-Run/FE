@@ -10,6 +10,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useState } from 'react';
 
 import { apiFetch } from '@/lib/api';
+import { t } from '@/lib/i18n';
 import { errorMessage } from '@/lib/error-copy';
 import { useStore } from '@/store/use-store';
 
@@ -62,7 +63,7 @@ export function useMyPublicProfile() {
 
   useEffect(() => {
     const uid = session?.user.id;
-    if (!uid) { setLoading(false); setError('로그인이 필요해요'); return; }
+    if (!uid) { setLoading(false); setError(t('err.loginNeeded')); return; }
 
     let cancelled = false;
     setError(null);

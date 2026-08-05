@@ -9,6 +9,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { t } from '@/lib/i18n';
 import { apiFetch } from '@/lib/api';
 import { errorMessage } from '@/lib/error-copy';
 import { useStore } from '@/store/use-store';
@@ -47,7 +48,7 @@ export function useFollowList(overrideUid?: string | null) {
 
   useEffect(() => {
     const uid = overrideUid ?? session?.user.id;
-    if (!uid) { setLoading(false); setError('로그인이 필요해요'); return; }
+    if (!uid) { setLoading(false); setError(t('err.loginNeeded')); return; }
 
     const isOwn = uid === session?.user.id;
     let cancelled = false;

@@ -20,6 +20,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { Icon } from '@/components/ui';
+import { t } from '@/lib/i18n';
 import { radius as R, shadows, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 
@@ -50,13 +51,13 @@ export function CurrentLocationButton({ onFix, style }: {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        showCaption('위치 권한이 꺼져 있어요 — 설정에서 허용해 주세요');
+        showCaption(t('loc.permOff'));
         return;
       }
       const pos = await Location.getCurrentPositionAsync({});
       onFix({ lat: pos.coords.latitude, lng: pos.coords.longitude });
     } catch {
-      showCaption('현재 위치를 찾지 못했어요');
+      showCaption(t('loc.notFound'));
     } finally {
       setLocating(false);
     }

@@ -50,7 +50,7 @@ import { shadows, spacing as S, type Tokens, DENSE_MAX_FONT_SCALE } from '@/lib/
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { useRunTrack } from '@/lib/track-cache';
 import { useSettings } from '@/store/use-settings';
-import { t, tf, useLang } from '@/lib/i18n';
+import { t, useLang, tfIn, useT } from '@/lib/i18n';
 
 export function RunCard({ run, units, mapLive, onOpen, kudosOff, onKudos, onCountPress }: {
   run: CrewRunItem;
@@ -66,6 +66,7 @@ export function RunCard({ run, units, mapLive, onOpen, kudosOff, onKudos, onCoun
   const C = useTokens();
   const st = useStyles(makeSt);
   const lang = useLang(); // compiler-visible locale for the date/title formatters (2026-08-03 formatter-cache fix)
+  const T = useT();
   // visual-split ruling: full track when fetched, thumb while loading
   const { line: cardLine, pending: linePending } = useRunTrack(mapLive ? run.run_id : null, run.polyline_thumb);
   return (
@@ -86,18 +87,18 @@ export function RunCard({ run, units, mapLive, onOpen, kudosOff, onKudos, onCoun
             {run.session_key?.startsWith('a:') ? (
               <View style={st.sessionChip}>
                 <Icon name="megaphone-outline" size={10} color={C.accentGrn} />
-                <Text style={st.sessionChipTxt}>공지 러닝</Text>
+                <Text style={st.sessionChipTxt}>{T('crs.annRun')}</Text>
               </View>
             ) : run.session_key?.startsWith('c:') ? (
               <View style={st.sessionChip}>
                 <Icon name="people" size={10} color={C.accentGrn} />
-                <Text style={st.sessionChipTxt}>함께 달림</Text>
+                <Text style={st.sessionChipTxt}>{T('crs.together')}</Text>
               </View>
             ) : null}
             {run.session_participant_count != null && (
               <View style={st.sessionChip}>
                 <Icon name="people" size={10} color={C.accentGrn} />
-                <Text style={st.sessionChipTxt}>{tf('crw.nJoined', { n: run.session_participant_count })}</Text>
+                <Text style={st.sessionChipTxt}>{tfIn(lang, 'crw.nJoined', { n: run.session_participant_count })}</Text>
               </View>
             )}
             <Text style={st.cardDate}>{fmtAgo(run.ran_at, lang)}</Text>
@@ -174,6 +175,7 @@ export default function CrewRunsScreen() {
   const insets = useSafeAreaInsets();
   const { crewId, crewName } = useLocalSearchParams<{ crewId: string; crewName?: string }>();
   const lang = useLang(); // folder-card date (screen scope — the card component has its own)
+  const T = useT();
   const units = useSettings(s => s.settings.units);
 
   const [rows, setRows]     = useState<CrewRunItem[] | null>(null);
@@ -334,11 +336,11 @@ export default function CrewRunsScreen() {
                     <View style={st.folderHeadRow}>
                       <Icon name="people" size={12} color={C.accentGrn} />
                       <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.folderBadgeTxt}>
-                        {a.session_participant_count != null ? tf('crw.nJoined', { n: a.session_participant_count }) : '함께 달린 기록'}
+                        {a.session_participant_count != null ? tfIn(lang, 'crw.nJoined', { n: a.session_participant_count }) : T('crs.togetherRecord')}
                       </Text>
                       {isAnn && (
                         <View style={st.annMarker}>
-                          <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.annMarkerTxt}>공지</Text>
+                          <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.annMarkerTxt}>{T('crs.ann')}</Text>
                         </View>
                       )}
                     </View>

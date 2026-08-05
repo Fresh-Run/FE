@@ -19,7 +19,7 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import { errorMessage } from '@/lib/error-copy';
-import { t, tf } from '@/lib/i18n';
+import { t, tf, tfIn, useLang } from '@/lib/i18n';
 import {
   ActivityIndicator,
   Alert,
@@ -43,6 +43,7 @@ import { useStyles, useTokens } from '@/hooks/use-tokens';
 const ROLE_ORDER: Record<CrewMember['role'], number> = { owner: 0, admin: 1, member: 2 };
 
 export default function CrewMembersScreen() {
+  const lang = useLang(); // 8/6 back-sweep: render tfIn anchor
   const C = useTokens();
   const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
@@ -94,8 +95,8 @@ export default function CrewMembersScreen() {
       promoting
         // v2 defaults (server-side: 공지·챌린지 ON, 나머지 OFF) — the promote
         // flow needs no FE change; 세부 조정은 권한 설정에서
-        ? tf('crw.promoteSub', { name: m.nickname })
-        : tf('crw.demoteSub', { name: m.nickname }),
+        ? tfIn(lang, 'crw.promoteSub', { name: m.nickname })
+        : tfIn(lang, 'crw.demoteSub', { name: m.nickname }),
       [
         { text: t('common.cancel'), style: 'cancel' },
         { text: promoting ? t('crw.promote') : t('crw.demote'), onPress: () => changeRole(m, promoting ? 'admin' : 'member') },
@@ -204,7 +205,7 @@ export default function CrewMembersScreen() {
                       {m.role === 'owner' && <View style={st.ownerBadge}><Text style={st.ownerTxt}>{t('crw.roleOwner')}</Text></View>}
                       {m.role === 'admin' && <View style={st.adminBadge}><Text style={st.adminTxt}>{t('crw.roleAdmin')}</Text></View>}
                     </View>
-                    <Text style={st.kmSub}>{tf('crw.thisChKm', { km: (m.challenge_km ?? 0).toFixed(1) })}</Text>
+                    <Text style={st.kmSub}>{tfIn(lang, 'crw.thisChKm', { km: (m.challenge_km ?? 0).toFixed(1) })}</Text>
                   </View>
                 </Pressable>
 

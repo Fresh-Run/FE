@@ -17,7 +17,7 @@
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
-import { t as tx, tf, useT } from '@/lib/i18n';
+import { t as tx, useT, tfIn, useLang } from '@/lib/i18n';
 import {
   ActivityIndicator,
   Alert,
@@ -43,6 +43,7 @@ import { useStore } from '@/store/use-store';
 type Step = 1 | 2 | 3;
 
 export default function OnboardingScreen() {
+  const lang = useLang(); // 8/6 back-sweep: render tfIn anchor
   const T = useT();
   const C = useTokens();
   const setDisplayName    = useStore((s) => s.setDisplayName);
@@ -193,7 +194,7 @@ export default function OnboardingScreen() {
               error={nameError}
             />
             <Text variant="labelSm" color="sub" style={styles.hint}>
-              {tf('onb.counter20', { n: name.trim().length })}
+              {tfIn(lang, 'onb.counter20', { n: name.trim().length })}
             </Text>
           </View>
         )}

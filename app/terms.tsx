@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/ui';
 import { spacing as S, type Tokens } from '@/lib/theme';
+import { useT } from '@/lib/i18n';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 
 const SECTIONS: [string, string][] = [
@@ -24,6 +25,7 @@ const SECTIONS: [string, string][] = [
 
 export default function TermsScreen() {
   const C = useTokens();
+  const T = useT();
   const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
   return (
@@ -32,11 +34,11 @@ export default function TermsScreen() {
         <Pressable onPress={() => router.back()} hitSlop={12} style={st.backBtn}>
           <Icon name="chevron-back" size={22} color={C.text} />
         </Pressable>
-        <Text style={st.appBarTitle}>서비스 약관</Text>
+        <Text style={st.appBarTitle}>{T('prof.rowTerms')}</Text>
         <View style={{ width: 40 }} />
       </View>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 16, paddingBottom: 30 }}>
-        <Text style={st.updated}>최종 업데이트 · 2026년 6월 1일</Text>
+        <Text style={st.updated}>{T('terms.updated')}</Text>
         {SECTIONS.map(([t, body]) => (
           <View key={t} style={{ marginBottom: 22 }}>
             <Text style={st.secTitle}>{t}</Text>

@@ -20,13 +20,15 @@ import { KudosSheet } from '@/components/kudos-sheet';
 import { Icon } from '@/components/ui';
 import { ApiError, apiFetch } from '@/lib/api';
 import { getCrewRuns, type CrewRunItem } from '@/lib/crews-api';
-import { tf } from '@/lib/i18n';
+import { t, useT, tfIn, useLang } from '@/lib/i18n';
 import { spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { useSettings } from '@/store/use-settings';
 import { RunCard } from './crew-runs';
 
 export default function CrewSessionScreen() {
+  const lang = useLang(); // 8/6 back-sweep: render tfIn anchor
+  const T = useT();
   const C = useTokens();
   const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
@@ -69,7 +71,7 @@ export default function CrewSessionScreen() {
       pathname: '/run-post' as never,
       params: {
         runId: run.run_id,
-        nickname: run.nickname ?? '러너',
+        nickname: run.nickname ?? t('home.runner'),
         avatarUrl: run.avatar_url ?? '',
         allowLikes: run.allow_likes === true ? '1' : '0',
         allowComments: run.allow_comments === true ? '1' : '0',
@@ -80,7 +82,7 @@ export default function CrewSessionScreen() {
   const members = (rows ?? []).filter(r => r.session_key === sessionKey);
   const anchor = members[0];
   const isAnn = (sessionKey ?? '').startsWith('a:');
-  const title = `${crewName ? `${crewName} · ` : ''}${isAnn ? '공지 러닝' : '함께 달림'}${anchor?.session_participant_count != null ? ` · ${tf('crw.nJoined', { n: anchor.session_participant_count })}` : ''}`;
+  const title = `${crewName ? `${crewName} · ` : ''}${isAnn ? T('crs.annRun') : T('crs.together')}${anchor?.session_participant_count != null ? ` · ${tfIn(lang, 'crw.nJoined', { n: anchor.session_participant_count })}` : ''}`;
 
   return (
     <View style={[st.root, { paddingTop: insets.top }]}>

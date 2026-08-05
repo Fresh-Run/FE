@@ -11,7 +11,7 @@ import Svg, { Circle, G } from 'react-native-svg';
 
 import { Icon } from '@/components/ui';
 import { useWeather } from '@/hooks/use-weather';
-import { t, tf, useT, type StringKey } from '@/lib/i18n';
+import { t, useT, type StringKey, tfIn, useLang } from '@/lib/i18n';
 import { weatherIcon, weatherTone } from '@/lib/weather-api';
 import { accentShadow,
   radius as R,
@@ -119,6 +119,7 @@ const GRADE_KEY: Record<string, StringKey> = {
 const gradeDisp = (g: string | undefined) => (g == null ? g : GRADE_KEY[g] ? t(GRADE_KEY[g]) : g);
 
 export default function WeatherDetailScreen() {
+  const lang = useLang(); // 8/6 back-sweep: render tfIn anchor
   const C = useTokens();
   const styles = useStyles(makeStyles);
   const T = useT();
@@ -196,7 +197,7 @@ export default function WeatherDetailScreen() {
             if (!w) return;
             Share.share({
               // server values pass through untouched: {cond} = w.condition (ko wire)
-              message: tf('wx.share', {
+              message: tfIn(lang, 'wx.share', {
                 place: placeName ?? t('wx.curLoc'),
                 t: Math.round(w.temp_c),
                 cond: w.condition,
@@ -238,7 +239,7 @@ export default function WeatherDetailScreen() {
             })()}
           </View>
           <Text style={styles.heroSub}>
-            {w ? tf('wx.feels', { cond: w.condition, n: Math.round(w.feels_like_c) }) : T('wx.loading')} · {placeName ?? T('wx.locating')}
+            {w ? tfIn(lang, 'wx.feels', { cond: w.condition, n: Math.round(w.feels_like_c) }) : T('wx.loading')} · {placeName ?? T('wx.locating')}
           </Text>
         </View>
 

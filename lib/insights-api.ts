@@ -4,6 +4,7 @@
 // 1–12 → 422 (guarded client-side too); zero-run month → ai: null.
 // Premium-gated but UNMETERED (not in the ai_generation quota family);
 // the ai block is server-cached and follows settings.lang.
+import { t } from '@/lib/i18n';
 import { apiFetch } from '@/lib/api';
 
 export type InsightStats = {
@@ -91,7 +92,7 @@ export type MonthlyInsight = {
 
 export function getMonthlyInsight(year: number, month: number): Promise<MonthlyInsight> {
   if (month < 1 || month > 12) {
-    return Promise.reject(new Error('유효하지 않은 월이에요')); // server would 422
+    return Promise.reject(new Error(t('err.badMonth'))); // server would 422
   }
   return apiFetch<MonthlyInsight>(`/api/me/insights/monthly?year=${year}&month=${month}`);
 }

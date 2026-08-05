@@ -8,6 +8,7 @@
 // avatar section doesn't document that (the run-photo contract puts EXIF
 // stripping client-side); one-line 지연 confirm logged in TODO.
 
+import { tf } from '@/lib/i18n';
 import { apiFetch } from '@/lib/api';
 
 type UploadUrlResponse = {
@@ -30,6 +31,6 @@ export async function uploadAvatar(localUri: string, mimeType = 'image/jpeg'): P
     headers: { 'Content-Type': mimeType },
     body: bytes,
   });
-  if (!put.ok) throw new Error(`업로드 실패 (${put.status})`);
+  if (!put.ok) throw new Error(tf('err.upload', { s: put.status }));
   return `${public_url}?v=${Date.now()}`;
 }

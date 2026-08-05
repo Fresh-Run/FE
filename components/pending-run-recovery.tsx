@@ -8,6 +8,7 @@ import { router } from 'expo-router';
 import { useEffect, useRef } from 'react';
 import { Alert } from 'react-native';
 
+import { t, tf } from '@/lib/i18n';
 import { fmtDist } from '@/lib/run-format';
 import { adoptRecovered, clearPendingRun, loadPendingFromDisk } from '@/store/pending-run';
 import { useSettings } from '@/store/use-settings';
@@ -25,16 +26,16 @@ export function PendingRunRecovery() {
       const units = useSettings.getState().settings.units;
       const dist = fmtDist(recovered.run.distanceKm, units, 2);
       Alert.alert(
-        '저장하지 않은 러닝이 있어요',
-        `지난 세션의 러닝(${dist}${units})이 저장되지 않았어요. 이어서 저장할까요?`,
+        t('rec2.title'),
+        tf('rec2.body', { d: `${dist}${units}` }),
         [
           {
-            text: '삭제',
+            text: t('common.delete'),
             style: 'destructive',
             onPress: () => clearPendingRun(),
           },
           {
-            text: '이어서 저장',
+            text: t('rec2.resume'),
             onPress: () => {
               adoptRecovered(recovered.run, recovered.draft);
               router.push('/(course)/run-save' as any);

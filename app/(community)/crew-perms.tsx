@@ -20,7 +20,7 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { errorMessage } from '@/lib/error-copy';
-import { t, tf, type StringKey } from '@/lib/i18n';
+import { t, type StringKey, tfIn, useLang } from '@/lib/i18n';
 import {
   ActivityIndicator,
   Alert,
@@ -60,6 +60,7 @@ const PERM_DEFS: { key: keyof CrewPermissions; label: string; desc: string; dang
 // the 4th local variant retired; its disabled prop moved into the shared one.
 
 export default function CrewPermsScreen() {
+  const lang = useLang(); // 8/6 back-sweep: render tfIn anchor
   const C = useTokens();
   const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
@@ -175,7 +176,7 @@ export default function CrewPermsScreen() {
                   <Text style={st.idName} numberOfLines={1}>{target!.nickname}</Text>
                   <View style={st.adminBadge}><Text style={st.adminBadgeTxt}>{t('crw.roleAdmin')}</Text></View>
                 </View>
-                <Text style={st.idSub}>{tf('crw.thisChKm', { km: (target!.challenge_km ?? 0).toFixed(1) })}</Text>
+                <Text style={st.idSub}>{tfIn(lang, 'crw.thisChKm', { km: (target!.challenge_km ?? 0).toFixed(1) })}</Text>
               </View>
             </View>
 

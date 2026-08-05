@@ -3,6 +3,7 @@
 // (which stays frozen and keeps its own copy).
 
 import { quotaExceededMessage } from '@/lib/quota-message';
+import { t, tf } from '@/lib/i18n';
 import { supabase } from '@/lib/supabase';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? '';
@@ -52,7 +53,7 @@ export class ApiError extends Error {
     on it (e.g. crew join: 200 joined vs 202 request pending). */
 export async function apiRequest<T>(path: string, opts: ApiOptions = {}, _retried = false): Promise<{ status: number; data: T }> {
   if (!API_URL) {
-    throw new ApiError('백엔드 주소가 설정되지 않았어요. .env.local의 EXPO_PUBLIC_API_URL을 확인해 주세요.', 0, 'config');
+    throw new ApiError(t('err.config'), 0, 'config');
   }
 
   const controller = new AbortController();
@@ -71,13 +72,13 @@ export async function apiRequest<T>(path: string, opts: ApiOptions = {}, _retrie
     ]);
   } catch {
     clearTimeout(timer);
-    throw new ApiError('요청 시간이 초과됐어요. 다시 시도해 주세요.', 0, 'timeout');
+    throw new ApiError(t('err.timeout'), 0, 'timeout');
   }
   if (!session) {
     clearTimeout(timer);
     // stale storage → one refresh may recover a valid session; else genuine logout
     if (!_retried && await refreshSessionOnce()) return apiRequest<T>(path, opts, true);
-    throw new ApiError('로그인이 필요해요', 401, null);
+    throw new ApiError(t('err.loginNeeded'), 401, null);
   }
 
   let res: Response;
@@ -92,8 +93,8 @@ export async function apiRequest<T>(path: string, opts: ApiOptions = {}, _retrie
       signal: controller.signal,
     });
   } catch {
-    if (controller.signal.aborted) throw new ApiError('요청 시간이 초과됐어요. 다시 시도해 주세요.', 0, 'timeout');
-    throw new ApiError('서버에 연결할 수 없어요. 백엔드 서버가 실행 중인지 확인해 주세요.', 0, 'network');
+    if (controller.signal.aborted) throw new ApiError(t('err.timeout'), 0, 'timeout');
+    throw new ApiError(t('err.serverDown'), 0, 'network');
   } finally {
     clearTimeout(timer);
   }
@@ -125,10 +126,10 @@ export async function apiRequest<T>(path: string, opts: ApiOptions = {}, _retrie
     if (res.status === 401 && !_retried && await refreshSessionOnce()) {
       return apiRequest<T>(path, opts, true);
     }
-    if (res.status === 401) throw new ApiError('로그인이 필요해요', 401, code, detail);
+    if (res.status === 401) throw new ApiError(t('err.loginNeeded'), 401, code, detail);
     // 429 quota — honest copy from the structured detail (never generic here)
     if (res.status === 429) throw new ApiError(message ?? quotaExceededMessage(detail), 429, code ?? 'quota_exceeded', detail);
-    throw new ApiError(message ?? `요청에 실패했어요 (${res.status})`, res.status, code, detail);
+    throw new ApiError(message ?? tf('err.reqFailed', { s: res.status }), res.status, code, detail);
   }
 
   // Empty-2xx-safe parse (⑥ fix, 2026-07-14): FastAPI returns bodyless

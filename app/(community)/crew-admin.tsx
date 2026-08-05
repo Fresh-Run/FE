@@ -24,7 +24,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import { errorMessage } from '@/lib/error-copy';
-import { t, tf } from '@/lib/i18n';
+import { t, tf, tfIn, useLang } from '@/lib/i18n';
 import {
   ActivityIndicator,
   Alert,
@@ -57,6 +57,7 @@ import { accentShadow, radius as R, shadows, spacing as S, type Tokens } from '@
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 
 export default function CrewAdminScreen() {
+  const lang = useLang(); // 8/6 back-sweep: render tfIn anchor
   const C = useTokens();
   const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
@@ -111,7 +112,7 @@ export default function CrewAdminScreen() {
       const code = inviteCode ?? await issueInviteCode(crewId);
       setInviteCode(code);
       await Share.share({
-        message: tf('crw.inviteMsg', { name: crew.name, code }),
+        message: tfIn(lang, 'crw.inviteMsg', { name: crew.name, code }),
       });
     } catch (e: unknown) {
       Alert.alert(t('crw.inviteCodeErr'), errorMessage(e));
@@ -187,12 +188,12 @@ export default function CrewAdminScreen() {
     }] : []),
     {
       icon: 'people-outline', label: t('crw.hMembers'),
-      sub: memberCount != null ? tf('crw.hMembersSub', { n: memberCount, m: adminCount ?? 0 }) : t('crw.hMembersSub2'),
+      sub: memberCount != null ? tfIn(lang, 'crw.hMembersSub', { n: memberCount, m: adminCount ?? 0 }) : t('crw.hMembersSub2'),
       onPress: () => go('/(community)/crew-members'),
     },
     ...(isOwner ? [{
       icon: 'person-add-outline', label: t('crw.hRequests'),
-      sub: pending != null ? (pending > 0 ? tf('crw.hPending', { n: pending }) : t('crw.hNoPending')) : t('crw.hApprove'),
+      sub: pending != null ? (pending > 0 ? tfIn(lang, 'crw.hPending', { n: pending }) : t('crw.hNoPending')) : t('crw.hApprove'),
       onPress: () => go('/(community)/crew-requests'),
       badge: pending ?? 0,
     }] : []),

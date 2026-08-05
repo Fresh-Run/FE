@@ -23,7 +23,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router, useNavigation } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { errorMessage } from '@/lib/error-copy';
-import { t, tf, useT } from '@/lib/i18n';
+import { t, useT, tfIn, useLang } from '@/lib/i18n';
 import {
   ActivityIndicator,
   Alert,
@@ -102,6 +102,7 @@ function SplitsChart({ splits, avg }: { splits: number[]; avg: number }) {
 }
 
 export default function RunResultScreen() {
+  const lang = useLang(); // 8/6 back-sweep: render tfIn anchor
   const C = useTokens();
   const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
@@ -270,7 +271,7 @@ export default function RunResultScreen() {
     const pace = avgPace > 0 ? fmtPaceIn(avgPace, units) + paceUnit(units) : null;
     const msg = [
       `${title} — FreshRun`,
-      tf('res.shareMsg', { d: `${fmtDist(run.distanceKm, units, 2)}${distUnit(units)}`, t: fmtDuration(run.elapsedSec) }) + (pace ? tf('res.sharePace', { p: pace }) : ''),
+      tfIn(lang, 'res.shareMsg', { d: `${fmtDist(run.distanceKm, units, 2)}${distUnit(units)}`, t: fmtDuration(run.elapsedSec) }) + (pace ? tfIn(lang, 'res.sharePace', { p: pace }) : ''),
     ].join('\n');
     try { await Share.share({ message: msg }); } catch { /* user dismissed */ }
   };
@@ -284,7 +285,7 @@ export default function RunResultScreen() {
         <View style={{ alignItems: 'center', paddingTop: insets.top + 26, paddingHorizontal: 24 }}>
           <Text style={st.title}>{t('res.title')}</Text>
           {stats != null && stats.all_time.run_count > 0 && (
-            <Text style={st.nth}>{tf('res.nth', { n: stats.all_time.run_count })}</Text>
+            <Text style={st.nth}>{tfIn(lang, 'res.nth', { n: stats.all_time.run_count })}</Text>
           )}
         </View>
 
@@ -350,10 +351,10 @@ export default function RunResultScreen() {
             <View style={st.saveRow}><Icon name="information-circle-outline" size={15} color={C.faint} /><Text style={st.saveRowTxt}>{t('res.tooShort')}</Text></View>
           )}
           {photoState === 'uploading' && (
-            <View style={st.saveRow}><ActivityIndicator size="small" color={C.faint} /><Text style={st.saveRowTxt}>{tf('res.photoUploading', { a: Math.min(photoDone + 1, photoUris.length), b: photoUris.length })}</Text></View>
+            <View style={st.saveRow}><ActivityIndicator size="small" color={C.faint} /><Text style={st.saveRowTxt}>{tfIn(lang, 'res.photoUploading', { a: Math.min(photoDone + 1, photoUris.length), b: photoUris.length })}</Text></View>
           )}
           {photoState === 'done' && (
-            <View style={st.saveRow}><Icon name="checkmark-circle" size={15} color={C.accentGrn} /><Text style={[st.saveRowTxt, { color: C.accentGrn }]}>{tf('res.photoDone', { n: photoUris.length })}</Text></View>
+            <View style={st.saveRow}><Icon name="checkmark-circle" size={15} color={C.accentGrn} /><Text style={[st.saveRowTxt, { color: C.accentGrn }]}>{tfIn(lang, 'res.photoDone', { n: photoUris.length })}</Text></View>
           )}
           {photoState === 'error' && (
             <View style={st.errCard}>
@@ -381,7 +382,7 @@ export default function RunResultScreen() {
                   <Icon name="speedometer-outline" size={15} color={C.sub} />
                   <Text style={st.vsLbl}>{t('res.avgPace')}</Text>
                   <Text style={[st.vsVal, paceDiff > 5 && { color: C.accentGrn }]}>
-                    {paceDiff > 5 ? tf('res.paceFaster', { s: paceDiff })
+                    {paceDiff > 5 ? tfIn(lang, 'res.paceFaster', { s: paceDiff })
                       : paceDiff < -5 ? t('res.paceRelaxed')
                       : t('res.paceSimilar')}
                   </Text>
@@ -390,13 +391,13 @@ export default function RunResultScreen() {
               <View style={[st.vsRow, pbGap != null && { borderBottomWidth: 1, borderBottomColor: C.border }]}>
                 <Icon name="calendar-outline" size={15} color={C.sub} />
                 <Text style={st.vsLbl}>{t('res.thisWeek')}</Text>
-                <Text style={st.vsVal}>{tf('res.weekLine', { km: stats.week.total_distance_km, n: stats.week.run_count })}</Text>
+                <Text style={st.vsVal}>{tfIn(lang, 'res.weekLine', { km: stats.week.total_distance_km, n: stats.week.run_count })}</Text>
               </View>
               {pbGap != null && (
                 <View style={st.vsRow}>
                   <Icon name="medal-outline" size={15} color={C.accentGrn} />
                   <Text style={st.vsLbl}>{t('res.pb')}</Text>
-                  <Text style={[st.vsVal, { color: C.accentGrn }]}>{tf('res.pbLine', { s: pbGap })}</Text>
+                  <Text style={[st.vsVal, { color: C.accentGrn }]}>{tfIn(lang, 'res.pbLine', { s: pbGap })}</Text>
                 </View>
               )}
             </View>

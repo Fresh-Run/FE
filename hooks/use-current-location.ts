@@ -7,6 +7,7 @@
  * The fallback exists so DISPLAY surfaces never hang — not so logic can
  * mistake 시청 for the user.
  */
+import { t } from '@/lib/i18n';
 import * as Location from 'expo-location';
 import { useEffect, useState } from 'react';
 
@@ -39,11 +40,11 @@ export function useCurrentLocation() {
       Location.reverseGeocodeAsync({ latitude: coord.lat, longitude: coord.lng })
         .then(([geo]) => {
           if (!cancelled) {
-            setPlaceName(geo?.district ?? geo?.subregion ?? geo?.city ?? '현재 위치');
+            setPlaceName(geo?.district ?? geo?.subregion ?? geo?.city ?? t('ct.currentLoc'));
           }
         })
         .catch(() => {
-          if (!cancelled) setPlaceName('현재 위치');
+          if (!cancelled) setPlaceName(t('ct.currentLoc'));
         });
     };
 

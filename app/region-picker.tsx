@@ -20,7 +20,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/ui';
 import { regionName, SIDO_LIST, SIGUNGU, type Sido } from '@/lib/korea-regions';
-import { t, tf, useT } from '@/lib/i18n';
+import { t, useT, tfIn, getLang } from '@/lib/i18n';
 import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { setCrewFilter } from '@/store/crew-filter';
@@ -118,7 +118,7 @@ export default function RegionPickerScreen() {
         renderItem={({ item }) => (
           <Pressable onPress={() => pickRow(item)} style={({ pressed }) => [st.row, pressed && { opacity: 0.6 }]}>
             <Text style={[st.rowTxt, item === '전체' && { color: C.accentGrn, fontWeight: '700' }]}>
-              {item === '전체' ? tf('region.allOf', { name: regionName(drill!) }) : regionName(item)}
+              {item === '전체' ? tfIn(getLang(), 'region.allOf', { name: regionName(drill!) }) : regionName(item)}
             </Text>
             {!drill && <Icon name="chevron-forward" size={15} color={C.faint} />}
           </Pressable>
