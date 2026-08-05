@@ -1300,7 +1300,10 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 
 ## ✅ 빌드-11 온-디바이스 필드 수락 (오너 버딕트, 8/5 — [HH:MM] 미동봉, as-arrived): **잠금화면 위젯 PASSED** — 타입 램프 **22pt 확정** (23 불요 룰링 — 보수단 초이스 비준) · 평균 페이스 라벨 정상 · 일시정지/자동 일시정지 캡션 **양쪽 확인** · **배치 ①②③ 필드 수락 = 빌드-11 아크 클로즈** (잔여: 지연 폰 설치 → 이중-퍼블리시 윈도우 종료)
 
-## 🔼 i18n 슬라이스 7 (코스 월드) 양-레인 STAGED — 1.0.6 = **fea18885** · 1.0.5 = **de9320fa** (플립, 리버트 ✓) · 커밋 278beea · **3중 해시 일치 (4wQuJOUn…)** — 오너 워드 8/6 언파크, 슬라이스-6 심 노트로 리줌
+## ✅ i18n 슬라이스 7 (코스 월드) 양-레인 PROMOTED (2026-08-06) — **[00:24] 오너 스탬프, 빌드 11** (코스 월드 전 화면 ko/en 왕복 정상 — 뛰러가기/저장된코스/코스포스트/프리뷰/시작지점/홈 · 의도된 잔여 미세먼지 라벨·랜드마크 칩 유지 확인) · 원-컨펌 (양 레인) · **프로모션 ×2 양 해시-타이 MATCH (4wQuJOUn…)**: 1.0.6 = fea18885 → **fdbd9009** · 1.0.5 = de9320fa → **8f7c78bd** · **플로어 전진: 5aa68352 → fdbd9009 · b8012fbd → 8f7c78bd** · **i18n 잔여 = 슬라이스 8 단독** (롱테일 심 노트 기레저 — 에픽 클로즈까지 한 세션)
+- 롤백 프리암드: 1.0.6 = 5aa68352 · 1.0.5 = b8012fbd.
+
+## ~~🔼 i18n 슬라이스 7 (코스 월드) 양-레인 STAGED~~ PROMOTED (위) — 1.0.6 = fea18885 · 1.0.5 = de9320fa (플립, 리버트 ✓) · 커밋 278beea · **3중 해시 일치 (4wQuJOUn…)** — 오너 워드 8/6 언파크, 슬라이스-6 심 노트로 리줌
 - **파일 테이블 (토큰-스윕 스코핑 — 슬라이스-6 방법론)**: saved-courses 38 · course-post 18 · preview 15 · tabs/create 21 · start-picker 8 · place-pick-sheet 6 · 홈 잔여 25 · run-format 2 · **드리프트 발견 +3**: route-map 2 (전환) · (course)/create 3 (플래그) · tracking 3 (플래그). 레저드 리스트 대비 = route-map 추가 · (course)/create는 기전환 확인 (코어 루프).
 - **파리티: 1308/1308 (+103쌍**: sc 37 · ct 19 · pv 12 · cp 9 · sp 8 · pp 6 · rm 4 · home 9 · fmt 1 — 배치 포인트 1231→1308, 듀프 0) · rp.*/common/trk/wx 재사용.
 - **3컨벤션 무예외**: 탭 (create/home) = useT 앵커 · 임퍼러티브 = 베어 t · **렌더 인터폴레이션 전량 tfIn(lang)** — 어제 답글 빌드가 남긴 렌더-tf 2사이트 (rp.viewReplies·rp.replyingTo) 동정정 · courseStats = lang 파라미터 (fmt.seoulFallback — 심 아이템 ④ 클로즈; preview 콜 2곳 스레딩 + 메모 deps에 lang).
