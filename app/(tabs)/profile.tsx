@@ -1,5 +1,6 @@
 import { useFocusEffect } from '@react-navigation/native';
 import Constants from 'expo-constants';
+import * as Updates from 'expo-updates';
 import { router, useNavigation } from 'expo-router';
 import React, { useCallback, useEffect, useRef } from 'react';
 import {
@@ -197,6 +198,33 @@ function PremiumBanner() {
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 const APP_VERSION = Constants.expoConfig?.version ?? '1.0.0';
+// ── Bundle identity (8/5 owner ruling — the structural fix): "which bytes am
+// I on" must be a GLANCE, not forensics. The night's three phantoms (wrong-
+// lane retest, unsubmitted binary, 32-cap ghost) all traced to a phone that
+// couldn't say what it was running. Sources, all runtime-true:
+//  · buildNumber  = Constants.nativeBuildVersion (the BINARY: 11 staging /
+//    12 production — the channel is baked per-binary, so this digit IS the
+//    lane discriminator)
+//  · channel + runtimeVersion = expo-updates (empty channel = dev client)
+//  · bundle = the running update's GROUP short-id (manifest.metadata
+//    .updateGroup — verified served 2026-08-05; the ledger's own key, so
+//    glance → ledger → commit) or 임베디드 when running the built-in bundle
+//    (isEmbeddedLaunch — exactly the 32-cap ghost's signature).
+// Commit short-hash was ruled in but the update manifest does not carry the
+// commit (verified: metadata = {updateGroup, branchName} only) — the group
+// id is the ledger-tied substitute; deviation stated at checkpoint.
+// ko hardcoded — the footer's existing convention (slice-6 census).
+function bundleIdentity(): string {
+  const build = Constants.nativeBuildVersion ?? '?';
+  const rt = (typeof Updates.runtimeVersion === 'string' && Updates.runtimeVersion) || APP_VERSION;
+  const ch = Updates.channel || '(개발)';
+  const group = Updates.isEmbeddedLaunch
+    ? '임베디드'
+    : ((Updates.manifest as { metadata?: { updateGroup?: string } })?.metadata?.updateGroup?.slice(0, 8)
+        ?? Updates.updateId?.slice(0, 8)
+        ?? '?');
+  return `#${build} · ${ch} · rt ${rt} · 번들 ${group}`;
+}
 
 
 export default function ProfileScreen() {
@@ -468,6 +496,8 @@ export default function ProfileScreen() {
         {/* Version footer — plain again: the temporary dev override DIED with
             Phase 5's real picker (테마 row above). */}
         <Text style={st.versionFooter}>{`FreshRun ${APP_VERSION} · Made in Seoul`}</Text>
+        {/* the identity line — see bundleIdentity's conviction comment */}
+        <Text style={st.bundleIdent}>{bundleIdentity()}</Text>
       </ScrollView>
     </View>
   );
@@ -527,5 +557,6 @@ const makeSt = (C: Tokens) => StyleSheet.create({
   retryTxt:      { fontSize: 14, fontWeight: '700', color: C.text },
 
   // Footer
-  versionFooter: { textAlign: 'center', fontSize: 11.5, color: C.faint, paddingHorizontal: S.gutter, paddingTop: S.lg, paddingBottom: S.xl },
+  versionFooter: { textAlign: 'center', fontSize: 11.5, color: C.faint, paddingHorizontal: S.gutter, paddingTop: S.lg },
+  bundleIdent:   { textAlign: 'center', fontSize: 10.5, color: C.faint, opacity: 0.75, fontVariant: ['tabular-nums'], paddingHorizontal: S.gutter, paddingTop: 4, paddingBottom: S.xl },
 });
