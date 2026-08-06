@@ -1300,6 +1300,13 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 
 ## ✅ 빌드-11 온-디바이스 필드 수락 (오너 버딕트, 8/5 — [HH:MM] 미동봉, as-arrived): **잠금화면 위젯 PASSED** — 타입 램프 **22pt 확정** (23 불요 룰링 — 보수단 초이스 비준) · 평균 페이스 라벨 정상 · 일시정지/자동 일시정지 캡션 **양쪽 확인** · **배치 ①②③ 필드 수락 = 빌드-11 아크 클로즈** (잔여: 지연 폰 설치 → 이중-퍼블리시 윈도우 종료)
 
+## 🔼 TTS-lang 양-레인 STAGED — 1.0.6 = **00947b18** · 1.0.5 = **b993b349** (플립, 리버트 ✓) · 커밋 6232e1f · **3중 해시 일치 (rB4nzhw6…)** — 캐리-포워드 도켓 ① 클로즈 (오너 룰링 8/6: 보이스가 로케일을 따름)
+- **랭귀지 = 스피크-타임**: speakCue 내부 getLang() → en-US/ko-KR — 플립은 **다음 큐부터** 즉시 적용 · **스트랜드 불가능 구조** (큐 무존재: stop-then-speak 프레시-윈) · 인-플라이트 발화는 구보이스로 완주 (수용, 명기).
+- **컴포저 spk.* 10키 (파리티 1376/1376)**: start/splitDist/splitPace/splitKcal/rate·intervalSample/finish + tracking 3큐 (autoPaused/autoResumed/offRoute — 슬라이스-8 도켓 11라인 소멸). **스피치-내추럴 헬퍼**: 풀 유닛 워드 ("km" = en TTS "kay-em" 함정 회피) · en 복수형 (1 minute/2 minutes) · **mi 유저 = 마일 청취** (거리 km→mi 변환 + **페이스 sec/km→sec/mi 변환**: 330s/km → "8 minutes 51 seconds per mile") · ko = 기존 문구 바이트-동등.
+- **버벌라이제이션 데스크 11케이스**: 5.2킬로미터 / 5.2 kilometers / 3.2 miles / 1 kilometer·1 mile (단수) / 61 minutes 1 second. **플래그 (기존-동등, 무개조)**: 시간 폴딩 무 — 61분은 "61 minutes"로 발화 (구 fmtMinSec 동일; "1 hour 1 minute" 폴딩 = 개선 후보 기록).
+- **보이스 부재 폴백**: en-US/ko-KR = iOS 시스템 번들 (실위험 최소) · 부재 시 onError → 덕-릴리즈 → 런 무영향 (큐 유실만, 세션 스턱 불가 — 덕-릴리즈 아키텍처가 그레이스풀 폴백 그 자체, 인-코멘트).
+- tsc 0 · eslint 0 · **게이트: 런 (실내 가) — en 로케일 큐 청취 (스타트/인터벌 샘플로 대체 가) → ko 플립 → 다음 큐 = ko 보이스** · 잔여 도켓 = 미세먼지 재픽스처 단독 · 프로모션 = 스탬프 + 원-컨펌 (양 레인).
+
 ## 🏆 i18n 에픽 CLOSED — 슬라이스 8 양-레인 PROMOTED (2026-08-06) — **[00:50] 오너 스탬프, 빌드 11** (탭바/크루상세/도움말/휠 AM·PM/쿼터 얼럿/백스윕 잔존 사이트 ko↔en 왕복 정상 · **웰컴 en 헤드라인 유지 확정** — "New roads every time — run your today.") · 원-컨펌 · **1.0.5 = 오너 same-commit 룰링** (00f05e8, copy/plumbing only — 저지먼트로 기록, 전례 = 폴리시 페어) · **프로모션 ×2 퍼-레인 해시-타이 MATCH**: 1.0.6 = b4c83c61 → **0ffad19c** (bNaATWil…) · 1.0.5 = bf5cd800 → **3188a51a** (fJyk8oJJ…) · **플로어 전진: fdbd9009 → 0ffad19c · 8f7c78bd → 3188a51a**
 - **에픽 토탈 (7/27 슬라이스-1 컷 → 8/6 클로즈)**: 8슬라이스 · ~90파일 · ~1,530히트 → **딕셔너리 1,366키쌍** (en 완전성 = tsc-강제) · **최종 잔존 135라인 = 8클래스 전수 분류, 미분류 렌더 카피 0** (센티널+키맵 · ko-포매터-브랜치 · TTS 도켓 11 · 리걸 (terms 바디) · 엔도님 · 미세먼지 픽스처 · 진단 · ko-유틸). 레거시 무소비 발견 2 (quota-message · runs-api 피드백-태그 배열).
 - **캐리-포워드 도켓 2**: ① TTS-lang (expo-speech language + 오디오-코치 컴포저 + tracking 큐 3 — 보이스 도메인 룰링 선행, S-M) ② 미세먼지 스트립 재픽스처 (en 라벨 = 폭 실측 재작업, S).
