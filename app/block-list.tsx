@@ -47,6 +47,7 @@ export default function BlockListScreen() {
 
   const confirmUnblock = useCallback((u: BlockedUser) => {
     Alert.alert(
+      // eslint-disable-next-line no-restricted-syntax -- imperative fire-time read (Alert/share/handler), not render-path
       tf('bl.unblockAsk', { name: u.nickname ?? t('fl.thisRunner') }),
       t('bl.unblockSub'),
       [

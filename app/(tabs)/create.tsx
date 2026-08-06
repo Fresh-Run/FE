@@ -66,6 +66,7 @@ export default function CreateTabScreen() {
   function handleAiPress() {
     if (!aiLocked) { router.push('/(course)/create'); return; }
     // TODO(PR-2): push the premium upsell screen once it exists
+    // eslint-disable-next-line no-restricted-syntax -- imperative fire-time read (Alert/share/handler), not render-path
     Alert.alert(t('ct.quotaOutT'), tf('ct.quotaOutB', { n: quota.limit ?? 3 }));
   }
 

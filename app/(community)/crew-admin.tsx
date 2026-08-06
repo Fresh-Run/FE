@@ -158,6 +158,7 @@ export default function CrewAdminScreen() {
     if (!crew || leaving) return;
     Alert.alert(
       t('crw.leaveTitle'),
+      // eslint-disable-next-line no-restricted-syntax -- imperative fire-time read (Alert/share/handler), not render-path
       tf('crw.leaveAdminAsk', { name: crew.name }),
       [
         { text: t('common.cancel'), style: 'cancel' },

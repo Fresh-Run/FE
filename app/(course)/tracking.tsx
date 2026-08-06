@@ -1154,40 +1154,40 @@ export default function TrackingScreen() {
           {/* v2 GO-TO-START chapter: unmissable start flag (bigger than
               turn chips) + dashed guidance line from the runner to the
               start — both dissolve on arrival (navPhase → 'nav') */}
-          {courseCoords.length > 1 && navPhase === 'pre' && (
+          {courseCoords.length > 1 && navPhase === 'pre' ? (
             <Marker coordinate={courseCoords[0]} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={false}>
               <View style={st.startFlag}>
                 <Icon name="flag" size={16} color="#0C1206" />
               </View>
             </Marker>
-          )}
-          {courseCoords.length > 1 && navPhase === 'pre' && drawnPath.length > 0 && (
+          ) : null}
+          {courseCoords.length > 1 && navPhase === 'pre' && drawnPath.length > 0 ? (
             <Polyline
               coordinates={[drawnPath[drawnPath.length - 1], courseCoords[0]]}
               strokeColor={C.accent}
               strokeWidth={3}
               lineDashPattern={[8, 8]}
             />
-          )}
+          ) : null}
           {/* 8/3: geometry turn marker — VISUAL ONLY (ruled: no TTS until
               tuning + T2 names; a wrong spoken turn is worse than none).
               Direction from the bearing delta's sign; distance from alongM. */}
-          {turnAhead && state === 'running' && navPhase === 'nav' && (
+          {turnAhead && state === 'running' && navPhase === 'nav' ? (
             <Marker coordinate={{ latitude: turnAhead.point.lat, longitude: turnAhead.point.lng }} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={false}>
               <View style={st.turnBadge}>
                 <Icon name={turnAhead.dir === 'right' ? 'arrow-redo' : 'arrow-undo'} size={13} color={C.text} />
                 <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.turnTxt}>{Math.round(turnAhead.distM)}m</Text>
               </View>
             </Marker>
-          )}
-          {drawnPath.length > 1 && (
+          ) : null}
+          {drawnPath.length > 1 ? (
             <Polyline coordinates={drawnPath} strokeColor={C.accent} strokeWidth={5} />
-          )}
+          ) : null}
           {/* nav v4: the custom runner dot — the Apple look, fixed pixel
               size at every zoom (markers are screen-space), NO halo ever.
               Billboard by default (flat=false): stays a dot under map
               rotation, never a tilting sprite. */}
-          {hasCoursePath && state !== 'idle' && dotCoord != null && (
+          {hasCoursePath && state !== 'idle' && dotCoord != null ? (
             <Marker
               coordinate={dotCoord}
               anchor={{ x: 0.5, y: 0.5 }}
@@ -1197,7 +1197,7 @@ export default function TrackingScreen() {
             >
               <View style={st.userDot} />
             </Marker>
-          )}
+          ) : null}
         </MapView>
 
         {/* ── nav v3 (8/3 executive ruling, second field walk): THE ARROW IS

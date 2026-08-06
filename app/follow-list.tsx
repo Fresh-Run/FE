@@ -117,6 +117,7 @@ export default function FollowListScreen() {
   const confirmRemove = useCallback((u: FollowUser) => {
     Alert.alert(
       t('fl.removeAsk'),
+      // eslint-disable-next-line no-restricted-syntax -- imperative fire-time read (Alert/share/handler), not render-path
       tf('fl.removeSub', { name: u.nickname ?? t('fl.thisRunner') }),
       [
         { text: t('common.cancel'), style: 'cancel' },

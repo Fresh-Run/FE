@@ -77,7 +77,9 @@ function monthRankCopy(mr: MonthRank): { headline: string; sub: string } {
   };
   // ko fills the raw number ({n}번째로); en fills a real ordinal (2nd, 3rd…)
   const n = getLang() === 'en' ? ordinalEn(mr.rank) : String(mr.rank);
+  // eslint-disable-next-line no-restricted-syntax -- imperative fire-time read (Alert/share/handler), not render-path
   const headline = mr.rank === 1 ? t(TOP[mr.type]) : tf(NTH[mr.type], { n });
+  // eslint-disable-next-line no-restricted-syntax -- imperative fire-time read (Alert/share/handler), not render-path
   const sub = tf(mr.type === 'best_5k' ? 'mi.rankSub5k' : 'mi.rankSub', { total: mr.total });
   return { headline, sub };
 }

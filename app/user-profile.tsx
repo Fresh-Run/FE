@@ -218,6 +218,7 @@ export default function UserProfileScreen() {
     closeSheet();
     const who = profile?.nickname ?? nickParam ?? t('up.thisUser');
     Alert.alert(
+      // eslint-disable-next-line no-restricted-syntax -- imperative fire-time read (Alert/share/handler), not render-path
       tf('up.blockAsk', { name: who }),
       t('up.blockSub'),
       [

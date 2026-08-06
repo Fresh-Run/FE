@@ -27,6 +27,7 @@ export function PendingRunRecovery() {
       const dist = fmtDist(recovered.run.distanceKm, units, 2);
       Alert.alert(
         t('rec2.title'),
+        // eslint-disable-next-line no-restricted-syntax -- imperative fire-time read (Alert/share/handler), not render-path
         tf('rec2.body', { d: `${dist}${units}` }),
         [
           {

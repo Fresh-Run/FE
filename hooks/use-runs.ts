@@ -172,8 +172,10 @@ export function useRuns() {
 }
 
 // ─── useRunDetail — single run by id ─────────────────────────────────────────
-// Own-only server-side: not-mine/unknown ids come back 404 → the same
-// graceful "not found" the legacy PGRST116 path produced.
+// Serves OTHERS' runs too (probed 2026-08-04, authz P1): visible-not-mine ids
+// return a SANITIZED 200 carrying user_id (identity fields absent) — the old
+// "own-only 404" claim was falsified by BE 4cd5685's 타인 정제 응답. Unknown/
+// invisible ids 404 → the graceful "not found".
 
 export function useRunDetail(runId: string | null) {
   const [run, setRun]         = useState<Run | null>(null);

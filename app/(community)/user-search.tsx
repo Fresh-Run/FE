@@ -98,6 +98,7 @@ export default function UserSearchScreen() {
     try {
       const code = (await getInviteCode(crewId)) ?? (await issueInviteCode(crewId));
       await Share.share({
+        // eslint-disable-next-line no-restricted-syntax -- imperative fire-time read (Alert/share/handler), not render-path
         message: tf('usr.inviteMsgFlex', { name: crewName ? ` '${crewName}'` : '', code }), // imperative — share-sheet fire time
       }).catch(() => {}); // user-cancelled sheet — quiet
     } catch {
@@ -119,6 +120,7 @@ export default function UserSearchScreen() {
     } catch {
       // 404 은닉 (차단·프로필 없음) or transient — honest, non-committal
       setInvite(m => ({ ...m, [u.user_id]: 'idle' }));
+      // eslint-disable-next-line no-restricted-syntax -- imperative fire-time read (Alert/share/handler), not render-path
       Alert.alert(t('usr.inviteFailTitle'), tf('usr.inviteFailBody', { name: u.nickname }));
     }
   }, [crewId, invite]);

@@ -109,6 +109,7 @@ export default function CrewMembersScreen() {
   function confirmTransfer(m: CrewMember) {
     Alert.alert(
       t('crw.transferAsk'),
+      // eslint-disable-next-line no-restricted-syntax -- imperative fire-time read (Alert/share/handler), not render-path
       tf('crw.transferSub', { name: m.nickname }),
       [
         { text: t('common.cancel'), style: 'cancel' },
@@ -131,6 +132,7 @@ export default function CrewMembersScreen() {
   }
 
   function confirmKick(m: CrewMember) {
+    // eslint-disable-next-line no-restricted-syntax -- imperative fire-time read (Alert/share/handler), not render-path
     Alert.alert(t('crw.kickAsk'), tf('crw.kickSub', { name: m.nickname }), [
       { text: t('common.cancel'), style: 'cancel' },
       {

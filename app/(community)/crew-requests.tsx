@@ -82,6 +82,7 @@ export default function CrewRequestsScreen() {
 
   function confirmReject(r: CrewJoinRequest) {
     const name = r.nickname ?? t('home.runner');
+    // eslint-disable-next-line no-restricted-syntax -- imperative fire-time read (Alert/share/handler), not render-path
     Alert.alert(t('crw.rejectAsk'), tf('crw.rejectSub', { name }), [
       { text: t('common.cancel'), style: 'cancel' },
       {
