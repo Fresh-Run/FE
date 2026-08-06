@@ -11,7 +11,7 @@ import * as Speech from 'expo-speech';
 
 import { getLang, t, tf } from '@/lib/i18n';
 import { deactivateRunAudioSession, engageCueAudioSession } from '@/lib/audio-session';
-import { KM_PER_MI } from '@/lib/run-format';
+import { durationWords, KM_PER_MI } from '@/lib/run-format';
 
 type Units = 'km' | 'mi';
 
@@ -40,14 +40,9 @@ function spokenDist(km: number, units: Units): string {
 }
 
 function spokenDur(totalSec: number): string {
-  const en = getLang() === 'en';
-  const m = Math.floor(totalSec / 60), sec = Math.round(totalSec % 60);
-  if (en) {
-    const mm = m > 0 ? `${m} ${m === 1 ? 'minute' : 'minutes'}` : '';
-    const ss = sec > 0 ? `${sec} ${sec === 1 ? 'second' : 'seconds'}` : '';
-    return [mm, ss].filter(Boolean).join(' ') || '0 seconds';
-  }
-  return sec > 0 ? `${m}분 ${sec}초` : `${m}분`;
+  // 8/6: delegates to the consolidated, HOUR-FOLDING home — 61-minute runs
+  // now speak "1시간 1분" / "1 hour 1 minute" (the flagged candidate, ruled).
+  return durationWords(totalSec, getLang(), true);
 }
 
 /** pace in the USER'S unit — sec/km converts to sec/mi for mi users. */

@@ -35,7 +35,7 @@ import { Toggle } from '@/components/toggle';
 import { useCurrentLocation } from '@/hooks/use-current-location';
 import { useWaypointNames } from '@/hooks/use-waypoint-names';
 import { waypointCacheKey } from '@/lib/waypoint-names';
-import { distUnit, fmtDist, KM_PER_MI } from '@/lib/run-format';
+import { distUnit, fmtDist, KM_PER_MI, foldMinutes } from '@/lib/run-format';
 import { haversineKm } from '@/lib/run-metrics';
 import { setActiveCourse } from '@/store/active-course';
 import { useEndPoint } from '@/store/end-point';
@@ -89,10 +89,8 @@ function fmtShortfall(km: number, units: 'km' | 'mi'): string {
 }
 
 function fmtMin(min: number): string {
-  if (min < 60) return tfIn(getLang(), 'crt.min', { n: min });
-  const h = Math.floor(min / 60);
-  const m = min % 60;
-  return m === 0 ? tfIn(getLang(), 'crt.hour', { h }) : tfIn(getLang(), 'crt.hourMin', { h, m });
+  // 8/6 consolidation: the shared fold algorithm; crt.* copy family unchanged
+  return foldMinutes(min, getLang(), { min: 'crt.min', h: 'crt.hour', hm: 'crt.hourMin' });
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────

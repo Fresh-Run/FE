@@ -39,7 +39,7 @@ import {
   type RsvpStatus,
 } from '@/lib/announcements-api';
 import { getCrewMembers } from '@/lib/crews-api';
-import { fmtWhen } from '@/lib/run-format';
+import { fmtWhen , fmtMonthDayTime } from '@/lib/run-format';
 import { supabase } from '@/lib/supabase';
 import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
@@ -51,15 +51,10 @@ const RSVP_OPTS: { value: RsvpStatus; label: string }[] = [
   { value: 'not_going', label: 'annd.notGoing' },
 ];
 
+// 8/6 consolidation: delegated to lib/run-format's fmtMonthDayTime (short-
+// weekday shape preserved: `Mon D (일) HH:mm` / `M월 D일 (일) HH:mm`).
 function fmtRunAt(iso: string): string {
-  const d = new Date(iso);
-  const DAY_KEYS = ['dayS.sun', 'dayS.mon', 'dayS.tue', 'dayS.wed', 'dayS.thu', 'dayS.fri', 'dayS.sat'] as const;
-  const day = t(DAY_KEYS[d.getDay()]);
-  if (getLang() === 'en') {
-    const MONTHS_EN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    return `${MONTHS_EN[d.getMonth()]} ${d.getDate()} (${day}) ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-  }
-  return `${d.getMonth() + 1}월 ${d.getDate()}일 (${day}) ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  return fmtMonthDayTime(new Date(iso), getLang(), { weekday: 'short' });
 }
 
 export default function AnnouncementDetailScreen() {

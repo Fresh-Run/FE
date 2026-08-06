@@ -127,6 +127,8 @@ export const ko = {
   'home.aiPromo': '주변 {km}km {terrain} 코스를\n달려보세요!',
   'home.aiResetSub': '다음 초기화 {day} · 프리미엄은 무제한',
   'home.aiEstMin': '약 {min}분',
+  'home.aiEstH': '약 {h}시간',
+  'home.aiEstHM': '약 {h}시간 {m}분',
   'home.aiRemaining': ' · 이번 주 {n}회 남았어요',
   'home.nearbyKoreaOnly': '주변 피드는 아직 한국에서만 제공돼요',
   'home.nearbyKoreaOnlySub': '친구 탭은 어디서나 볼 수 있어요',

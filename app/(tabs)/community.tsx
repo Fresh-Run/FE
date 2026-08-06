@@ -41,9 +41,9 @@ import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { getCrewFilter, type CrewLocationFilter } from '@/store/crew-filter';
 import { useJoinRequests } from '@/store/join-requests';
 import { useQuota } from '@/store/use-quota';
-import { t, tfIn, useLang, useT, type StringKey } from '@/lib/i18n';
+import { t, tfIn, useLang, useT } from '@/lib/i18n';
+import { DAY_LABEL_KEY } from '@/lib/run-format';
 
-const DAY_LABEL_KEY: Record<string, StringKey> = { '월': 'dayS.mon', '화': 'dayS.tue', '수': 'dayS.wed', '목': 'dayS.thu', '금': 'dayS.fri', '토': 'dayS.sat', '일': 'dayS.sun' };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 

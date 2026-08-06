@@ -115,6 +115,8 @@ export const en: Record<keyof typeof ko, string> = {
   'home.aiPromo': 'Run a {terrain} course\nwithin {km}km!',
   'home.aiResetSub': 'Resets {day} · Premium is unlimited',
   'home.aiEstMin': 'About {min} min',
+  'home.aiEstH': 'About {h} hr',
+  'home.aiEstHM': 'About {h} hr {m} min',
   'home.aiRemaining': ' · {n} left this week',
   'home.nearbyKoreaOnly': 'The nearby feed is Korea-only for now',
   'home.nearbyKoreaOnlySub': 'The Friends tab works anywhere',

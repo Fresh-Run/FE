@@ -19,6 +19,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '@/components/ui';
 import { spacing as S, type Tokens } from '@/lib/theme';
 import { t, getLang } from '@/lib/i18n';
+import { DAY_KEYS_SHORT } from '@/lib/run-format';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 
 // ─── Sheet housing ────────────────────────────────────────────────────────────
@@ -181,7 +182,6 @@ function fmtYmd(y: number, m: number, d: number): string {
   return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
 }
 
-const WEEKDAYS_KO = ['일', '월', '화', '수', '목', '금', '토']; // display resolves via dayS keys below
 
 export function DateWheelRow({ label, value, onChange }: {
   label: string;
@@ -246,8 +246,10 @@ export function DateWheelRow({ label, value, onChange }: {
             </Pressable>
           </View>
           <View style={st.calWeekRow}>
-            {WEEKDAYS_KO.map((w, i) => (
-              <Text key={w} style={[st.calWeekTxt, i === 0 && { color: C.danger }]}>{getLang() === 'en' ? ['S','M','T','W','T','F','S'][i] : w}</Text>
+            {DAY_KEYS_SHORT.map((k, i) => (
+              // en calendar chrome stays single-letter (grid convention, not
+              // the dayS.* words); ko resolves via the consolidated keys
+              <Text key={k} style={[st.calWeekTxt, i === 0 && { color: C.danger }]}>{getLang() === 'en' ? ['S','M','T','W','T','F','S'][i] : t(k)}</Text>
             ))}
           </View>
           <View style={st.calGrid}>

@@ -16,6 +16,7 @@ import { router } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { errorMessage } from '@/lib/error-copy';
 import { t, type StringKey, tfIn, useLang } from '@/lib/i18n';
+import { DAY_LABEL_KEY } from '@/lib/run-format';
 import {
   ActivityIndicator,
   Alert,
@@ -48,7 +49,6 @@ const SPORT_KEY = { '러닝': 'crw.sportRun', '라이딩': 'crw.sportRide', '워
 export const LEVELS: CrewLevel[] = ['입문', '중급', '고급', '무관']; // SERVER values
 const LEVEL_KEY = { '입문': 'crw.lvBeginner', '중급': 'crw.lvMid', '고급': 'crw.lvAdv', '무관': 'crw.lvAny' } as const;
 export const DAYS = ['월', '화', '수', '목', '금', '토', '일'] as const; // SERVER values
-const DAY_KEY = { '월': 'dayS.mon', '화': 'dayS.tue', '수': 'dayS.wed', '목': 'dayS.thu', '금': 'dayS.fri', '토': 'dayS.sat', '일': 'dayS.sun' } as const;
 
 export type Privacy = '공개' | '승인제' | '비공개';
 // internal enum values (mapped to is_public/join_policy at send) — display via keys
@@ -464,7 +464,7 @@ export default function CrewCreateScreen() {
               const on = days.includes(d);
               return (
                 <Pressable key={d} onPress={() => toggleDay(d)} style={[st.dayCircle, on && st.dayCircleOn]}>
-                  <Text style={[st.dayTxt, on && { color: C.accentText }]}>{t(DAY_KEY[d])}</Text>
+                  <Text style={[st.dayTxt, on && { color: C.accentText }]}>{t(DAY_LABEL_KEY[d])}</Text>
                 </Pressable>
               );
             })}

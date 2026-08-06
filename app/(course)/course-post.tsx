@@ -46,7 +46,7 @@ import {
   unlikeRoute,
   type RouteComment,
 } from '@/lib/routes-api';
-import { fmtAgo, fmtWhen } from '@/lib/run-format';
+import { fmtAgo, fmtWhen, foldMinutes } from '@/lib/run-format';
 import { t, tfIn, useLang, useT } from '@/lib/i18n';
 import { radius as R, shadows, spacing as S, type Tokens, DENSE_MAX_FONT_SCALE} from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
@@ -58,9 +58,8 @@ const HERO_H = 210;
 
 function fmtEstMin(min: number | null, lang: 'ko' | 'en'): string {
   if (min == null) return '—';
-  if (min < 60) return tfIn(lang, 'cp.estMin', { m: min });
-  const h = Math.floor(min / 60), m = min % 60;
-  return m === 0 ? tfIn(lang, 'cp.estH', { h }) : tfIn(lang, 'cp.estHM', { h, m });
+  // 8/6 consolidation: the shared fold algorithm; cp.* copy family unchanged
+  return foldMinutes(min, lang, { min: 'cp.estMin', h: 'cp.estH', hm: 'cp.estHM' });
 }
 
 function StatTile({ label, value }: { label: string; value: string }) {

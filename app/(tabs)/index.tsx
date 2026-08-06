@@ -10,6 +10,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { KudosSheet } from '@/components/kudos-sheet';
 import { SuggestedRunnersRow, useSuggestedRunners } from '@/components/suggested-runners';
 import { tfIn, tIn, useLang, useT } from '@/lib/i18n';
+import { DAY_KEYS_FULL, fmtMonthDay, foldMinutes } from '@/lib/run-format';
 import { useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useNavigation } from 'expo-router';
@@ -63,14 +64,11 @@ function verdictColor(C: Tokens, tone: WeatherTone): string {
   return C.danger;
 }
 
-const DAY_KEYS = ['day.sun', 'day.mon', 'day.tue', 'day.wed', 'day.thu', 'day.fri', 'day.sat'] as const;
-const MONTHS_EN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+// 8/6 consolidation: date words live in lib/run-format (the one home)
 function formatDate(lang: 'ko' | 'en'): string {
   const d = new Date();
-  const day = tIn(lang, DAY_KEYS[d.getDay()]);
-  return lang === 'en'
-    ? `${day}, ${MONTHS_EN[d.getMonth()]} ${d.getDate()}`
-    : `${day}, ${d.getMonth() + 1}월 ${d.getDate()}일`;
+  const day = tIn(lang, DAY_KEYS_FULL[d.getDay()]);
+  return `${day}, ${fmtMonthDay(d, lang)}`;
 }
 
 // ─── Greeting header ──────────────────────────────────────────────────────────
@@ -358,7 +356,7 @@ function AIBanner({ onStart, onUpsell }: { onStart: (km: number) => void; onUpse
   // reset weekday from server truth; the quota copy's own promise ("월요일에
   // 초기화") is the fallback when reset_at is absent
   const resetDay = quota.reset_at
-    ? T(DAY_KEYS[new Date(quota.reset_at).getDay()])
+    ? T(DAY_KEYS_FULL[new Date(quota.reset_at).getDay()])
     : T('day.mon');
   return (
     <Pressable onPress={exhausted ? onUpsell : () => onStart(km)} style={abt.banner}>
@@ -384,7 +382,7 @@ function AIBanner({ onStart, onUpsell }: { onStart: (km: number) => void; onUpse
           <RNText style={abt.subTxt}>
             {exhausted
               ? tfIn(bLang, 'home.aiResetSub', { day: resetDay })
-              : tfIn(bLang, 'home.aiEstMin', { min: estMin }) + (!quota.unlimited ? tfIn(bLang, 'home.aiRemaining', { n: quota.remaining ?? 0 }) : '')}
+              : foldMinutes(estMin, bLang, { min: 'home.aiEstMin', h: 'home.aiEstH', hm: 'home.aiEstHM' }) + (!quota.unlimited ? tfIn(bLang, 'home.aiRemaining', { n: quota.remaining ?? 0 }) : '')}
           </RNText>
           <View style={{ transform: [{ rotate: '-45deg' }] }}>
             <Icon name="arrow-forward-outline" size={15} color="#fff" />

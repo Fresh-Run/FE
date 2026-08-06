@@ -33,7 +33,7 @@ import { ApiError } from '@/lib/api';
 import { errorMessage } from '@/lib/error-copy';
 import { getMonthlyInsight, type MonthlyInsight, type MonthRank, type PaceTrendPoint } from '@/lib/insights-api';
 import { getLang, t, tf, useT, type StringKey, tfIn, useLang } from '@/lib/i18n';
-import { distUnit, fmtDist, fmtDuration, fmtPaceIn, paceUnit } from '@/lib/run-format';
+import { distUnit, fmtDist, fmtDuration, fmtPaceIn, paceUnit, DAY_KEYS_SHORT_MON } from '@/lib/run-format';
 import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { useSettings } from '@/store/use-settings';
@@ -53,7 +53,6 @@ const TIME_OF_DAY_KEY: Record<string, StringKey> = {
   dawn: 'mi.todDawn', morning: 'mi.todMorning', day: 'mi.todDay', evening: 'mi.todEvening', night: 'mi.todNight',
 };
 
-const WEEKDAY_KEYS: StringKey[] = ['dayS.mon', 'dayS.tue', 'dayS.wed', 'dayS.thu', 'dayS.fri', 'dayS.sat', 'dayS.sun'];
 const monthKey = (m: number) => ('date.m' + m) as StringKey;
 // en ordinals for the month-rank headline ({n}번째로 has no 1:1 English twin)
 function ordinalEn(n: number): string {
@@ -384,7 +383,7 @@ export default function MonthlyInsightScreen() {
                 return (
                   <View key={i} style={{ flex: 1, alignItems: 'center', gap: 6 }}>
                     <View style={[st.weekdayBar, { height: h }, peak && { backgroundColor: C.accent }]} />
-                    <Text style={[st.weekdayLbl, peak && { color: C.text, fontWeight: '700' }]}>{T(WEEKDAY_KEYS[i])}</Text>
+                    <Text style={[st.weekdayLbl, peak && { color: C.text, fontWeight: '700' }]}>{T(DAY_KEYS_SHORT_MON[i])}</Text>
                   </View>
                 );
               })}

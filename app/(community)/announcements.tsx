@@ -21,15 +21,15 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Avatar } from '@/components/avatar';
 import { Icon } from '@/components/ui';
 import { listAnnouncements, type Announcement } from '@/lib/announcements-api';
-import { fmtWhen } from '@/lib/run-format';
+import { fmtWhen , fmtMonthDayTime } from '@/lib/run-format';
 import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { getLang, t, useLang, tfIn } from '@/lib/i18n';
 
+// 8/6 consolidation: the LIST keeps its compact en `M/D HH:mm` (pre-merge
+// behavior; detail's `Mon D (일)` shape is the OTHER branch of the finding).
 function fmtRunAt(iso: string): string {
-  const d = new Date(iso);
-  const hm = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-  return getLang() === 'en' ? `${d.getMonth() + 1}/${d.getDate()} ${hm}` : `${d.getMonth() + 1}월 ${d.getDate()}일 ${hm}`;
+  return fmtMonthDayTime(new Date(iso), getLang(), { monthStyle: 'numeric' });
 }
 
 export default function AnnouncementsScreen() {
