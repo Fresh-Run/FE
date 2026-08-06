@@ -1300,7 +1300,10 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 
 ## ✅ 빌드-11 온-디바이스 필드 수락 (오너 버딕트, 8/5 — [HH:MM] 미동봉, as-arrived): **잠금화면 위젯 PASSED** — 타입 램프 **22pt 확정** (23 불요 룰링 — 보수단 초이스 비준) · 평균 페이스 라벨 정상 · 일시정지/자동 일시정지 캡션 **양쪽 확인** · **배치 ①②③ 필드 수락 = 빌드-11 아크 클로즈** (잔여: 지연 폰 설치 → 이중-퍼블리시 윈도우 종료)
 
-## 🔼 TTS-lang 양-레인 STAGED — 1.0.6 = **00947b18** · 1.0.5 = **b993b349** (플립, 리버트 ✓) · 커밋 6232e1f · **3중 해시 일치 (rB4nzhw6…)** — 캐리-포워드 도켓 ① 클로즈 (오너 룰링 8/6: 보이스가 로케일을 따름)
+## ✅ TTS-lang 양-레인 PROMOTED (2026-08-06) — **[15:45] 오너 스탬프, 빌드 11** (en 샘플 영어 음성 · ko 복귀 한국어 · mi 모드 마일 발화 · 실제 런 큐 정상) · 원-컨펌 (양 레인, 바이트-동일) · **프로모션 ×2 양 해시-타이 MATCH (rB4nzhw6…)**: 1.0.6 = 00947b18 → **4711a23f** · 1.0.5 = b993b349 → **52798e85** · **플로어 전진: 0ffad19c → 4711a23f · 3188a51a → 52798e85** · **캐리-포워드 도켓 ① 클로즈 — 잔여 도켓 = 미세먼지 스트립 재픽스처 단독**
+- 롤백 프리암드: 1.0.6 = 0ffad19c · 1.0.5 = 3188a51a.
+
+## ~~🔼 TTS-lang 양-레인 STAGED~~ PROMOTED (위) — 1.0.6 = 00947b18 · 1.0.5 = b993b349 (플립, 리버트 ✓) · 커밋 6232e1f · **3중 해시 일치 (rB4nzhw6…)** — 캐리-포워드 도켓 ① 클로즈 (오너 룰링 8/6: 보이스가 로케일을 따름)
 - **랭귀지 = 스피크-타임**: speakCue 내부 getLang() → en-US/ko-KR — 플립은 **다음 큐부터** 즉시 적용 · **스트랜드 불가능 구조** (큐 무존재: stop-then-speak 프레시-윈) · 인-플라이트 발화는 구보이스로 완주 (수용, 명기).
 - **컴포저 spk.* 10키 (파리티 1376/1376)**: start/splitDist/splitPace/splitKcal/rate·intervalSample/finish + tracking 3큐 (autoPaused/autoResumed/offRoute — 슬라이스-8 도켓 11라인 소멸). **스피치-내추럴 헬퍼**: 풀 유닛 워드 ("km" = en TTS "kay-em" 함정 회피) · en 복수형 (1 minute/2 minutes) · **mi 유저 = 마일 청취** (거리 km→mi 변환 + **페이스 sec/km→sec/mi 변환**: 330s/km → "8 minutes 51 seconds per mile") · ko = 기존 문구 바이트-동등.
 - **버벌라이제이션 데스크 11케이스**: 5.2킬로미터 / 5.2 kilometers / 3.2 miles / 1 kilometer·1 mile (단수) / 61 minutes 1 second. **플래그 (기존-동등, 무개조)**: 시간 폴딩 무 — 61분은 "61 minutes"로 발화 (구 fmtMinSec 동일; "1 hour 1 minute" 폴딩 = 개선 후보 기록).
