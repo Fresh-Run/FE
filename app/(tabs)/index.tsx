@@ -157,11 +157,11 @@ function WeatherStrip({ onPress }: { onPress: () => void }) {
             {/* v4 (owner-ruled): the grade WORD is gone — the dot's traffic-
                 light color carries it. Weather-detail keeps full grade words.
                 RE-FIXTURE (8/6, the last i18n docket): label keyed — en
-                "Fine dust" (NOT "Air quality": the dot keys on pm10.grade
-                specifically; air-quality is the broader CAI metric this
-                strip does not show — and it's ~12px narrower). Width math:
-                ko 미세먼지 ≈50px ↔ en "Fine dust" ≈53px (Δ≈+3px, glyph
-                model) — absorbed by the v4 fixture's 23px slack. The REAL
+                "Air quality" (OWNER RULING 8/6, overriding the pm10-vs-CAI
+                semantic-precision argument: user comprehension wins).
+                Width math (실측-델타): ko 미세먼지 ≈50px ↔ en ≈62px
+                (Δ≈+12px) → base 298 ≤ 309, slack 11px — absorbed, no
+                layout change. The REAL
                 en pressure is the server-lang verdict chip (최고 24px ↔
                 "Excellent" ≈60px, pre-existing since v118, not this fix):
                 worst-case en ≈ +39px → the NAME yields, but its minWidth 68

@@ -647,7 +647,7 @@ export const en: Record<keyof typeof ko, string> = {
   'spk.autoPaused': 'Auto-paused',
   'spk.autoResumed': 'Resuming your run',
   'spk.offRoute': 'You are off the route',
-  'wx.pmLabel': 'Fine dust',
+  'wx.pmLabel': 'Air quality',
   'set.saveFailT': 'Save failed',
   'set.saveFailB': 'Could not save the setting. Please try again shortly.',
   'thm.title': 'Theme',
