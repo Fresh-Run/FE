@@ -480,7 +480,7 @@ export default function TrackingScreen() {
       // fire-time gate, same idiom as every cue-time read on this screen
       if (useSettings.getState().settings.run.haptics) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       // self-verifying start cue — names the armed interval (M1 episode fix)
-      if (coachActive) speakCue(composeStartCue(coach.cue_interval_km), coach.rate);
+      if (coachActive) speakCue(composeStartCue(coach.cue_interval_km, useSettings.getState().settings.units), coach.rate);
     }
     // Pause/resume confirmation buzzes (vocabulary expansion 2026-07-23):
     // a pocketed fumble gets ANSWERED without looking. Riding the state
@@ -505,7 +505,7 @@ export default function TrackingScreen() {
       // where a pocketed runner looks).
       wasAutoPauseRef.current = runSession.getPauseSource() === 'auto';
       if (wasAutoPauseRef.current && useSettings.getState().settings.run.voice_cue) {
-        speakCue('자동으로 일시정지했어요', useSettings.getState().settings.audio_coach.rate);
+        speakCue(t('spk.autoPaused'), useSettings.getState().settings.audio_coach.rate);
       }
     }
     if (prev === 'paused' && state === 'running') {
@@ -514,7 +514,7 @@ export default function TrackingScreen() {
         setTimeout(() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }, 140);
       }
       if (wasAutoPauseRef.current && useSettings.getState().settings.run.voice_cue) {
-        speakCue('러닝을 다시 시작해요', useSettings.getState().settings.audio_coach.rate);
+        speakCue(t('spk.autoResumed'), useSettings.getState().settings.audio_coach.rate);
       }
       wasAutoPauseRef.current = false;
     }
@@ -547,6 +547,7 @@ export default function TrackingScreen() {
         paceSecPerKm,
         kcal, // estimateKcal-driven — null without confirmed weight (honest rule)
         items: { dist: coach.announce_distance, pace: coach.announce_pace, kcal: coach.announce_calories },
+        units: useSettings.getState().settings.units,
       });
       if (text) speakCue(text, coach.rate);
     }
@@ -653,7 +654,7 @@ export default function TrackingScreen() {
         // edge (enter/exit hysteresis debounces flapping); voice_cue-gated
         // like every cue. Hardcoded ko — slice-6/8 keying note.
         if (useSettings.getState().settings.run.voice_cue) {
-          speakCue('경로를 벗어났어요', useSettings.getState().settings.audio_coach.rate);
+          speakCue(t('spk.offRoute'), useSettings.getState().settings.audio_coach.rate);
         }
       }
       return next;
@@ -1024,7 +1025,7 @@ export default function TrackingScreen() {
     const preview = snapshot();
     if (!preview) { exitingRef.current = true; router.back(); return; } // dead session — old exit
     // 종료 cue — fire-and-forget before the screen swap
-    if (coachActive) speakCue(composeFinishCue(preview.distanceKm, preview.elapsedSec), useSettings.getState().settings.audio_coach.rate);
+    if (coachActive) speakCue(composeFinishCue(preview.distanceKm, preview.elapsedSec, useSettings.getState().settings.units), useSettings.getState().settings.audio_coach.rate);
     const payload = course
       ? {
           ...preview,

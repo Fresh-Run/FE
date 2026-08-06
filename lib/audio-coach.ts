@@ -9,25 +9,64 @@
  */
 import * as Speech from 'expo-speech';
 
+import { getLang, t, tf } from '@/lib/i18n';
 import { deactivateRunAudioSession, engageCueAudioSession } from '@/lib/audio-session';
+import { KM_PER_MI } from '@/lib/run-format';
+
+type Units = 'km' | 'mi';
 
 // 안내 항목 shape — callers map settings.audio_coach.announce_* into this
 // (the composer keeps its own vocabulary; server names stay at the edge)
 type CueItems = { dist: boolean; pace: boolean; kcal: boolean };
 
-function fmtKm(km: number): string {
-  return Number.isInteger(km) ? `${km}` : km.toFixed(1);
+function fmtNum(v: number): string {
+  return Number.isInteger(v) ? `${v}` : v.toFixed(1);
 }
-function fmtMinSec(totalSec: number): string {
-  const m = Math.floor(totalSec / 60), s = Math.round(totalSec % 60);
-  return s > 0 ? `${m}분 ${s}초` : `${m}분`;
+
+// ── Spoken-phrase helpers (TTS-lang, owner-ruled 8/6) ────────────────────────
+// SPOKEN strings verbalize differently from visual copy: full unit WORDS
+// (kilometers/miles/minutes), never abbreviations — en-US TTS reads "km" as
+// "kay-em". All helpers read getLang() at CALL time (= speak time): a locale
+// flip mid-session changes the very next cue, never a composer-time capture.
+// en plurals handled (1 minute / 2 minutes); ko needs none.
+
+/** distance in the USER'S unit — mi users hear miles (item-3 rule). */
+function spokenDist(km: number, units: Units): string {
+  const en = getLang() === 'en';
+  const v = units === 'mi' ? km / KM_PER_MI : km;
+  const n = fmtNum(Math.round(v * 10) / 10);
+  if (en) return `${n} ${units === 'mi' ? (n === '1' ? 'mile' : 'miles') : (n === '1' ? 'kilometer' : 'kilometers')}`;
+  return `${n}${units === 'mi' ? '마일' : '킬로미터'}`;
+}
+
+function spokenDur(totalSec: number): string {
+  const en = getLang() === 'en';
+  const m = Math.floor(totalSec / 60), sec = Math.round(totalSec % 60);
+  if (en) {
+    const mm = m > 0 ? `${m} ${m === 1 ? 'minute' : 'minutes'}` : '';
+    const ss = sec > 0 ? `${sec} ${sec === 1 ? 'second' : 'seconds'}` : '';
+    return [mm, ss].filter(Boolean).join(' ') || '0 seconds';
+  }
+  return sec > 0 ? `${m}분 ${sec}초` : `${m}분`;
+}
+
+/** pace in the USER'S unit — sec/km converts to sec/mi for mi users. */
+function spokenPace(paceSecPerKm: number, units: Units): string {
+  const perUnitSec = units === 'mi' ? paceSecPerKm * KM_PER_MI : paceSecPerKm;
+  return spokenDur(Math.round(perUnitSec));
+}
+
+function unitWord(units: Units): string {
+  const en = getLang() === 'en';
+  if (units === 'mi') return en ? 'mile' : '마일';
+  return en ? 'kilometer' : '킬로미터';
 }
 
 /** Self-verifying start cue (M1 episode fix, 2026-07-22): announces the
     ARMED interval so a surprise value is audible in the first three seconds
     of every run — the armed-value-invisibility defect's cure. */
-export function composeStartCue(intervalKm: number): string {
-  return `러닝을 시작합니다. ${fmtKm(intervalKm)}킬로미터마다 안내할게요.`;
+export function composeStartCue(intervalKm: number, units: Units): string {
+  return tf('spk.start', { d: spokenDist(intervalKm, units) });
 }
 
 /** null when every enabled item has nothing to say (e.g. all toggles off). */
@@ -36,31 +75,32 @@ export function composeSplitCue(args: {
   elapsedSec: number;
   paceSecPerKm: number | null;      // tracker's current pace; null → omit
   kcal: number | null;              // estimateKcal output; null → omit (honest rule)
+  units: Units;                     // TTS-lang 8/6: mi users hear miles
   items: CueItems;
 }): string | null {
   const parts: string[] = [];
   if (args.items.dist) {
-    parts.push(`${fmtKm(args.km)}킬로미터 지점입니다. 경과 시간 ${fmtMinSec(args.elapsedSec)}.`);
+    parts.push(tf('spk.splitDist', { d: spokenDist(args.km, args.units), t: spokenDur(args.elapsedSec) }));
   }
   if (args.items.pace && args.paceSecPerKm != null && args.paceSecPerKm > 0) {
-    parts.push(`현재 페이스, 킬로미터당 ${fmtMinSec(args.paceSecPerKm)}.`);
+    parts.push(tf('spk.splitPace', { p: spokenPace(args.paceSecPerKm, args.units), u: unitWord(args.units) }));
   }
   if (args.items.kcal && args.kcal != null) {
-    parts.push(`소모 칼로리 약 ${args.kcal}칼로리.`);
+    parts.push(tf('spk.splitKcal', { n: args.kcal }));
   }
   return parts.length ? parts.join(' ') : null;
 }
 
 // ── 설정 샘플 라인 (지연 feature ask, 2026-07-21) — slider release feedback ──
 export function composeRateSample(): string {
-  return '이 속도로 안내해 드릴게요.';
+  return t('spk.rateSample');
 }
-export function composeIntervalSample(km: number): string {
-  return `${fmtKm(km)}킬로미터마다 안내해 드릴게요.`;
+export function composeIntervalSample(km: number, units: Units): string {
+  return tf('spk.intervalSample', { d: spokenDist(km, units) });
 }
 
-export function composeFinishCue(distanceKm: number, elapsedSec: number): string {
-  return `러닝 종료. 총 ${distanceKm.toFixed(2)}킬로미터, ${fmtMinSec(elapsedSec)} 달렸어요.`;
+export function composeFinishCue(distanceKm: number, elapsedSec: number, units: Units): string {
+  return tf('spk.finish', { d: spokenDist(distanceKm, units), t: spokenDur(elapsedSec) });
 }
 
 // Duck-release (walk defect 2026-07-24): speech AUTO-ACTIVATES the session
@@ -81,7 +121,15 @@ export function speakCue(text: string, rate: number): void {
   Speech.stop();
   engageCueAudioSession(); // explicit duck ENGAGE — every cue, not just the cold first
   Speech.speak(text, {
-    language: 'ko-KR',
+    // TTS-lang (owner-ruled 8/6): the voice follows the LOCALE, read at
+    // SPEAK time — a flip changes the very next cue; there is no queue to
+    // strand (stop-then-speak, fresh-wins), and an utterance already in
+    // flight finishes in its old voice (accepted, stated). Voice
+    // availability: en-US/ko-KR are system-bundled on iOS; a missing voice
+    // lands in onError → the duck releases and the run continues — cue
+    // loss only, never a stuck session (the duck-release architecture is
+    // the graceful fallback).
+    language: getLang() === 'en' ? 'en-US' : 'ko-KR',
     rate,
     onDone: releaseAudioSession,
     onStopped: releaseAudioSession,

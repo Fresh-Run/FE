@@ -101,7 +101,7 @@ export default function AudioCoachScreen() {
               fmt={v => `${v} km`}
               onChange={v => {
                 void setAudioCoach({ cue_interval_km: v });
-                speakCue(composeIntervalSample(v), useSettings.getState().settings.audio_coach.rate);
+                speakCue(composeIntervalSample(v, useSettings.getState().settings.units), useSettings.getState().settings.audio_coach.rate);
               }}
             />
           </View>
