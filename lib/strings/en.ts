@@ -1267,7 +1267,7 @@ export const en: Record<keyof typeof ko, string> = {
   'wx.badgeOk': 'Fair running weather',
   'wx.badgeBad': 'Go easy today',
   'wx.humidity': 'Humidity',
-  'wx.pm10': 'Fine dust (AQI)',
+  'wx.pm10': 'Air quality (PM10)',
   'wx.pm25': 'Ultrafine PM2.5',
   'wx.wind': 'Wind',
   'wx.uvMax': "Today's peak UV",

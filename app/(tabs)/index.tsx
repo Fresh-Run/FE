@@ -121,6 +121,7 @@ function WeatherStrip({ onPress }: { onPress: () => void }) {
   const C = useTokens();
   const wst = useStyles(makeWst);
   const wT = useT();
+  const wLang = useLang(); // 8/6 ruling ②: en-only name floor 58
   // W2: live data (shared useWeather cache/TTL; quiet dashes; Seoul fallback).
   // SINGLE ROW, FIXED-SIZE (⑥ final, owner ruling 2026-07-16): every text
   // in THIS strip is allowFontScaling={false} — a deliberate one-component
@@ -142,7 +143,12 @@ function WeatherStrip({ onPress }: { onPress: () => void }) {
       <Icon name={icon.name as any} size={26} color={icon.color} />
       <View style={wst.tempGroup}>
         <RNText style={wst.temp} allowFontScaling={false}>{w ? `${Math.round(w.temp_c)}°` : '--°'}</RNText>
-        <RNText style={wst.area} numberOfLines={1} ellipsizeMode="tail" allowFontScaling={false}>{placeName ?? wT('wx.locating')}</RNText>
+        {/* 8/6 ruling ②: en floor 58 — the v4 BINDING constraint is 5-ko-char
+            names whole (≈58px); 68 was the 6-char nicety. ko keeps 68. At 58,
+            en states Fair/Good render fully clean; Caution/Excellent/Not-
+            recommended still engage the chip belt (11/25/50px) until her
+            short-label map lands (ask on record). */}
+        <RNText style={[wst.area, wLang === 'en' && { minWidth: 58 }]} numberOfLines={1} ellipsizeMode="tail" allowFontScaling={false}>{placeName ?? wT('wx.locating')}</RNText>
       </View>
       <View style={wst.divider} />
       <View style={wst.metrics}>
