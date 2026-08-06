@@ -155,9 +155,23 @@ function WeatherStrip({ onPress }: { onPress: () => void }) {
           <View style={wst.pmGroup}>
             <View style={[wst.aqiDot, { backgroundColor: C.aqi[w.pm10.grade] ?? C.faint }]} />
             {/* v4 (owner-ruled): the grade WORD is gone — the dot's traffic-
-                light color carries it. Weather-detail keeps full grade words. */}
+                light color carries it. Weather-detail keeps full grade words.
+                RE-FIXTURE (8/6, the last i18n docket): label keyed — en
+                "Fine dust" (NOT "Air quality": the dot keys on pm10.grade
+                specifically; air-quality is the broader CAI metric this
+                strip does not show — and it's ~12px narrower). Width math:
+                ko 미세먼지 ≈50px ↔ en "Fine dust" ≈53px (Δ≈+3px, glyph
+                model) — absorbed by the v4 fixture's 23px slack. The REAL
+                en pressure is the server-lang verdict chip (최고 24px ↔
+                "Excellent" ≈60px, pre-existing since v118, not this fix):
+                worst-case en ≈ +39px → the NAME yields, but its minWidth 68
+                still fits a 5-ko-char domestic name whole (≈58px) — the v4
+                binding constraint survives; 6+/latin names ellipsize (the
+                accepted Hobart rule). Off-edge impossible: single flexible
+                box + numberOfLines=1. Glyph-model caveat on record — the
+                gate's device look is the 실측. */}
             <RNText style={wst.metricTxt} allowFontScaling={false}>
-              미세먼지
+              {wT('wx.pmLabel')}
             </RNText>
           </View>
         ) : null}
@@ -165,7 +179,7 @@ function WeatherStrip({ onPress }: { onPress: () => void }) {
       {w && vc ? (
         <View style={[wst.verdict, { backgroundColor: vc + '1A' }]}>
           <View style={[wst.verdictDot, { backgroundColor: vc }]} />
-          <RNText style={wst.verdictTxt} allowFontScaling={false}>{w.running_index.label}</RNText>
+          <RNText style={wst.verdictTxt} numberOfLines={1} allowFontScaling={false}>{w.running_index.label}</RNText>
         </View>
       ) : null}
       <View style={{ marginLeft: 2 }}>
@@ -197,7 +211,15 @@ const makeWst = (C: Tokens) => StyleSheet.create({
   pmGroup:    { flexDirection: 'row', alignItems: 'center', gap: 4 },
   metricTxt:  { fontSize: 12.5, fontWeight: '600', color: C.text },
   aqiDot:     { width: 6, height: 6, borderRadius: 3, flexShrink: 0 },
-  verdict:    { flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5, flexShrink: 0 },
+  // 8/6 re-fixture BELT (judgment, flagged for the gate): shrink-0 → shrink-1
+  // + maxWidth. The 7/29 "right side never yields" ruling protected the ko
+  // layout; her v118 en chip labels ("Not recommended" ≈97px vs 비추천 36px)
+  // can push the row OFF-EDGE at 375pt — clipping past the border is worse
+  // than a contained yield. With ko labels (≤36px) and the proposed short en
+  // map this belt NEVER engages; it exists only so the two long en states
+  // truncate visibly instead of clipping silently. The FIX is her map
+  // (ask drafted): Excellent→Great · Not recommended→Avoid.
+  verdict:    { flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5, flexShrink: 1, maxWidth: 120 },
   verdictDot: { width: 7, height: 7, borderRadius: 4 },
   verdictTxt: { fontSize: 12, fontWeight: '700', color: C.text, letterSpacing: -0.2 },
 });
