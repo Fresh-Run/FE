@@ -660,6 +660,7 @@ export const ko = {
   'spk.autoResumed': '러닝을 다시 시작해요',
   'spk.offRoute': '경로를 벗어났어요',
   'wx.pmLabel': '미세먼지',
+  'sc.regionOther': '기타',
   'set.saveFailT': '저장 실패',
   'set.saveFailB': '설정을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.',
   'thm.title': '테마',

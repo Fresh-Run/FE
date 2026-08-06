@@ -61,9 +61,22 @@ import { setPendingCourse } from '@/store/pending-course';
 // ─── Filters (canvas: dist ranges + region keywords) ──────────────────────────
 
 const REGION_KEYS = ['한강', '뚝섬', '남산', '올림픽', '양재천', '서울숲', '성수', '응봉', '중랑', '잠실', '반포', '여의도'];
+/** 8/6 en-aware fold (the class audit's #1 — her lang-lane emits ENGLISH
+    summaries for en users, e.g. "3.3km loop course"; the old first-word
+    fallback minted garbage chips like "3.3km"). Predicate: a first-word
+    fallback token is accepted ONLY if it contains at least one Hangul
+    syllable (U+AC00–D7A3) — Hangul presence is the one positive signal the
+    token is a Korean place-ish word; char-class whitelists fail on the
+    digit/unit/latin mixes summaries actually contain. No landmark match +
+    no-Hangul token → '기타' (the SENTINEL value — display resolves via
+    sc.regionOther at render so a locale flip can't orphan an active filter
+    selection; the region-'전체' sentinel discipline). */
 function regionOf(r: { summary: string }): string {
   const s = r.summary ?? '';
-  return REGION_KEYS.find(k => s.includes(k)) ?? s.split(/[ ·]/)[0] ?? '기타';
+  const landmark = REGION_KEYS.find(k => s.includes(k));
+  if (landmark) return landmark;
+  const first = s.split(/[ ·]/)[0] ?? '';
+  return /[가-힣]/.test(first) ? first : '기타';
 }
 const DIST_RANGES: [string, number, number][] = [['~5km', 0, 5], ['5–10km', 5, 10], ['10km+', 10, 9999]];
 
@@ -349,7 +362,13 @@ export default function SavedCoursesScreen() {
   }
 
   const activeAll = tab === 'saved' ? all : mine;
-  const regionOpts = [...new Set((activeAll ?? []).map(regionOf))];
+  // 8/6 degenerate-case rule (audit item 2): the region chip row renders
+  // only with ≥2 REAL (non-기타) regions — a filter offering one meaningless
+  // chip is worse than no filter. 기타 itself appears only alongside real
+  // choices (as the remainder bucket), never alone.
+  const regionOptsAll = [...new Set((activeAll ?? []).map(regionOf))];
+  const realRegions = regionOptsAll.filter(rg => rg !== '기타');
+  const regionOpts = realRegions.length >= 2 ? regionOptsAll : [];
   const anyFilter = regions.length > 0 || dists.length > 0;
   const toggle = (setter: React.Dispatch<React.SetStateAction<string[]>>, arr: string[], v: string) =>
     setter(arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v]);
@@ -420,7 +439,7 @@ export default function SavedCoursesScreen() {
             ))}
             {regionOpts.length > 0 && <View style={st.chipDivider} />}
             {regionOpts.map(rg => (
-              <Chip key={rg} label={rg} active={regions.includes(rg)} onPress={() => toggle(setRegions, regions, rg)} />
+              <Chip key={rg} label={rg === '기타' ? T('sc.regionOther') : rg} active={regions.includes(rg)} onPress={() => toggle(setRegions, regions, rg)} />
             ))}
           </ScrollView>
         </View>

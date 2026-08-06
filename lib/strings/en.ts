@@ -648,6 +648,7 @@ export const en: Record<keyof typeof ko, string> = {
   'spk.autoResumed': 'Resuming your run',
   'spk.offRoute': 'You are off the route',
   'wx.pmLabel': 'Air quality',
+  'sc.regionOther': 'Other',
   'set.saveFailT': 'Save failed',
   'set.saveFailB': 'Could not save the setting. Please try again shortly.',
   'thm.title': 'Theme',
