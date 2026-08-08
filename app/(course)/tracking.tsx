@@ -115,7 +115,7 @@ const NEXT_BAND_M = 300;      // the emphasized "next stretch" band + the turn o
 const TURN_EXECUTE_M = 40;    // T2 voice: the "지금 우회전" execute cue threshold (tunable — field decision)
 // nav v6 (8/9 field): the heading cone + backward detection
 const CONE_SMOOTH_ALPHA = 0.25;  // circular low-pass — a jittery cone is worse than none
-const CONE_COMMIT_DEG = 2;       // render throttle: re-render only on ≥2° smoothed change
+const CONE_COMMIT_DEG = 3;       // render throttle: re-render only on ≥3° smoothed change (v6.1: each commit re-renders a live marker — 3° ≈ ≤10 renders/s at slow hand rotation)
 const BACKWARD_M = 30;           // net regression vs window max → wrong-way cue (tunable)
 const BACKWARD_RESET_M = 15;     // forward progress vs window min → re-arm turns
 const BACKWARD_WINDOW_MS = 45_000;
@@ -815,7 +815,9 @@ export default function TrackingScreen() {
     const hereC = (navPhase === 'nav' && course?.polyline ? snapToCourse(course.polyline, raw, SNAP_TO_ROUTE_M) : null) ?? raw;
     // v5.1: the ladder — course runs ALWAYS have a bearing (tangent at
     // standstill) → the dot sits at the ~22% band in every camera state
-    mapRef.current?.animateCamera(courseCamera(hereC, courseBearing(hereC)), { duration: NAV_FOLLOW_MS });
+    const followB = courseBearing(hereC);
+    mapRef.current?.animateCamera(courseCamera(hereC, followB), { duration: NAV_FOLLOW_MS });
+    camHeadingRef.current = followB ?? 0; // v6.1: we are the camera's heading commander — record it for the cone composition
      
   }, [drawnPath.length, state, drawnPath, courseCoords.length, courseBearing, navPhase, course]);
 
@@ -839,18 +841,11 @@ export default function TrackingScreen() {
   // snap; HARD BOUNDARY unchanged — raw GPS drives everything real), raw
   // elsewhere. Heading cone still skipped (course-up rotation encodes
   // direction).
-  // ── nav v6 ④a: first-segment direction at the start flag ─────────────────
-  // The flag says WHERE; this says WHICH WAY the loop runs — an accent
-  // chevron ~18m along segment 0's bearing, map-frame (flat) so it stays
-  // true under any camera. Dissolves with the go-to-start chapter.
-  const startDir = useMemo(() => {
-    const poly = course?.polyline;
-    if (!(courseCoords.length > 1 && navPhase === 'pre') || !poly || poly.length < 2) return null;
-    const a = poly[0], b = poly[1];
-    const kx = Math.cos((a.lat * Math.PI) / 180);
-    const brg = ((Math.atan2((b.lng - a.lng) * kx, b.lat - a.lat) * 180) / Math.PI + 360) % 360;
-    return { coord: pointAhead(a, brg, 18), bearing: brg };
-  }, [courseCoords.length, navPhase, course]);
+  // nav v6.1 (owner ruling 8/9): the loop-direction CHEVRON at the start is
+  // REMOVED — it never rotated anyway (AIRMapMarker implements neither
+  // `rotation` nor `flat`; both props are Google-only — verified in native
+  // source, the v6.1 conviction). The direction affordance is the EXTENDED
+  // ARRIVAL CUE (spoken first direction) + the band once nav starts.
 
   // ── nav v6 ①: HEADING CONE (the v4 deferral repaid) ──────────────────────
   // STRICT BOUNDARY: the compass drives the DOT SPRITE ONLY — the camera
@@ -862,6 +857,13 @@ export default function TrackingScreen() {
   // < 0 / no hardware / permission quirk) → cone hidden, plain dot stands.
   const [coneHeading, setConeHeading] = useState<number | null>(null);
   const coneSmoothRef = useRef<number | null>(null);
+  // v6.1: the camera's CURRENT heading as WE last commanded/synced it — the
+  // cone's screen rotation composes as (worldHeading − cameraHeading)
+  // because AIRMapMarker children are screen-billboards (no native
+  // rotation/flat on Apple — verified in source). While standing (the
+  // cone's whole use case) the camera bearing HOLDS, so the composition
+  // base is static and every heading commit rotates the cone exactly.
+  const camHeadingRef = useRef(0);
   useEffect(() => {
     // courseCoords-keyed (hasCoursePath declares later in the file — same truth)
     if (!(courseCoords.length > 1 && state !== 'idle')) { setConeHeading(null); coneSmoothRef.current = null; return; }
@@ -870,8 +872,11 @@ export default function TrackingScreen() {
     (async () => {
       try {
         const h = await Location.watchHeadingAsync((ev: Location.LocationHeadingObject) => {
+          // v6.1 hide-condition fix: accuracy<0 (uncalibrated) previously hid
+          // the cone entirely — but magHeading is usable while calibrating;
+          // only a negative heading value itself means "no data".
           const deg = ev.trueHeading >= 0 ? ev.trueHeading : ev.magHeading;
-          if (deg < 0 || ev.accuracy < 0) return;
+          if (deg < 0) return;
           const prev = coneSmoothRef.current;
           let next = deg;
           if (prev != null) {
@@ -1045,6 +1050,7 @@ export default function TrackingScreen() {
       // the movement rung — a stale last-speed must not resurrect a COG)
       const bearing = courseBearing(hereC, state !== 'running');
       mapRef.current?.animateCamera(courseCamera(hereC, bearing), { duration: 400 });
+      camHeadingRef.current = bearing ?? 0; // v6.1 cone composition bookkeeping
       return;
     }
     const target = drawnPath.length > 0
@@ -1239,7 +1245,13 @@ export default function TrackingScreen() {
           onPanDrag={onUserPan}
           // T1.5 zoom agency: pinch-zoom joins the indefinite suspension (onPanDrag
           // misses two-finger gestures); recenter resumes follow instantly
-          onRegionChangeComplete={(_r, d) => { if (d?.isGesture && state === 'running') onUserPan(); }}
+          onRegionChangeComplete={(_r, d) => {
+            if (d?.isGesture && state === 'running') onUserPan();
+            // v6.1: a two-finger rotation changes the camera heading OUTSIDE
+            // our command path — re-sync the cone composition base on
+            // gesture end (async ~ms; transient mid-gesture drift accepted)
+            if (d?.isGesture) mapRef.current?.getCamera().then(c => { camHeadingRef.current = c.heading ?? 0; }).catch(() => {});
+          }}
           // nav v4 (8/3 field screenshots — the halo verdict): the NATIVE
           // dot's accuracy halo is a real-meter circle that dominates at
           // street zoom and iOS offers no API to hide it → during a course
@@ -1316,13 +1328,6 @@ export default function TrackingScreen() {
               lineDashPattern={[8, 8]}
             />
           ) : null}
-          {/* nav v6 ④a: loop-direction chevron — accent (distinct from the
-              white band), flat = rotates with the world */}
-          {courseCoords.length > 1 && navPhase === 'pre' && startDir != null ? (
-            <Marker coordinate={{ latitude: startDir.coord.lat, longitude: startDir.coord.lng }} anchor={{ x: 0.5, y: 0.5 }} flat rotation={startDir.bearing} tracksViewChanges={false} zIndex={9}>
-              <View style={st.startDirChevron} />
-            </Marker>
-          ) : null}
           {/* 8/3: geometry turn marker — VISUAL ONLY (ruled: no TTS until
               tuning + T2 names; a wrong spoken turn is worse than none).
               Direction from the bearing delta's sign; distance from alongM. */}
@@ -1341,12 +1346,20 @@ export default function TrackingScreen() {
               size at every zoom (markers are screen-space), NO halo ever.
               Billboard by default (flat=false): stays a dot under map
               rotation, never a tilting sprite. */}
-          {/* nav v6 ①: heading cone — DOT SPRITE ONLY (camera untouched);
-              flat + world-frame rotation, so course-up/pan/pitch all keep it
-              true. Hidden when no usable heading (plain dot, graceful). */}
+          {/* nav v6.1: heading cone — DOT SPRITE ONLY (camera untouched).
+              Rotation lives on the CHILD VIEW transform (Marker rotation/
+              flat are Google-only — absent from AIRMapMarker source, the
+              v6.1 conviction): screen = worldHeading − cameraHeading.
+              tracksViewChanges stays TRUE — a rotating child must re-render
+              natively (the dot's snapshot-flip trick would freeze it; one
+              small live marker at ≤10 commits/s is the km-marker precedent
+              cost class). Hidden when no usable heading (plain dot). */}
           {hasCoursePath && state !== 'idle' && dotCoord != null && coneHeading != null ? (
-            <Marker coordinate={dotCoord} anchor={{ x: 0.5, y: 0.5 }} flat rotation={coneHeading} tracksViewChanges={dotTracks} zIndex={9}>
-              <View style={st.coneWrap}><View style={st.headingCone} /></View>
+            <Marker coordinate={dotCoord} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges zIndex={9}>
+              <View style={[st.coneWrap, { transform: [{ rotate: `${(((coneHeading - camHeadingRef.current) % 360) + 360) % 360}deg` }] }]}>
+                <View style={st.headingConeRim} />
+                <View style={st.headingCone} />
+              </View>
             </Marker>
           ) : null}
           {hasCoursePath && state !== 'idle' && dotCoord != null ? (
@@ -1650,21 +1663,22 @@ const makeSt = (C: Tokens) => StyleSheet.create({
     backgroundColor: '#007AFF', borderWidth: 3, borderColor: '#FFFFFF',
     shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 3, shadowOffset: { width: 0, height: 1 },
   },
-  // nav v6 ①: the heading beam — apex at the dot, widening outward (Apple's
-  // flashlight-cone family); translucent so tiles read through
-  coneWrap: { width: 56, height: 56, alignItems: 'center' },
-  headingCone: {
-    marginTop: 3, width: 0, height: 0,
-    borderLeftWidth: 10, borderRightWidth: 10, borderTopWidth: 17,
+  // nav v6.1: the heading wedge — SOLID, unmistakable (owner ruling: the
+  // translucent beam read as decoration). Apple's dot-cone as reference:
+  // white rim + solid system-blue body, apex meeting the dot's edge,
+  // widening outward. Two stacked border-triangles fake the rim.
+  coneWrap: { width: 64, height: 64, alignItems: 'center' },
+  headingConeRim: {
+    marginTop: 2, width: 0, height: 0,
+    borderLeftWidth: 14, borderRightWidth: 14, borderTopWidth: 24,
     borderLeftColor: 'transparent', borderRightColor: 'transparent',
-    borderTopColor: 'rgba(0,122,255,0.38)',
+    borderTopColor: '#FFFFFF',
   },
-  // nav v6 ④a: loop-direction chevron at the start — accent apex-forward
-  startDirChevron: {
-    width: 0, height: 0,
-    borderLeftWidth: 9, borderRightWidth: 9, borderBottomWidth: 15,
+  headingCone: {
+    position: 'absolute', top: 5, width: 0, height: 0,
+    borderLeftWidth: 11, borderRightWidth: 11, borderTopWidth: 19,
     borderLeftColor: 'transparent', borderRightColor: 'transparent',
-    borderBottomColor: '#7CF03D',
+    borderTopColor: 'rgba(0,122,255,0.92)',
   },
   turnOverlayWrap: { position: 'absolute', left: 0, right: 0, top: '28%', alignItems: 'center' },
   turnOverlayCard: {
