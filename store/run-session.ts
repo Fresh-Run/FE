@@ -60,6 +60,12 @@ export type RunSnapshot = {
 export type RunContext = {
   course?: { id: string | null; title: string };
   crewSession?: CrewSessionTag;
+  /** nav v6 (8/9): course runs with real geometry start in the go-to-start
+      chapter — GPS watching + nav UI only, ZERO accumulation (no clock, no
+      distance, no gps_track, no splits) until beginAccumulation() at the
+      PRE_START→NAVIGATING transition. Free/crew runs never set this —
+      their behavior is byte-identical to before. */
+  deferAccumulation?: boolean;
 };
 
 const LOCATION_TASK = 'freshrun-run-location';
@@ -172,6 +178,13 @@ let rawTrack: GpsPoint[] = [];    // RAW fixes, gates NOT applied → gps_track
 let paceWindow: { t: number; cumM: number }[] = [];
 let lastFixTs = 0;                // last RAW callback ts — GPS-lost chip
 let context: RunContext = {};
+let accumGated = false;
+// nav v6 accumulation gate — while true: the session is in the go-to-start
+// hunt. Fixes keep the POSITION BUFFER alive (anchor + path, for the dot,
+// dashed guidance, arrival detection) but credit NOTHING: distanceM, pace,
+// rawTrack, elapsed (segmentStart/wallStartedAt stay unseeded) and the Live
+// Activity all wait for beginAccumulation(). Auto-pause is OFF while gated
+// (zero accumulation = nothing to protect; the hunt is mostly standing).
 let lastPersistMs = 0;
 let watchSub: Location.LocationSubscription | null = null; // fallback stream only
 
@@ -244,7 +257,7 @@ function processFix(loc: Location.LocationObject): void {
 
   // Raw track capture — BEFORE any gate (incl. the accuracy reject below):
   // the server filter must see everything the client filter saw.
-  if (state === 'running') {
+  if (state === 'running' && !accumGated) {
     rawTrack.push({
       // iOS timestamps carry fractional ms; the contract's t is integer
       // epoch ms (422 int_from_float otherwise — convicted 2026-07-08)
@@ -287,6 +300,9 @@ function processFix(loc: Location.LocationObject): void {
   // sprint-start loses ~0m; the exact under-credit class the 8/2 core cures).
   if (state === 'countdown' || (state === 'paused' && pauseSource !== 'auto')) {
     anchor = { ...cur, t };
+    // gated hunt: path is a position buffer (cleared at beginAccumulation),
+    // so a PAUSED hunter still moves the dot / dashed line / arrival check
+    if (accumGated && state === 'paused') path.push(cur);
     return;
   }
   if (state === 'paused' && pauseSource === 'auto') {
@@ -343,6 +359,12 @@ function processFix(loc: Location.LocationObject): void {
     return; // jitter floor — anchor stays put, slow progress still adds up
   }
 
+  if (accumGated) {
+    // hunt mode: the fix moves the position buffer, credits nothing
+    anchor = { ...cur, t };
+    path.push(cur);
+    return;
+  }
   distanceM += dM;
   anchor = { ...cur, t };
   path.push(cur);
@@ -363,6 +385,7 @@ function processFix(loc: Location.LocationObject): void {
     canyons included. */
 function maybeAutoPause(now: number): void {
   if (state !== 'running') return;
+  if (accumGated) return; // hunt = zero accumulation, nothing to protect
   if (!useSettings.getState().settings.run.auto_pause) return;
   if (wallStartedAt && now - wallStartedAt < START_GRACE_MS) return;
   if (now - manualResumeAt < AUTO_REPAUSE_GRACE_MS) return;
@@ -377,7 +400,7 @@ function feedFix(loc: Location.LocationObject): void {
   maybePersist(now);
   // running only — a paused push would creep the frozen clock (pause/resume
   // have their own exact force-pushes in togglePause)
-  if (state === 'running') pushLiveActivity(now);
+  if (state === 'running' && !accumGated) pushLiveActivity(now); // no LA until the session truly begins
 }
 
 // ── ④b: rolling pace + Live-Activity stats push ──────────────────────────────
@@ -541,6 +564,7 @@ function elapsedMsNow(): number {
 }
 
 function resetAccumulators(): void {
+  accumGated = false;
   accumulatedMs = 0;
   segmentStart = null;
   wallStartedAt = 0;
@@ -570,19 +594,43 @@ export const runSession = {
     if (state !== 'idle') return;
     resetAccumulators();
     context = ctx ?? {};
+    accumGated = !!ctx?.deferAccumulation;
     setState('countdown');
     await startUpdates();
   },
 
   beginRunning(): void {
     if (state !== 'countdown') return;
+    setState('running');
+    if (accumGated) return; // hunt: clocks + LA wait for beginAccumulation
     segmentStart = Date.now();
     wallStartedAt = segmentStart; // true wall-clock start (③'s HK anchor)
-    setState('running');
     // ④a: lock-screen/Dynamic-Island Live Activity — clock self-counts from
     // here; ④b feeds stats. Fire-and-forget, never blocks the run; no-op on
     // Android/unsupported (requireOptionalNativeModule).
     startLiveActivity(segmentStart);
+  },
+
+  /** nav v6: the PRE_START→NAVIGATING seam — the session TRULY begins here.
+      Zeroes the hunt's position buffer into a fresh track (first vertex =
+      the course start area), seeds the clocks, starts the Live Activity.
+      Arrival while PAUSED: the gate opens but clocks/LA seed on the resume
+      (togglePause's resume branch) — a paused arrival must not tick. */
+  beginAccumulation(): void {
+    if (!accumGated) return;
+    accumGated = false;
+    distanceM = 0;
+    paceWindow = [];
+    rawTrack = [];
+    const seed = path[path.length - 1];
+    path = seed ? [seed] : [];
+    stillRef = null;
+    if (state === 'running') {
+      const now = Date.now();
+      segmentStart = now;
+      wallStartedAt = now;
+      startLiveActivity(now);
+    }
   },
 
   togglePause(source: 'manual' | 'auto' = 'manual'): void {
@@ -597,7 +645,7 @@ export const runSession = {
       // a pause is an interruption-risk moment — persist outside the throttle
       const partial = buildPartial();
       if (partial) persistActiveRun(partial);
-      pushLiveActivity(now, true); // ④b: freeze the widget clock exactly here
+      if (!accumGated) pushLiveActivity(now, true); // ④b: freeze the widget clock exactly here (no LA exists while gated)
     } else if (state === 'paused') {
       const now = Date.now();
       // a MANUAL resume from an auto-pause gets a re-pause grace (crosswalk:
@@ -605,6 +653,20 @@ export const runSession = {
       if (pauseSource === 'auto' && source === 'manual') manualResumeAt = now;
       pauseSource = null;
       stillRef = null;
+      if (accumGated) {
+        // hunt resume: still zero accumulation — no clock seam to manage
+        setState('running');
+        return;
+      }
+      if (wallStartedAt === 0) {
+        // arrival happened WHILE paused (beginAccumulation opened the gate
+        // with no clocks) — this resume is the true start
+        segmentStart = now;
+        wallStartedAt = now;
+        setState('running');
+        startLiveActivity(now);
+        return;
+      }
       segmentStart = now;
       setState('running');
       pushLiveActivity(now, true); // ④b: unfreeze — startedAt absorbs the pause

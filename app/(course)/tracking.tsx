@@ -48,6 +48,7 @@ import { activateRunAudioSession, deactivateRunAudioSession } from '@/lib/audio-
 import { useQuota } from '@/store/use-quota';
 import { addLiveActivityActionListener } from '@/modules/live-activity';
 import { clearActiveCourse, getActiveCourse } from '@/store/active-course';
+import * as Location from 'expo-location';
 import { getLang, t, tfIn, useLang } from '@/lib/i18n';
 import { getPendingRun, refreshPendingRun, setPendingRun } from '@/store/pending-run';
 import { useLocalProfile } from '@/store/use-local-profile';
@@ -112,6 +113,13 @@ const ARRIVAL_M = 25;           // v2 go-to-start: arrival radius → NAVIGATING
 // there by construction; NAV_FOLLOW_MS below keeps the dot visually tied.)
 const NEXT_BAND_M = 300;      // the emphasized "next stretch" band + the turn overlay's approach window
 const TURN_EXECUTE_M = 40;    // T2 voice: the "지금 우회전" execute cue threshold (tunable — field decision)
+// nav v6 (8/9 field): the heading cone + backward detection
+const CONE_SMOOTH_ALPHA = 0.25;  // circular low-pass — a jittery cone is worse than none
+const CONE_COMMIT_DEG = 2;       // render throttle: re-render only on ≥2° smoothed change
+const BACKWARD_M = 30;           // net regression vs window max → wrong-way cue (tunable)
+const BACKWARD_RESET_M = 15;     // forward progress vs window min → re-arm turns
+const BACKWARD_WINDOW_MS = 45_000;
+const BACKWARD_COOLDOWN_MS = 60_000;
 // T1.7 CLOSE (owner verdict from the field look, 2026-07-26): 320/57/180
 // READS RIGHT — the baseline landed; the tuning panel stripped per the
 // temp-probe doctrine without needing its session.
@@ -590,7 +598,11 @@ export default function TrackingScreen() {
   // one phase gate per consumer, machinery internals untouched).
   const [navPhase, setNavPhase] = useState<'pre' | 'nav'>('pre');
   useEffect(() => {
-    if (courseCoords.length < 2 || navPhase !== 'pre' || state !== 'running') return;
+    // nav v6: arrival is detectable while PAUSED too (the 8/9 field repro —
+    // pausing through the arrival moment latched 'pre' forever because the
+    // check was running-only and livePath froze; run-session now buffers
+    // position through a gated pause, and this gate accepts both states)
+    if (courseCoords.length < 2 || navPhase !== 'pre' || (state !== 'running' && state !== 'paused')) return;
     const here = livePath[livePath.length - 1];
     const s0 = course?.polyline?.[0];
     if (!here || !s0) return;
@@ -598,9 +610,21 @@ export default function TrackingScreen() {
     const d = Math.hypot((here.lng - s0.lng) * kx, (here.lat - s0.lat) * 110_540);
     if (d <= ARRIVAL_M) {
       setNavPhase('nav');
-      // ONE arrival cue, voice_cue-gated (the off-route cue's exact pattern)
+      runSession.beginAccumulation(); // nav v6: the session TRULY begins here
+      // ONE arrival cue, voice_cue-gated (the off-route cue's exact pattern).
+      // nav v6 4(b): when the first turn is already inside the window, the
+      // cue extends with the first instruction — composed from the existing
+      // keys (direction+distance only; the real-POI naming rule keeps names
+      // out). That turn's approach flag is consumed so T2 won't repeat it.
       if (useSettings.getState().settings.run.voice_cue) {
-        speakCue(t('trk.startCue'), useSettings.getState().settings.audio_coach.rate);
+        let text = t('trk.startCue');
+        const firstTurn = course?.polyline ? nextTurn(course.polyline, 0) : null;
+        if (firstTurn && firstTurn.distM <= NEXT_BAND_M) {
+          const dd = Math.round(firstTurn.distM / 10) * 10;
+          text += ' ' + tfIn(getLang(), firstTurn.dir === 'left' ? 'spk.turnApproachLeft' : 'spk.turnApproachRight', { d: dd });
+          turnSpokenRef.current = { key: `${firstTurn.point.lat.toFixed(6)},${firstTurn.point.lng.toFixed(6)}`, approach: true, execute: false };
+        }
+        speakCue(text, useSettings.getState().settings.audio_coach.rate);
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -693,6 +717,7 @@ export default function TrackingScreen() {
   const turnSpokenRef = useRef<{ key: string | null; approach: boolean; execute: boolean }>({ key: null, approach: false, execute: false });
   useEffect(() => {
     if (!turnAhead || state !== 'running' || navPhase !== 'nav' || offCourse) return;
+    if (backwardRef.current) return; // v6 rule: turns are forward-defined — silent while wrong-way
     const key = `${turnAhead.point.lat.toFixed(6)},${turnAhead.point.lng.toFixed(6)}`;
     const flags = turnSpokenRef.current;
     if (flags.key !== key) { flags.key = key; flags.approach = false; flags.execute = false; }
@@ -814,6 +839,87 @@ export default function TrackingScreen() {
   // snap; HARD BOUNDARY unchanged — raw GPS drives everything real), raw
   // elsewhere. Heading cone still skipped (course-up rotation encodes
   // direction).
+  // ── nav v6 ④a: first-segment direction at the start flag ─────────────────
+  // The flag says WHERE; this says WHICH WAY the loop runs — an accent
+  // chevron ~18m along segment 0's bearing, map-frame (flat) so it stays
+  // true under any camera. Dissolves with the go-to-start chapter.
+  const startDir = useMemo(() => {
+    const poly = course?.polyline;
+    if (!(courseCoords.length > 1 && navPhase === 'pre') || !poly || poly.length < 2) return null;
+    const a = poly[0], b = poly[1];
+    const kx = Math.cos((a.lat * Math.PI) / 180);
+    const brg = ((Math.atan2((b.lng - a.lng) * kx, b.lat - a.lat) * 180) / Math.PI + 360) % 360;
+    return { coord: pointAhead(a, brg, 18), bearing: brg };
+  }, [courseCoords.length, navPhase, course]);
+
+  // ── nav v6 ①: HEADING CONE (the v4 deferral repaid) ──────────────────────
+  // STRICT BOUNDARY: the compass drives the DOT SPRITE ONLY — the camera
+  // stays movement/course-tangent (the v2 compass-fusion lesson lives; a
+  // compass touches rendering, never the camera). watchHeadingAsync fires on
+  // change (iOS CLHeading, up to ~50Hz); we circular-low-pass (α 0.25) and
+  // commit to React state only on ≥2° smoothed change — the cone glides.
+  // trueHeading < 0 falls back to magHeading; no usable heading (accuracy
+  // < 0 / no hardware / permission quirk) → cone hidden, plain dot stands.
+  const [coneHeading, setConeHeading] = useState<number | null>(null);
+  const coneSmoothRef = useRef<number | null>(null);
+  useEffect(() => {
+    // courseCoords-keyed (hasCoursePath declares later in the file — same truth)
+    if (!(courseCoords.length > 1 && state !== 'idle')) { setConeHeading(null); coneSmoothRef.current = null; return; }
+    let sub: { remove: () => void } | null = null;
+    let dead = false;
+    (async () => {
+      try {
+        const h = await Location.watchHeadingAsync((ev: Location.LocationHeadingObject) => {
+          const deg = ev.trueHeading >= 0 ? ev.trueHeading : ev.magHeading;
+          if (deg < 0 || ev.accuracy < 0) return;
+          const prev = coneSmoothRef.current;
+          let next = deg;
+          if (prev != null) {
+            const delta = ((deg - prev + 540) % 360) - 180;
+            next = (prev + delta * CONE_SMOOTH_ALPHA + 360) % 360;
+          }
+          coneSmoothRef.current = next;
+          setConeHeading(c => (c == null || Math.abs(((next - c + 540) % 360) - 180) >= CONE_COMMIT_DEG ? next : c));
+        });
+        if (dead) h.remove(); else sub = h;
+      } catch { /* no compass — plain dot, graceful */ }
+    })();
+    return () => { dead = true; sub?.remove(); };
+  }, [courseCoords.length, state]);
+
+  // ── nav v6 ⑤: BACKWARD DETECTION (on-line wrong-way) ─────────────────────
+  // alongM regressing ≥ BACKWARD_M net vs the rolling-window MAX → one
+  // corrective cue (cooldown-re-armable); forward ≥ BACKWARD_RESET_M vs the
+  // window MIN clears it. STATED RULE: while backward, the turn system is
+  // SILENT — turns are forward-defined; wrong directions are worse than
+  // silence. Off-route machinery untouched (backward-on-line ≠ off-route:
+  // the !offCourse gate here keeps the two states disjoint).
+  const alongHistRef = useRef<{ t: number; m: number }[]>([]);
+  const backwardRef = useRef(false);
+  const backwardCueAtRef = useRef(0);
+  useEffect(() => {
+    if (navPhase !== 'nav' || state !== 'running' || offCourse) {
+      alongHistRef.current = []; backwardRef.current = false; return;
+    }
+    const now = Date.now();
+    const hist = alongHistRef.current;
+    hist.push({ t: now, m: alongM });
+    while (hist.length && hist[0].t < now - BACKWARD_WINDOW_MS) hist.shift();
+    if (hist.length < 2) return;
+    let maxM = -Infinity, minM = Infinity;
+    for (const sm of hist) { if (sm.m > maxM) maxM = sm.m; if (sm.m < minM) minM = sm.m; }
+    if (!backwardRef.current && alongM - maxM <= -BACKWARD_M) {
+      backwardRef.current = true;
+      if (now - backwardCueAtRef.current >= BACKWARD_COOLDOWN_MS && useSettings.getState().settings.run.voice_cue) {
+        backwardCueAtRef.current = now;
+        speakCue(t('spk.wrongWay'), useSettings.getState().settings.audio_coach.rate);
+      }
+    } else if (backwardRef.current && alongM - minM >= BACKWARD_RESET_M) {
+      backwardRef.current = false;
+    }
+     
+  }, [alongM, navPhase, state, offCourse]);
+
   const [dotCoord, setDotCoord] = useState<{ latitude: number; longitude: number } | null>(null);
   const dotCoordRef = useRef<{ latitude: number; longitude: number } | null>(null);
   const dotLerpRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -1086,6 +1192,9 @@ export default function TrackingScreen() {
       ? {
           course: { id: course.id, title: course.title },
           ...(course.crewSession ? { crewSession: course.crewSession } : {}),
+          // nav v6: real geometry → the go-to-start chapter accumulates
+          // NOTHING (crew runs without geometry keep free-run behavior)
+          ...((course.polyline?.length ?? 0) > 1 ? { deferAccumulation: true } : {}),
         }
       : undefined);
     if (!granted) {
@@ -1207,6 +1316,13 @@ export default function TrackingScreen() {
               lineDashPattern={[8, 8]}
             />
           ) : null}
+          {/* nav v6 ④a: loop-direction chevron — accent (distinct from the
+              white band), flat = rotates with the world */}
+          {courseCoords.length > 1 && navPhase === 'pre' && startDir != null ? (
+            <Marker coordinate={{ latitude: startDir.coord.lat, longitude: startDir.coord.lng }} anchor={{ x: 0.5, y: 0.5 }} flat rotation={startDir.bearing} tracksViewChanges={false} zIndex={9}>
+              <View style={st.startDirChevron} />
+            </Marker>
+          ) : null}
           {/* 8/3: geometry turn marker — VISUAL ONLY (ruled: no TTS until
               tuning + T2 names; a wrong spoken turn is worse than none).
               Direction from the bearing delta's sign; distance from alongM. */}
@@ -1225,6 +1341,14 @@ export default function TrackingScreen() {
               size at every zoom (markers are screen-space), NO halo ever.
               Billboard by default (flat=false): stays a dot under map
               rotation, never a tilting sprite. */}
+          {/* nav v6 ①: heading cone — DOT SPRITE ONLY (camera untouched);
+              flat + world-frame rotation, so course-up/pan/pitch all keep it
+              true. Hidden when no usable heading (plain dot, graceful). */}
+          {hasCoursePath && state !== 'idle' && dotCoord != null && coneHeading != null ? (
+            <Marker coordinate={dotCoord} anchor={{ x: 0.5, y: 0.5 }} flat rotation={coneHeading} tracksViewChanges={dotTracks} zIndex={9}>
+              <View style={st.coneWrap}><View style={st.headingCone} /></View>
+            </Marker>
+          ) : null}
           {hasCoursePath && state !== 'idle' && dotCoord != null ? (
             <Marker
               coordinate={dotCoord}
@@ -1525,6 +1649,22 @@ const makeSt = (C: Tokens) => StyleSheet.create({
     width: 24, height: 24, borderRadius: 12,
     backgroundColor: '#007AFF', borderWidth: 3, borderColor: '#FFFFFF',
     shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 3, shadowOffset: { width: 0, height: 1 },
+  },
+  // nav v6 ①: the heading beam — apex at the dot, widening outward (Apple's
+  // flashlight-cone family); translucent so tiles read through
+  coneWrap: { width: 56, height: 56, alignItems: 'center' },
+  headingCone: {
+    marginTop: 3, width: 0, height: 0,
+    borderLeftWidth: 10, borderRightWidth: 10, borderTopWidth: 17,
+    borderLeftColor: 'transparent', borderRightColor: 'transparent',
+    borderTopColor: 'rgba(0,122,255,0.38)',
+  },
+  // nav v6 ④a: loop-direction chevron at the start — accent apex-forward
+  startDirChevron: {
+    width: 0, height: 0,
+    borderLeftWidth: 9, borderRightWidth: 9, borderBottomWidth: 15,
+    borderLeftColor: 'transparent', borderRightColor: 'transparent',
+    borderBottomColor: '#7CF03D',
   },
   turnOverlayWrap: { position: 'absolute', left: 0, right: 0, top: '28%', alignItems: 'center' },
   turnOverlayCard: {

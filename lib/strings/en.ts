@@ -653,6 +653,7 @@ export const en: Record<keyof typeof ko, string> = {
   'spk.turnApproachRight': 'Right turn in {d} meters',
   'spk.turnNowLeft': 'Turn left now',
   'spk.turnNowRight': 'Turn right now',
+  'spk.wrongWay': 'You\'re going the wrong way along the route',
   'wx.pmLabel': 'Air quality',
   'sc.regionOther': 'Other',
   'set.saveFailT': 'Save failed',

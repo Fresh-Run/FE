@@ -665,6 +665,7 @@ export const ko = {
   'spk.turnApproachRight': '{d}미터 앞 우회전',
   'spk.turnNowLeft': '지금 좌회전',
   'spk.turnNowRight': '지금 우회전',
+  'spk.wrongWay': '경로 반대 방향입니다',
   'wx.pmLabel': '미세먼지',
   'sc.regionOther': '기타',
   'set.saveFailT': '저장 실패',

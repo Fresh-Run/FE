@@ -2,12 +2,12 @@
 // runs (server filters by viewer; the 공개 framing is honest here).
 // Shapes staging-probed 2026-07-08.
 //
-// 비공개 프로필 v1 (⑪): the profile response carries `locked` — when her
-// gate is live, a locked account's runs GET is a 404 BY CONTRACT ("more
-// restrictive wins", run-level visibility included). The runs fetch is
-// therefore NON-FATAL: it degrades to [] and only the profile fetch drives
-// the screen's error state. (Gate staging-dark as of 2026-07-26 — locked
-// arrives false until her deploy; this path is forward-wired.)
+// 비공개 프로필 v1 (⑪): the profile response carries `locked` — **GATE IS
+// LIVE (re-probed 2026-08-08, 감사 #4-M: non-follower on a private account
+// gets locked=true)**. Locked runs GET serves 200 + EMPTY LIST, not the
+// once-documented 404 (drift caught same probe) — the runs fetch stays
+// NON-FATAL either way: it degrades to [] and only the profile fetch drives
+// the screen's error state.
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useState } from 'react';
@@ -29,11 +29,11 @@ export type UserProfile = {
   avatar_url: string | null;
   bio: string | null;
   tier: string;
-  follower_count: number;   // zeroed by the server when locked (her contract)
-  following_count: number;  // zeroed by the server when locked
+  follower_count: number;   // NOT zeroed when locked (probed 8/8 — real counts served; her stated contract said zeroed → flagged to 지연, 감사 #4-M)
+  following_count: number;  // NOT zeroed when locked (same 8/8 probe)
   is_following: boolean;
   is_followed_by: boolean;
-  public_run_count: number; // zeroed by the server when locked
+  public_run_count: number; // NOT zeroed when locked (same 8/8 probe)
   /** Additive (지연 2026-07-16, probed both states): true count of the
       user's followers-only runs. Locked profiles ALWAYS 0 — existence
       hidden, leak-verified server-side (no titles/dates/tracks). Feeds the
@@ -90,8 +90,9 @@ export function useUserProfile(uid: string | null) {
       .catch(() => {});
     Promise.all([
       apiFetch<UserProfile>(`/api/users/${uid}/profile`),
-      // non-fatal: locked accounts 404 here by contract; any runs hiccup
-      // degrades to an empty list instead of killing the profile
+      // non-fatal: locked accounts serve 200 + [] (probed 8/8; the old
+      // 404-by-contract claim drifted); any runs hiccup degrades to an
+      // empty list instead of killing the profile
       apiFetch<UserRun[]>(`/api/users/${uid}/runs?limit=50`).catch(() => [] as UserRun[]),
     ])
       .then(([p, r]) => {
