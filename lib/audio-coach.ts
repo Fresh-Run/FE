@@ -111,7 +111,31 @@ export function composeFinishCue(distanceKm: number, elapsedSec: number, units: 
 // session stays active for the live cue, whose own onDone releases.
 const releaseAudioSession = () => { deactivateRunAudioSession(); };
 
+// ── Session mute — the MASTER audio gate (owner recon 8/8) ───────────────────
+// SESSION-LOCAL override: the tracking screen's speaker button, this run only.
+// Read AT SPEAK TIME inside speakCue (the getLang precedent — fire-time, never
+// captured), so EVERY cue family is gated by construction: composer cues
+// (start/split/finish), go-to-start arrival, off-route, auto-pause/resume,
+// and any future cue (turn-by-turn joins this path for free).
+// Relationship to settings: settings.run.voice_cue is the PERSISTENT
+// preference — off means cues never compose and the button is irrelevant;
+// voice_cue on + session-muted means silent for this session only. The
+// tracking screen resets the flag at run start and on unmount, so the
+// settings screen's sample cues are never muted by a stale session.
+let sessionMuted = false;
+
+/** Muting also KILLS the in-flight utterance — a mute that lets the current
+    sentence finish is half a mute. Unmute replays nothing; the next natural
+    cue speaks. */
+export function setSessionMuted(muted: boolean): void {
+  sessionMuted = muted;
+  if (muted) Speech.stop(); // onStopped releases the duck (existing architecture)
+}
+
 export function speakCue(text: string, rate: number): void {
+  // Session-mute gate — BEFORE any side effect: a muted cue must not stop
+  // prior speech or duck the user's music via the audio session.
+  if (sessionMuted) return;
   // stop any in-flight cue — a fresh split always wins
   Speech.stop();
   engageCueAudioSession(); // explicit duck ENGAGE — every cue, not just the cold first

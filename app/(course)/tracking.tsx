@@ -43,7 +43,7 @@ import { SEOUL_FALLBACK, useCurrentLocation } from '@/hooks/use-current-location
 import { courseLengthM, courseTangentAt, nearestOnCourse, nextTurn, OFF_COURSE_ENTER_M, OFF_COURSE_EXIT_M, pointAhead, sliceAhead, snapToCourse } from '@/lib/course-nav';
 import { runSession } from '@/store/run-session';
 import { useRunTracker } from '@/hooks/use-run-tracker';
-import { composeFinishCue, composeSplitCue, composeStartCue, speakCue, stopSpeech } from '@/lib/audio-coach';
+import { composeFinishCue, composeSplitCue, composeStartCue, setSessionMuted, speakCue, stopSpeech } from '@/lib/audio-coach';
 import { activateRunAudioSession, deactivateRunAudioSession } from '@/lib/audio-session';
 import { useQuota } from '@/store/use-quota';
 import { addLiveActivityActionListener } from '@/modules/live-activity';
@@ -463,6 +463,10 @@ export default function TrackingScreen() {
     // #12 session rider: arm the audio session when the run arms — the
     // countdown's ~3s means ducking is in force before the start cue speaks
     if (prev === 'idle' && state === 'countdown') {
+      // Session mute is PER-RUN: every run starts unmuted (the button is a
+      // this-session override, not a preference — that's settings voice_cue)
+      setSessionMuted(false);
+      setCoachMuted(false);
       activateRunAudioSession();
       // T1.5 "drive pressed": in course mode, fly overview → follow posture
       // DURING the countdown (the overlay lifts onto an already-set camera)
@@ -521,7 +525,7 @@ export default function TrackingScreen() {
     if (state === 'idle') stopSpeech(); // paused handled in-branch (order-sensitive — see above)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state]);
-  useEffect(() => () => { stopSpeech(); deactivateRunAudioSession(); }, []); // unmount safety
+  useEffect(() => () => { stopSpeech(); setSessionMuted(false); deactivateRunAudioSession(); }, []); // unmount safety (+ session-mute scope ends with the screen)
 
   // interval-split watcher — catch-up-safe (advances past every crossed
   // threshold). ONE EVENT, TWO CHANNELS (haptics ruling 2026-07-23): the
@@ -1257,7 +1261,7 @@ export default function TrackingScreen() {
             {/* 오디오 코치 mute — premium only (free: no affordance, line-132) */}
             {isPremium && voiceCue && (
               <Pressable
-                onPress={() => { setCoachMuted(m => { if (!m) stopSpeech(); return !m; }); }}
+                onPress={() => { setCoachMuted(m => { setSessionMuted(!m); return !m; }); }}
                 hitSlop={8}
                 style={st.coachMuteBtn}
                 accessibilityLabel={coachMuted ? t('trk.voiceOn') : t('trk.voiceOff')}
@@ -1430,8 +1434,17 @@ export default function TrackingScreen() {
             </View>
           ) : (
             <View style={[st.controls, st.controlsRow]}>
-              <Pressable style={[st.speakerBtn, shadows.sm]}>
-                <Icon name="volume-medium-outline" size={22} color={C.sub} />
+              {/* 8/8 recon: this button was a Pressable wired to NOTHING (dead
+                  affordance). Now the same session mute as the map-chrome pill —
+                  one state, two mirrors. No coach (free / voice_cue off) =
+                  dimmed-disabled: nothing to mute, shown honestly. */}
+              <Pressable
+                disabled={!(isPremium && voiceCue)}
+                onPress={() => { setCoachMuted(m => { setSessionMuted(!m); return !m; }); }}
+                accessibilityLabel={coachMuted ? t('trk.voiceOn') : t('trk.voiceOff')}
+                style={[st.speakerBtn, shadows.sm, !(isPremium && voiceCue) && { opacity: 0.35 }]}
+              >
+                <Icon name={coachMuted ? 'volume-mute-outline' : 'volume-medium-outline'} size={22} color={coachMuted ? C.sub : C.text} />
               </Pressable>
               <Pressable onPress={togglePause} style={[st.pauseBtn, accentShadow(C.accent)]}>
                 <Icon name={running ? 'pause' : 'play'} size={32} color={C.accentText} />
