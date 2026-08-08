@@ -48,7 +48,7 @@ import { activateRunAudioSession, deactivateRunAudioSession } from '@/lib/audio-
 import { useQuota } from '@/store/use-quota';
 import { addLiveActivityActionListener } from '@/modules/live-activity';
 import { clearActiveCourse, getActiveCourse } from '@/store/active-course';
-import { t, tfIn, useLang } from '@/lib/i18n';
+import { getLang, t, tfIn, useLang } from '@/lib/i18n';
 import { getPendingRun, refreshPendingRun, setPendingRun } from '@/store/pending-run';
 import { useLocalProfile } from '@/store/use-local-profile';
 import { useSettings } from '@/store/use-settings';
@@ -111,6 +111,7 @@ const ARRIVAL_M = 25;           // v2 go-to-start: arrival radius → NAVIGATING
 // as the CAMERA's own projection: lookahead × flat posture puts the runner
 // there by construction; NAV_FOLLOW_MS below keeps the dot visually tied.)
 const NEXT_BAND_M = 300;      // the emphasized "next stretch" band + the turn overlay's approach window
+const TURN_EXECUTE_M = 40;    // T2 voice: the "지금 우회전" execute cue threshold (tunable — field decision)
 // T1.7 CLOSE (owner verdict from the field look, 2026-07-26): 320/57/180
 // READS RIGHT — the baseline landed; the tuning panel stripped per the
 // temp-probe doctrine without needing its session.
@@ -553,7 +554,7 @@ export default function TrackingScreen() {
         items: { dist: coach.announce_distance, pace: coach.announce_pace, kcal: coach.announce_calories },
         units: useSettings.getState().settings.units,
       });
-      if (text) speakCue(text, coach.rate);
+      if (text) speakCue(text, coach.rate, 'coach'); // droppable: a turn cue in flight outranks a pace report
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [distanceKm, state, coachActive]);
@@ -674,6 +675,39 @@ export default function TrackingScreen() {
     () => (courseCoords.length > 1 ? nextTurn(course?.polyline ?? [], alongM) : null),
     [courseCoords.length, course, alongM],
   );
+
+  // ── T2 voice: turn-by-turn cues (8/8) — the overlay made audible ──────────
+  // PARITY RULE: the voice announces exactly what the overlay shows — same
+  // turn source (turnAhead), same gates (running · nav · !offCourse), same
+  // 300m window. Two cues per turn instance: APPROACH at window entry
+  // (distance = the live value the overlay renders, rounded to 10m for
+  // speech), EXECUTE at TURN_EXECUTE_M. Dedup is structural like the
+  // overlay's dismissal: flags key on the turn's course vertex — passing a
+  // turn advances nextTurn to the following one (never behind), a new key
+  // resets flags for the NEW turn only. Arriving inside the execute radius
+  // consumes BOTH flags (no late "40미터 앞" after a 지금 cue). Off-route
+  // yields by the same gate the overlay uses; voice_cue read at fire time
+  // (arrival/off-route precedent); session mute + phase gates inherited via
+  // speakCue. Free runs: no course → turnAhead is null by derivation →
+  // structurally silent. tier 'turn' outranks coach splits (drop, not queue).
+  const turnSpokenRef = useRef<{ key: string | null; approach: boolean; execute: boolean }>({ key: null, approach: false, execute: false });
+  useEffect(() => {
+    if (!turnAhead || state !== 'running' || navPhase !== 'nav' || offCourse) return;
+    const key = `${turnAhead.point.lat.toFixed(6)},${turnAhead.point.lng.toFixed(6)}`;
+    const flags = turnSpokenRef.current;
+    if (flags.key !== key) { flags.key = key; flags.approach = false; flags.execute = false; }
+    if (!useSettings.getState().settings.run.voice_cue) return; // fire-time read, never captured
+    const rate = useSettings.getState().settings.audio_coach.rate;
+    if (!flags.execute && turnAhead.distM <= TURN_EXECUTE_M) {
+      flags.execute = true;
+      flags.approach = true;
+      speakCue(t(turnAhead.dir === 'left' ? 'spk.turnNowLeft' : 'spk.turnNowRight'), rate, 'turn');
+    } else if (!flags.approach && turnAhead.distM <= NEXT_BAND_M) {
+      flags.approach = true;
+      const d = Math.round(turnAhead.distM / 10) * 10;
+      speakCue(tfIn(getLang(), turnAhead.dir === 'left' ? 'spk.turnApproachLeft' : 'spk.turnApproachRight', { d }), rate, 'turn');
+    }
+  }, [turnAhead, state, navPhase, offCourse]);
 
   // ahead/behind split — behind dims, ahead keeps the full course stroke
   const courseNext = useMemo(
@@ -1218,8 +1252,8 @@ export default function TrackingScreen() {
             distance counts down live (turnAhead recomputes per accepted
             fix); turn passage drops it by construction (nextTurn returns
             the following turn or null); off-route hands the screen to the
-            off-course machinery. Voice cues unchanged (turns stay visual-
-            only per the standing ruling). */}
+            off-course machinery. T2 voice (8/8): the turn-cue effect above
+            speaks this same data — parity by shared source. */}
         {turnAhead && state === 'running' && navPhase === 'nav' && !offCourse && turnAhead.distM <= NEXT_BAND_M && (
           <TurnOverlay dir={turnAhead.dir} distM={turnAhead.distM} />
         )}

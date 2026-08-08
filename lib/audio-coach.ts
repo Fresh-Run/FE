@@ -132,13 +132,32 @@ export function setSessionMuted(muted: boolean): void {
   if (muted) Speech.stop(); // onStopped releases the duck (existing architecture)
 }
 
-export function speakCue(text: string, rate: number): void {
+// ── Cue priority (T2 voice, 8/8): turn cues OUTRANK coach cues ──────────────
+// Mechanism inside stop-then-speak: an incoming cue with LOWER rank than the
+// in-flight utterance is DROPPED (never queued — a 30-second-late pace report
+// is noise); equal-or-higher rank preempts via the existing stop-then-speak.
+// Order: system (off-route/arrival/auto-pause — the existing standing, and
+// the default so unmarked callers keep last-wins) ≥ turn > coach (split).
+// In-flight rank clears on done/stopped/error, token-guarded so a preempted
+// utterance's late onStopped can't clear the NEW cue's rank.
+type CueTier = 'coach' | 'turn' | 'system';
+const TIER_RANK: Record<CueTier, number> = { coach: 0, turn: 1, system: 2 };
+let speakingRank: number | null = null;
+let utterId = 0;
+
+export function speakCue(text: string, rate: number, tier: CueTier = 'system'): void {
   // Session-mute gate — BEFORE any side effect: a muted cue must not stop
   // prior speech or duck the user's music via the audio session.
   if (sessionMuted) return;
-  // stop any in-flight cue — a fresh split always wins
+  const rank = TIER_RANK[tier];
+  if (speakingRank != null && rank < speakingRank) return; // outranked → dropped
+  // stop any in-flight cue — an equal/higher-rank fresh cue always wins
   Speech.stop();
   engageCueAudioSession(); // explicit duck ENGAGE — every cue, not just the cold first
+  utterId += 1;
+  const id = utterId;
+  speakingRank = rank;
+  const done = () => { if (id === utterId) speakingRank = null; releaseAudioSession(); };
   Speech.speak(text, {
     // TTS-lang (owner-ruled 8/6): the voice follows the LOCALE, read at
     // SPEAK time — a flip changes the very next cue; there is no queue to
@@ -150,9 +169,9 @@ export function speakCue(text: string, rate: number): void {
     // the graceful fallback).
     language: getLang() === 'en' ? 'en-US' : 'ko-KR',
     rate,
-    onDone: releaseAudioSession,
-    onStopped: releaseAudioSession,
-    onError: releaseAudioSession,
+    onDone: done,
+    onStopped: done,
+    onError: done,
   });
 }
 
