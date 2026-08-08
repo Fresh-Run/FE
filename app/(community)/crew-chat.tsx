@@ -123,7 +123,9 @@ export default function CrewChatScreen() {
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => setMyUid(user?.id ?? null));
+    supabase.auth.getUser()
+      .then(({ data: { user } }) => setMyUid(user?.id ?? null))
+      .catch(() => { /* offline/refresh race — myUid stays null = own-message styling/affordances degrade gracefully (fail-closed); next mount re-reads */ });
   }, []);
 
   function showToast(msg: string) {

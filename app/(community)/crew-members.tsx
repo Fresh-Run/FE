@@ -67,7 +67,9 @@ export default function CrewMembersScreen() {
   }, [crewId]);
   useEffect(() => { load(); }, [load]);
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => setMyUid(user?.id ?? null));
+    supabase.auth.getUser()
+      .then(({ data: { user } }) => setMyUid(user?.id ?? null))
+      .catch(() => { /* offline/refresh race — myUid stays null = self affordances hidden (fail-closed); next mount re-reads */ });
   }, []);
 
   const myRow = rows?.find(m => m.user_id === myUid);
