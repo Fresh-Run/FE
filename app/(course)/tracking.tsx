@@ -648,6 +648,19 @@ export default function TrackingScreen() {
   const [rejoinM, setRejoinM] = useState(0);
   // T1.6 nav strip: along-line progress → 남은 거리 · 도착 예상
   const [alongM, setAlongM] = useState(0);
+  // 8/21 waypoint markers — ALWAYS-ON through the whole run (the POI
+  // always-on rule's sibling): the runner sees upcoming waypoints ahead on
+  // the route; passing one dismisses nothing. Middle waypoints only (출발/
+  // 복귀 = the start flag/endpoint's job). NO voice cue in this slice —
+  // the real-POI naming rule makes "지점 1" audio awkward; flagged for her
+  // per-course capability flag (ledgered 8/8).
+  const wpMarkers = useMemo(
+    () => (course?.waypoints && course.waypoints.length > 2
+      ? course.waypoints.slice(1, -1).map((wp, i) => ({ lat: wp.coordinate.lat, lng: wp.coordinate.lng, label: String(i + 1) }))
+      : []),
+    [course],
+  );
+
   const courseLenM = useMemo(
     () => (course?.polyline && course.polyline.length > 1 ? courseLengthM(course.polyline) : 0),
     [course],
@@ -1325,6 +1338,15 @@ export default function TrackingScreen() {
           {courseNext.length > 1 ? (
             <Polyline coordinates={courseNext} strokeColor="#FFFFFF" strokeWidth={5} lineCap="round" lineJoin="round" />
           ) : null}
+          {/* 8/21 waypoint markers — numbered circles, default
+              tracksViewChanges (the ={false} empty-bitmap conviction) */}
+          {wpMarkers.length > 0 ? wpMarkers.map(w => (
+            <Marker key={`wp-${w.label}`} coordinate={{ latitude: w.lat, longitude: w.lng }} anchor={{ x: 0.5, y: 0.5 }} zIndex={7}>
+              <View style={st.wpMarker}>
+                <Text style={st.wpMarkerTxt}>{w.label}</Text>
+              </View>
+            </Marker>
+          )) : null}
           {/* v2 GO-TO-START chapter: unmissable start flag (bigger than
               turn chips) + dashed guidance line from the runner to the
               start — both dissolve on arrival (navPhase → 'nav') */}
@@ -1681,6 +1703,9 @@ const makeSt = (C: Tokens) => StyleSheet.create({
   // schemes by design, high-contrast over any tile.
   // nav v4 custom dot — the Apple look exactly: 18px system-blue disc +
   // 3px white ring (24px total), soft shadow; fixed pixel size by nature
+  // 8/21 waypoint marker — the RealMap twin (route-stroke fill, white ring)
+  wpMarker: { minWidth: 22, height: 22, borderRadius: 11, paddingHorizontal: 4, backgroundColor: '#39FF14', borderWidth: 2, borderColor: '#fff', alignItems: 'center', justifyContent: 'center' },
+  wpMarkerTxt: { fontSize: 11, fontWeight: '800', color: '#0D1A06' },
   userDot: {
     width: 24, height: 24, borderRadius: 12,
     backgroundColor: '#007AFF', borderWidth: 3, borderColor: '#FFFFFF',

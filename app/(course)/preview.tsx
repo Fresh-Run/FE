@@ -102,6 +102,7 @@ export default function CoursePreviewScreen() {
           title: pending.summary,
           distanceKm: pending.total_distance_km,
           polyline: pending.polyline ?? null,
+          ...(pending.waypoints ? { waypoints: pending.waypoints } : {}), // forward-wire
         });
       } else {
         // "이 코스 달리기" = copy into my account; the copy's id links runs.route_id
@@ -111,6 +112,7 @@ export default function CoursePreviewScreen() {
           title: copy.summary,
           distanceKm: copy.total_distance_km,
           polyline: copy.polyline ?? pending.polyline ?? null,
+          ...(copy.waypoints ?? pending.waypoints ? { waypoints: copy.waypoints ?? pending.waypoints } : {}), // forward-wire
         });
       }
       // replace: back from tracking-idle should land on the feed, not here
@@ -133,7 +135,20 @@ export default function CoursePreviewScreen() {
               setRouteMap({ title: pending.summary, polyline: pending.polyline! });
               router.push('/(course)/route-map' as never);
             }}>
-              <RealMap height={300} borderRadius={0} polyline={pending.polyline} startPin cache={false} />
+              <RealMap
+                height={300}
+                borderRadius={0}
+                polyline={pending.polyline}
+                startPin
+                cache={false}
+                // FORWARD-WIRE: today's feed payload serves NO waypoints
+                // (PublicRoute — 지연 ask drafted); lights up when it lands
+                waypointMarkers={pending.waypoints?.slice(1, -1).map((wp, i) => ({
+                  lat: wp.coordinate.lat, lng: wp.coordinate.lng,
+                  label: String(i + 1),
+                  title: wp.name,
+                }))}
+              />
             </Pressable>
           ) : (
             <MiniMap seed={s.seed ?? 'course-preview'} height={300} borderRadius={0} />

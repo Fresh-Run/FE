@@ -2,6 +2,7 @@
 // (from the POST /routes/{id}/copy result), the tracking screen peeks it and
 // clears on unmount. Same pattern as pending-run / pending-course.
 
+import type { Waypoint } from '@/lib/routes-api';
 import type { Coordinate } from '@/types';
 
 /** L1 크루 러닝 세션 태그 — set by crew-detail's "크루 러닝 시작", rides the
@@ -23,6 +24,9 @@ export type ActiveCourse = {
   polyline: Coordinate[] | null;
   /** L1: present when started via "크루 러닝 시작" — tags the saved run */
   crewSession?: CrewSessionTag;
+  /** 8/21 waypoint-markers slice: generation path supplies these (feed/copy
+      paths can't until 지연 serves waypoints on those shapes — forward-wired) */
+  waypoints?: Waypoint[];
 };
 
 let active: ActiveCourse | null = null;

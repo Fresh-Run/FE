@@ -5,16 +5,12 @@ import { t, tf } from '@/lib/i18n';
 import { quotaExceededMessage } from '@/lib/quota-message';
 import { supabase } from '@/lib/supabase';
 
+import type { Waypoint } from '@/lib/routes-api';
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type Coordinate = { lat: number; lng: number };
-
-export type Waypoint = {
-  name: string;
-  coordinate: Coordinate;
-  is_pitstop: boolean;
-  description: string | null;
-};
+export type { Waypoint } from '@/lib/routes-api'; // canonical home moved 8/21 (waypoint-markers slice)
 
 export type GeneratedRoute = {
   /** 저장된 routes 행 id (BE v116, 2026-07-29 additive) — 생성 직후 달리기가

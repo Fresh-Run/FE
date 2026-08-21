@@ -422,7 +422,19 @@ export default function CreateScreen() {
                 setRouteMap({ title: route.summary, polyline: route.polyline! });
                 router.push('/(course)/route-map' as never);
               }}>
-                <RealMap height={HERO_H + insets.top} polyline={route.polyline} startPin cache={false} />
+                <RealMap
+                  height={HERO_H + insets.top}
+                  polyline={route.polyline}
+                  startPin
+                  cache={false}
+                  // middle waypoints only — 출발/복귀 are the flag/endpoint's job;
+                  // labels match the list numbering (지점 N → N)
+                  waypointMarkers={route.waypoints.slice(1, -1).map((wp, i) => ({
+                    lat: wp.coordinate.lat, lng: wp.coordinate.lng,
+                    label: String(i + 1),
+                    title: wpNames[waypointCacheKey(wp.coordinate)] ?? wp.name,
+                  }))}
+                />
               </Pressable>
             ) : (
               <MiniMap seed={route.summary} height={HERO_H + insets.top} borderRadius={0} polyline={route.polyline} />
@@ -528,6 +540,7 @@ export default function CreateScreen() {
                 title: route.summary,
                 distanceKm: route.total_distance_km,
                 polyline: route.polyline ?? null,
+                waypoints: route.waypoints, // 8/21: markers ride into tracking
               });
               router.replace('/(course)/tracking' as any);
             }}

@@ -5,6 +5,11 @@
 import { ApiError, apiFetch } from '@/lib/api';
 import type { Coordinate } from '@/types';
 
+/** Waypoint — the generation/route shape (probed live 8/21: EVERY waypoint
+    carries coordinate {lat,lng}; names are neutral placeholders on generated
+    courses per 지연's real-POI-only rule). Canonical home for the type. */
+export type Waypoint = { name: string; coordinate: Coordinate; is_pitstop: boolean; description: string | null };
+
 export type PublicRoute = {
   id: string;
   created_at: string;
@@ -22,6 +27,9 @@ export type PublicRoute = {
   like_count: number;
   is_liked: boolean;
   comment_count: number;
+  /** FORWARD-WIRE (8/21): absent from today's feed payload — 지연 ask drafted
+      (add waypoints to public route responses); markers render when present */
+  waypoints?: Waypoint[];
 };
 
 export type RouteComment = {
@@ -77,7 +85,7 @@ export type StoredRoute = {
   summary: string;
   total_distance_km: number;
   estimated_duration_min: number | null;
-  waypoints: { name: string; coordinate: Coordinate; is_pitstop: boolean; description: string | null }[];
+  waypoints: Waypoint[];
   polyline: Coordinate[] | null;
   is_public: boolean;
   /** v2.3+ (BE 리포트 D, 63/63 backfilled false): true = 편도 — pre-column
@@ -132,6 +140,8 @@ export type CopiedRoute = {
   polyline: Coordinate[] | null;
   is_public: boolean;
   copied_from: string | null;
+  /** FORWARD-WIRE (8/21) — same ask as PublicRoute.waypoints */
+  waypoints?: Waypoint[];
 };
 
 /** "이 코스 달리기" — copies a public route into my account; the copy's id

@@ -96,9 +96,15 @@ type Props = {
       line-derived draws (line/dots/markers) — the track appears once,
       complete, when the caller flips this off. */
   lineHidden?: boolean;
+  /** 8/21 waypoint markers: numbered circles at course waypoints (①②③ —
+      matches the route list). `title` = the waypoint's name → native callout
+      on tap where the map is interactive (card mode is pointerEvents-none,
+      so callouts are structurally inert there — tap-to-enlarge is the door).
+      Names stay the served neutral placeholders (real-POI-only rule). */
+  waypointMarkers?: { lat: number; lng: number; label: string; title?: string }[];
 };
 
-export function RealMap({ height, borderRadius = 0, polyline, center, marker = false, startPin = false, showsUser = false, interactive = false, cache = true, distanceMarkers = false, units = 'km', officialDistanceKm, lineHidden = false, mapType, showsPoi = false, compassOffset }: Props) {
+export function RealMap({ height, borderRadius = 0, polyline, center, marker = false, startPin = false, showsUser = false, interactive = false, cache = true, distanceMarkers = false, units = 'km', officialDistanceKm, lineHidden = false, mapType, showsPoi = false, compassOffset, waypointMarkers }: Props) {
   // 지연 two-tone — keys on the RESOLVED scheme since Phase 5 (manual 다크
   // gets the dark stroke; 시스템 mode behaves as before via the store).
   // Map-theme binding (2026-07-22): the map obeys the APP's scheme picker,
@@ -215,6 +221,13 @@ export function RealMap({ height, borderRadius = 0, polyline, center, marker = f
             the ={false} "optimization" snapshotted an EMPTY bitmap at mount
             (the known iOS pitfall, convicted by the in-file control group
             2026-07-22) */}
+        {waypointMarkers && waypointMarkers.length > 0 ? waypointMarkers.map(w => (
+          <Marker key={`wp-${w.label}`} coordinate={{ latitude: w.lat, longitude: w.lng }} anchor={{ x: 0.5, y: 0.5 }} title={w.title}>
+            <View style={{ minWidth: 22, height: 22, borderRadius: 11, paddingHorizontal: 4, backgroundColor: stroke, borderWidth: 2, borderColor: '#fff', alignItems: 'center', justifyContent: 'center' }}>
+              <Text style={{ fontSize: 11, fontWeight: '800', color: '#0D1A06' }}>{w.label}</Text>
+            </View>
+          </Marker>
+        )) : null}
         {line && !lineHidden ? crossings.map(c => (
           <Marker key={`km-${c.n}`} coordinate={{ latitude: c.lat, longitude: c.lng }} anchor={{ x: 0.5, y: 0.5 }}>
             <View style={{ minWidth: 19, height: 19, borderRadius: 10, paddingHorizontal: 3, backgroundColor: markerFill, borderWidth: 2, borderColor: stroke, alignItems: 'center', justifyContent: 'center' }}>
