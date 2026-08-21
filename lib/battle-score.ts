@@ -24,6 +24,10 @@ export type BattleRun = {
   distance_km: number;
   duration_sec: number;
   avg_pace_sec_per_km: number | null;
+  /** anti-cheat adjusted flag (already on the run record) — flagged runs
+      score ZERO (8/21: scoring a server-flagged distance at face value was
+      a face-value bug, not a contract question) */
+  is_flagged?: boolean;
 };
 
 export type BattleParticipant = {
@@ -37,6 +41,8 @@ export type BattleParticipant = {
 export type RunScore = {
   runId: string;
   qualified: boolean;
+  /** true = excluded by the anti-cheat flag (UI renders 미집계, distinctly) */
+  flagged: boolean;
   base: number;
   completion: number;
   pace: number;
@@ -64,15 +70,19 @@ export function scoredRun(
   participant: BattleParticipant,
   window: { fiveKmTaken: boolean; tenKmTaken: boolean },
 ): RunScore {
+  if (run.is_flagged) {
+    return { runId: run.id, qualified: false, flagged: true, base: 0, completion: 0, pace: 0, milestone: 0, earlyBird: 0, pts: 0 };
+  }
   const qualified = run.distance_km >= QUALIFY_KM;
   if (!qualified) {
-    return { runId: run.id, qualified, base: 0, completion: 0, pace: 0, milestone: 0, earlyBird: 0, pts: 0 };
+    return { runId: run.id, qualified, flagged: false, base: 0, completion: 0, pace: 0, milestone: 0, earlyBird: 0, pts: 0 };
   }
   const base = Math.round(run.distance_km * 10);
   const completion = 20;
   const beatsBaseline =
     participant.baselinePaceSecPerKm != null &&
     run.avg_pace_sec_per_km != null &&
+    run.avg_pace_sec_per_km > 0 && // corrupt/negative pace must not "beat" anything (8/21 harness catch)
     run.avg_pace_sec_per_km < participant.baselinePaceSecPerKm;
   const pace = beatsBaseline ? Math.round(run.distance_km * 5) : 0;
   let milestone = 0;
@@ -86,13 +96,13 @@ export function scoredRun(
   const localHour = hourMatch ? Number(hourMatch[1]) : new Date(run.ran_at).getHours();
   const earlyBird = localHour < 7 ? 10 : 0;
   const pts = base + completion + pace + milestone + earlyBird;
-  return { runId: run.id, qualified, base, completion, pace, milestone, earlyBird, pts };
+  return { runId: run.id, qualified, flagged: false, base, completion, pace, milestone, earlyBird, pts };
 }
 
 /** Chronological walk (one-time milestones bind to the EARLIEST qualifying
     run regardless of input order), then the streak multiplier on the sum. */
 export function aggregateScore(runs: BattleRun[], participant: BattleParticipant): BattleScore {
-  const ordered = [...runs].sort((a, b) => a.ran_at.localeCompare(b.ran_at));
+  const ordered = [...runs].sort((a, b) => a.ran_at.localeCompare(b.ran_at) || a.id.localeCompare(b.id)); // id tiebreak — same-second runs get a deterministic milestone holder (8/21 harness catch)
   const window = { fiveKmTaken: false, tenKmTaken: false };
   let firstFiveKmRunId: string | null = null;
   let firstTenKmRunId: string | null = null;

@@ -24,6 +24,13 @@ export function deepLink(n: DeepLinkTarget): (() => void) | null {
   switch (n.type) {
     case 'run_kudoed':
     case 'run_commented': // target_type "run", target_id = run id (probed)
+    case 'battle_invited':
+    case 'battle_overtaken':
+    case 'battle_won':
+      // 8/21 battle pre-wire: DELIBERATELY inert (null) — the battle screen
+      // doesn't exist yet; a wrong-guess route is worse than no route.
+      // TODO(contract): point at the battle detail when her shape lands.
+      return null;
     case 'reply_to_comment': // 8/4 forward-wire (see notifications.tsx) —
       // same landing by construction: the target is still the RUN the
       // comment thread lives on, which may belong to a third party.

@@ -67,6 +67,13 @@ const typeMeta = (C: Tokens): Record<string, Meta> => ({
   run_kudoed:          { tag: 'ntf.tagKudos',   tone: C.accentGrn, icon: 'avatar', copy: 'ntf.runKudoed' },
   // 10th type, discovered live 2026-07-07 (ships with her run-comments batch)
   run_commented:       { tag: 'ntf.tagComment', tone: C.accentGrn, icon: 'avatar', copy: 'ntf.runCommented' },
+  // 8/21 battle pre-wire (the reply_to_comment precedent): GUESSED type
+  // strings — her real contract = one key rename per line; until then any
+  // battle notification lands on fallbackMeta harmlessly. bt.ntfWon is
+  // actorless (the battle ends; nobody "did" it to you).
+  battle_invited:      { tag: 'bt.tagBattle', tone: C.accentGrn, icon: 'avatar', copy: 'bt.ntfInvited' },
+  battle_overtaken:    { tag: 'bt.tagBattle', tone: C.sun,       icon: 'avatar', copy: 'bt.ntfOvertaken' },
+  battle_won:          { tag: 'bt.tagBattle', tone: C.crown, icon: { name: 'trophy-outline', color: C.crown, bg: C.surfaceAlt }, copy: 'bt.ntfWon', actorless: true },
   // 8/4 forward-wire: IF 지연 ships a distinct type instead of a payload flag.
   // (We asked for the flag — a new type leaves every un-updated client on
   // FALLBACK_META with an INERT tap, since deepLink defaults to null. Wired

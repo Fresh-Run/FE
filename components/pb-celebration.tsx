@@ -69,7 +69,7 @@ const BITS: Bit[] = (() => {
   }));
 })();
 
-function Confetti() {
+export function Confetti() { // exported 8/21 — battle win-reveal reuses the exact machinery (seeded bits, house colors)
   const C = useTokens();
   const colors = confettiColors(C);
   const progress = useRef(BITS.map(() => new Animated.Value(0))).current;
