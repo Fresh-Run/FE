@@ -1292,7 +1292,7 @@ export const ko = {
   'wx.pm10': '미세먼지 (AQI)',
   'wx.pm25': '초미세 PM2.5',
   'wx.wind': '바람',
-  'wx.uvMax': '오늘 최고 자외선',
+  'wx.uvNow': '현재 자외선',
   'wx.rain1h': '강수량 (1시간)',
   'wx.none': '없음',
   'wx.share': '{place} 러닝 날씨 — {t}° {cond}, 체감 {feels}° · AI 러닝 지수 {score}/100 ({verdict}) — FreshRun',

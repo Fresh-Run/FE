@@ -1278,7 +1278,7 @@ export const en: Record<keyof typeof ko, string> = {
   'wx.pm10': 'Air quality (PM10)',
   'wx.pm25': 'Ultrafine PM2.5',
   'wx.wind': 'Wind',
-  'wx.uvMax': "Today's peak UV",
+  'wx.uvNow': 'Current UV',
   'wx.rain1h': 'Rain (1h)',
   'wx.none': 'None',
   'wx.share': '{place} running weather — {t}° {cond}, feels like {feels}° · AI run index {score}/100 ({verdict}) — FreshRun',

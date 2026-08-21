@@ -156,15 +156,16 @@ export default function WeatherDetailScreen() {
       value:     w ? w.wind_ms.toFixed(1) : '—',
       sub:       '㎧',
     },
-    // 자외선 — LIVE (uv landed on the payload, probed 2026-07-14; 기상청
-    // 5단계, C.uv map). Contract: null on partial outage → tile hidden.
-    // Label says daily-max per 지연's ⓐ ruling: /data/2.5/uvi returns the
-    // day's solar-noon UV, not a current reading (the night-9.8 finding).
-    // Night collapse (is_day, BE 2bd2855): a noon-max reading is noise at
-    // midnight — tile hides after dark.
+    // 자외선 — LIVE (기상청 5단계, C.uv map). Contract: null on partial
+    // outage → tile hidden. SEMANTICS FLIPPED 8/21 (지연 8/17, One Call 4.0
+    // 이행): the payload now carries a REAL-TIME uvi, not the old 2.5-era
+    // daily solar-noon max — probed 2026-08-21 09:17 KST: value 1.9 (낮음),
+    // a max reading would be ~7-9 in August. Label follows ('현재 자외선').
+    // Night collapse (is_day, BE 2bd2855) kept — current UV after dark is
+    // ~0 and the tile stays hidden as before.
     ...(w && (!w.uv || !w.is_day) ? [] : [{
       iconName:  'sunny-outline',
-      label:     T('wx.uvMax'),
+      label:     T('wx.uvNow'),
       value:     w?.uv ? String(w.uv.value) : '—',
       sub:       gradeDisp(w?.uv?.grade),
       subColor:  w?.uv ? C.uv[w.uv.grade] : undefined,
