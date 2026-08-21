@@ -43,7 +43,7 @@ import { accentShadow, radius as R, shadows, spacing as S, type Tokens, DENSE_MA
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { takePendingCrewRegion } from '@/store/pending-crew-region';
 
-export const CREW_COLORS = ['#74E827', '#2F8FE8', '#E8703D', '#A24DE8', '#E8B53D'];
+export const CREW_COLORS = ['#39FF14', '#2F8FE8', '#E8703D', '#A24DE8', '#E8B53D']; // slot 0 rebranded 8/20 — crews with the stored old hex keep rendering it (server value, by design)
 export const SPORTS = ['러닝', '라이딩', '워킹'] as const; // SERVER values — display via SPORT_KEY
 const SPORT_KEY = { '러닝': 'crw.sportRun', '라이딩': 'crw.sportRide', '워킹': 'crw.sportWalk' } as const;
 export const LEVELS: CrewLevel[] = ['입문', '중급', '고급', '무관']; // SERVER values

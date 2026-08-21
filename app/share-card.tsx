@@ -102,7 +102,7 @@ const METRIC_LABELS = {
 const BG_ADJUST_CAP = 20;
 // v2.1 stroke presets — the house lime leads; fixture companions chosen for
 // dark-canvas/photo legibility (the composer's canvas family)
-const STROKE_COLORS = ['#74E827', '#FFFFFF', '#FFC24B', '#5AC8FA', '#FF6B81'];
+const STROKE_COLORS = ['#39FF14', '#FFFFFF', '#FFC24B', '#5AC8FA', '#FF6B81'];
 const STROKE_WEIGHTS = [[3, 'shr.thin'], [4.5, 'shr.normal'], [6, 'shr.thick']] as const; // keys — render-time
 // default stack ≈ the old bottom-left block (canvas fractions)
 const DEFAULT_PLACEMENT: Record<ShareLayerKey, MetricPlacement> = {
@@ -1079,8 +1079,8 @@ const makeSt = (C: Tokens) => StyleSheet.create({
 
   metricLayer: { position: 'absolute', left: 0, top: 0, flexDirection: 'row', alignItems: 'baseline', gap: 7 },
   // smart guides — thin lime full-bleed (the PPT look); 74E827 = the house lime
-  guideV: { position: 'absolute', left: 0, top: 0, width: 1.5, backgroundColor: '#74E827', opacity: 0 },
-  guideH: { position: 'absolute', left: 0, top: 0, height: 1.5, backgroundColor: '#74E827', opacity: 0 },
+  guideV: { position: 'absolute', left: 0, top: 0, width: 1.5, backgroundColor: '#39FF14', opacity: 0 },
+  guideH: { position: 'absolute', left: 0, top: 0, height: 1.5, backgroundColor: '#39FF14', opacity: 0 },
   statVal:    { fontSize: 21, fontWeight: '800', color: '#fff', letterSpacing: -0.6, fontVariant: ['tabular-nums'], textShadowColor: 'rgba(0,0,0,0.55)', textShadowRadius: 5 },
   statLbl:    { fontSize: 11, fontWeight: '600', color: 'rgba(255,255,255,0.75)', letterSpacing: -0.2, textShadowColor: 'rgba(0,0,0,0.55)', textShadowRadius: 4 },
   wordmark:   { position: 'absolute', right: 14, bottom: 12, fontSize: 12, fontWeight: '800', letterSpacing: -0.3, color: 'rgba(255,255,255,0.82)', textShadowColor: 'rgba(0,0,0,0.5)', textShadowRadius: 4 },
@@ -1138,7 +1138,7 @@ const makeSt = (C: Tokens) => StyleSheet.create({
   actions:      { paddingHorizontal: S.gutter, paddingTop: 18, gap: 9 },
   textShareBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 14, paddingVertical: 14 },
   textShareTxt: { fontSize: 14.5, fontWeight: '700', color: C.text, letterSpacing: -0.3 },
-  exportLive:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#74E827', borderRadius: 14, paddingVertical: 15 },
+  exportLive:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#39FF14', borderRadius: 14, paddingVertical: 15 },
   exportLiveTxt: { fontSize: 15, fontWeight: '800', color: '#0C1206', letterSpacing: -0.3 },
   textShareSubTxt: { fontSize: 13, fontWeight: '600', color: C.sub, letterSpacing: -0.2 },
 });

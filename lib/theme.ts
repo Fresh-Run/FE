@@ -49,13 +49,13 @@ export const palette = {
 // ─── Semantic color tokens ────────────────────────────────────────────────────
 
 /** Route-line two-tone (지연 ruling 2026-07-16): LIGHT #2E7D32 / DARK
-    #74E827 — the DARK tone IS the Live Activity lime, so lock screen and map
+    #39FF14 — the DARK tone IS the Live Activity lime, so lock screen and map
     stay consistent. Keys on the SYSTEM scheme: the app's only live theme
     mechanism (settings.theme is persist-only — ledgered board item). Dark-
     fixed panels (MiniMap's night canvas, the LA widget) use the dark tone
     unconditionally — panel-keyed, not scheme-keyed (the LA precedent). */
 export const routeStroke = (scheme: 'light' | 'dark' | null | undefined): string =>
-  scheme === 'dark' ? '#74E827' : '#2E7D32';
+  scheme === 'dark' ? '#39FF14' : '#2E7D32'; // dark tone rebranded 8/20 (identity: == accent == LA lime)
 
 /** Course under-layer on the live tracking map — the "where to go" line,
     visually DISTINCT from the accent "where I've been" path (deep green vs
@@ -293,15 +293,16 @@ export const darkColors: Tokens = {
   text:  '#F2F3F0',
   sub:   '#9A9EA5',
   faint: '#6A6F77',
-  // Accent — JUDGMENT (c)+ (owner, 2026-07-21): 지연's #74E827 ADOPTED
-  // (== LA lime + route-line dark tone — the brand protagonist); accentGrn
-  // follows (the canvas dark ternary = accent). accentText #0D1A06 already
-  // agreed (J1 convergence). accentDim held (her draft gave none). Her
-  // pressed #5FC41E: noted-unconsumable, no pressed system exists.
-  accent:     '#74E827',
+  // Accent — REBRAND (designer spec 프레쉬런_8_12, owner-confirmed 8/20):
+  // #39FF14 replaces 지연's 7/21 #74E827 across all accent surfaces. The
+  // identity rule survives the swap: accent == LA lime == route-line dark
+  // tone (the brand protagonist); accentGrn follows (canvas dark ternary =
+  // accent). accentText #0D1A06 stays (contrast improves on the brighter
+  // green). accentDim held. Pressed system still nonexistent.
+  accent:     '#39FF14',
   accentText: '#0D1A06',
   accentDim:  '#18260D',
-  accentGrn:  '#74E827',
+  accentGrn:  '#39FF14',
   // Semantic — blue/sun scheme-invariant per canvas; danger from FR_DARK;
   // crown DERIVED (no canvas source — canvas debt)
   blue:   palette.blue400,
@@ -311,10 +312,10 @@ export const darkColors: Tokens = {
   medalGold:   '#F5C542',
   medalSilver: '#C4CCC0',  // green-undertone
   medalBronze: '#D89860',
-  chart:          '#74E827',  // her chart primary (== LA/route lime)
+  chart:          '#39FF14',  // her chart primary (== LA/route lime — rides the 8/20 rebrand identity)
   chartSecondary: '#4A9BE8',
   chartTertiary:  '#B08AE8',
-  paceFast: '#74E827',
+  paceFast: '#39FF14', // rebrand 8/20 — rides the accent identity
   paceMid:  '#C8E85A',
   paceSlow: '#E8B84A',
   // JUDGMENT (c)+ (owner): her danger ADOPTED. Surfaces/text stay FR_DARK

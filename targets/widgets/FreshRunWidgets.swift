@@ -1,6 +1,6 @@
 // FreshRun Live Activity UI (④a) — 지연's canvas spec "FreshRun Live
 // Activity.html" (design source of truth): lock-screen card + Dynamic Island
-// compact / minimal / expanded, lime #74E827 on ink #0D1A06, elapsed time
+// compact / minimal / expanded, lime #39FF14 on ink #0D1A06, elapsed time
 // self-counting via Text(timerInterval:) (zero updates needed for the clock).
 //
 // Stated adaptations (checkpointed):
@@ -18,7 +18,7 @@ import SwiftUI
 import WidgetKit
 
 // ── Design tokens (canvas) ───────────────────────────────────────────────────
-private let lime = Color(red: 116 / 255, green: 232 / 255, blue: 39 / 255)   // #74E827
+private let lime = Color(red: 57 / 255, green: 255 / 255, blue: 20 / 255)   // #39FF14 — rebrand 8/20; NATIVE: lands with the next binary cut (the widget shows the old green until then, stated drift)
 private let ink = Color(red: 13 / 255, green: 26 / 255, blue: 6 / 255)       // #0D1A06
 private let textHi = Color(red: 234 / 255, green: 241 / 255, blue: 230 / 255) // #EAF1E6
 private let textLo = Color(red: 154 / 255, green: 166 / 255, blue: 154 / 255) // #9AA69A

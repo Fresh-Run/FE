@@ -1,8 +1,10 @@
+import { Montserrat_500Medium, Montserrat_600SemiBold } from '@expo-google-fonts/montserrat';
 import { DarkTheme, DefaultTheme, ThemeProvider as NavThemeProvider } from '@react-navigation/native';
 import { router, Stack, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect } from 'react';
 import { ActivityIndicator, View } from 'react-native';
+import { useFonts } from 'expo-font';
 import 'react-native-reanimated';
 
 import { useTokens } from '@/hooks/use-tokens';
@@ -115,6 +117,17 @@ function RootLayoutInner() {
 }
 
 export default function RootLayout() {
+  // ── Brand fonts (designer spec 8/12, wired 8/20; owner rulings 8/20) ─────
+  // Montserrat ONLY (500 labels / 600 values·numbers per the designer's
+  // mapping). NotoSansKR REMOVED by owner ruling — 5.9MB/weight was the OTA
+  // cost; the iOS system 고딕 (Apple SD Gothic Neo) stays for Korean.
+  // Loaded at root, NO render gate: zero surfaces consume the families yet
+  // (adoption = its own slices), so there is no flash to gate against; the
+  // returned flag is deliberately unread until the first adopting surface.
+  useFonts({
+    Montserrat_500Medium,
+    Montserrat_600SemiBold,
+  });
   return (
     <>
       <AuthGuard />
