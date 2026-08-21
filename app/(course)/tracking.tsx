@@ -115,7 +115,7 @@ const NEXT_BAND_M = 300;      // the emphasized "next stretch" band + the turn o
 const TURN_EXECUTE_M = 40;    // T2 voice: the "지금 우회전" execute cue threshold (tunable — field decision)
 // nav v6 (8/9 field): the heading cone + backward detection
 const CONE_SMOOTH_ALPHA = 0.25;  // circular low-pass — a jittery cone is worse than none
-const CONE_COMMIT_DEG = 3;       // render throttle: re-render only on ≥3° smoothed change (v6.1: each commit re-renders a live marker — 3° ≈ ≤10 renders/s at slow hand rotation)
+const CONE_COMMIT_DEG = 0.5;     // v6.2 (owner): dropped 3°→0.5° — rules out threshold-filtering as the freeze cause; revisit the throttle after the fix is field-proven
 const BACKWARD_M = 30;           // net regression vs window max → wrong-way cue (tunable)
 const BACKWARD_RESET_M = 15;     // forward progress vs window min → re-arm turns
 const BACKWARD_WINDOW_MS = 45_000;
@@ -855,7 +855,14 @@ export default function TrackingScreen() {
   // commit to React state only on ≥2° smoothed change — the cone glides.
   // trueHeading < 0 falls back to magHeading; no usable heading (accuracy
   // < 0 / no hardware / permission quirk) → cone hidden, plain dot stands.
-  const [coneHeading, setConeHeading] = useState<number | null>(null);
+  // v6.2 (지연 verdict: cone rendered but froze on 360° rotation): the
+  // screen angle is now composed AT EVENT TIME and committed as STATE —
+  // the old render-time `coneHeading - camHeadingRef.current` read a
+  // non-reactive ref inside render, which the React Compiler may cache
+  // (the formatter-cache class, this screen's own 783 lesson). Render is
+  // now a pure state interpolation; every commit is a guaranteed re-render.
+  const [coneScreenDeg, setConeScreenDeg] = useState<number | null>(null);
+  const [coneRawDbg, setConeRawDbg] = useState<number | null>(null); // TEMP v6.2 diagnostic — strip after 지연's verdict
   const coneSmoothRef = useRef<number | null>(null);
   // v6.1: the camera's CURRENT heading as WE last commanded/synced it — the
   // cone's screen rotation composes as (worldHeading − cameraHeading)
@@ -866,7 +873,7 @@ export default function TrackingScreen() {
   const camHeadingRef = useRef(0);
   useEffect(() => {
     // courseCoords-keyed (hasCoursePath declares later in the file — same truth)
-    if (!(courseCoords.length > 1 && state !== 'idle')) { setConeHeading(null); coneSmoothRef.current = null; return; }
+    if (!(courseCoords.length > 1 && state !== 'idle')) { setConeScreenDeg(null); setConeRawDbg(null); coneSmoothRef.current = null; return; }
     let sub: { remove: () => void } | null = null;
     let dead = false;
     (async () => {
@@ -877,6 +884,11 @@ export default function TrackingScreen() {
           // only a negative heading value itself means "no data".
           const deg = ev.trueHeading >= 0 ? ev.trueHeading : ev.magHeading;
           if (deg < 0) return;
+          // TEMP v6.2 diagnostic (strip after verdict): raw heading before
+          // smoothing — TF has no Metro console, so the on-cone readout
+          // below is the observable; the log covers the dev lane.
+          console.log('[cone] raw heading', Math.round(deg));
+          setConeRawDbg(Math.round(deg));
           const prev = coneSmoothRef.current;
           let next = deg;
           if (prev != null) {
@@ -884,7 +896,10 @@ export default function TrackingScreen() {
             next = (prev + delta * CONE_SMOOTH_ALPHA + 360) % 360;
           }
           coneSmoothRef.current = next;
-          setConeHeading(c => (c == null || Math.abs(((next - c + 540) % 360) - 180) >= CONE_COMMIT_DEG ? next : c));
+          // v6.2: compose HERE (event time — imperative ref read, compiler-
+          // safe): screen = worldHeading − cameraHeading, normalized.
+          const screen = (((next - camHeadingRef.current) % 360) + 360) % 360;
+          setConeScreenDeg(c => (c == null || Math.abs(((screen - c + 540) % 360) - 180) >= CONE_COMMIT_DEG ? screen : c));
         });
         if (dead) h.remove(); else sub = h;
       } catch { /* no compass — plain dot, graceful */ }
@@ -1354,12 +1369,20 @@ export default function TrackingScreen() {
               natively (the dot's snapshot-flip trick would freeze it; one
               small live marker at ≤10 commits/s is the km-marker precedent
               cost class). Hidden when no usable heading (plain dot). */}
-          {hasCoursePath && state !== 'idle' && dotCoord != null && coneHeading != null ? (
+          {hasCoursePath && state !== 'idle' && dotCoord != null && coneScreenDeg != null ? (
             <Marker coordinate={dotCoord} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges zIndex={9}>
-              <View style={[st.coneWrap, { transform: [{ rotate: `${(((coneHeading - camHeadingRef.current) % 360) + 360) % 360}deg` }] }]}>
+              <View style={[st.coneWrap, { transform: [{ rotate: `${coneScreenDeg}deg` }] }]}>
                 <View style={st.headingConeRim} />
                 <View style={st.headingCone} />
               </View>
+            </Marker>
+          ) : null}
+          {/* TEMP v6.2 diagnostic marker (strip after 지연's verdict): the
+              raw sensor number, un-rotated — spinning number + frozen cone
+              = render/native channel; frozen number = sensor stall. */}
+          {hasCoursePath && state !== 'idle' && dotCoord != null && coneRawDbg != null ? (
+            <Marker coordinate={dotCoord} anchor={{ x: 0.5, y: -1.6 }} tracksViewChanges zIndex={11}>
+              <View style={st.coneDbg}><Text style={st.coneDbgTxt}>{coneRawDbg}°</Text></View>
             </Marker>
           ) : null}
           {hasCoursePath && state !== 'idle' && dotCoord != null ? (
@@ -1668,6 +1691,9 @@ const makeSt = (C: Tokens) => StyleSheet.create({
   // white rim + solid system-blue body, apex meeting the dot's edge,
   // widening outward. Two stacked border-triangles fake the rim.
   coneWrap: { width: 64, height: 64, alignItems: 'center' },
+  // TEMP v6.2 diagnostic chip
+  coneDbg: { backgroundColor: 'rgba(0,0,0,0.65)', borderRadius: 6, paddingHorizontal: 5, paddingVertical: 1 },
+  coneDbgTxt: { color: '#fff', fontSize: 10, fontWeight: '700', fontVariant: ['tabular-nums'] },
   headingConeRim: {
     marginTop: 2, width: 0, height: 0,
     borderLeftWidth: 14, borderRightWidth: 14, borderTopWidth: 24,
