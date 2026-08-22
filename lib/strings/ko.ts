@@ -464,7 +464,7 @@ export const ko = {
   'prof.close': '닫기',
   'prof.hkDisconnect': '연결 해제',
   'prof.hkUnavailT': '사용할 수 없어요',
-  'prof.hkUnavailB': '이 기기에서는 Apple Health을 사용할 수 없어요.',
+  'prof.hkUnavailB': '이 기기에서는 Apple Health를 사용할 수 없어요.',
   'prof.hkConnFailT': '연결 실패',
   'prof.hkConnOkT': 'Apple Health 연결됨',
   'prof.hkConnOkB': '이제 저장하는 러닝이 건강 앱에 운동으로 기록돼요. 권한을 나중에 바꾸려면 건강 앱 > 공유 > 앱에서 조정할 수 있어요.',
