@@ -1,4 +1,4 @@
-// Apple 건강 integration (③, Slice C — pure JS over the build-#4 natives).
+// Apple Health integration (③, Slice C — pure JS over the build-#4 natives).
 // kingstinct v14 (Nitro): write the finished run as a real HKWorkout (+ the
 // GPS route into Fitness maps — the ratification bonus), read body mass for
 // the 체중-가져오기 affordance. HR read auth is requested for the roadmap

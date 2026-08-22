@@ -150,7 +150,7 @@ export default function RunResultScreen() {
       });
       savedRunRef.current = saved;
       setSaveState('saved');
-      // ③: mirror into Apple 건강 (opt-in gated, fire-and-forget) — the
+      // ③: mirror into Apple Health (opt-in gated, fire-and-forget) — the
       // safety-net save path gets the same hook as the compose path
       maybeWriteRunToHealth(run);
       if (saved.new_records && saved.new_records.length > 0) setPbRecords(saved.new_records);

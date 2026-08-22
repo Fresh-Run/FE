@@ -258,7 +258,7 @@ export default function ProfileScreen() {
   const themeMode     = useScheme(s => s.mode); // Phase 5 — the 테마 row value
   const lang          = useSettings(s => s.settings.lang);
 
-  // Apple 건강 opt-in (③ Slice C — device-local; enable = the HK sheet once).
+  // Apple Health opt-in (③ Slice C — device-local; enable = the HK sheet once).
   // iOS hides write-denial by design: `enabled` records the opt-in, and the
   // post-enable alert names 건강 앱 > 공유 as the re-grant home.
   const healthOn = useHealth(s => s.enabled);
@@ -409,7 +409,7 @@ export default function ProfileScreen() {
             condition met: HealthKit shipped at build #4). Original row
             grammar from git (9fb4462~1): heart icon #EF444418, state
             subtitle. The original rows were INERT — no tap behavior existed
-            to restore — so taps get the real feature: Apple 건강 drives the
+            to restore — so taps get the real feature: Apple Health drives the
             opt-in/disconnect flow (the 설정-group toggle's third and FINAL
             home; one truth). 소셜 계정 = OWNER OVERRIDE of A2: visible +
             tappable 준비-중 alert NOW, wired when 지연's social-links

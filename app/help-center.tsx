@@ -5,7 +5,7 @@
  * HONEST-CONTENT ADAPTATIONS (stated): canvas FAQ #3 (Premium) re-worded to
  * the B1 page's truthful feature list (the canvas's "심층 퍼포먼스 분석"
  * phrasing overclaims — guide §132 fields don't exist). Canvas FAQ #4
- * referenced Apple 건강 sync — that row was REMOVED this same slice (A2
+ * referenced Apple Health sync — that row was REMOVED this same slice (A2
  * ruling), so the FAQ is replaced with a truthful visibility Q&A. 이메일
  * 문의 opens the real mail composer (canvas pushed a stub screen —
  * a mailto: link is the honest version of that row). Address = the real

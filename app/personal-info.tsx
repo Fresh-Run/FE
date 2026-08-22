@@ -421,7 +421,7 @@ export default function PersonalInfoScreen() {
         {/* ── 신체 정보 ── */}
         <Group title={T('pi.gBody')} hint={T('pi.gBodyHint')}>
           <NumberWheelRow label={T('pi.weight')} value={weightKg} min={30} max={150} step={0.5} suffix=" kg" onChange={setWeightKg} />
-          {/* ③: 건강에서 체중 가져오기 — visible only after the Apple 건강
+          {/* ③: 건강에서 체중 가져오기 — visible only after the Apple Health
               opt-in (설정). Sets the wheel; 저장 still commits it (no silent
               writes). Honest empty state when 건강 has no record. */}
           {healthOn && (

@@ -239,7 +239,7 @@ export default function RunSaveScreen() {
       savedOnceRef.current = true;
       markSaved(saved); // disk copy dropped — server has it now
       runSession.stop(); // the checkpoint's deferred teardown — GPS/LA die HERE (idempotent)
-      // ③: mirror the run into Apple 건강 (opt-in gated, fire-and-forget —
+      // ③: mirror the run into Apple Health (opt-in gated, fire-and-forget —
       // the server save above is the source of truth; HK never blocks it)
       maybeWriteRunToHealth(run);
       exitingRef.current = true;

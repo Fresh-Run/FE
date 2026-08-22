@@ -1,5 +1,5 @@
 /**
- * Apple 건강 연동 opt-in (③ Slice C) — DEVICE-LOCAL (AsyncStorage persist).
+ * Apple Health 연동 opt-in (③ Slice C) — DEVICE-LOCAL (AsyncStorage persist).
  * (The old use-audio-coach store that pioneered this pattern migrated to the
  * server 2026-07-23; health stays local BY DESIGN.) NOT on PATCH /me/settings: the
  * server has no health field (지연-confirmed greenfield) and HealthKit
