@@ -77,7 +77,7 @@
         "@kingstinct/react-native-healthkit",
         {
           "NSHealthShareUsageDescription": "러닝 기록과 함께 심박수·체중을 보여주기 위해 건강 데이터를 읽어요.",
-          "NSHealthUpdateUsageDescription": "완료한 러닝을 Apple 건강에 운동으로 기록해요.",
+          "NSHealthUpdateUsageDescription": "완료한 러닝을 Apple Health에 운동으로 기록해요.",
           "background": false
         }
       ],
