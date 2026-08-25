@@ -301,6 +301,7 @@ export default function SavedCoursesScreen() {
       start_lat: r.polyline?.[0]?.lat ?? null,
       start_lng: r.polyline?.[0]?.lng ?? null,
       polyline: r.polyline,
+      waypoints: r.waypoints,
       is_mine: true,
       owner_nickname: me?.nickname ?? null,
       owner_avatar_url: null,
