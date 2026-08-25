@@ -1442,7 +1442,7 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 
 ## ⚠️ 스탠딩 퍼블리시 해저드: Apple Sign In 언스테이지 파일 (2026-08-25 — 빌드 13 컷까지)
 - **해저드**: Apple Sign In 클라 통합 7파일 (app.json · app/(auth)/sign-in.tsx · store/use-store.ts · lib/strings/ko.ts·en.ts · package.json·lock) = **언스테이지 홀드** (지연 Supabase Apple provider 설정 + 빌드 13 컷 게이트). sign-in.tsx가 `expo-apple-authentication` 네이티브 모듈을 import — **빌드 ≤12 바이너리에 부재** → 이 워킹 트리에서 빌드 13 전에 OTA 퍼블리시가 발화하면 기존 설치의 로그인 스크린이 import 시점 크래시.
-- **프리-플라이트 룰 (스탠딩)**: 빌드 13 컷 전 모든 퍼블리시 (dual-stage 포함)는 이 파일들을 **stash or 제외** 후 실행. **dual-stage.sh에 실행형 가드 추가 (8/25)**: 7파일 dirty 시 exit 2 (app.json은 기존 라인-32 가드가 선커버) — stash 후 클린이면 통과, 빌드-13 컷 커밋 후엔 자연 해제 (커밋 자체가 빌드 13 게이트라 클린 = 안전). 수동 `eas update` 퍼블리시는 스크립트 밖 — 체크리스트 준수 수동 확인.
+- **프리-플라이트 룰 (스탠딩)**: 빌드 13 컷 전 모든 퍼블리시 (dual-stage 포함)는 이 파일들을 **stash or 제외** 후 실행. **실행형 가드 = `scripts/preflight-check.sh`로 공유화 (8/25 2차)**: 7파일 dirty 시 exit/return 2 — dual-stage.sh가 source, **수동 `eas update` 퍼블리시도 발사 전 `scripts/preflight-check.sh` 실행 (스탠딩)**. stash 후 클린이면 통과, 빌드-13 컷 커밋 후엔 자연 해제 (커밋 자체가 빌드 13 게이트라 클린 = 안전).
 - **해제 조건**: 빌드 13 컷 + 7파일 커밋 → 이 섹션 클로즈 (해저드 소멸 — 신규 바이너리에 모듈 존재, 구 빌드는 runtimeVersion appVersion 정책으로 신규 번들 미수신).
 
 ## 📋 도킷: 경유지 특정 POI 지정 (2026-08-25, 퓨처 슬라이스 — 지연 필드 게이트)
