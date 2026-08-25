@@ -10,7 +10,9 @@
 # the held-unstaged build-13 native integration must never ride an OTA —
 # builds ≤12 lack the expo-apple-authentication native module, and a bundle
 # importing it crashes the login screen on existing installs. Publishing
-# requires these files clean (stash first). Self-clearing: the files' commit
+# requires these files clean (stash first — use `git stash -u`: the tree
+# also carries untracked held files, e.g. verify-email.tsx, that a plain
+# stash leaves behind). Self-clearing: the files' commit
 # is itself gated on the build-13 cut, so clean = safe; close out this guard
 # when the ledger section closes at build 13.
 APPLE_DIRTY=$(git status --porcelain -- app.json "app/(auth)/sign-in.tsx" store/use-store.ts lib/strings/ko.ts lib/strings/en.ts package.json package-lock.json)
