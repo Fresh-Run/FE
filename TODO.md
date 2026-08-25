@@ -1440,6 +1440,12 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 - **폰트 어답션 잔여 결정 (디자이너/오너)**: 퍼-표면 패밀리 스플릿 (RN 퍼-스크립트 폴백 부재 — 한국어 포함 텍스트는 패밀리 지정 불가∵Noto 제거, 순수 EN/숫자 표면만 Montserrat 후보).
 - tsc 0 · eslint 0 에러 · **미스테이지** — 스테이징 오더 = 오너 (레인에 v6.1 게이트 팬딩 참조).
 
+## 📋 도킷: 경유지 특정 POI 지정 (2026-08-25, 퓨처 슬라이스 — 지연 필드 게이트)
+- **리콘 확정 (8/25 스테이징 OpenAPI 프로브): 더블 갭** — 클라이언트는 키워드 칩만 보유 (create.tsx 경유지 = 카테고리 single-select, 특정 장소 탭 플로우 부재), 서버 RouteRequest는 `pitstop_keyword`(≤50)만 수용 (`pitstop_name`/`pitstop_coordinate` 부재) → 서버가 Kakao 재검색으로 장소를 고르며 유저 의도와 다른 지점 개연. 스키마-갭 룰 준수: 미빌드.
+- **지연 애스크 (드래프트 완료, 8/25 세션 — 송부 대기)**: RouteRequest에 additive optional `pitstop_name: str|None (≤100)` + `pitstop_coordinate: Coordinate|None` — coordinate **presence-keyed** (`end` 필드 문법 동일): 있으면 Kakao 재검색 생략, 해당 지점 `is_pitstop=true` 고정 경유. `pitstop_keyword`는 폴백+라벨로 기존 동작 불변. 응답 shape 무변경 (기존 `waypoints[]`로 마커/리스트 자동 정합).
+- **FE 스코프 (그녀 필드 착지 시)**: ① 신규 POI 피커 표면 (create 플로우 — 검색 or 맵-탭; start-picker/`/places` 패턴 재사용 후보) = **진짜 슬라이스** (캔버스 디자인 부재 — 디자인-세션 도킷 동승) · ② `RouteInput` + use-generate-route.ts 페이로드 2라인 = 트리비얼 와이어-업.
+- **트리거: 그녀 필드 컨펌** ("스테이징 반영됨" + OpenAPI 마커 확인). 게이트-홀더: 지연 (필드) + 오너 (피커 UI 디자인).
+
 ## 📋 거버넌스 클로즈 3종 (2026-08-21, 오너 룰링)
 - **[G] 답글-카피 E2E [시각] — CLOSED as-arrived**: 목격 타임스탬프 없음 확정 수용 · 리페어 패스 기문서화 · 8/5 거버넌스 패스의 마지막 오픈 브래킷 소멸 (잔여 = [E] 그녀-사이드 단독).
 - **노션 스테일 2종 — 오너 직접 삭제 (8/21)**: 쿠도스 시트 (기출하 8/3, [01:25] 관찰) · S2 마이그레이션 (기출하 7/13, 78edc1d) — 8/8 어드바이저리의 스테일-캐리 정정이 페이지에 반영 완료.
