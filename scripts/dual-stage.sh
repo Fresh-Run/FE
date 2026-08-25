@@ -31,6 +31,15 @@ grep -q "EXPO_PUBLIC_API_URL=https://freshrun-api.fly.dev" .env.local || { echo 
 ! grep -qE "localhost|127\.0\.0\.1|192\.168\." .env.local || { echo "✖ env-guard: local address in .env.local"; exit 2; }
 [[ -z "$(git status --porcelain app.json)" ]] || { echo "✖ app.json already dirty — refusing to start"; exit 2; }
 
+# Apple Sign In hazard guard (8/25, ledgered): the held-unstaged build-13
+# native integration must never ride an OTA — builds ≤12 lack the native
+# module, and a bundle importing it crashes the login screen on existing
+# installs. Publishing requires these files clean (stash first); the guard
+# self-clears when they're committed at the build-13 cut (the commit is
+# itself gated on build 13, so clean = safe).
+APPLE_DIRTY=$(git status --porcelain -- "app/(auth)/sign-in.tsx" store/use-store.ts lib/strings/ko.ts lib/strings/en.ts package.json package-lock.json)
+[[ -z "$APPLE_DIRTY" ]] || { echo "✖ apple-signin guard: build-13 files dirty — stash before publishing:"; echo "$APPLE_DIRTY"; exit 2; }
+
 BACKUP=$(mktemp)
 cp app.json "$BACKUP"
 FLIPPED=0

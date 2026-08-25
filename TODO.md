@@ -1440,6 +1440,11 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 - **폰트 어답션 잔여 결정 (디자이너/오너)**: 퍼-표면 패밀리 스플릿 (RN 퍼-스크립트 폴백 부재 — 한국어 포함 텍스트는 패밀리 지정 불가∵Noto 제거, 순수 EN/숫자 표면만 Montserrat 후보).
 - tsc 0 · eslint 0 에러 · **미스테이지** — 스테이징 오더 = 오너 (레인에 v6.1 게이트 팬딩 참조).
 
+## ⚠️ 스탠딩 퍼블리시 해저드: Apple Sign In 언스테이지 파일 (2026-08-25 — 빌드 13 컷까지)
+- **해저드**: Apple Sign In 클라 통합 7파일 (app.json · app/(auth)/sign-in.tsx · store/use-store.ts · lib/strings/ko.ts·en.ts · package.json·lock) = **언스테이지 홀드** (지연 Supabase Apple provider 설정 + 빌드 13 컷 게이트). sign-in.tsx가 `expo-apple-authentication` 네이티브 모듈을 import — **빌드 ≤12 바이너리에 부재** → 이 워킹 트리에서 빌드 13 전에 OTA 퍼블리시가 발화하면 기존 설치의 로그인 스크린이 import 시점 크래시.
+- **프리-플라이트 룰 (스탠딩)**: 빌드 13 컷 전 모든 퍼블리시 (dual-stage 포함)는 이 파일들을 **stash or 제외** 후 실행. **dual-stage.sh에 실행형 가드 추가 (8/25)**: 7파일 dirty 시 exit 2 (app.json은 기존 라인-32 가드가 선커버) — stash 후 클린이면 통과, 빌드-13 컷 커밋 후엔 자연 해제 (커밋 자체가 빌드 13 게이트라 클린 = 안전). 수동 `eas update` 퍼블리시는 스크립트 밖 — 체크리스트 준수 수동 확인.
+- **해제 조건**: 빌드 13 컷 + 7파일 커밋 → 이 섹션 클로즈 (해저드 소멸 — 신규 바이너리에 모듈 존재, 구 빌드는 runtimeVersion appVersion 정책으로 신규 번들 미수신).
+
 ## 📋 도킷: 경유지 특정 POI 지정 (2026-08-25, 퓨처 슬라이스 — 지연 필드 게이트)
 - **리콘 확정 (8/25 스테이징 OpenAPI 프로브): 더블 갭** — 클라이언트는 키워드 칩만 보유 (create.tsx 경유지 = 카테고리 single-select, 특정 장소 탭 플로우 부재), 서버 RouteRequest는 `pitstop_keyword`(≤50)만 수용 (`pitstop_name`/`pitstop_coordinate` 부재) → 서버가 Kakao 재검색으로 장소를 고르며 유저 의도와 다른 지점 개연. 스키마-갭 룰 준수: 미빌드.
 - ~~지연 애스크 (pitstop_name/pitstop_coordinate 페어 드래프트)~~ **SUPERSEDED — 그녀가 먼저 스펙 도착 (BE `b61c609`, docs/PITSTOP_POI_SPEC.md), SHAPE 합의 8/25**: `RouteRequest.pitstop_place: PitstopPlace|None` (nested object — 우리 플랫 페어보다 원자적: name 없는 coordinate 전송 불가) = `{name: str (필수, Kakao 원문 실명), coordinate: KoreaCoordinate (필수 — 한국 경계 검증 재사용), place_id?: str (관측용), category_code?: str (관측용)}`. Presence-keyed: place 있음 → Kakao 재검색·랭킹 전면 스킵 + 상업 카테고리 필터 우회 (명시 선택 존중) · `pitstop_keyword`는 폴백+라벨 존치 · 응답 shape 무변경. 그녀 협의 6항 회신 (8/25): place 우선/keyword 무시 · 먼-POI 엣지 = ⓓ best-effort+`target_missed` (FE 배너 기존재 — 코스트 0; 오너 컨펌 라이더) · 좌표 클라 사전검증 불요 (`/places` = Kakao 한국産) · `category_code` 전송 (라이브 프로브 CE7 확인) · **`place_id`는 `/places`가 미서빙 (프로브 확인) → 그녀가 `/places`에 추가하기 전까지 생략** · place_id 재조회 무 (클라 좌표 신뢰).
