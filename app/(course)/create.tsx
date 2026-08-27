@@ -17,7 +17,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { errorMessage } from '@/lib/error-copy';
-import { t, tfIn, useLang, getLang } from '@/lib/i18n';
+import { t, tfIn, tIn, useLang, getLang } from '@/lib/i18n';
 import {
   ActivityIndicator,
   Pressable,
@@ -37,6 +37,8 @@ import { useWaypointNames } from '@/hooks/use-waypoint-names';
 import { waypointCacheKey } from '@/lib/waypoint-names';
 import { distUnit, fmtDist, KM_PER_MI, foldMinutes } from '@/lib/run-format';
 import { haversineKm } from '@/lib/run-metrics';
+import { PitstopPickSheet } from '@/components/pitstop-pick-sheet';
+import { type Place } from '@/lib/places-api';
 import { setActiveCourse } from '@/store/active-course';
 import { useEndPoint } from '@/store/end-point';
 import { setRouteMap } from '@/store/route-map';
@@ -242,6 +244,10 @@ export default function CreateScreen() {
   const isMi = units === 'mi';
   const distDisplay = isMi ? distanceKm / KM_PER_MI : distanceKm;
   const [pitstop, setPitstop]       = useState<string | null>(null);
+  // 특정 장소 경유지 (pitstop_place slice 1, 8/26) — keyword와 상호 배타:
+  // 장소 선택 = 키워드 칩 해제, 칩 선택 = 장소 해제 (하나의 pitstop 의도만).
+  const [pitstopPlace, setPitstopPlace] = useState<Place | null>(null);
+  const [pitstopSheetOpen, setPitstopSheetOpen] = useState(false);
 
   // ── 고급 설정 (C2) ──────────────────────────────────────────────────────────
   // 언덕 피하기 seeds from settings.ai_course and is ALWAYS sent as a body
@@ -262,6 +268,12 @@ export default function CreateScreen() {
   const manualStart = useStartPoint(s => s.point);
   useEffect(() => () => useStartPoint.getState().clear(), []);
   const startCoord = manualStart ? { lat: manualStart.lat, lng: manualStart.lng } : gpsCoord;
+  // 서버 위치 밴드 미러 (target×0.5) — 밴드 밖 pitstop_place = 502 (프로브 8/26).
+  // 선택 후 출발지/목표 거리가 바뀐 케이스: 렌더 시점 재검증 → 인라인 warn +
+  // 제출 게이트 (handleGenerate)가 이중으로 막는다.
+  const pitstopBandKm = distanceKm * 0.5;
+  const pitstopTooFar = pitstopPlace != null
+    && haversineKm(startCoord, pitstopPlace.coordinate) > pitstopBandKm;
 
   // ── 일방통행 (v2.3 unlock) ──────────────────────────────────────────────────
   // end is sent ONLY in one-way mode (the server's one-way semantics key on
@@ -318,6 +330,13 @@ export default function CreateScreen() {
 
   async function handleGenerate() {
     if (oneWay && !endCoord) return; // CTA is disabled; belt for the retry paths
+    // Pre-submit re-validation (selection-time guard's twin): the start point
+    // or target distance may have changed after the place was picked — an
+    // out-of-band pitstop_place 502s server-side, so block honestly here.
+    if (pitstopPlace && haversineKm(startCoord, pitstopPlace.coordinate) > distanceKm * 0.5) {
+      setGenError(tIn(lang, 'pit.tooFarSubmit'));
+      return;
+    }
     genCancelledRef.current = false;
     const controller = new AbortController();
     genAbortRef.current = controller;
@@ -333,6 +352,9 @@ export default function CreateScreen() {
         start: startCoord,
         target_distance_km: distanceKm,
         pitstop_keyword: pitstop,
+        pitstop_place: pitstopPlace
+          ? { name: pitstopPlace.name, coordinate: pitstopPlace.coordinate, category_code: pitstopPlace.category_code }
+          : null,
         notes,
         avoid_hills: avoidHills,
         end: oneWay ? endCoord : null,
@@ -755,23 +777,56 @@ export default function CreateScreen() {
           </Pressable>
           {advOpen && (
             <View style={st.advBody}>
-              {/* 경유지 키워드 — single-select → pitstop_keyword */}
+              {/* 경유지 키워드 — single-select → pitstop_keyword. 장소 지정과
+                  상호 배타 (칩 선택 = 장소 해제, pitstop 의도는 하나). */}
               <Text style={st.advSubLabel}>{t('crt.pitKeyword')}</Text>
               <View style={st.chipRow}>
                 <Chip
                   label={t('pit.none')}
-                  active={pitstop === null}
-                  onPress={() => setPitstop(null)}
+                  active={pitstop === null && pitstopPlace === null}
+                  onPress={() => { setPitstop(null); setPitstopPlace(null); }}
                 />
                 {PITSTOP_OPTIONS.map(opt => (
                   <Chip
                     key={opt}
                     label={t(PITSTOP_LABEL_KEY[opt])}
                     active={pitstop === opt}
-                    onPress={() => setPitstop(prev => prev === opt ? null : opt)}
+                    onPress={() => { setPitstopPlace(null); setPitstop(prev => prev === opt ? null : opt); }}
                   />
                 ))}
               </View>
+
+              {/* 특정 장소 지정 (pitstop_place slice 1) — 검색 결과 픽만
+                  (real-POI-only 룰; 임의 좌표 무명 핀 금지). */}
+              {pitstopPlace === null ? (
+                <Pressable onPress={() => setPitstopSheetOpen(true)} style={({ pressed }) => [st.pitPickRow, pressed && { opacity: 0.7 }]} hitSlop={4}>
+                  <Icon name="search" size={15} color={C.accentGrn} />
+                  <Text style={st.pitPickTxt}>{tIn(lang, 'pit.pickEntry')}</Text>
+                  <View style={{ flex: 1 }} />
+                  <Icon name="chevron-forward" size={14} color={C.faint} />
+                </Pressable>
+              ) : (
+                <View>
+                  <Pressable onPress={() => setPitstopSheetOpen(true)} style={({ pressed }) => [st.pitSelRow, pressed && { opacity: 0.8 }]}>
+                    <Icon name="location" size={15} color={C.accentGrn} />
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text style={st.pitSelName} numberOfLines={1}>{pitstopPlace.name}</Text>
+                      {pitstopPlace.address ? (
+                        <Text style={st.pitSelAddr} numberOfLines={1}>{pitstopPlace.address}</Text>
+                      ) : null}
+                    </View>
+                    <Pressable onPress={() => setPitstopPlace(null)} hitSlop={10} accessibilityLabel={tIn(lang, 'pit.clearA11y')}>
+                      <Icon name="close-circle" size={18} color={C.faint} />
+                    </Pressable>
+                  </Pressable>
+                  {pitstopTooFar && (
+                    <View style={st.feasWarn}>
+                      <Icon name="alert-circle-outline" size={14} color={C.sun} />
+                      <Text style={st.feasWarnTxt} numberOfLines={2}>{tIn(lang, 'pit.tooFarSubmit')}</Text>
+                    </View>
+                  )}
+                </View>
+              )}
 
               {/* 회피 — per-request avoid_hills override + notes-append hint */}
               <AdvToggleRow
@@ -838,6 +893,16 @@ export default function CreateScreen() {
           </Text>
         </Pressable>
       </View>
+
+      {/* 경유지 장소 검색 시트 — 밴드 = target×0.5 (서버 미러) */}
+      <PitstopPickSheet
+        visible={pitstopSheetOpen}
+        start={startCoord}
+        bandKm={pitstopBandKm}
+        units={units}
+        onClose={() => setPitstopSheetOpen(false)}
+        onPick={(p) => { setPitstopPlace(p); setPitstop(null); }}
+      />
     </View>
   );
 }
@@ -887,6 +952,12 @@ const makeSt = (C: Tokens) => StyleSheet.create({
 
   // Chips (single and multi-select)
   chipRow:       { flexDirection: 'row', flexWrap: 'nowrap', gap: 8 },
+  // 특정 장소 경유지 (pitstop_place slice 1)
+  pitPickRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10, paddingHorizontal: 12, paddingVertical: 11, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: R.md, borderStyle: 'dashed' },
+  pitPickTxt: { fontSize: 13, fontWeight: '600', color: C.accentGrn, letterSpacing: -0.2 },
+  pitSelRow:  { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 10, paddingHorizontal: 12, paddingVertical: 11, backgroundColor: C.accentGrn + '0F', borderWidth: 1, borderColor: C.accentGrn + '44', borderRadius: R.md },
+  pitSelName: { fontSize: 13, fontWeight: '700', color: C.text, letterSpacing: -0.2 },
+  pitSelAddr: { fontSize: 11, color: C.sub, letterSpacing: -0.2, marginTop: 1 },
   chipWrap:      { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip:          { height: 36, paddingHorizontal: 14, borderRadius: R.pill, backgroundColor: C.surface, borderWidth: 1.5, borderColor: C.border, flexDirection: 'row', alignItems: 'center', gap: 4 },
   chipActive:    { backgroundColor: C.accentDim, borderColor: C.accent },

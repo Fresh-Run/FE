@@ -11,6 +11,9 @@ export type Place = {
   name: string;
   coordinate: { lat: number; lng: number };
   category: string | null;
+  /** Kakao category_group_code (CE7 카페 등) — served since BE 2026-07-22,
+      typed 8/26 for the pitstop_place wire (observational, optional server-side). */
+  category_code: string | null;
   address: string | null;
 };
 

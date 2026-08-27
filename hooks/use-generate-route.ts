@@ -32,6 +32,14 @@ export type RouteInput = {
   start: Coordinate;         // device GPS, Seoul fallback, or manual pick (C1)
   target_distance_km: number;
   pitstop_keyword: string | null;
+  /** 유저 지정 경유지 POI (A-2 계약, BE 5501077 — probed live 2026-08-26).
+      Present → the server skips its Kakao re-search and pins THIS place
+      (name required 1–100, coordinate Korea-bbox 422 pre-quota, category_code
+      optional). We send place XOR keyword: when place is set the keyword is
+      OMITTED from the body (server would place-prioritize anyway; omitting
+      keeps one intent on the wire). Out-of-band picks (> target×0.5 from
+      start) 502 — the client guards pre-submit. */
+  pitstop_place: { name: string; coordinate: Coordinate; category_code: string | null } | null;
   notes: string | null;      // 회피 hints only (분위기 removed 2026-07-16, owner ruling)
   // Per-request override of settings.ai_course.avoid_hills — the guide's
   // body > 내 설정 priority; false counts as an explicit value server-side.
@@ -114,7 +122,16 @@ async function generate(input: RouteInput, signal?: AbortSignal): Promise<Genera
       body: JSON.stringify({
         start: input.start,
         target_distance_km: input.target_distance_km,
-        pitstop_keyword: input.pitstop_keyword,
+        // place XOR keyword (see RouteInput doc) — schema fields only, no extras
+        ...(input.pitstop_place
+          ? {
+              pitstop_place: {
+                name: input.pitstop_place.name,
+                coordinate: input.pitstop_place.coordinate,
+                ...(input.pitstop_place.category_code ? { category_code: input.pitstop_place.category_code } : {}),
+              },
+            }
+          : { pitstop_keyword: input.pitstop_keyword }),
         notes: input.notes,
         avoid_hills: input.avoid_hills,
         // presence-keyed (v2.3): included ONLY in one-way mode
