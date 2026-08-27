@@ -265,6 +265,13 @@ export default function ActivityScreen() {
               hint={kcal ? undefined : T('act.kcalHint')}
             />
           </View>
+          {/* 케이던스 (8/27, avg_cadence_spm additive) — non-null only; the
+              2×2 grid stays untouched for the all-null legacy world. */}
+          {run.avg_cadence_spm != null ? (
+            <View style={[st.tileRow, { marginTop: 10 }]}>
+              <StatTile icon="footsteps-outline" label={T('run.cadence')} value={String(run.avg_cadence_spm)} unit={T('run.cadenceUnit')} />
+            </View>
+          ) : null}
 
           {/* 조정됨 caption — server ±10% recompute (guide §148: is_flagged
               → distance_km replaced, original kept in distance_km_reported).

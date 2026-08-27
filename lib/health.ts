@@ -14,6 +14,7 @@
 import {
   getMostRecentQuantitySample,
   isHealthDataAvailable,
+  queryStatisticsForQuantity,
   requestAuthorization,
   saveWorkoutSample,
   WorkoutActivityType,
@@ -31,6 +32,11 @@ const SHARE = [
 const READ = [
   'HKQuantityTypeIdentifierBodyMass',
   'HKQuantityTypeIdentifierHeartRate',
+  // 8/27 cadence slice — steps for avg_cadence_spm. Pure JS addition (OTA):
+  // already-enabled users get the read-auth sheet re-presented for the NEW
+  // type at the next opt-in touchpoint (iOS only sheets undetermined types);
+  // until granted, step reads return empty → cadence simply absent.
+  'HKQuantityTypeIdentifierStepCount',
 ] as const;
 
 export function healthAvailable(): boolean {
@@ -111,6 +117,33 @@ export async function writeRunToHealth(run: HealthRunInput): Promise<boolean> {
 export function maybeWriteRunToHealth(run: HealthRunInput): void {
   if (!useHealth.getState().enabled) return;
   void writeRunToHealth(run);
+}
+
+/** Avg cadence (steps/min) for a finished run — HK stepCount cumulative sum
+    over the run's wall-clock window ÷ duration (SAME basis as pace: the
+    duration_sec run clock, paused time excluded). null = HK opt-in off /
+    read denied / unavailable / no window (pre-anchor recoveries lack
+    startedAtMs) / zero samples — cadence is simply absent, never an error.
+    Zero steps against a real-distance run = the known post-run sample-write
+    lag → null, NEVER a persisted 0. */
+export async function queryRunCadenceSpm(run: HealthRunInput): Promise<number | null> {
+  if (!useHealth.getState().enabled) return null;
+  if (run.startedAtMs == null || run.elapsedSec <= 0) return null;
+  try {
+    const res = await queryStatisticsForQuantity(
+      'HKQuantityTypeIdentifierStepCount',
+      ['cumulativeSum'],
+      {
+        filter: { date: { startDate: new Date(run.startedAtMs), endDate: new Date(run.endedAt) } },
+        unit: 'count',
+      },
+    );
+    const steps = res?.sumQuantity?.quantity ?? 0;
+    if (steps <= 0) return null;
+    return Math.round(steps / (run.elapsedSec / 60));
+  } catch {
+    return null; // health must never break a save
+  }
 }
 
 /** Most-recent body mass (kg) from 건강 — the 체중 가져오기 affordance.

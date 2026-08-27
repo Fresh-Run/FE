@@ -268,9 +268,9 @@ export default function CreateScreen() {
   const manualStart = useStartPoint(s => s.point);
   useEffect(() => () => useStartPoint.getState().clear(), []);
   const startCoord = manualStart ? { lat: manualStart.lat, lng: manualStart.lng } : gpsCoord;
-  // 서버 위치 밴드 미러 (target×0.5) — 밴드 밖 pitstop_place = 502 (프로브 8/26).
-  // 선택 후 출발지/목표 거리가 바뀐 케이스: 렌더 시점 재검증 → 인라인 warn +
-  // 제출 게이트 (handleGenerate)가 이중으로 막는다.
+  // 서버 위치 밴드 미러 (target×0.5) — 밴드 밖 pitstop_place는 best-effort
+  // 서빙 + target_missed (BE 7199f16, 8/27 — 구 502는 사망). 초과 = 경고만:
+  // 렌더 시점 재검증 → 선택 카드 인라인 warn (하드 블록 없음).
   const pitstopBandKm = distanceKm * 0.5;
   const pitstopTooFar = pitstopPlace != null
     && haversineKm(startCoord, pitstopPlace.coordinate) > pitstopBandKm;
@@ -330,13 +330,9 @@ export default function CreateScreen() {
 
   async function handleGenerate() {
     if (oneWay && !endCoord) return; // CTA is disabled; belt for the retry paths
-    // Pre-submit re-validation (selection-time guard's twin): the start point
-    // or target distance may have changed after the place was picked — an
-    // out-of-band pitstop_place 502s server-side, so block honestly here.
-    if (pitstopPlace && haversineKm(startCoord, pitstopPlace.coordinate) > distanceKm * 0.5) {
-      setGenError(tIn(lang, 'pit.tooFarSubmit'));
-      return;
-    }
+    // 8/27: the pitstop far-POI submit block is GONE — the server best-effort
+    // serves out-of-band picks with target_missed (BE 7199f16, the 502 path
+    // died). The inline card warn (pitstopTooFar) remains the honest signal.
     genCancelledRef.current = false;
     const controller = new AbortController();
     genAbortRef.current = controller;
@@ -822,7 +818,7 @@ export default function CreateScreen() {
                   {pitstopTooFar && (
                     <View style={st.feasWarn}>
                       <Icon name="alert-circle-outline" size={14} color={C.sun} />
-                      <Text style={st.feasWarnTxt} numberOfLines={2}>{tIn(lang, 'pit.tooFarSubmit')}</Text>
+                      <Text style={st.feasWarnTxt} numberOfLines={2}>{tIn(lang, 'pit.farWarn')}</Text>
                     </View>
                   )}
                 </View>

@@ -46,7 +46,7 @@ import { computeElevGain, computeKmSplits } from '@/lib/run-metrics';
 import { uploadRunPhotos } from '@/lib/run-photos';
 import { saveRun, type NewRecord, type SavedRun } from '@/lib/runs-api';
 import { getMyStats, type MyStats } from '@/lib/stats-api';
-import { maybeWriteRunToHealth } from '@/lib/health';
+import { maybeWriteRunToHealth, queryRunCadenceSpm } from '@/lib/health';
 import { accentShadow, radius as R, shadows, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { clearPendingRun, getPendingDraft, getPendingRun, getSavedResult } from '@/store/pending-run';
@@ -134,10 +134,14 @@ export default function RunResultScreen() {
     setSaveState('saving');
     setSaveError(null);
     try {
+      // cadence (8/27): HK steps over the run window — null-safe, never
+      // blocks the save (internally guarded; absent = field omitted).
+      const avgCadenceSpm = await queryRunCadenceSpm(run);
       const saved = await saveRun({
         distanceKm: run.distanceKm,
         durationSec: run.elapsedSec,
         avgPaceSecPerKm: run.avgPaceSecPerKm,
+        avgCadenceSpm,
         routeId: run.course?.id ?? null,
         gpsTrack: run.gpsTrack,
         // 8/7-8/8 safety-net thread: the crew-banner choice AND the tag ×

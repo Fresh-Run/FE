@@ -58,6 +58,9 @@ export type SaveRunInput = {
   distanceKm: number;
   durationSec: number;
   avgPaceSecPerKm: number | null;
+  /** BE 5e95db1 (additive, 8/27): HK-derived steps/min over duration_sec —
+      null/absent = no cadence (HK off/denied/no samples); field omitted. */
+  avgCadenceSpm?: number | null;
   routeId?: string | null; // course runs link the copied route's id
   title?: string | null;      // ≤60 (BE 2af3715)
   notes?: string | null;      // 개인 메모, ≤2000
@@ -120,6 +123,7 @@ export function saveRun(input: SaveRunInput): Promise<SavedRun> {
       distance_km: Math.round(input.distanceKm * 100) / 100,
       duration_sec: input.durationSec,
       avg_pace_sec_per_km: input.avgPaceSecPerKm,
+      ...(input.avgCadenceSpm != null ? { avg_cadence_spm: input.avgCadenceSpm } : {}),
       title: input.title ?? null,
       notes: input.notes ?? null,
       visibility: input.visibility ?? 'public',

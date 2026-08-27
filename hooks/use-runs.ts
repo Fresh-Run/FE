@@ -43,6 +43,9 @@ export type Run = {
       stretches; her contract note ledgered). null on trackless/old runs. */
   moving_sec?: number | null;
   avg_pace_sec_per_km: number | null;
+  /** BE 5e95db1 (additive, 8/27) — HK-derived 걸음/분; null = 무데이터
+      (기존 런 전부 null — absent 렌더는 타일 자체 미표시). */
+  avg_cadence_spm?: number | null;
   notes: string | null;
   route_id: string | null;
   // ── R3' additions (BE 4cd5685: 타인 공개범위 내 정제 응답) ──────────────

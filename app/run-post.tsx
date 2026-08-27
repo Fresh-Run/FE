@@ -508,6 +508,10 @@ export default function RunPostScreen() {
                   value={run.avg_pace_sec_per_km != null ? fmtPaceIn(run.avg_pace_sec_per_km, units) : '--'}
                   unit={paceUnit(units)}
                 />
+                {/* 케이던스 (8/27) — non-null only; legacy runs keep 3 tiles */}
+                {run.avg_cadence_spm != null ? (
+                  <StatTile label={T('run.cadence')} value={String(run.avg_cadence_spm)} unit={T('run.cadenceUnit')} />
+                ) : null}
               </View>
 
 

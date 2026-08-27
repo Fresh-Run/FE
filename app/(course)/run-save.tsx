@@ -42,7 +42,7 @@ import { Icon } from '@/components/ui';
 import { errorMessage } from '@/lib/error-copy';
 import { distUnit, fmtDist, fmtDuration, fmtPaceIn, fmtWhen, paceUnit, timeTitle } from '@/lib/run-format';
 import { MAX_RUN_PHOTOS, reencodeForUpload } from '@/lib/run-photos';
-import { maybeWriteRunToHealth } from '@/lib/health';
+import { maybeWriteRunToHealth, queryRunCadenceSpm } from '@/lib/health';
 import { t, useLang, useT, tfIn } from '@/lib/i18n';
 import { runSession } from '@/store/run-session';
 import { saveRun, type RunVisibility } from '@/lib/runs-api';
@@ -219,10 +219,14 @@ export default function RunSaveScreen() {
     if (!run || tooShort || saving || savedOnceRef.current) return;
     setSaving(true);
     try {
+      // cadence (8/27): HK steps over the run window — null-safe, never
+      // blocks the save (internally guarded; absent = field omitted).
+      const avgCadenceSpm = await queryRunCadenceSpm(run);
       const saved = await saveRun({
         distanceKm: run.distanceKm,
         durationSec: run.elapsedSec,
         avgPaceSecPerKm: run.avgPaceSecPerKm,
+        avgCadenceSpm,
         routeId: run.course?.id ?? null,
         // empty title → the suggestion is sent as the real title (the
         // placeholder is a promise, not decoration)

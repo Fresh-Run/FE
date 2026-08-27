@@ -6,10 +6,11 @@
  * shell, deliberately WITHOUT the center-pin (an arbitrary coordinate has
  * no real name to serve).
  *
- * Distance guard: band = target×0.5 (mirrors the server position band —
- * out-of-band pitstop_place picks 502 route_generation_failed, probed live
- * 2026-08-26). Too-far rows render DISABLED with a hint, not hidden, so
- * the user understands why that cafe can't ride a 3km loop.
+ * Distance guard (softened 8/27): band = target×0.5 mirrors the server
+ * position band. Out-of-band picks are now best-effort-served with
+ * target_missed (BE 7199f16 — the 8/26-probed 502 is dead), so far rows
+ * stay SELECTABLE and carry an amber may-lengthen warning instead of a
+ * disable.
  *
  * Search mechanics = the house transplant (place-pick-sheet S1 verbatim):
  * /api/places Kakao proxy, 400ms debounce, 2-char floor, monotonic
@@ -120,27 +121,27 @@ export function PitstopPickSheet({ visible, start, bandKm, units, onClose, onPic
           )}
           {(results ?? []).map((p, i) => {
             const dKm = haversineKm(start, p.coordinate);
-            const tooFar = dKm > bandKm;
+            // 8/27 guard softening: far rows are SELECTABLE — the server now
+            // best-effort-serves out-of-band picks with target_missed (BE
+            // 7199f16; the 502 path is gone). The amber hint stays as an
+            // honest warning, not a block.
+            const far = dKm > bandKm;
             return (
               <Pressable
                 key={`${p.name}-${i}`}
-                onPress={tooFar ? undefined : () => { onPick(p); close(); }}
-                disabled={tooFar}
-                accessibilityState={{ disabled: tooFar }}
-                style={({ pressed }) => [st.row, pressed && !tooFar && { opacity: 0.7 }]}
+                onPress={() => { onPick(p); close(); }}
+                style={({ pressed }) => [st.row, pressed && { opacity: 0.7 }]}
               >
                 <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text variant="bodyMd" weight="600" numberOfLines={1} color={tooFar ? 'faint' : undefined}>
-                    {p.name}
-                  </Text>
+                  <Text variant="bodyMd" weight="600" numberOfLines={1}>{p.name}</Text>
                   {p.address ? (
-                    <Text variant="labelSm" color={tooFar ? 'faint' : 'sub'} numberOfLines={1}>{p.address}</Text>
+                    <Text variant="labelSm" color="sub" numberOfLines={1}>{p.address}</Text>
                   ) : null}
-                  {tooFar && (
+                  {far && (
                     <Text variant="labelSm" style={{ color: C.sun }}>{T('pit.tooFar')}</Text>
                   )}
                 </View>
-                <Text variant="labelSm" color={tooFar ? 'faint' : 'sub'}>
+                <Text variant="labelSm" color="sub">
                   {`${fmtDist(dKm, units, 1)}${distUnit(units)}`}
                 </Text>
               </Pressable>
