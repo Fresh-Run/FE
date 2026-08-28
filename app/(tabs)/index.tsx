@@ -690,7 +690,7 @@ export default function HomeScreen() {
               <AIBanner
                 // tap-direct: single round-trip into generation, form skipped
                 // (M build; quota gating + exhausted→premium live in the banner)
-                onStart={km => router.push({ pathname: '/(course)/create', params: { auto: '1', seedKm: String(km) } } as never)}
+                onStart={km => router.push({ pathname: '/(course)/create', params: { seedKm: String(km) } } as never)}
                 onUpsell={() => router.push('/premium' as never)}
               />
             </View>

@@ -206,28 +206,28 @@ export default function CreateScreen() {
   // only when the body omits distance, and this form always sends it — so the
   // pref lands here as the slider's initial value instead. Clamped to the
   // active unit's slider range; pre-sync cold start = server default (5.0).
-  // AI-banner tap-direct (M build, 2026-07-22): ?auto=1&seedKm= — the banner's
-  // derived distance outranks the pref seed, same clamp. (Note: the parked
-  // funnel-v1 branch carries its own seedKm intake — merge point when it
-  // unparks, flagged.)
-  const { seedKm: seedParam, auto: autoParam } = useLocalSearchParams<{ seedKm?: string; auto?: string }>();
+  // AI-banner (8/28 ruling — 지연 인도어 검거 ②): ?seedKm= PRE-FILLS the form
+  // (banner distance outranks the pref seed, same clamp) and the USER fires
+  // generate. The old ?auto=1 tap-direct auto-fire is REMOVED — it raced the
+  // user's configuration (pitstop dropped) and fired on the OS-cached stale
+  // fix. (Note: the parked funnel-v1 branch carries its own seedKm intake —
+  // merge point when it unparks, flagged.)
+  const { seedKm: seedParam } = useLocalSearchParams<{ seedKm?: string }>();
   // First-generation prefs onboarding (8/2, recon shape B): the normal
   // door's FIRST visit detours to ai-course-prefs?firstRun=1 (create stays
   // mounted beneath — state untouched). Flag is DEVICE-scoped AsyncStorage:
   // the cross-device edge is accepted here — worst case is one re-prompt on
   // a new device (cf. the lang-seed ledger entry: that edge's harm came from
-  // WRITING server state; a read-only seen-flag has none). ?auto=1 fast-lane
-  // entries BYPASS and leave the flag UNSET (ruled) — their first normal
-  // entry still gets the intercept.
+  // WRITING server state; a read-only seen-flag has none). 8/28: the ?auto=1
+  // fast-lane bypass died with the auto-fire — banner entries now take the
+  // one-time intercept like every door (review-first flow, same ruling).
   useEffect(() => {
-    if (autoParam === '1') return; // fast lane stays fast — flag stays unset
     AsyncStorage.getItem('@fr_gen_prefs_seen').then(seen => {
       if (seen) return;
       AsyncStorage.setItem('@fr_gen_prefs_seen', '1').catch(() => {});
       router.push('/ai-course-prefs?firstRun=1' as never);
     }).catch(() => { /* storage miss — no intercept, defaults are sane */ });
-    // mount-only: autoParam is fixed for this screen instance
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // mount-only by design
   }, []);
   const seedKm = useMemo(() => {
     const { units: u, ai_course } = useSettings.getState().settings;
@@ -291,13 +291,9 @@ export default function CreateScreen() {
   const sliderMaxKm = isMi ? MAX_TARGET_MI * KM_PER_MI : MAX_TARGET_KM;
 
   // ── Flow state ──────────────────────────────────────────────────────────────
-  // auto mode opens ON the generating shell (single round-trip — nothing
-  // between tap and generation); the effect below fires the real call the
-  // moment a REAL location resolves (granted-key rule — never the Seoul
-  // fallback: the banner's 지금-위치 promise). DENIED drops to the form,
-  // the honest fallback surface. Cancel also lands on the form.
-  const [autoMode] = useState(autoParam === '1');
-  const [viewState, setViewState] = useState<ViewState>(autoParam === '1' ? 'generating' : 'form');
+  // Every door opens on the FORM (8/28 — the auto-mode generating shell died
+  // with the banner auto-fire). Generation fires only from a user tap.
+  const [viewState, setViewState] = useState<ViewState>('form');
   const [route, setRoute]         = useState<GeneratedRoute | null>(null);
   // 지점 N fill — placeholder waypoints get real names (label-shape slice);
   // top-level call (hooks rule), no-ops until a route exists
@@ -313,20 +309,9 @@ export default function CreateScreen() {
   const genAbortRef = useRef<AbortController | null>(null);
 
   // ── Generation ──────────────────────────────────────────────────────────────
-  // banner tap-direct auto-fire — once, on real location (M build)
-  const autoFiredRef = useRef(false);
-  useEffect(() => {
-    if (!autoMode || autoFiredRef.current) return;
-    if (manualStart == null && locationStatus === 'denied') {
-      autoFiredRef.current = true;
-      setViewState('form'); // no honest location → the form is the fallback
-      return;
-    }
-    if (manualStart == null && locationStatus !== 'granted') return; // still resolving
-    autoFiredRef.current = true;
-    handleGenerate();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoMode, locationStatus, manualStart]);
+  // 8/28: the banner auto-fire effect is DELETED (지연 인도어 검거 ② ruling)
+  // — generate now fires ONLY from a user tap (CTA / 다시-생성 retry), so the
+  // request always reads the reviewed form state and the refined fix.
 
   async function handleGenerate() {
     if (oneWay && !endCoord) return; // CTA is disabled; belt for the retry paths
@@ -406,10 +391,6 @@ export default function CreateScreen() {
           <ActivityIndicator size="large" color={C.accent} style={{ marginTop: S.lg }} />
           <Text style={st.genTitle}>{t('crt.genTitle')}</Text>
           <Text style={st.genSub}>{t('crt.genSub')}</Text>
-          {/* tap-direct: the derived params, visible (M build spec) */}
-          {autoMode && (
-            <Text style={st.genSub}>{tfIn(getLang(), 'crt.genAuto', { d: `${fmtDist(distanceKm, units, 1)}${distUnit(units)}` })}</Text>
-          )}
         </View>
       </View>
     );

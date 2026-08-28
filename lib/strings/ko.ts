@@ -195,7 +195,6 @@ export const ko = {
   'crt.genFail': '코스 생성에 실패했어요',
   'crt.genTitle': 'AI가 최적의 코스를\n설계하고 있어요',
   'crt.genSub': '잠시만 기다려 주세요',
-  'crt.genAuto': '약 {d} · 내 위치에서 시작',
   'crt.aiGen': 'AI 생성',
   'crt.estTime': '예상 시간',
   'crt.pitstops': '경유지',

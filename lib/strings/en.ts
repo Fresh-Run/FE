@@ -183,7 +183,6 @@ export const en: Record<keyof typeof ko, string> = {
   'crt.genFail': 'Course generation failed',
   'crt.genTitle': 'AI is designing\nyour best course',
   'crt.genSub': 'Just a moment',
-  'crt.genAuto': '~{d} · from my location',
   'crt.aiGen': 'AI generated',
   'crt.estTime': 'Est. time',
   'crt.pitstops': 'Pitstops',

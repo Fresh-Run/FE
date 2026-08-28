@@ -681,7 +681,12 @@ export default function TrackingScreen() {
     const { segIndex, distM, alongM: am } = nearestOnCourse(poly, here);
     setNearestSeg(segIndex);
     setRejoinM(Math.round(distM));
-    setAlongM(am);
+    // 8/28 (지연 인도어 검거 ①): while navPhase 'pre' (not yet arrived at the
+    // course start) the runner's PROJECTION onto the course is meaningless —
+    // it teleported the white next-stretch band off the start (loop tails
+    // degenerate it to a sliver). Pin alongM to 0 until 'nav'; from 'nav' on,
+    // behavior is byte-identical to before.
+    setAlongM(navPhase === 'pre' ? 0 : am);
     if (navPhase !== 'nav') { setOffCourse(false); return; } // v2: pre-start = legitimately off the line
     setOffCourse(prev => {
       const next = prev ? distM > OFF_COURSE_EXIT_M : distM > OFF_COURSE_ENTER_M;
@@ -1101,9 +1106,14 @@ export default function TrackingScreen() {
     // last fix → course start → nothing (no-op). PAUSED now takes the nav
     // branch too, with bearing FORCED null (no lookahead while paused).
     if (hasCoursePath && state !== 'idle') {
+      // 8/28 (지연 인도어 검거 ③): live-fix rung inserted — with zero ACCEPTED
+      // fixes (indoor), the old chain fell straight to course-start and the
+      // camera jumped there. Order: last accepted fix (freshest while moving)
+      // → hereCoord (real position when nothing accepted — granted-key gated,
+      // never the Seoul fallback) → course start (final fallback) → no-op.
       const t = drawnPath.length > 0
         ? { lat: drawnPath[drawnPath.length - 1].latitude, lng: drawnPath[drawnPath.length - 1].longitude }
-        : course?.polyline?.[0] ?? null;
+        : (locStatus === 'granted' && hereCoord ? hereCoord : course?.polyline?.[0] ?? null);
       if (!t) return;
       const hereC = (navPhase === 'nav' && course?.polyline ? snapToCourse(course.polyline, t, SNAP_TO_ROUTE_M) : null) ?? t;
       // v5.1: paused/standstill → the course TANGENT (preferTangent skips
