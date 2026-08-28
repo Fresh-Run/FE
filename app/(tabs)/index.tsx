@@ -52,8 +52,18 @@ import type { Coordinate } from '@/types';
 import { useWeather } from '@/hooks/use-weather';
 import { weatherIcon, weatherTone, type WeatherTone } from '@/lib/weather-api';
 
-// friends v1.1 interleave interval — constant for later retune (owner spec)
-const SUGGEST_EVERY_N = 3;
+// 8/28: home feed list slots — run cards + two sentinel kinds (suggest row,
+// AI banner). Sentinels are data-driven so placement scrolls WITH the feed.
+type FeedSlot = FeedRun | { __suggest: string } | { __banner: string };
+
+// friends v1.1 — 8/28 ruling: ONE suggest row per feed, after the Nth card
+// (the old every-3 interleave died; cold-start header mode unchanged)
+const SUGGEST_AFTER_N = 3;
+// 8/28 ruling: the AI banner interleaves after every Nth card (footer slot
+// retired — it sat under the loadMore spinner and got shoved mid-tap).
+// Short feeds (< N cards, incl. empty) keep it in the ListFooter instead —
+// the flagship CTA is never absent (see the footer's invariant note).
+const BANNER_EVERY_N = 10;
 
 // ─── Constants / helpers ──────────────────────────────────────────────────────
 
@@ -532,7 +542,7 @@ export default function HomeScreen() {
   // refetch rides the tap (refresh stays pull-to-refresh's job); the one
   // FlatList serves BOTH feed tabs (전체/친구 swap data, not lists), so a
   // single ref covers whichever is showing.
-  const feedListRef = useRef<FlatList<FeedRun | { __suggest: string }>>(null);
+  const feedListRef = useRef<FlatList<FeedSlot>>(null);
   const navigation = useNavigation();
   useEffect(() => {
     return navigation.addListener('tabPress' as never, () => {
@@ -562,16 +572,39 @@ export default function HomeScreen() {
   // the row never relocates mid-scroll.
   const sr = useSuggestedRunners(); // ONE fetch; every rendered row shares state
   const coldStart = tab === '친구' && list.length < 3;
-  const displayList: (FeedRun | { __suggest: string })[] = useMemo(() => {
-    if (tab !== '친구' || !sr.available || list.length < 3) return list;
-    const out: (FeedRun | { __suggest: string })[] = [];
+  // 8/28 sentinel weave (both rulings in one pass): ONE suggest row after
+  // card SUGGEST_AFTER_N (친구 tab, rich feed only) + the AI banner after
+  // every BANNER_EVERY_N cards (both tabs). Distinct sentinel keys, distinct
+  // positions by construction (3 vs multiples of 10 — never colliding), and
+  // the memo stays recompute-stable: it re-derives only on the list
+  // reference seam, exactly as before.
+  const displayList: FeedSlot[] = useMemo(() => {
+    const suggest = tab === '친구' && sr.available && list.length >= 3;
+    const out: FeedSlot[] = [];
     list.forEach((it, i) => {
       out.push(it);
-      if ((i + 1) % SUGGEST_EVERY_N === 0) out.push({ __suggest: `suggest-${i}` });
+      if (suggest && i + 1 === SUGGEST_AFTER_N) out.push({ __suggest: 'suggest' });
+      if ((i + 1) % BANNER_EVERY_N === 0) out.push({ __banner: `banner-${i + 1}` });
     });
     return out;
-     
+
   }, [tab, list, sr.available]);
+  // Short-feed banner home (< BANNER_EVERY_N cards, incl. empty): the
+  // ListFooter — NOT a data sentinel, so ListEmptyComponent still renders on
+  // 0 cards. Invariant: footer-banner ⇒ list < 10 < PAGE(20) ⇒ hasMore is
+  // false (① end-detection) ⇒ the loadMore spinner can never mount beside it.
+  const bannerInFooter = list.length < BANNER_EVERY_N;
+  // ONE banner element, both homes (interleave slot + short-feed footer) —
+  // content logic unchanged: quota/upsell state + prefs copy live inside
+  // AIBanner; tap → pre-filled create (8/28 banner ruling upstream).
+  const bannerSlot = (
+    <View style={{ paddingHorizontal: S.gutter, paddingTop: 10, paddingBottom: 10 }}>
+      <AIBanner
+        onStart={km => router.push({ pathname: '/(course)/create', params: { seedKm: String(km) } } as never)}
+        onUpsell={() => router.push('/premium' as never)}
+      />
+    </View>
+  );
   // No-swap pre-warm (ruling ③, 2026-07-23): fire track fetches at
   // data-arrival so cards are usually track-ready before the eye lands.
   useEffect(() => {
@@ -602,7 +635,7 @@ export default function HomeScreen() {
       <FlatList
         ref={feedListRef}
         data={displayList}
-        keyExtractor={(r) => '__suggest' in r ? r.__suggest : r.run_id}
+        keyExtractor={(r) => '__suggest' in r ? r.__suggest : '__banner' in r ? r.__banner : r.run_id}
         showsVerticalScrollIndicator={false}
         viewabilityConfig={viewabilityConfig}
         onViewableItemsChanged={onViewableItemsChanged}
@@ -629,7 +662,8 @@ export default function HomeScreen() {
         contentContainerStyle={{ paddingBottom: tabBarInset }}
         ItemSeparatorComponent={() => <View style={{ height: 16 }} />}
         renderItem={({ item }) => {
-          if ('__suggest' in item) return <SuggestedRunnersRow sr={sr} />; // interleave slot
+          if ('__suggest' in item) return <SuggestedRunnersRow sr={sr} />; // single suggest slot
+          if ('__banner' in item) return bannerSlot; // 8/28: interleaved AI banner (every 10th card)
           // ── ONE RunCard path, both tabs (payload shape parity, probed) ────
           const ov = kudosOv[item.run_id];
           const shown = ov ? { ...item, my_kudos: ov.on, kudos_count: item.kudos_count + ov.delta } : item;
@@ -686,14 +720,12 @@ export default function HomeScreen() {
             {((tab === '친구' && feed.loadingMore) || (tab === '전체' && nearby.loadingMore)) && (
               <ActivityIndicator size="small" color={C.faint} style={{ paddingVertical: 14 }} />
             )}
-            <View style={{ paddingHorizontal: S.gutter, paddingTop: 26, paddingBottom: 26 }}>
-              <AIBanner
-                // tap-direct: single round-trip into generation, form skipped
-                // (M build; quota gating + exhausted→premium live in the banner)
-                onStart={km => router.push({ pathname: '/(course)/create', params: { seedKm: String(km) } } as never)}
-                onUpsell={() => router.push('/premium' as never)}
-              />
-            </View>
+            {/* 8/28: banner footer slot = SHORT FEEDS ONLY (< 10 cards, incl.
+                empty — the flagship CTA is never absent). Rich feeds carry it
+                interleaved in the data. Invariant: bannerInFooter ⇒ list <
+                10 < PAGE ⇒ hasMore false ⇒ the spinner above never mounts
+                beside it (the shove class is structurally dead). */}
+            {bannerInFooter && <View style={{ paddingTop: 16, paddingBottom: 16 }}>{bannerSlot}</View>}
             {__DEV__ && (
               <Pressable
                 onPress={signOut}

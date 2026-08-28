@@ -44,7 +44,10 @@ export function useFeed() {
     try {
       const page = await getActivityFeed(0);
       setItems(page);
-      setHasMore(page.length > 0);
+      // 8/28 (bottom-refresh fix): a SHORT page is the end — arming hasMore
+      // on any non-empty page made every short feed fire a spurious loadMore
+      // at bottom (re-armed each focus). Mirrors useNearbyFeed's rule.
+      setHasMore(page.length >= PAGE);
     } catch (e: unknown) {
       setError(errorMessage(e));
     } finally {
@@ -65,7 +68,7 @@ export function useFeed() {
   useFocusEffect(useCallback(() => {
     if (busyRef.current || countRef.current > PAGE) return;
     getActivityFeed(0)
-      .then(page => { setItems(page); setHasMore(page.length > 0); })
+      .then(page => { setItems(page); setHasMore(page.length >= PAGE); })
       .catch(() => {}); // quiet — the visible list is still valid
   }, []));
 
@@ -75,8 +78,11 @@ export function useFeed() {
     setLoadingMore(true);
     try {
       const page = await getActivityFeed(items.length);
-      setItems(prev => [...prev, ...page]);
-      if (page.length === 0) setHasMore(false); // empty page = end (guide §6)
+      // 8/28: empty page appends NOTHING — the old unconditional append
+      // churned the array identity (kudos-overlay wholesale clear + a full
+      // row reconcile over map cards = the visible bottom flicker).
+      if (page.length > 0) setItems(prev => [...prev, ...page]);
+      setHasMore(page.length >= PAGE); // short page = end (mirrors nearby)
     } catch {
       // silent — the next onEndReached retries
     } finally {
