@@ -42,7 +42,7 @@ import { getCrewFilter, type CrewLocationFilter } from '@/store/crew-filter';
 import { useJoinRequests } from '@/store/join-requests';
 import { useQuota } from '@/store/use-quota';
 import { t, tfIn, useLang, useT } from '@/lib/i18n';
-import { useBattleMock } from '@/store/battle-mock';
+import { BattleHomeBody } from '@/components/battle-home-body';
 import { DAY_LABEL_KEY } from '@/lib/run-format';
 
 
@@ -61,7 +61,11 @@ function CommTabs({ active, onChange }: { active: string; onChange: (v: string) 
   const T = useT(); // 8/5 stale-locale fix: bare t() froze this tab's strings
   return (
     <View style={st.tabRow}>
-      {([{ id: 'crew', label: T('com.tabCrew') }, { id: 'discover', label: T('com.tabDiscover') }]).map(tab => {
+      {([
+        { id: 'crew', label: T('com.tabCrew') },
+        { id: 'discover', label: T('com.tabDiscover') },
+        { id: 'battle', label: T('com.tabBattle') }, // 9/1 재룰링: 배틀 = 3번째 톱탭
+      ]).map(tab => {
         const on = active === tab.id;
         return (
           <Pressable key={tab.id} onPress={() => onChange(tab.id)} style={st.tabBtn}>
@@ -587,9 +591,6 @@ function MyCrewsTab({ scrollRef }: { scrollRef: React.RefObject<ScrollView | nul
   const tabBarInset = useTabBarInset();
   const { crews, loading, error, signedOut, refetch } = useMyCrews();
   const [codeSheetOpen, setCodeSheetOpen] = useState(false);
-  const lang = useLang(); // render-path tfIn anchor (battle entry count)
-  // 배틀 엔트리 count — mock store until slice 2 (real list endpoint)
-  const activeBattles = useBattleMock(s => s.battles.filter(b => b.status === 'active').length);
 
   // Crew-create gate (API_GUIDE 크루 생성 row): free tier may OWN 1 crew;
   // premium unlimited. Server enforces via 403 premium_required {feature:
@@ -683,27 +684,6 @@ function MyCrewsTab({ scrollRef }: { scrollRef: React.RefObject<ScrollView | nul
         </Pressable>
       </View>
 
-      {/* 배틀 엔트리 (slice-1 nav wire, ruling (a) 8/29) — codeRow idiom
-          verbatim; sub = 진행 중 count when >0, invite copy when 0. Mock
-          store count until slice 2 wires the real list. */}
-      <View style={{ paddingHorizontal: S.gutter, paddingTop: S.md }}>
-        <Pressable
-          onPress={() => router.push('/battle-home' as never)}
-          style={({ pressed }) => [st.codeRow, { opacity: pressed ? 0.8 : 1 }]}
-        >
-          <View style={st.codeIcon}>
-            <Icon name="flash-outline" size={18} color={C.accentGrn} />
-          </View>
-          <View style={{ flex: 1, minWidth: 0 }}>
-            <Text style={st.codeTitle}>{T('bat.entryTitle')}</Text>
-            <Text style={st.codeSub}>
-              {activeBattles > 0 ? tfIn(lang, 'bat.entryActive', { n: activeBattles }) : T('bat.entrySub')}
-            </Text>
-          </View>
-          <Icon name="chevron-forward" size={16} color={C.faint} />
-        </Pressable>
-      </View>
-
       <InviteCodeSheet
         visible={codeSheetOpen}
         onClose={() => setCodeSheetOpen(false)}
@@ -737,24 +717,26 @@ export default function CommunityScreen() {
   const T = useT();
   const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
-  const [tab, setTab] = useState<'crew' | 'discover'>('crew');
+  const [tab, setTab] = useState<'crew' | 'discover' | 'battle'>('crew');
 
   // 재탭 = 맨 위로 (owner-ruled 8/5, 홈 패턴 버바팀 — index.tsx의
   // conviction 코멘트 참조): 자기 탭 tabPress만 수신, emit-타임 isFocused()
   // 분기 (true = 재탭 → 스크롤 / false = 타-탭발 도착 → 무동작 = 위치 보존).
   // SCROLL ONLY — 리페치 무동승 (refresh는 pull-to-refresh 소관).
-  // Dual-container twist: the two sub-views own their scrollables, so the
-  // root (the tab's focus owner) holds BOTH refs and branches on the active
+  // Multi-container twist: the sub-views own their scrollables, so the
+  // root (the tab's focus owner) holds ALL refs and branches on the active
   // sub-view at press time. `tab` in deps re-subscribes on switch — the
   // closure always sees the live branch.
   const crewScrollRef = useRef<ScrollView>(null);
   const discoverListRef = useRef<FlatList<Crew>>(null);
+  const battleScrollRef = useRef<ScrollView>(null);
   const navigation = useNavigation();
   useEffect(() => {
     return navigation.addListener('tabPress' as never, () => {
       if (navigation.isFocused()) {
         if (tab === 'crew') crewScrollRef.current?.scrollTo({ y: 0, animated: true });
-        else discoverListRef.current?.scrollToOffset({ offset: 0, animated: true });
+        else if (tab === 'discover') discoverListRef.current?.scrollToOffset({ offset: 0, animated: true });
+        else battleScrollRef.current?.scrollTo({ y: 0, animated: true });
       }
     });
   }, [navigation, tab]);
@@ -772,12 +754,14 @@ export default function CommunityScreen() {
         </Pressable>
       </View>
 
-      <CommTabs active={tab} onChange={v => setTab(v as 'crew' | 'discover')} />
+      <CommTabs active={tab} onChange={v => setTab(v as 'crew' | 'discover' | 'battle')} />
 
       <View style={{ flex: 1 }}>
         {tab === 'crew'
           ? <MyCrewsTab scrollRef={crewScrollRef} />
-          : <DiscoverTab listRef={discoverListRef} />
+          : tab === 'discover'
+            ? <DiscoverTab listRef={discoverListRef} />
+            : <BattleHomeBody mode="embedded" scrollRef={battleScrollRef} />
         }
       </View>
     </View>
