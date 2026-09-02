@@ -42,6 +42,7 @@ import { getCrewFilter, type CrewLocationFilter } from '@/store/crew-filter';
 import { useJoinRequests } from '@/store/join-requests';
 import { useQuota } from '@/store/use-quota';
 import { t, tfIn, useLang, useT } from '@/lib/i18n';
+import { useBattleMock } from '@/store/battle-mock';
 import { DAY_LABEL_KEY } from '@/lib/run-format';
 
 
@@ -586,6 +587,9 @@ function MyCrewsTab({ scrollRef }: { scrollRef: React.RefObject<ScrollView | nul
   const tabBarInset = useTabBarInset();
   const { crews, loading, error, signedOut, refetch } = useMyCrews();
   const [codeSheetOpen, setCodeSheetOpen] = useState(false);
+  const lang = useLang(); // render-path tfIn anchor (battle entry count)
+  // 배틀 엔트리 count — mock store until slice 2 (real list endpoint)
+  const activeBattles = useBattleMock(s => s.battles.filter(b => b.status === 'active').length);
 
   // Crew-create gate (API_GUIDE 크루 생성 row): free tier may OWN 1 crew;
   // premium unlimited. Server enforces via 403 premium_required {feature:
@@ -674,6 +678,27 @@ function MyCrewsTab({ scrollRef }: { scrollRef: React.RefObject<ScrollView | nul
           <View style={{ flex: 1, minWidth: 0 }}>
             <Text style={st.codeTitle}>{T('com.codeTitle')}</Text>
             <Text style={st.codeSub}>{T('com.codeSub')}</Text>
+          </View>
+          <Icon name="chevron-forward" size={16} color={C.faint} />
+        </Pressable>
+      </View>
+
+      {/* 배틀 엔트리 (slice-1 nav wire, ruling (a) 8/29) — codeRow idiom
+          verbatim; sub = 진행 중 count when >0, invite copy when 0. Mock
+          store count until slice 2 wires the real list. */}
+      <View style={{ paddingHorizontal: S.gutter, paddingTop: S.md }}>
+        <Pressable
+          onPress={() => router.push('/battle-home' as never)}
+          style={({ pressed }) => [st.codeRow, { opacity: pressed ? 0.8 : 1 }]}
+        >
+          <View style={st.codeIcon}>
+            <Icon name="flash-outline" size={18} color={C.accentGrn} />
+          </View>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text style={st.codeTitle}>{T('bat.entryTitle')}</Text>
+            <Text style={st.codeSub}>
+              {activeBattles > 0 ? tfIn(lang, 'bat.entryActive', { n: activeBattles }) : T('bat.entrySub')}
+            </Text>
           </View>
           <Icon name="chevron-forward" size={16} color={C.faint} />
         </Pressable>
