@@ -1,12 +1,13 @@
 import { router } from 'expo-router';
 import React from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Image, Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle, Path, Text as SvgText } from 'react-native-svg';
 
 import { Button, Text } from '@/components/ui';
 import { useTokens } from '@/hooks/use-tokens';
 import { useT } from '@/lib/i18n';
+import { useScheme } from '@/store/use-scheme';
 import { useStore } from '@/store/use-store';
 
 const ROUTE_PATH =
@@ -17,15 +18,24 @@ const END   = { cx: 372, cy: 70  };
 export default function WelcomeScreen() {
   const T = useT();
   const C = useTokens();
+  const resolved = useScheme((s) => s.resolved);
   const _devBypassAuth = useStore((s) => s._devBypassAuth);
 
   return (
     <SafeAreaView style={[styles.root, { backgroundColor: C.bg }]} edges={['top', 'bottom']}>
 
-      {/* Brand */}
+      {/* Brand — 9/2 wordmark PNG (scheme-aware: dark→green, light→black).
+          The lockup replaces the dot+text pair — the dot was a logo stand-in.
+          Green over white on dark: it matches the accent dot it replaces and
+          the route line below (the screen's one brand hue, not a second ink). */}
       <View style={styles.brand}>
-        <View style={[styles.brandDot, { backgroundColor: C.accent }]} />
-        <Text variant="bodyLg" weight="700">FreshRun</Text>
+        <Image
+          source={resolved === 'dark'
+            ? require('@/assets/images/logo-green.png')
+            : require('@/assets/images/logo-black.png')}
+          resizeMode="contain"
+          style={styles.brandLogo}
+        />
       </View>
 
       {/* Route SVG — no wrapper, sits directly in the flex column, full width */}
@@ -118,7 +128,8 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     paddingBottom: 4,
   },
-  brandDot: { width: 9, height: 9, borderRadius: 5 },
+  // old bodyLg(≈17pt) 700 text의 시각 무게 매치 — aspect 5.05
+  brandLogo: { width: 96, height: 19 },
 
   copy:     { paddingHorizontal: 24, paddingTop: 28, gap: 12 },
   subtitle: { lineHeight: 24 },

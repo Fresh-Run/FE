@@ -114,6 +114,26 @@ const DEFAULT_PLACEMENT: Record<ShareLayerKey, MetricPlacement> = {
   crew: { x: 0.05, y: 0.88, s: 1 },
 };
 
+// ─── Wordmark logo (9/2 asset swap — PNG wordmark + user color) ──────────────
+// 로고 컬러 = 세션 상태 (지속 없음, 이 슬라이스). 리걸리티 가드: 다크 카드
+// 에서 블랙 금지 / 라이트 카드에서 화이트 금지 — 카드 톤이 바뀌어 선택이
+// 일리걸해지면 스킴 디폴트(다크→그린, 라이트→블랙)로 오토-폴. 보이지 않는
+// 워드마크는 절대 금지. 현 컴포저의 캔버스 = 다크-픽스처 하우스 패밀리 +
+// 포토(화이트-잉크/딤 시스템) → cardTone은 오늘 상수 'dark'; 라이트 카드
+// 패밀리가 생기면 bg에서 파생한다 (가드/오토-폴은 이미 이 값 기준으로 산다).
+type LogoColor = 'green' | 'black' | 'white';
+const LOGO_SRC = {
+  green: require('@/assets/images/logo-green.png'),
+  black: require('@/assets/images/logo-black.png'),
+  white: require('@/assets/images/logo-white.png'),
+} as const;
+const LOGO_SWATCH: Record<LogoColor, string> = { green: '#39FF14', black: '#000000', white: '#FFFFFF' };
+const LOGO_LABELS = {
+  green: 'shr.logoGreen', black: 'shr.logoBlack', white: 'shr.logoWhite',
+} as const; // keys — render-time (static-capture rule)
+const logoDefaultFor = (tone: 'dark' | 'light'): LogoColor => (tone === 'dark' ? 'green' : 'black');
+const logoIllegalFor = (tone: 'dark' | 'light'): LogoColor => (tone === 'dark' ? 'black' : 'white');
+
 // ─── Backgrounds — dark-fixture house family (night-canvas precedent) ─────────
 
 type Bg =
@@ -582,6 +602,13 @@ export default function ShareCardScreen() {
   const bgLayer = useBgLayer(canvasW, canvasH, bgStored, bgAdjustMode && bgIsPhoto, persistBg);
   const bgDim = bgStored?.dim ?? 0;
 
+  // 로고 컬러 (세션 상태) — cardTone-파생 디폴트; 일리걸 선택은 오토-폴
+  const cardTone: 'dark' | 'light' = 'dark';
+  const [logoColor, setLogoColor] = useState<LogoColor>(logoDefaultFor(cardTone));
+  useEffect(() => {
+    if (logoColor === logoIllegalFor(cardTone)) setLogoColor(logoDefaultFor(cardTone));
+  }, [cardTone, logoColor]);
+
   // 8/6 crew toggles (split ruling): 크루명 + 참여인원, BOTH per-visit
   // default OFF (her mock amendment — the one deliberate divergence from
   // the metrics' persisted toggles). Semantic: count renders only when the
@@ -950,8 +977,10 @@ export default function ShareCardScreen() {
                 </Reanimated.View>
               </GestureDetector>
             ) : null}
-            {/* permanent wordmark (re-ruling) — subtle corner, both formats */}
-            <Text style={st.wordmark} pointerEvents="none">FreshRun</Text>
+            {/* permanent wordmark (re-ruling) — subtle corner, both formats;
+                9/2: PNG lockup, user-colored (세션), sized to the old 12pt
+                text's visual weight */}
+            <Image source={LOGO_SRC[logoColor]} resizeMode="contain" style={st.wordmarkImg} />
           </View>
           </GestureDetector>
           {/* smart-guide lines — OUTSIDE the captured ref (structural export
@@ -997,6 +1026,25 @@ export default function ShareCardScreen() {
                 <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={[st.chipTxt, (prefs.strokeWeight ?? 4.5) === w && st.chipTxtOn]}>{t(label)}</Text>
               </Pressable>
             ))}
+          </View>
+          {/* 로고 컬러 스와치 — 스트로크 colorDot 이디엄 (options-area의 색
+              스와치 문법). 일리걸 스와치 = disabled (숨김 아님): 다크 카드
+              에서 블랙은 보이되 죽어 있다. */}
+          <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.groupLbl}>{t('shr.logo')}</Text>
+          <View style={st.chipRow}>
+            {(['green', 'black', 'white'] as LogoColor[]).map(c => {
+              const illegal = c === logoIllegalFor(cardTone);
+              return (
+                <Pressable
+                  key={c}
+                  onPress={illegal ? undefined : () => setLogoColor(c)}
+                  disabled={illegal}
+                  accessibilityLabel={t(LOGO_LABELS[c])}
+                  accessibilityState={{ disabled: illegal, selected: logoColor === c }}
+                  style={[st.colorDot, st.logoDotRing, { backgroundColor: LOGO_SWATCH[c] }, logoColor === c && st.colorDotOn, illegal && st.logoDotOff]}
+                />
+              );
+            })}
           </View>
           {bgIsPhoto && (
             <>
@@ -1081,9 +1129,15 @@ const makeSt = (C: Tokens) => StyleSheet.create({
   // smart guides — thin lime full-bleed (the PPT look); 74E827 = the house lime
   guideV: { position: 'absolute', left: 0, top: 0, width: 1.5, backgroundColor: '#39FF14', opacity: 0 },
   guideH: { position: 'absolute', left: 0, top: 0, height: 1.5, backgroundColor: '#39FF14', opacity: 0 },
-  statVal:    { fontSize: 21, fontWeight: '800', color: '#fff', letterSpacing: -0.6, fontVariant: ['tabular-nums'], textShadowColor: 'rgba(0,0,0,0.55)', textShadowRadius: 5 },
-  statLbl:    { fontSize: 11, fontWeight: '600', color: 'rgba(255,255,255,0.75)', letterSpacing: -0.2, textShadowColor: 'rgba(0,0,0,0.55)', textShadowRadius: 4 },
-  wordmark:   { position: 'absolute', right: 14, bottom: 12, fontSize: 12, fontWeight: '800', letterSpacing: -0.3, color: 'rgba(255,255,255,0.82)', textShadowColor: 'rgba(0,0,0,0.5)', textShadowRadius: 4 },
+  // 9/2 Montserrat (share-card ONLY — the _layout loader's 500/600 pair):
+  // 숫자/단위는 Montserrat 페이스로, 한글 라벨 글리프는 시스템 폰트 폴백
+  // (Montserrat에 한글 없음 — 의도된 동작). fontWeight는 페이스명에 내장 —
+  // 별도 지정 시 iOS가 시스템 페이스로 되돌린다.
+  statVal:    { fontSize: 21, fontFamily: 'Montserrat_600SemiBold', color: '#fff', letterSpacing: -0.6, fontVariant: ['tabular-nums'], textShadowColor: 'rgba(0,0,0,0.55)', textShadowRadius: 5 },
+  statLbl:    { fontSize: 11, fontFamily: 'Montserrat_500Medium', color: 'rgba(255,255,255,0.75)', letterSpacing: -0.2, textShadowColor: 'rgba(0,0,0,0.55)', textShadowRadius: 4 },
+  // PNG 워드마크 — 구 12pt 텍스트의 시각 무게 매치 (60×12, aspect 5.05);
+  // iOS 레이어 섀도가 알파 실루엣을 따른다 (구 textShadow 등가)
+  wordmarkImg: { position: 'absolute', right: 14, bottom: 12, width: 60, height: 12, opacity: 0.92, pointerEvents: 'none', shadowColor: '#000', shadowOpacity: 0.5, shadowRadius: 4, shadowOffset: { width: 0, height: 0 } },
   // 8/6 free-layer join: box anchored at 0,0 like metricLayer (transform
   // positions it); ink keeps the static line's date-tier typography + the
   // metric family's text shadow (free placement can land on bright photo
@@ -1132,6 +1186,10 @@ const makeSt = (C: Tokens) => StyleSheet.create({
   dimSlider:  { flex: 1, minWidth: 170, flexDirection: 'row', alignItems: 'center', gap: 8 },
   dimLbl:     { fontSize: 12, fontWeight: '600', color: C.sub, letterSpacing: -0.2, width: 58 },
   colorDotOn: { borderColor: C.text },
+  // 로고 스와치 전용: 블랙/화이트 스와치가 서피스에 묻지 않게 헤어라인 링;
+  // disabled = 죽은 상태가 보이는 채로 (숨김 금지 — 가드의 가시성)
+  logoDotRing: { borderColor: C.border },
+  logoDotOff:  { opacity: 0.25 },
   bgModeBadge: { position: 'absolute', top: 10, alignSelf: 'center', backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: 999, paddingHorizontal: 12, paddingVertical: 5 },
   bgModeTxt:   { fontSize: 11, fontWeight: '700', color: '#fff', letterSpacing: -0.2 },
 

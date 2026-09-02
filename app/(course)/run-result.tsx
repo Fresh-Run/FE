@@ -27,6 +27,7 @@ import { t, useT, tfIn, useLang } from '@/lib/i18n';
 import {
   ActivityIndicator,
   Alert,
+  Image,
   Pressable,
   ScrollView,
   Share,
@@ -315,7 +316,12 @@ export default function RunResultScreen() {
             <View style={st.cardBottom} pointerEvents="none">
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
                 <Icon name="sparkles" size={13} color="#7CF03D" />
-                <Text style={st.cardBrand}>FreshRun</Text>
+                {/* 9/2 wordmark PNG — GREEN FIXED: the brand sits on the
+                    card's own dark gradient band (0.85 black), which never
+                    goes light regardless of app scheme — a scheme-swapped
+                    black logo here would vanish (no-invisible-wordmark rule) */}
+                <Image source={require('@/assets/images/logo-green.png')} resizeMode="contain" style={st.cardBrandImg} />
+
               </View>
               <Text style={st.cardUser}>@{displayName}</Text>
             </View>
@@ -458,7 +464,7 @@ const makeSt = (C: Tokens) => StyleSheet.create({
   cardDist:   { fontSize: 40, fontWeight: '800', color: '#fff', letterSpacing: -1.5, marginTop: 2 },
   cardDistUnit:{ fontSize: 16, fontWeight: '700', color: '#7CF03D' },
   cardBottom: { position: 'absolute', left: 16, right: 16, bottom: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  cardBrand:  { fontSize: 12, fontWeight: '800', color: '#fff', letterSpacing: 0.2 },
+  cardBrandImg: { width: 60, height: 12 },
   cardUser:   { fontSize: 12, fontWeight: '600', color: 'rgba(255,255,255,0.75)' },
 
   statRow:  { flexDirection: 'row', paddingHorizontal: 24, paddingTop: 16 },
