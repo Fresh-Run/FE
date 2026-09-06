@@ -49,7 +49,9 @@ export function BattleHomeBody({ mode, scrollRef }: {
   const lang = useLang();
 
   const [tab, setTab] = useState<Tab>('active');
-  const [detailOpen, setDetailOpen] = useState(false);
+  // 9/5 이모지 라이더: 어느 배틀의 디테일인지 헤더가 알아야 해서 boolean →
+  // 배틀 참조 (열림 = non-null)
+  const [detail, setDetail] = useState<MockBattle | null>(null);
   const battles = useBattleMock(s => s.battles);
 
   const active = battles.filter(b => b.status === 'active');
@@ -63,7 +65,7 @@ export function BattleHomeBody({ mode, scrollRef }: {
     router.push('/battle-create' as never);
   }
 
-  if (detailOpen) return <LeaderboardDemo mode={mode} onBack={() => setDetailOpen(false)} />;
+  if (detail) return <LeaderboardDemo mode={mode} emoji={detail.emoji} onBack={() => setDetail(null)} />;
 
   const TABS: [Tab, string][] = [
     ['active', T('bat.tabActive')],
@@ -128,12 +130,13 @@ export function BattleHomeBody({ mode, scrollRef }: {
             key={b.id}
             onPress={() => {
               if (b.status === 'pending' && b.direction === 'in') router.push({ pathname: '/battle-invite', params: { id: b.id } } as never);
-              else if (b.status === 'active') setDetailOpen(true); // 목 리더보드 (slice-3 상세의 조상)
+              else if (b.status === 'active') setDetail(b); // 목 리더보드 (slice-3 상세의 조상)
             }}
             style={[st.card, shadows.sm]}
           >
             <View style={st.cardHead}>
               <Avatar name={b.opponent.nickname} size={38} photoUrl={null} />
+              <Text style={st.cardEmoji}>{b.emoji}</Text>
               <View style={{ flex: 1, minWidth: 0 }}>
                 <Text style={st.cardName} numberOfLines={1}>
                   {b.title ?? tfIn(lang, 'bat.vsName', { name: b.opponent.nickname })}
@@ -235,7 +238,7 @@ function ScoreFlip({ text, style }: { text: string; style: object }) {
   return <Animated.Text style={[style, { transform: [{ translateY }], opacity }]}>{shown}</Animated.Text>;
 }
 
-function LeaderboardDemo({ mode, onBack }: { mode: Mode; onBack: () => void }) {
+function LeaderboardDemo({ mode, emoji, onBack }: { mode: Mode; emoji: string; onBack: () => void }) {
   const C = useTokens();
   const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
@@ -259,7 +262,7 @@ function LeaderboardDemo({ mode, onBack }: { mode: Mode; onBack: () => void }) {
         <Pressable onPress={onBack} hitSlop={12} style={st.backBtn}>
           <Icon name="arrow-back" size={20} color={C.text} />
         </Pressable>
-        <Text style={st.appTitle}>{T('bt.title')}</Text>
+        <Text style={st.appTitle}>{`${emoji} ${T('bt.title')}`}</Text>
         <View style={{ width: 20 }} />
       </View>
       <ScrollView contentContainerStyle={{ padding: S.lg, paddingBottom: mode === 'route' ? insets.bottom + 24 : tabBarInset }} showsVerticalScrollIndicator={false}>
@@ -369,6 +372,7 @@ const makeSt = (C: Tokens) => ({
   emptyTitle: { fontSize: 15, fontWeight: '700' as const, color: C.sub },
   emptySub: { fontSize: 13, color: C.faint },
   cardHead: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 10 },
+  cardEmoji: { fontSize: 20 },
   cardName: { fontSize: 15, fontWeight: '700' as const, color: C.text },
   cardSubName: { fontSize: 12, color: C.sub },
   daysLeft: { fontSize: 12, fontWeight: '700' as const, color: C.accentGrn },

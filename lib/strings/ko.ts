@@ -706,6 +706,8 @@ export const ko = {
   'bc.stepSettings': '배틀 설정',
   'bc.stepConfirm': '확인',
   'bc.duration': '기간',
+  'bc.durationCustom': '직접 입력',
+  'bc.emojiLabel': '배틀 이모지',
   'bc.days': '{n}일',
   'bc.vs': 'VS',
   'bc.start': '배틀 신청',

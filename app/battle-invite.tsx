@@ -53,6 +53,7 @@ export default function BattleInviteScreen() {
         <>
           <ScrollView contentContainerStyle={{ padding: S.lg, paddingBottom: insets.bottom + 120 }}>
             <View style={[st.card, shadows.sm]}>
+              <Text style={st.inviteEmoji}>{battle.emoji}</Text>
               <Avatar name={battle.opponent.nickname} size={64} photoUrl={null} />
               <Text style={st.inviteSub}>{tfIn(lang, 'bat.inviteSub', { name: battle.opponent.nickname })}</Text>
               {battle.title ? <Text style={st.battleTitle}>{battle.title}</Text> : null}
@@ -85,6 +86,7 @@ const makeSt = (C: Tokens) => ({
   appBar: { flexDirection: 'row' as const, alignItems: 'center' as const, justifyContent: 'space-between' as const, paddingHorizontal: S.lg, paddingVertical: 10 },
   appTitle: { fontSize: 17, fontWeight: '800' as const, color: C.text },
   card: { backgroundColor: C.surface, borderRadius: R.xl, borderWidth: 1, borderColor: C.border, padding: S.lg, alignItems: 'center' as const, gap: 12 },
+  inviteEmoji: { fontSize: 34 },
   inviteSub: { fontSize: 15, fontWeight: '700' as const, color: C.text, textAlign: 'center' as const },
   battleTitle: { fontSize: 14, fontWeight: '800' as const, color: C.accentGrn },
   footer: { position: 'absolute' as const, left: 0, right: 0, bottom: 0, flexDirection: 'row' as const, gap: 10, paddingHorizontal: S.lg, paddingTop: 10, backgroundColor: C.bg },

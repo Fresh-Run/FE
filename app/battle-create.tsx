@@ -16,13 +16,20 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/avatar';
 import { BattleTermsCard } from '@/components/battle-terms';
+import { SeededSlider } from '@/components/seeded-slider';
 import { Icon } from '@/components/ui';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { tfIn, useLang, useT } from '@/lib/i18n';
-import { MOCK_FRIENDS, useBattleMock, type MockFriend } from '@/store/battle-mock';
+import { BATTLE_EMOJIS, DEFAULT_BATTLE_EMOJI, MOCK_FRIENDS, useBattleMock, type MockFriend } from '@/store/battle-mock';
 import { radius as R, spacing as S, shadows, type Tokens } from '@/lib/theme';
 
 const DURATIONS = [3, 7, 14, 30] as const; // spec §2.2 프리셋 칩 (30d max)
+// 직접 입력 (9/5 오너 룰링) — spec 바운드 그대로: 1–30일, 정수만.
+// 이디엄 = 코스 생성의 거리 슬라이더 문법 (SeededSlider + 값 표시 + 양끝
+// 라벨); step 1 + clamp가 정수·범위를 이중으로 보증한다.
+const DAYS_MIN = 1;
+const DAYS_MAX = 30;
+const clampDays = (v: number) => Math.min(DAYS_MAX, Math.max(DAYS_MIN, Math.round(v)));
 const TITLE_MAX = 30;
 
 export default function BattleCreateScreen() {
@@ -34,7 +41,12 @@ export default function BattleCreateScreen() {
 
   const [step, setStep] = useState(0);
   const [opponent, setOpponent] = useState<MockFriend | null>(null);
+  // 프리셋과 직접 입력은 하나의 선택 그룹: days가 단일 진실이고 custom은
+  // 어느 칩이 켜져 있는지만 가른다 — 확인/약관은 days만 읽으므로 두 경로의
+  // 표시가 구조적으로 동일하다.
   const [days, setDays] = useState<number>(7);
+  const [custom, setCustom] = useState(false);
+  const [emoji, setEmoji] = useState<string>(DEFAULT_BATTLE_EMOJI);
   const [title, setTitle] = useState('');
 
   const steps = [T('bc.stepOpponent'), T('bc.stepSettings'), T('bc.stepConfirm')];
@@ -44,7 +56,7 @@ export default function BattleCreateScreen() {
     if (!opponent) return;
     // 쿼터 슬롯 — 베타: 항상 ok (spec Q6); slice 2에서 실 게이트로 교체
     if (!useBattleMock.getState().canCreate().ok) return;
-    useBattleMock.getState().createBattle(opponent, days, title);
+    useBattleMock.getState().createBattle(opponent, days, title, emoji);
     router.back(); // 홈 대기 탭에 pending 카드로 나타난다
   }
 
@@ -86,8 +98,43 @@ export default function BattleCreateScreen() {
             <Text style={st.secLabel}>{T('bc.duration')}</Text>
             <View style={st.chipRow}>
               {DURATIONS.map(d => (
-                <Pressable key={d} onPress={() => setDays(d)} style={[st.chip, days === d && st.chipSel]}>
-                  <Text style={[st.chipTxt, days === d && st.chipTxtSel]}>{tfIn(lang, 'bc.days', { n: d })}</Text>
+                <Pressable key={d} onPress={() => { setCustom(false); setDays(d); }} style={[st.chip, !custom && days === d && st.chipSel]}>
+                  <Text style={[st.chipTxt, !custom && days === d && st.chipTxtSel]}>{tfIn(lang, 'bc.days', { n: d })}</Text>
+                </Pressable>
+              ))}
+              {/* 직접 입력 — 프리셋과 같은 그룹: 이 칩이 켜지면 프리셋 해제,
+                  프리셋을 고르면 이 칩 해제 (days는 계속 단일 진실) */}
+              <Pressable onPress={() => setCustom(true)} style={[st.chip, custom && st.chipSel]}>
+                <Text style={[st.chipTxt, custom && st.chipTxtSel]}>{T('bc.durationCustom')}</Text>
+              </Pressable>
+            </View>
+            {custom && (
+              <View style={st.customBox}>
+                <Text style={st.customValue}>{tfIn(lang, 'bc.days', { n: days })}</Text>
+                <SeededSlider
+                  siteId="battle-days"
+                  style={st.slider}
+                  minimumValue={DAYS_MIN}
+                  maximumValue={DAYS_MAX}
+                  step={1}
+                  value={days}
+                  onValueChange={v => setDays(clampDays(v))}
+                  minimumTrackTintColor={C.accent}
+                  maximumTrackTintColor={C.border}
+                  thumbTintColor={C.accent}
+                />
+                <View style={st.sliderLabels}>
+                  <Text style={st.sliderLabel}>{tfIn(lang, 'bc.days', { n: DAYS_MIN })}</Text>
+                  <Text style={st.sliderLabel}>{tfIn(lang, 'bc.days', { n: DAYS_MAX })}</Text>
+                </View>
+              </View>
+            )}
+            {/* 배틀 이모지 — 큐레이션 12종 단일 선택, 자유 입력 없음 (9/5) */}
+            <Text style={st.secLabel}>{T('bc.emojiLabel')}</Text>
+            <View style={st.emojiRow}>
+              {BATTLE_EMOJIS.map(e => (
+                <Pressable key={e} onPress={() => setEmoji(e)} style={[st.emojiChip, emoji === e && st.emojiChipSel]}>
+                  <Text style={st.emojiTxt}>{e}</Text>
                 </Pressable>
               ))}
             </View>
@@ -107,6 +154,7 @@ export default function BattleCreateScreen() {
 
         {step === 2 && opponent && (
           <View style={[st.confirmCard, shadows.sm]}>
+            <Text style={st.confirmEmoji}>{emoji}</Text>
             <View style={st.vsRow}>
               <View style={st.vsSide}>
                 <Avatar name={T('bat.me')} size={48} photoUrl={null} />
@@ -158,6 +206,17 @@ const makeSt = (C: Tokens) => ({
   chipSel: { backgroundColor: C.accent, borderColor: C.accent },
   chipTxt: { fontSize: 13, fontWeight: '600' as const, color: C.text },
   chipTxtSel: { color: '#0D1A06', fontWeight: '800' as const },
+  // 직접 입력 — 코스 생성 거리 슬라이더 문법 (값 표시 + 슬라이더 + 양끝 라벨)
+  customBox: { marginTop: 10, backgroundColor: C.surface, borderRadius: R.lg, borderWidth: 1, borderColor: C.border, padding: 12 },
+  customValue: { fontSize: 17, fontWeight: '800' as const, color: C.text, textAlign: 'center' as const, fontVariant: ['tabular-nums' as const] },
+  slider: { marginTop: 4 },
+  sliderLabels: { flexDirection: 'row' as const, justifyContent: 'space-between' as const },
+  sliderLabel: { fontSize: 11, color: C.faint },
+  emojiRow: { flexDirection: 'row' as const, flexWrap: 'wrap' as const, gap: 8 },
+  emojiChip: { width: 44, height: 44, borderRadius: R.lg, borderWidth: 1, borderColor: C.border, backgroundColor: C.surface, alignItems: 'center' as const, justifyContent: 'center' as const },
+  emojiChipSel: { borderColor: C.accent, backgroundColor: C.accentDim },
+  emojiTxt: { fontSize: 20 },
+  confirmEmoji: { fontSize: 34 },
   titleBox: { backgroundColor: C.surface, borderRadius: R.lg, borderWidth: 1, borderColor: C.border, paddingHorizontal: 12 },
   titleInput: { paddingVertical: 11, fontSize: 15, color: C.text },
   confirmCard: { backgroundColor: C.surface, borderRadius: R.xl, borderWidth: 1, borderColor: C.border, padding: S.lg, alignItems: 'center' as const, gap: 12 },

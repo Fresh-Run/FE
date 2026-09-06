@@ -694,6 +694,8 @@ export const en: Record<keyof typeof ko, string> = {
   'bc.stepSettings': 'Battle settings',
   'bc.stepConfirm': 'Confirm',
   'bc.duration': 'Duration',
+  'bc.durationCustom': 'Custom',
+  'bc.emojiLabel': 'Battle emoji',
   'bc.days': '{n} days',
   'bc.vs': 'VS',
   'bc.start': 'Send challenge',

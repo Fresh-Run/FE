@@ -22,12 +22,20 @@ export const MOCK_FRIENDS: MockFriend[] = [
   { id: 'mock-f4', nickname: '새벽공기' },
 ];
 
+/** 배틀 이모지 — 큐레이션 12종 (9/5 오너 룰링). 자유 키보드 입력 없음 =
+    모더레이션-프리 보증 (선택지가 곧 화이트리스트). slice 2에서 이 세트가
+    서버 계약의 enum 후보로 넘어간다. */
+export const BATTLE_EMOJIS = ['⚡', '🔥', '🏃', '💨', '🏆', '🎯', '👟', '💪', '🚀', '🌅', '⛰️', '🐢'] as const;
+export const DEFAULT_BATTLE_EMOJI = '⚡';
+
 export type MockBattleStatus = 'pending' | 'active' | 'settled';
 
 export type MockBattle = {
   id: string;
   opponent: MockFriend;
   title: string | null;
+  /** 큐레이션 세트의 하나 (BATTLE_EMOJIS) — 디폴트 ⚡ */
+  emoji: string;
   durationDays: number;
   /** out = 내가 보낸 초대 · in = 받은 초대 (수락/거절 대상) */
   direction: 'out' | 'in';
@@ -46,7 +54,7 @@ type BattleMockStore = {
       여기 들어온다 (지연 쿼터 필드, slice 2) — 시그니처는 그대로, 구현만
       교체되도록 create 진입이 이 함수를 이미 경유한다. */
   canCreate: () => { ok: boolean };
-  createBattle: (opponent: MockFriend, durationDays: number, title: string | null) => void;
+  createBattle: (opponent: MockFriend, durationDays: number, title: string | null, emoji: string) => void;
   acceptInvite: (id: string) => void;
   declineInvite: (id: string) => void;
   /** 데모 전용 — 진행 중 배틀을 즉시 정산 (목 최종 점수). slice 2에서 죽는다. */
@@ -63,6 +71,7 @@ export const useBattleMock = create<BattleMockStore>((set) => ({
       id: 'mock-b0',
       opponent: MOCK_FRIENDS[1],
       title: '청라 대전',
+      emoji: '🔥',
       durationDays: 7,
       direction: 'in',
       status: 'pending',
@@ -74,13 +83,14 @@ export const useBattleMock = create<BattleMockStore>((set) => ({
 
   canCreate: () => ({ ok: true }),
 
-  createBattle: (opponent, durationDays, title) => set(s => ({
+  createBattle: (opponent, durationDays, title, emoji) => set(s => ({
     battles: [
       ...s.battles,
       {
         id: `mock-b${seq++}`,
         opponent,
         title: title?.trim() ? title.trim() : null,
+        emoji,
         durationDays,
         direction: 'out' as const,
         status: 'pending' as const,
