@@ -228,6 +228,8 @@ export default function RunSaveScreen() {
         avgPaceSecPerKm: run.avgPaceSecPerKm,
         avgCadenceSpm,
         routeId: run.course?.id ?? null,
+        startedAtMs: run.startedAtMs ?? null, // 배틀 additive — 플래그 뒤 (runs-api)
+        endedAtMs: run.endedAt ?? null,
         // empty title → the suggestion is sent as the real title (the
         // placeholder is a promise, not decoration)
         title: (title.trim() || suggestedTitle).slice(0, 60),

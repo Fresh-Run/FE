@@ -145,6 +145,8 @@ export default function RunResultScreen() {
         avgCadenceSpm,
         routeId: run.course?.id ?? null,
         gpsTrack: run.gpsTrack,
+        startedAtMs: run.startedAtMs ?? null, // 배틀 additive — 플래그 뒤 (runs-api)
+        endedAtMs: run.endedAt ?? null,
         // 8/7-8/8 safety-net thread: the crew-banner choice AND the tag ×
         // removal ride the crash-safe draft (pending-run) — the omissions
         // here meant server default ON / a removed tag re-tagged on the

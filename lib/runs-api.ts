@@ -81,7 +81,19 @@ export type SaveRunInput = {
       sent explicitly so the toggle's OFF is honored. Private crews never
       banner regardless (server hard gate). */
   showCrew?: boolean;
+  /** 배틀 계약 (지연 7bc2e4f additive 후속): true wall-clock run start/end
+      (RunSnapshot.startedAtMs / endedAt). Absent on pre-anchor recovery
+      runs → fields omitted (her columns nullable-additive). */
+  startedAtMs?: number | null;
+  endedAtMs?: number | null;
 };
+
+/** 배틀 서버 타임스탬프 (started_at/ended_at) 전송 스위치 — 오늘 OFF.
+    지연 RunRequest는 extra="forbid"이고 두 필드가 아직 스키마에 없다
+    (BE 7bc2e4f 커밋 노트 "ended_at additive 후속" + schemas.py:1106-1112
+    확인, 2026-09-08) — 지금 보내면 저장 자체가 422로 죽는다. 그녀 additive
+    SQL+스키마 착지 시 true로 플립 (라이브 프로브 후 — probes-carry-no-expiry). */
+const SEND_RUN_TIMESTAMPS: boolean = false;
 
 // Contract hard cap: >5,000 points → 422. Uniform stride keeps the shape
 // without client-side distance math.
@@ -134,6 +146,10 @@ export function saveRun(input: SaveRunInput): Promise<SavedRun> {
       ...(input.crewId ? { crew_id: input.crewId } : {}),
       ...(input.announcementId ? { announcement_id: input.announcementId } : {}),
       ...(input.showCrew != null ? { show_crew: input.showCrew } : {}),
+      // 배틀 additive (플래그 뒤 — 위 SEND_RUN_TIMESTAMPS 주석): 클라이언트-
+      // authoritative 월-클록, UTC ISO. 부재(프리-앵커 리커버리) = 생략.
+      ...(SEND_RUN_TIMESTAMPS && input.startedAtMs ? { started_at: new Date(input.startedAtMs).toISOString() } : {}),
+      ...(SEND_RUN_TIMESTAMPS && input.endedAtMs ? { ended_at: new Date(input.endedAtMs).toISOString() } : {}),
     },
   });
 }
