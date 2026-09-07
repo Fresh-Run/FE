@@ -51,6 +51,19 @@ export default function CoursePreviewScreen() {
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ item?: string }>();
   const [pending] = useState(() => getPendingCourse());
+  // P1 (9/8): create 히어로와 동일 처리 — 메모화 (처닝 킬) + coordinate
+  // 셰이프 가드. 이 표면의 웨이포인트는 지연 PublicRouteResponse.waypoints
+  // 신설로 포워드-와이어가 막 라이브된 상태 (finite 여과 = RealMap 초크포인트).
+  const previewWaypointMarkers = useMemo(
+    () => pending?.waypoints?.slice(1, -1)
+      .filter(wp => wp?.coordinate != null)
+      .map((wp, i) => ({
+        lat: wp.coordinate.lat, lng: wp.coordinate.lng,
+        label: String(i + 1),
+        title: wp.name,
+      })),
+    [pending],
+  );
   const units = useSettings(s => s.settings.units);
   useEffect(() => () => clearPendingCourse(), []);
 
@@ -141,13 +154,9 @@ export default function CoursePreviewScreen() {
                 polyline={pending.polyline}
                 startPin
                 cache={false}
-                // FORWARD-WIRE: today's feed payload serves NO waypoints
-                // (PublicRoute — 지연 ask drafted); lights up when it lands
-                waypointMarkers={pending.waypoints?.slice(1, -1).map((wp, i) => ({
-                  lat: wp.coordinate.lat, lng: wp.coordinate.lng,
-                  label: String(i + 1),
-                  title: wp.name,
-                }))}
+                // 지연 PublicRouteResponse.waypoints 신설 (9/7 배틀 커밋 동승)
+                // 로 포워드-와이어 라이브 — P1 가드/메모 경유 (위 훅)
+                waypointMarkers={previewWaypointMarkers}
               />
             </Pressable>
           ) : (

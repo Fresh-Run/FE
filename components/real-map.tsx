@@ -130,6 +130,16 @@ export function RealMap({ height, borderRadius = 0, polyline, center, marker = f
     const clean = polyline.filter(c => c != null && Number.isFinite(c.lat) && Number.isFinite(c.lng));
     return clean.length >= 2 ? clean : null;
   }, [polyline]);
+  // P1 나일-가드 (9/8, ASC 빌드-11 크래시): 8/3 ①룰의 웨이포인트 누락분 —
+  // 라인은 finite-필터를 받는데 마커 좌표는 raw로 네이티브에 갔다. null/NaN
+  // 멤버 좌표의 Marker = nil 네이티브 뷰 제조 (AIRMap insertReactSubview:
+  // atIndex: object cannot be nil — AIRMap.m:138). 라인과 동일 이디엄으로
+  // 마운트 전 여과 — 3 소비 표면 (create 히어로 · preview · 실전 소비처
+  // 전부)이 이 초크포인트 하나로 커버된다.
+  const wps = useMemo(
+    () => (waypointMarkers ?? []).filter(w => w != null && Number.isFinite(w.lat) && Number.isFinite(w.lng)),
+    [waypointMarkers],
+  );
   const mapRef = useRef<MapView>(null);
 
   const region = useMemo(() => {
@@ -221,7 +231,7 @@ export function RealMap({ height, borderRadius = 0, polyline, center, marker = f
             the ={false} "optimization" snapshotted an EMPTY bitmap at mount
             (the known iOS pitfall, convicted by the in-file control group
             2026-07-22) */}
-        {waypointMarkers && waypointMarkers.length > 0 ? waypointMarkers.map(w => (
+        {wps.length > 0 ? wps.map(w => (
           <Marker key={`wp-${w.label}`} coordinate={{ latitude: w.lat, longitude: w.lng }} anchor={{ x: 0.5, y: 0.5 }} title={w.title}>
             <View style={{ minWidth: 22, height: 22, borderRadius: 11, paddingHorizontal: 4, backgroundColor: stroke, borderWidth: 2, borderColor: '#fff', alignItems: 'center', justifyContent: 'center' }}>
               <Text style={{ fontSize: 11, fontWeight: '800', color: '#0D1A06' }}>{w.label}</Text>

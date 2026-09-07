@@ -298,6 +298,21 @@ export default function CreateScreen() {
   // 지점 N fill — placeholder waypoints get real names (label-shape slice);
   // top-level call (hooks rule), no-ops until a route exists
   const wpNames = useWaypointNames(route?.waypoints);
+  // P1 (9/8): ① 아이덴티티-처닝 킬 — 인라인 배열이 wpNames 비동기 채움 동안
+  // 렌더마다 재생성돼 맵 마운트 중 마커 자식이 처닝 (new-arch interop
+  // nil-insert 레이스 창, ~7s ASC 크래시의 시간대). ② 셰이프 가드 —
+  // coordinate 부재/비정상 행 스킵 (TypeError 자매 레인; finite 여과는
+  // RealMap 초크포인트가 이어받는다).
+  const heroWaypointMarkers = useMemo(
+    () => (route?.waypoints ?? []).slice(1, -1)
+      .filter(wp => wp?.coordinate != null)
+      .map((wp, i) => ({
+        lat: wp.coordinate.lat, lng: wp.coordinate.lng,
+        label: String(i + 1),
+        title: wpNames[waypointCacheKey(wp.coordinate)] ?? wp.name,
+      })),
+    [route, wpNames],
+  );
   const [genError, setGenError]   = useState<string | null>(null);
   // Target captured at request time — the miss banner's delta must compare
   // against what was actually asked, not the (resettable) slider state.
@@ -428,11 +443,7 @@ export default function CreateScreen() {
                   cache={false}
                   // middle waypoints only — 출발/복귀 are the flag/endpoint's job;
                   // labels match the list numbering (지점 N → N)
-                  waypointMarkers={route.waypoints.slice(1, -1).map((wp, i) => ({
-                    lat: wp.coordinate.lat, lng: wp.coordinate.lng,
-                    label: String(i + 1),
-                    title: wpNames[waypointCacheKey(wp.coordinate)] ?? wp.name,
-                  }))}
+                  waypointMarkers={heroWaypointMarkers}
                 />
               </Pressable>
             ) : (

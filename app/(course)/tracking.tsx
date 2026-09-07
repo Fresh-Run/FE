@@ -585,7 +585,11 @@ export default function TrackingScreen() {
   const drawnPath = useMemo(() => livePath.map(p => ({ latitude: p.lat, longitude: p.lng })), [livePath.length]);
 
   const courseCoords = useMemo(
-    () => (course?.polyline ?? []).map(p => ({ latitude: p.lat, longitude: p.lng })),
+    // P1 동반 하드닝 (9/8): 코스 지오메트리도 finite-여과 — courseCoords[0]가
+    // 스타트-플래그 Marker 좌표로 직행한다 (RealMap ①룰의 이 파일 등가물)
+    () => (course?.polyline ?? [])
+      .filter(p => p != null && Number.isFinite(p.lat) && Number.isFinite(p.lng))
+      .map(p => ({ latitude: p.lat, longitude: p.lng })),
     [course],
   );
 
@@ -655,8 +659,12 @@ export default function TrackingScreen() {
   // the real-POI naming rule makes "지점 1" audio awkward; flagged for her
   // per-course capability flag (ledgered 8/8).
   const wpMarkers = useMemo(
+    // P1 셰이프+finite 가드 (9/8): 이 MapView는 RealMap 초크포인트 밖 —
+    // 자체 여과 필수 (coordinate 부재/NaN 행 스킵, nil-마커 제조 금지)
     () => (course?.waypoints && course.waypoints.length > 2
-      ? course.waypoints.slice(1, -1).map((wp, i) => ({ lat: wp.coordinate.lat, lng: wp.coordinate.lng, label: String(i + 1) }))
+      ? course.waypoints.slice(1, -1)
+          .filter(wp => wp?.coordinate != null && Number.isFinite(wp.coordinate.lat) && Number.isFinite(wp.coordinate.lng))
+          .map((wp, i) => ({ lat: wp.coordinate.lat, lng: wp.coordinate.lng, label: String(i + 1) }))
       : []),
     [course],
   );
@@ -1410,7 +1418,7 @@ export default function TrackingScreen() {
           {/* 8/3: geometry turn marker — VISUAL ONLY (ruled: no TTS until
               tuning + T2 names; a wrong spoken turn is worse than none).
               Direction from the bearing delta's sign; distance from alongM. */}
-          {turnAhead && state === 'running' && navPhase === 'nav' ? (
+          {turnAhead && Number.isFinite(turnAhead.point.lat) && Number.isFinite(turnAhead.point.lng) && state === 'running' && navPhase === 'nav' ? (
             <Marker coordinate={{ latitude: turnAhead.point.lat, longitude: turnAhead.point.lng }} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={false}>
               <View style={st.turnBadge}>
                 <Icon name={turnAhead.dir === 'right' ? 'arrow-redo' : 'arrow-undo'} size={13} color={C.text} />
