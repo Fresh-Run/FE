@@ -71,6 +71,7 @@ import { distUnit, fmtDist, fmtDuration, fmtPaceIn, fmtWhen, paceUnit } from '@/
 import type { SavedRun } from '@/lib/runs-api';
 import { supabase } from '@/lib/supabase';
 import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
+import { isPlausibleTrack } from '@/lib/track-plausibility';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { useSettings } from '@/store/use-settings';
 import { t, useLang, tfIn } from '@/lib/i18n';
@@ -401,7 +402,9 @@ export default function CrewChatScreen() {
     // original's deletion/privating; tap re-evaluates → friendly 404) ──
     if (m.type === 'run_share' && !m.deleted && m.payload) {
       const rp = m.payload as unknown as RunSharePayload;
-      const line = Array.isArray(rp.polyline_thumb) && rp.polyline_thumb.length >= 2 ? rp.polyline_thumb : null;
+      // 실측성 게이트 (9/7): 지터-런 스냅샷도 스크리블 금지 — 라인 없이 렌더
+      const line = Array.isArray(rp.polyline_thumb) && rp.polyline_thumb.length >= 2
+        && isPlausibleTrack(rp.polyline_thumb, rp.distance_km) ? rp.polyline_thumb : null;
       return (
         <View style={[st.msgRow, mine && st.msgRowMine]}>
           {!mine && (

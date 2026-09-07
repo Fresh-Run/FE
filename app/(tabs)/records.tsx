@@ -23,6 +23,7 @@ import { useRuns, type Run } from '@/hooks/use-runs';
 import { t, tfIn, useLang, useT, type StringKey } from '@/lib/i18n';
 import { distUnit, fmtDate, fmtDist, fmtDuration, fmtPaceIn, fmtWhen, timeTitle } from '@/lib/run-format';
 import { radius as R, shadows, spacing as S, type Tokens, DENSE_MAX_FONT_SCALE} from '@/lib/theme';
+import { isPlausibleTrack } from '@/lib/track-plausibility';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { getMonthlyStats, type MonthlyStats } from '@/lib/stats-api';
 import { useQuota } from '@/store/use-quota';
@@ -271,7 +272,7 @@ function RunRow({ run }: { run: Run }) {
             fit the current row; the ~110px redesign docket revisits.
             Otherwise: route-shaped mini (thumb) / seed art (trackless). */}
         <SafeImage uri={run.photo_thumb} style={st.photoThumb}
-          fallback={run.polyline_thumb && run.polyline_thumb.length >= 2
+          fallback={run.polyline_thumb && run.polyline_thumb.length >= 2 && isPlausibleTrack(run.polyline_thumb, run.distance_km)
             ? <RealMap height={62} borderRadius={14} polyline={run.polyline_thumb} />
             : <MiniMap seed={run.id} height={62} borderRadius={14} />} />
       </View>

@@ -38,6 +38,7 @@ import { useMyPublicProfile, type MyRun } from '@/hooks/use-my-public-profile';
 import { ApiError, apiFetch } from '@/lib/api';
 import { distUnit, fmtDist, fmtDuration, fmtPaceIn, fmtWhen, paceUnit, timeTitle } from '@/lib/run-format';
 import { radius as R, shadows, spacing as S, type Tokens, DENSE_MAX_FONT_SCALE} from '@/lib/theme';
+import { isPlausibleTrack } from '@/lib/track-plausibility';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { prewarmTracks, useRunTrack } from '@/lib/track-cache';
 import { useSettings } from '@/store/use-settings';
@@ -61,6 +62,8 @@ function RunCard({ run, name, photoUrl, units, mapLive, kudosOff, onKudos, onCou
   const st = useStyles(makeSt);
   // visual-split ruling: full track when fetched, thumb while loading
   const { line: cardLine, pending: linePending } = useRunTrack(mapLive ? run.id : null, run.polyline_thumb);
+  // 실측성 게이트 (9/7) — 공유 RunCard와 동일 문법 (지터-런 → 트랙리스 페이스)
+  const plausible = isPlausibleTrack(cardLine ?? run.polyline_thumb, run.distance_km);
   return (
     // Whole card → own-run SOCIAL view (owner correction 2026-07-12); the
     // 활동 상세 analysis screen's home is the 기록 tab — social links to it
@@ -91,10 +94,10 @@ function RunCard({ run, name, photoUrl, units, mapLive, kudosOff, onKudos, onCou
       {/* polyline_thumb slice: viewable + thumb → real map (card-mode, same
           perf pattern as the feed); off-screen/trackless → route-shaped or
           seed SVG per the ledger rulings */}
-      {mapLive && ((cardLine && cardLine.length >= 2) || linePending) ? (
+      {mapLive && plausible && ((cardLine && cardLine.length >= 2) || linePending) ? (
         <RealMap height={150} polyline={cardLine ?? run.polyline_thumb} lineHidden={linePending} />
       ) : (
-        <MiniMap seed={run.id} height={150} polyline={cardLine ?? undefined} />
+        <MiniMap seed={run.id} height={150} polyline={plausible ? cardLine ?? undefined : undefined} />
       )}
       <View style={st.cardBody}>
         <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.cardTitle}>{run.title ?? timeTitle(run.ran_at, lang)}</Text>

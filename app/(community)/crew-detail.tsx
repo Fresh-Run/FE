@@ -41,6 +41,7 @@ import { getUnread } from '@/lib/chat-api';
 import { getCrewRanking, getCrewRuns, groupCrewSessions, listJoinRequests, uploadCrewImage, type CrewRankingEntry, type CrewRunItem } from '@/lib/crews-api';
 import { DAY_LABEL_KEY, distUnit, fmtAgo, fmtDist, fmtDuration, fmtPaceIn, paceUnit } from '@/lib/run-format';
 import { accentShadow, radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
+import { isPlausibleTrack } from '@/lib/track-plausibility';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { setActiveCourse } from '@/store/active-course';
 import { useSettings } from '@/store/use-settings';
@@ -882,7 +883,7 @@ export default function CrewDetailScreen() {
                             the route-shaped MiniMap SVG (no MapKit at this
                             size = the degenerate-fit class dead), else seed. */}
                         <SafeImage uri={run.photo_thumb} style={st.feedThumbImg}
-                          fallback={run.polyline_thumb && run.polyline_thumb.length >= 2
+                          fallback={run.polyline_thumb && run.polyline_thumb.length >= 2 && isPlausibleTrack(run.polyline_thumb, run.distance_km)
                             ? <MiniMap seed={run.run_id} height={48} borderRadius={13} polyline={run.polyline_thumb} />
                             : <MiniMap seed={run.run_id} height={48} borderRadius={13} />} />
                       </View>

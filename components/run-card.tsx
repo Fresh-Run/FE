@@ -14,6 +14,7 @@ import { MiniMap } from '@/components/mini-map';
 import { RealMap } from '@/components/real-map';
 import { distUnit, fmtDist, fmtDuration, fmtPaceIn, fmtWhen, paceUnit, timeTitle } from '@/lib/run-format';
 import { shadows, type Tokens, DENSE_MAX_FONT_SCALE} from '@/lib/theme';
+import { isPlausibleTrack } from '@/lib/track-plausibility';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { useRunTrack } from '@/lib/track-cache';
 import type { UserRun } from '@/hooks/use-user-profile';
@@ -49,6 +50,9 @@ export function RunCard({ run, units, mapLive, onKudos, kudosOff, onOpen, onAvat
   const st = useStyles(makeSt);
   // visual-split ruling: full track when fetched, thumb while loading
   const { line: cardLine, pending: linePending } = useRunTrack(mapLive ? run.run_id : null, run.polyline_thumb);
+  // 실측성 게이트 (9/7): 지터-런 (거리 대비 bbox 극소)은 지도 대신 트랙리스
+  // 페이스 — 숫자와 모순되는 스크리블 금지 (lib/track-plausibility 진단 참조)
+  const plausible = isPlausibleTrack(cardLine ?? run.polyline_thumb, run.distance_km);
   return (
     <Pressable onPress={onOpen} disabled={!onOpen} style={({ pressed }) => [st.card, shadows.sm, pressed && !!onOpen && { opacity: 0.85 }]}>
       <View style={st.cardHead}>
@@ -76,10 +80,10 @@ export function RunCard({ run, units, mapLive, onKudos, kudosOff, onOpen, onAvat
       </View>
       {/* polyline_thumb slice: viewable + thumb → real map; off-screen /
           trackless → route-shaped or seed SVG (ledger rulings) */}
-      {mapLive && ((cardLine && cardLine.length >= 2) || linePending) ? (
+      {mapLive && plausible && ((cardLine && cardLine.length >= 2) || linePending) ? (
         <RealMap height={200} polyline={cardLine ?? run.polyline_thumb} lineHidden={linePending} />
       ) : (
-        <MiniMap seed={run.run_id} height={200} polyline={cardLine ?? undefined} />
+        <MiniMap seed={run.run_id} height={200} polyline={plausible ? cardLine ?? undefined : undefined} />
       )}
       <View style={st.cardBody}>
         <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.cardTitle}>{run.title ?? timeTitle(run.ran_at, lang)}</Text>

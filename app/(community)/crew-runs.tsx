@@ -47,6 +47,7 @@ import { getCrewRuns, groupCrewSessions, CREW_FEED_PAGE, type CrewRunItem } from
 import { openProfile } from '@/lib/profile-nav';
 import { distUnit, fmtAgo, fmtDateAbs, fmtDist, fmtDuration, fmtPaceIn, paceUnit, timeTitle } from '@/lib/run-format';
 import { shadows, spacing as S, type Tokens, DENSE_MAX_FONT_SCALE } from '@/lib/theme';
+import { isPlausibleTrack } from '@/lib/track-plausibility';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { useRunTrack } from '@/lib/track-cache';
 import { useSettings } from '@/store/use-settings';
@@ -121,7 +122,8 @@ export function RunCard({ run, units, mapLive, onOpen, kudosOff, onKudos, onCoun
       {(() => {
         const line = (cardLine && cardLine.length >= 2) ? cardLine
           : (run.polyline_thumb && run.polyline_thumb.length >= 2) ? run.polyline_thumb : null;
-        if (!line) return <MiniMap seed={run.run_id} height={160} />; // trackless — seed art
+        // 실측성 게이트 (9/7): 지터-런은 트랙리스 취급 (스크리블 금지)
+        if (!line || !isPlausibleTrack(line, run.distance_km)) return <MiniMap seed={run.run_id} height={160} />;
         return mapLive
           ? <RealMap height={160} polyline={line} lineHidden={linePending && line !== cardLine} />
           : <MiniMap seed={run.run_id} height={160} polyline={line} />;
@@ -328,7 +330,7 @@ export default function CrewRunsScreen() {
                   style={({ pressed }) => [st.folderCard, shadows.sm, pressed && { opacity: 0.85 }]}
                 >
                   <View style={st.folderThumb}>
-                    {a.polyline_thumb && a.polyline_thumb.length >= 2
+                    {a.polyline_thumb && a.polyline_thumb.length >= 2 && isPlausibleTrack(a.polyline_thumb, a.distance_km)
                       ? <MiniMap seed={a.run_id} height={64} borderRadius={14} polyline={a.polyline_thumb} />
                       : <MiniMap seed={a.run_id} height={64} borderRadius={14} />}
                   </View>
