@@ -149,12 +149,25 @@ function StatTile({ label, value }: { label: string; value: string }) {
   );
 }
 
-function WaypointRow({ wp, index, displayName }: { wp: Waypoint; index: number; displayName?: string }) {
+// 9/8 넘버링 정렬 (팔로업): 리스트 지점 N === 맵 핀 N 항상 — 넘버는 논-핏스톱
+// 미들만 스킵-카운트 (맵과 동일 카운터), 핏스톱 = 카페 글리프 (배지+이름이
+// 행의 아이덴티티), 출발/복귀 = 플래그 글리프 (맵 스타트-플래그 문법의 리스트
+// 등가물; 이름 '출발'/'복귀'가 의미를 지참 — 글리프는 장식).
+function WaypointRow({ wp, kind, num, displayName }: {
+  wp: Waypoint;
+  kind: 'start' | 'end' | 'pitstop' | 'num';
+  num: number;
+  displayName?: string;
+}) {
   const st = useStyles(makeSt);
+  const C = useTokens();
   return (
     <View style={st.wpRow}>
       <View style={st.wpIndex}>
-        <Text style={st.wpIndexTxt}>{index + 1}</Text>
+        {kind === 'num' ? <Text style={st.wpIndexTxt}>{num}</Text>
+          : kind === 'pitstop' ? <Icon name="cafe" size={11} color={C.accentGrn} />
+          : kind === 'start' ? <Icon name="flag" size={11} color={C.accentGrn} />
+          : <Icon name="flag-outline" size={11} color={C.accentGrn} />}
       </View>
       <View style={{ flex: 1, minWidth: 0 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -303,16 +316,19 @@ export default function CreateScreen() {
   // nil-insert 레이스 창, ~7s ASC 크래시의 시간대). ② 셰이프 가드 —
   // coordinate 부재/비정상 행 스킵 (TypeError 자매 레인; finite 여과는
   // RealMap 초크포인트가 이어받는다).
-  const heroWaypointMarkers = useMemo(
-    () => (route?.waypoints ?? []).slice(1, -1)
+  const heroWaypointMarkers = useMemo(() => {
+    // 핏스톱 글리프 (9/8 오너 룰링): 글리프가 번호를 대체, 넘버링은
+    // 논-핏스톱만 카운트 — 이터너리 배지 트리트먼트의 맵 등가물
+    let n = 0, p = 0;
+    return (route?.waypoints ?? []).slice(1, -1)
       .filter(wp => wp?.coordinate != null)
-      .map((wp, i) => ({
+      .map(wp => ({
         lat: wp.coordinate.lat, lng: wp.coordinate.lng,
-        label: String(i + 1),
+        isPitstop: !!wp.is_pitstop,
+        label: wp.is_pitstop ? `P${++p}` : String(++n), // P라벨 = 키 전용 (글리프가 렌더)
         title: wpNames[waypointCacheKey(wp.coordinate)] ?? wp.name,
-      })),
-    [route, wpNames],
-  );
+      }));
+  }, [route, wpNames]);
   const [genError, setGenError]   = useState<string | null>(null);
   // Target captured at request time — the miss banner's delta must compare
   // against what was actually asked, not the (resettable) slider state.
@@ -513,12 +529,23 @@ export default function CreateScreen() {
           <View style={{ paddingHorizontal: S.gutter, paddingTop: S.xl }}>
             <Text style={st.resultSectionTitle}>{t('crt.route')}</Text>
             <View style={[st.waypointCard, shadows.sm]}>
-              {route.waypoints.map((wp, i) => (
-                <View key={i}>
-                  {i > 0 && <View style={st.wpDivider} />}
-                  <WaypointRow wp={wp} index={i} displayName={wpNames[waypointCacheKey(wp.coordinate)]} />
-                </View>
-              ))}
+              {(() => {
+                // 맵과 동일한 스킵 카운터 (heroWaypointMarkers 참조) — 지점
+                // N(리스트) === 핀 N(맵) 항상
+                let n = 0;
+                return route.waypoints.map((wp, i) => {
+                  const kind = wp.is_pitstop ? 'pitstop' as const
+                    : i === 0 ? 'start' as const
+                    : i === route.waypoints.length - 1 ? 'end' as const
+                    : 'num' as const;
+                  return (
+                    <View key={i}>
+                      {i > 0 && <View style={st.wpDivider} />}
+                      <WaypointRow wp={wp} kind={kind} num={kind === 'num' ? ++n : 0} displayName={wpNames[waypointCacheKey(wp.coordinate)]} />
+                    </View>
+                  );
+                });
+              })()}
             </View>
           </View>
 

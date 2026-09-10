@@ -16,6 +16,8 @@ import React, { useMemo, useRef } from 'react';
 import { Text, View } from 'react-native';
 import MapView, { Marker, Polyline } from 'react-native-maps';
 
+import { Icon } from '@/components/ui';
+
 import { KM_PER_MI } from '@/lib/run-format';
 import { distanceCrossings } from '@/lib/run-metrics';
 import { routeStroke } from '@/lib/theme';
@@ -101,7 +103,7 @@ type Props = {
       on tap where the map is interactive (card mode is pointerEvents-none,
       so callouts are structurally inert there — tap-to-enlarge is the door).
       Names stay the served neutral placeholders (real-POI-only rule). */
-  waypointMarkers?: { lat: number; lng: number; label: string; title?: string }[];
+  waypointMarkers?: { lat: number; lng: number; label: string; title?: string; isPitstop?: boolean }[];
 };
 
 export function RealMap({ height, borderRadius = 0, polyline, center, marker = false, startPin = false, showsUser = false, interactive = false, cache = true, distanceMarkers = false, units = 'km', officialDistanceKm, lineHidden = false, mapType, showsPoi = false, compassOffset, waypointMarkers }: Props) {
@@ -233,8 +235,12 @@ export function RealMap({ height, borderRadius = 0, polyline, center, marker = f
             2026-07-22) */}
         {wps.length > 0 ? wps.map(w => (
           <Marker key={`wp-${w.label}`} coordinate={{ latitude: w.lat, longitude: w.lng }} anchor={{ x: 0.5, y: 0.5 }} title={w.title}>
+            {/* 핏스톱 = 카페 글리프 (9/8 오너 룰링) — 스타트-플래그 이디엄
+                (핀 서클 속 Ionicons); 번호는 논-핏스톱만 (콜아웃 name 존치) */}
             <View style={{ minWidth: 22, height: 22, borderRadius: 11, paddingHorizontal: 4, backgroundColor: stroke, borderWidth: 2, borderColor: '#fff', alignItems: 'center', justifyContent: 'center' }}>
-              <Text style={{ fontSize: 11, fontWeight: '800', color: '#0D1A06' }}>{w.label}</Text>
+              {w.isPitstop
+                ? <Icon name="cafe" size={12} color="#0D1A06" />
+                : <Text style={{ fontSize: 11, fontWeight: '800', color: '#0D1A06' }}>{w.label}</Text>}
             </View>
           </Marker>
         )) : null}

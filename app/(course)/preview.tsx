@@ -54,16 +54,18 @@ export default function CoursePreviewScreen() {
   // P1 (9/8): create 히어로와 동일 처리 — 메모화 (처닝 킬) + coordinate
   // 셰이프 가드. 이 표면의 웨이포인트는 지연 PublicRouteResponse.waypoints
   // 신설로 포워드-와이어가 막 라이브된 상태 (finite 여과 = RealMap 초크포인트).
-  const previewWaypointMarkers = useMemo(
-    () => pending?.waypoints?.slice(1, -1)
+  const previewWaypointMarkers = useMemo(() => {
+    // 핏스톱 글리프 + 스킵-넘버링 — create 히어로와 동일 문법 (9/8 룰링)
+    let n = 0, p = 0;
+    return pending?.waypoints?.slice(1, -1)
       .filter(wp => wp?.coordinate != null)
-      .map((wp, i) => ({
+      .map(wp => ({
         lat: wp.coordinate.lat, lng: wp.coordinate.lng,
-        label: String(i + 1),
+        isPitstop: !!wp.is_pitstop,
+        label: wp.is_pitstop ? `P${++p}` : String(++n),
         title: wp.name,
-      })),
-    [pending],
-  );
+      }));
+  }, [pending]);
   const units = useSettings(s => s.settings.units);
   useEffect(() => () => clearPendingCourse(), []);
 

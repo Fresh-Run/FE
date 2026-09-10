@@ -658,16 +658,22 @@ export default function TrackingScreen() {
   // 복귀 = the start flag/endpoint's job). NO voice cue in this slice —
   // the real-POI naming rule makes "지점 1" audio awkward; flagged for her
   // per-course capability flag (ledgered 8/8).
-  const wpMarkers = useMemo(
+  const wpMarkers = useMemo(() => {
     // P1 셰이프+finite 가드 (9/8): 이 MapView는 RealMap 초크포인트 밖 —
-    // 자체 여과 필수 (coordinate 부재/NaN 행 스킵, nil-마커 제조 금지)
-    () => (course?.waypoints && course.waypoints.length > 2
-      ? course.waypoints.slice(1, -1)
-          .filter(wp => wp?.coordinate != null && Number.isFinite(wp.coordinate.lat) && Number.isFinite(wp.coordinate.lng))
-          .map((wp, i) => ({ lat: wp.coordinate.lat, lng: wp.coordinate.lng, label: String(i + 1) }))
-      : []),
-    [course],
-  );
+    // 자체 여과 필수 (coordinate 부재/NaN 행 스킵, nil-마커 제조 금지).
+    // 핏스톱 글리프 + 스킵-넘버링 동승 (9/8 룰링, create 히어로와 동형);
+    // 핏스톱만 name 콜아웃 (일반 지점의 "지점 N" 오디오-어색 클래스 무관).
+    if (!course?.waypoints || course.waypoints.length <= 2) return [];
+    let n = 0, p = 0;
+    return course.waypoints.slice(1, -1)
+      .filter(wp => wp?.coordinate != null && Number.isFinite(wp.coordinate.lat) && Number.isFinite(wp.coordinate.lng))
+      .map(wp => ({
+        lat: wp.coordinate.lat, lng: wp.coordinate.lng,
+        isPitstop: !!wp.is_pitstop,
+        label: wp.is_pitstop ? `P${++p}` : String(++n),
+        ...(wp.is_pitstop ? { title: wp.name } : {}),
+      }));
+  }, [course]);
 
   const courseLenM = useMemo(
     () => (course?.polyline && course.polyline.length > 1 ? courseLengthM(course.polyline) : 0),
@@ -1391,9 +1397,11 @@ export default function TrackingScreen() {
           {/* 8/21 waypoint markers — numbered circles, default
               tracksViewChanges (the ={false} empty-bitmap conviction) */}
           {wpMarkers.length > 0 ? wpMarkers.map(w => (
-            <Marker key={`wp-${w.label}`} coordinate={{ latitude: w.lat, longitude: w.lng }} anchor={{ x: 0.5, y: 0.5 }} zIndex={7}>
+            <Marker key={`wp-${w.label}`} coordinate={{ latitude: w.lat, longitude: w.lng }} anchor={{ x: 0.5, y: 0.5 }} zIndex={7} title={w.title}>
               <View style={st.wpMarker}>
-                <Text style={st.wpMarkerTxt}>{w.label}</Text>
+                {w.isPitstop
+                  ? <Icon name="cafe" size={12} color="#0C1206" />
+                  : <Text style={st.wpMarkerTxt}>{w.label}</Text>}
               </View>
             </Marker>
           )) : null}
