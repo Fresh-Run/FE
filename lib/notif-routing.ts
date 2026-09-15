@@ -22,15 +22,20 @@ export type DeepLinkTarget = Pick<AppNotification, 'type' | 'target_id' | 'paylo
     may lack the id a type needs — degrade to inert, never fake-nav or crash. */
 export function deepLink(n: DeepLinkTarget): (() => void) | null {
   switch (n.type) {
-    case 'run_kudoed':
-    case 'run_commented': // target_type "run", target_id = run id (probed)
     case 'battle_invited':
     case 'battle_overtaken':
     case 'battle_won':
       // 8/21 battle pre-wire: DELIBERATELY inert (null) — the battle screen
       // doesn't exist yet; a wrong-guess route is worse than no route.
       // TODO(contract): point at the battle detail when her shape lands.
+      // [9/15 REGRESSION FIX] this group was INSERTED MID-FALL-THROUGH between
+      // run_kudoed/run_commented and their shared run-post return (de1a5f9) —
+      // hijacking both into this null since 8/21 (kudos/comment taps inert;
+      // reached production 9/5). Group separated; the pair routes again below.
       return null;
+    case 'run_kudoed':
+    case 'run_commented': // target_type "run", target_id = run id (probed)
+    case 'run_mentioned': // 9/15 지연 계약: run_commented의 자매 — 동일 페이로드/딥링크
     case 'reply_to_comment': // 8/4 forward-wire (see notifications.tsx) —
       // same landing by construction: the target is still the RUN the
       // comment thread lives on, which may belong to a third party.
@@ -90,7 +95,8 @@ export function deepLink(n: DeepLinkTarget): (() => void) | null {
       return () => router.push({ pathname: '/(community)/crew-detail' as any, params: { crewId } });
     }
     case 'route_liked':
-    case 'route_commented': {
+    case 'route_commented':
+    case 'route_mentioned': { // 9/15 지연 계약: route_commented의 자매 — 동일 딥링크
       // #4 slice (2026-07-21): target = MY public course. The owner read
       // (GET /routes/{id}) is StoredRoute — no social fields — so the tap
       // hydrates from /routes/public (own rows included, real counts,

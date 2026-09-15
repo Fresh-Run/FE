@@ -67,6 +67,11 @@ const typeMeta = (C: Tokens): Record<string, Meta> => ({
   run_kudoed:          { tag: 'ntf.tagKudos',   tone: C.accentGrn, icon: 'avatar', copy: 'ntf.runKudoed' },
   // 10th type, discovered live 2026-07-07 (ships with her run-comments batch)
   run_commented:       { tag: 'ntf.tagComment', tone: C.accentGrn, icon: 'avatar', copy: 'ntf.runCommented' },
+  // 9/15 멘션 (지연 계약 — _commented 자매 쌍, 페이로드/딥링크 동일). 카피는
+  // 소유 무주장 ("내 러닝" 금지 — 멘션은 제3자 런의 댓글에서도 온다).
+  // 그녀 이미션 코드 미푸시 — 셰이프는 계약 락, 첫 라이브 행이 프로브 확인.
+  run_mentioned:       { tag: 'ntf.tagMention', tone: C.accentGrn, icon: 'avatar', copy: 'ntf.runMentioned' },
+  route_mentioned:     { tag: 'ntf.tagMention', tone: C.accentGrn, icon: 'avatar', copy: 'ntf.routeMentioned' },
   // 8/21 battle pre-wire (the reply_to_comment precedent): GUESSED type
   // strings — her real contract = one key rename per line; until then any
   // battle notification lands on fallbackMeta harmlessly. bt.ntfWon is
@@ -167,7 +172,7 @@ const TABS: { key: TabKey; label: string }[] = [
 ];
 
 const FOLLOW_TYPES = new Set(['user_followed', 'follow_requested', 'follow_request_approved']);
-const SOCIAL_TYPES = new Set(['run_kudoed', 'run_commented', 'reply_to_comment', 'route_liked', 'route_commented']);
+const SOCIAL_TYPES = new Set(['run_kudoed', 'run_commented', 'run_mentioned', 'reply_to_comment', 'route_liked', 'route_commented', 'route_mentioned']);
 const CREW_TYPES   = new Set(['crew_joined', 'join_requested', 'join_approved', 'crew_announcement', 'crew_invited']);
 // pb_achieved: 전체-only, mirroring challenge_completed (both self-achievements,
 // actorless). The rider said "러닝 tab" — no such tab exists; owner ruling
