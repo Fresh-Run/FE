@@ -5,7 +5,7 @@
  * 도착 경로는 빌드 13 (de1a5f9 프리-와이어 dormant 유지); slice 2가 실
  * invite 엔드포인트로 교체한다.
  */
-import { router, useLocalSearchParams } from 'expo-router';
+import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import React from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -15,7 +15,7 @@ import { BattleTermsCard } from '@/components/battle-terms';
 import { Icon } from '@/components/ui';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { tfIn, useLang, useT } from '@/lib/i18n';
-import { useBattleMock } from '@/store/battle-mock';
+import { BATTLE_ENABLED, useBattleMock } from '@/store/battle-mock';
 import { radius as R, spacing as S, shadows, type Tokens } from '@/lib/theme';
 
 export default function BattleInviteScreen() {
@@ -27,6 +27,9 @@ export default function BattleInviteScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
 
   const battle = useBattleMock(s => s.battles.find(b => b.id === id && b.direction === 'in' && b.status === 'pending'));
+
+  // 9/16 플래그 (훅 뒤 — rules-of-hooks): 슬라이스 2까지 inert-리다이렉트
+  if (!BATTLE_ENABLED) return <Redirect href="/(tabs)/community" />;
 
   function accept() {
     if (!battle) return;

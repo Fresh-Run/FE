@@ -43,6 +43,7 @@ import { useJoinRequests } from '@/store/join-requests';
 import { useQuota } from '@/store/use-quota';
 import { t, tfIn, useLang, useT } from '@/lib/i18n';
 import { BattleHomeBody } from '@/components/battle-home-body';
+import { BATTLE_ENABLED } from '@/store/battle-mock';
 import { DAY_LABEL_KEY } from '@/lib/run-format';
 
 
@@ -64,7 +65,8 @@ function CommTabs({ active, onChange }: { active: string; onChange: (v: string) 
       {([
         { id: 'crew', label: T('com.tabCrew') },
         { id: 'discover', label: T('com.tabDiscover') },
-        { id: 'battle', label: T('com.tabBattle') }, // 9/1 재룰링: 배틀 = 3번째 톱탭
+        // 9/1 재룰링: 배틀 = 3번째 톱탭 · 9/16 플래그: 슬라이스 2까지 숨김
+        ...(BATTLE_ENABLED ? [{ id: 'battle', label: T('com.tabBattle') }] : []),
       ]).map(tab => {
         const on = active === tab.id;
         return (

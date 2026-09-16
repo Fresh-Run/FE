@@ -11,6 +11,12 @@
  */
 import { create } from 'zustand';
 
+/** 9/16 가시성 플래그: 배틀은 목-데이터인데 9/5 프로모션으로 프로덕션에
+    노출됐다 — 지연 슬라이스-2 엔드포인트 와이어-인 때 true로 플립.
+    false = 커뮤니티 배틀 탭 숨김 + 배틀 라우트 inert-리다이렉트.
+    목 스토어/화면 코드는 존치 (슬라이스 2/3가 이 위에 빌드). */
+export const BATTLE_ENABLED = false;
+
 export type MockFriend = { id: string; nickname: string };
 
 /** 맞팔 친구 목 (spec Q3: v1 대전 범위 = 맞팔만) — slice 2에서

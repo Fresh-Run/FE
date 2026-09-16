@@ -9,7 +9,7 @@
  * 항상 ok지만, 무료 30일-롤링 3회 게이팅이 이 함수 교체만으로 들어온다.
  * 라우트: /battle-create (8/29 클로즈아웃에서 -demo 은퇴).
  */
-import { router } from 'expo-router';
+import { Redirect, router } from 'expo-router';
 import React, { useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -20,7 +20,7 @@ import { SeededSlider } from '@/components/seeded-slider';
 import { Icon } from '@/components/ui';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { tfIn, useLang, useT } from '@/lib/i18n';
-import { BATTLE_EMOJIS, DEFAULT_BATTLE_EMOJI, MOCK_FRIENDS, useBattleMock, type MockFriend } from '@/store/battle-mock';
+import { BATTLE_EMOJIS, BATTLE_ENABLED, DEFAULT_BATTLE_EMOJI, MOCK_FRIENDS, useBattleMock, type MockFriend } from '@/store/battle-mock';
 import { radius as R, spacing as S, shadows, type Tokens } from '@/lib/theme';
 
 const DURATIONS = [3, 7, 14, 30] as const; // spec §2.2 프리셋 칩 (30d max)
@@ -51,6 +51,9 @@ export default function BattleCreateScreen() {
 
   const steps = [T('bc.stepOpponent'), T('bc.stepSettings'), T('bc.stepConfirm')];
   const canNext = step === 0 ? opponent != null : true;
+
+  // 9/16 플래그 (훅 뒤 — rules-of-hooks): 슬라이스 2까지 inert-리다이렉트
+  if (!BATTLE_ENABLED) return <Redirect href="/(tabs)/community" />;
 
   function submit() {
     if (!opponent) return;

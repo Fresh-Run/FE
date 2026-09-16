@@ -894,18 +894,10 @@ export default function TrackingScreen() {
   // (the formatter-cache class, this screen's own 783 lesson). Render is
   // now a pure state interpolation; every commit is a guaranteed re-render.
   const [coneScreenDeg, setConeScreenDeg] = useState<number | null>(null);
-  // TEMP v6.2b diagnostic (strip after 지연's verdict) — sentinel states so
-  // the chip renders from GATE-OPEN, not first-valid-event: the 8/26 gate
-  // failure (total absence) sits in one of two silent channels (subscribe
-  // throw / all-events-invalid) the old coneRawDbg chip could not separate.
-  type ConeDbg =
-    | { kind: 'waiting' }
-    | { kind: 'err_subscribe'; msg: string }
-    | { kind: 'err_native'; msg: string }
-    | { kind: 'invalid'; count: number; t: number; m: number }
-    | { kind: 'live'; deg: number };
-  const [coneDbg, setConeDbg] = useState<ConeDbg | null>(null);
-  const coneInvalidRef = useRef(0); // consecutive deg<0 drops (10+ → sentinel)
+  // v6.2b 센티널 칩 STRIPPED (9/16) — 아웃도어 버딕트: 콘 생존 (라이브
+  // 260°/274°, 실코스 런에서 회전 확인). 진단 미션 종료. 에러 리포팅
+  // 레인은 존치: errorHandler 인자 + non-swallowing catch + [cone] 로그
+  // — 관측성은 UI 없이 유지 (8/26 두 사일런트 채널은 영구 봉쇄).
   const coneSmoothRef = useRef<number | null>(null);
   // v6.1: the camera's CURRENT heading as WE last commanded/synced it — the
   // cone's screen rotation composes as (worldHeading − cameraHeading)
@@ -916,11 +908,9 @@ export default function TrackingScreen() {
   const camHeadingRef = useRef(0);
   useEffect(() => {
     // courseCoords-keyed (hasCoursePath declares later in the file — same truth)
-    if (!(courseCoords.length > 1 && state !== 'idle')) { setConeScreenDeg(null); setConeDbg(null); coneSmoothRef.current = null; coneInvalidRef.current = 0; return; }
+    if (!(courseCoords.length > 1 && state !== 'idle')) { setConeScreenDeg(null); coneSmoothRef.current = null; return; }
     let sub: { remove: () => void } | null = null;
     let dead = false;
-    setConeDbg({ kind: 'waiting' }); // gate open, no event yet
-    coneInvalidRef.current = 0;
     (async () => {
       try {
         const h = await Location.watchHeadingAsync((ev: Location.LocationHeadingObject) => {
@@ -928,19 +918,10 @@ export default function TrackingScreen() {
           // the cone entirely — but magHeading is usable while calibrating;
           // only a negative heading value itself means "no data".
           const deg = ev.trueHeading >= 0 ? ev.trueHeading : ev.magHeading;
-          if (deg < 0) {
-            // TEMP v6.2b: events ARE arriving but carry no usable heading —
-            // surface after 10 consecutive drops (count + last raw pair).
-            const n = ++coneInvalidRef.current;
-            if (n >= 10) setConeDbg({ kind: 'invalid', count: n, t: Math.round(ev.trueHeading), m: Math.round(ev.magHeading) });
-            return;
-          }
-          coneInvalidRef.current = 0;
-          // TEMP v6.2 diagnostic (strip after verdict): raw heading before
-          // smoothing — TF has no Metro console, so the on-cone readout
-          // below is the observable; the log covers the dev lane.
+          if (deg < 0) return; // no usable heading — cone hidden (plain dot)
+          // dev-lane observability (칩 스트립 후 존치, 9/16) — raw heading
+          // before smoothing
           console.log('[cone] raw heading', Math.round(deg));
-          setConeDbg({ kind: 'live', deg: Math.round(deg) });
           const prev = coneSmoothRef.current;
           let next = deg;
           if (prev != null) {
@@ -953,19 +934,16 @@ export default function TrackingScreen() {
           const screen = (((next - camHeadingRef.current) % 360) + 360) % 360;
           setConeScreenDeg(c => (c == null || Math.abs(((screen - c + 540) % 360) - 180) >= CONE_COMMIT_DEG ? screen : c));
         }, (reason: string) => {
-          // TEMP v6.2b: post-subscription native error — previously dropped
-          // (no errorHandler passed); the second silent channel, now surfaced.
+          // 존치 (9/16): post-subscription native error — 8/26의 두 번째
+          // 사일런트 채널; 로그 리포팅은 영구 (칩만 스트립)
           console.log('[cone] native error', reason);
-          if (!dead) setConeDbg({ kind: 'err_native', msg: String(reason).slice(0, 40) });
         });
         if (dead) h.remove(); else sub = h;
       } catch (e: unknown) {
-        // TEMP v6.2b: the empty catch was the prime silent-total-absence
-        // channel (8/26 investigation) — now surfaced. Cone stays hidden
-        // (plain dot, unchanged); only the diagnostic chip reports.
+        // 존치 (9/16): the empty catch was the prime silent-total-absence
+        // channel (8/26) — 로그 리포팅 영구, 콘은 숨김 (플레인 도트) 유지.
         const msg = e instanceof Error ? e.message : String(e);
         console.log('[cone] subscribe error', msg);
-        if (!dead) setConeDbg({ kind: 'err_subscribe', msg: msg.slice(0, 40) });
       }
     })();
     return () => { dead = true; sub?.remove(); };
@@ -1457,24 +1435,6 @@ export default function TrackingScreen() {
               </View>
             </Marker>
           ) : null}
-          {/* TEMP v6.2b diagnostic marker (strip after 지연's verdict):
-              renders from GATE-OPEN with sentinel states — 'waiting' before
-              any event, ERR-S (subscribe throw) / ERR-N (native error) /
-              invalid ×N (all events deg<0) — so total absence is now
-              diagnosable from a screenshot. 'live' = the v6.2 number chip
-              verbatim (spinning number + frozen cone = render/native
-              channel; frozen number = sensor stall). */}
-          {hasCoursePath && state !== 'idle' && dotCoord != null && coneDbg != null ? (
-            <Marker coordinate={dotCoord} anchor={{ x: 0.5, y: -1.6 }} tracksViewChanges zIndex={11}>
-              <View style={st.coneDbg}><Text style={st.coneDbgTxt}>{
-                coneDbg.kind === 'live'          ? `${coneDbg.deg}°`
-                : coneDbg.kind === 'waiting'       ? 'CONE: waiting'
-                : coneDbg.kind === 'err_subscribe' ? `CONE: ERR-S ${coneDbg.msg}`
-                : coneDbg.kind === 'err_native'    ? `CONE: ERR-N ${coneDbg.msg}`
-                : `CONE: invalid ×${coneDbg.count} t:${coneDbg.t} m:${coneDbg.m}`
-              }</Text></View>
-            </Marker>
-          ) : null}
           {hasCoursePath && state !== 'idle' && dotCoord != null ? (
             <Marker
               coordinate={dotCoord}
@@ -1785,8 +1745,6 @@ const makeSt = (C: Tokens) => StyleSheet.create({
   // widening outward. Two stacked border-triangles fake the rim.
   coneWrap: { width: 64, height: 64, alignItems: 'center' },
   // TEMP v6.2 diagnostic chip
-  coneDbg: { backgroundColor: 'rgba(0,0,0,0.65)', borderRadius: 6, paddingHorizontal: 5, paddingVertical: 1 },
-  coneDbgTxt: { color: '#fff', fontSize: 10, fontWeight: '700', fontVariant: ['tabular-nums'] },
   headingConeRim: {
     marginTop: 2, width: 0, height: 0,
     borderLeftWidth: 14, borderRightWidth: 14, borderTopWidth: 24,
