@@ -46,8 +46,10 @@ import { useStartPoint } from '@/store/start-point';
 import { useSettings } from '@/store/use-settings';
 import {
   LOOP_MIN_TARGET_KM,
+  AreaInfeasibleError,
   LoopTooShortError,
   OneWayTooFarError,
+  UnroutableAreaError,
   useGenerateRoute,
   type GeneratedRoute,
   type Waypoint,
@@ -330,6 +332,10 @@ export default function CreateScreen() {
       }));
   }, [route, wpNames]);
   const [genError, setGenError]   = useState<string | null>(null);
+  // v193 우아한 실패 (9/26): area_distance_infeasible의 추천 거리 — non-null
+  // 이면 에러 배너에 프리필 칩이 붙는다 (탭 = 슬라이더 세팅만, 오토-파이어
+  // 없음 — 배너 룰링 전례). 클램프된 km 값 보관.
+  const [genSuggestKm, setGenSuggestKm] = useState<number | null>(null);
   // Target captured at request time — the miss banner's delta must compare
   // against what was actually asked, not the (resettable) slider state.
   const [genTargetKm, setGenTargetKm] = useState(0);
@@ -354,6 +360,7 @@ export default function CreateScreen() {
     genAbortRef.current = controller;
     setViewState('generating');
     setGenError(null);
+    setGenSuggestKm(null);
     setGenTargetKm(distanceKm);
     try {
       // 분위기 removed (owner ruling 2026-07-16) — `notes` survives for the
@@ -385,6 +392,19 @@ export default function CreateScreen() {
         // this fires only on drift (server raised its floor). Copy composed
         // here, unit-aware, from the server's authoritative min.
         setGenError(tfIn(lang, 'crt.loopTooShort', { d: `${fmtDist(e.minTargetKm, units, 1)}${distUnit(units)}` }));
+      } else if (e instanceof AreaInfeasibleError) {
+        // v193 (9/26): 저밀도 지역 — 서버 추천 거리를 슬라이더 실제 바운드로
+        // 클램프해 칩에 싣는다 (서버는 루프최소 이상 보장하지만 방어 유지)
+        const minKm = oneWay ? 1 : LOOP_MIN_TARGET_KM;
+        const sug = Math.min(MAX_TARGET_KM, Math.max(minKm, e.suggestedTargetKm));
+        setGenSuggestKm(sug);
+        setGenError(tfIn(lang, 'crt.areaInfeasible', {
+          t: `${fmtDist(distanceKm, units, 1)}${distUnit(units)}`,
+          s: `${fmtDist(sug, units, 1)}${distUnit(units)}`,
+        }));
+      } else if (e instanceof UnroutableAreaError) {
+        // v193: 길이 안 이어짐 (또는 힌트 결손 infeasible) — 추천 없음
+        setGenError(t('crt.unroutableArea'));
       } else {
         setGenError(errorMessage(e));
       }
@@ -626,7 +646,18 @@ export default function CreateScreen() {
         <View style={st.errBanner}>
           <Icon name="alert-circle-outline" size={14} color={C.danger} />
           <Text style={st.errBannerTxt} numberOfLines={2}>{genError}</Text>
-          <Pressable onPress={() => setGenError(null)} hitSlop={8}>
+          {/* v193 프리필 칩 — 탭 = 슬라이더만 세팅, 재생성은 유저 CTA (오토-
+              파이어 금지, 배너 룰링 전례). 폼 위에 그대로 남는다. */}
+          {genSuggestKm != null && (
+            <Pressable
+              onPress={() => { setDistanceKm(genSuggestKm); setGenError(null); setGenSuggestKm(null); }}
+              style={st.errBannerChip}
+              hitSlop={6}
+            >
+              <Text style={st.errBannerChipTxt}>{tfIn(lang, 'crt.useSuggested', { s: `${fmtDist(genSuggestKm, units, 1)}${distUnit(units)}` })}</Text>
+            </Pressable>
+          )}
+          <Pressable onPress={() => { setGenError(null); setGenSuggestKm(null); }} hitSlop={8}>
             <Icon name="close" size={14} color={C.danger} />
           </Pressable>
         </View>
@@ -937,6 +968,9 @@ const makeSt = (C: Tokens) => StyleSheet.create({
   // Error banner
   errBanner:    { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: S.gutter, paddingVertical: 10, backgroundColor: C.danger + '12', borderBottomWidth: 1, borderBottomColor: C.danger + '30' },
   errBannerTxt: { flex: 1, fontSize: 13, color: C.danger, letterSpacing: -0.2 },
+  // v193 프리필 칩 — 배너 내 액션 (경고색 계열 유지, 접근성 대비 배너 위)
+  errBannerChip:    { backgroundColor: C.danger + '22', borderWidth: 1, borderColor: C.danger + '55', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4, flexShrink: 0 },
+  errBannerChipTxt: { fontSize: 12, fontWeight: '700', color: C.danger, letterSpacing: -0.2 },
 
   // Sections
   section:        { paddingHorizontal: S.gutter, paddingVertical: S.lg },

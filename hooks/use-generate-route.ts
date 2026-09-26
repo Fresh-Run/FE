@@ -62,6 +62,22 @@ export class OneWayTooFarError extends Error {
   }
 }
 
+/** v193 우아한 실패 (BE 5ea1d0b, 가이드 §502 additive 2026-09-26): 저밀도
+    도로망에서 그 거리 순환 미형성 (band_cap_zero). suggestedTargetKm =
+    서버가 실제 만들어본 최대 − 0.5km 마진, 정수 (routes.py:875 floor). */
+export class AreaInfeasibleError extends Error {
+  suggestedTargetKm: number;
+  constructor(message: string, suggestedTargetKm: number) {
+    super(message);
+    this.suggestedTargetKm = suggestedTargetKm;
+  }
+}
+
+/** v193: 길이 안 이어지는 지역 (no_path) — 추천 거리 없음, 출발점 변경 유도.
+    infeasible인데 suggested가 결손/비정상인 케이스도 이 클래스로 폴백
+    ("undefined km" 렌더 금지 — 방어 규칙). */
+export class UnroutableAreaError extends Error {}
+
 /** Loop floor gate (지연 batch; staging-probed 2026-07-23): a loop ask (no
     end) below the minimum viable loop → 422 BEFORE credit spend (probe:
     quota unchanged). detail = { error: 'loop_target_too_short', message,
@@ -194,11 +210,27 @@ async function generate(input: RouteInput, signal?: AbortSignal): Promise<Genera
       // 생성 전패 반려(미달-only 포함) — 쿼터는 raise 전에 해제되므로 미소모가
       // 항상 참. 다른 502(게이트웨이 등)는 아래 일반 매핑으로 폴백.
       let code: string | null = null;
+      let d: { reason?: unknown; suggested_target_km?: unknown } | null = null;
       try {
         const body = await res.json();
         code = typeof body?.detail?.error === 'string' ? body.detail.error : null;
+        d = body?.detail && typeof body.detail === 'object' ? body.detail : null;
       } catch { /* non-JSON 502 — generic fallback */ }
       if (code === 'route_generation_failed') {
+        // v193 additive 힌트 (가이드 §502, 2026-09-26): detail.reason 있을
+        // 때만 분기 — 부재/미지 reason = 기존 제네릭 (구계약 그대로).
+        const reason = typeof d?.reason === 'string' ? d.reason : null;
+        if (reason === 'area_distance_infeasible') {
+          const s = d?.suggested_target_km;
+          if (typeof s === 'number' && Number.isFinite(s) && s > 0) {
+            throw new AreaInfeasibleError(t('gen.notFound'), s);
+          }
+          // 힌트 결손/비정상 → 제안 없는 unroutable 카피로 (방어 규칙)
+          throw new UnroutableAreaError(t('gen.notFound'));
+        }
+        if (reason === 'unroutable_area') {
+          throw new UnroutableAreaError(t('gen.notFound'));
+        }
         throw new Error(t('gen.notFound'));
       }
       throw new Error(t('gen.failed502'));
