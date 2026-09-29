@@ -2,7 +2,7 @@
   "expo": {
     "name": "FreshRun",
     "slug": "freshrun",
-    "version": "1.0.6",
+    "version": "1.0.7",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "freshrun",
@@ -26,7 +26,8 @@
       "config": {
         "usesNonExemptEncryption": false
       },
-      "usesAppleSignIn": true
+      "usesAppleSignIn": true,
+      "associatedDomains": ["applinks:freshrun.run"]
     },
     "android": {
       "package": "com.freshrun.app",
