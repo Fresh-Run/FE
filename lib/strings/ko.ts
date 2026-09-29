@@ -84,6 +84,7 @@ export const ko = {
   'auth.badCreds': '이메일 또는 비밀번호가 올바르지 않습니다.',
   'auth.emailUnverified': '이메일 인증이 필요합니다.',
   'auth.appleFailed': 'Apple 로그인에 실패했어요. 다시 시도해 주세요.',
+  'auth.googleFailed': 'Google 로그인에 실패했어요. 다시 시도해 주세요.',
   'auth.tryLater': '잠시 후 다시 시도해 주세요.',
   'auth.enterEmail': '이메일을 입력해 주세요.',
   'auth.pwMin': '비밀번호는 8자 이상이어야 합니다.',

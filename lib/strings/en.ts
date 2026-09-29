@@ -74,6 +74,7 @@ export const en: Record<keyof typeof ko, string> = {
   'auth.badCreds': 'Incorrect email or password.',
   'auth.emailUnverified': 'Email verification required.',
   'auth.appleFailed': 'Apple sign-in failed. Please try again.',
+  'auth.googleFailed': 'Google sign-in failed. Please try again.',
   'auth.tryLater': 'Please try again in a moment.',
   'auth.enterEmail': 'Please enter your email.',
   'auth.pwMin': 'Password must be at least 8 characters.',

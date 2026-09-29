@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { GoogleSignin, GoogleSigninButton, isErrorWithCode, statusCodes } from '@react-native-google-signin/google-signin';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { router } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
@@ -8,6 +9,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button, Icon, Input, Text } from '@/components/ui';
 import { useTokens } from '@/hooks/use-tokens';
+import { configureGoogleSignin, googleConfigured } from '@/lib/google-signin';
 import { useScheme } from '@/store/use-scheme';
 import { useStore } from '@/store/use-store';
 
@@ -21,6 +23,7 @@ export default function SignInScreen() {
   const scheme = useScheme((s) => s.resolved);
   const signIn = useStore((s) => s.signIn);
   const signInWithApple = useStore((s) => s.signInWithApple);
+  const signInWithGoogle = useStore((s) => s.signInWithGoogle);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -30,9 +33,11 @@ export default function SignInScreen() {
   // non-Apple device / Android: isAvailableAsync resolves false — no button).
   const [appleAvailable, setAppleAvailable] = useState(false);
   const appleBusy = useRef(false);
+  const googleBusy = useRef(false);
 
   useEffect(() => {
     AppleAuthentication.isAvailableAsync().then(setAppleAvailable).catch(() => {});
+    configureGoogleSignin(); // no-op while client IDs are PENDING
   }, []);
 
   const passwordRef = useRef<TextInput>(null);
@@ -72,6 +77,32 @@ export default function SignInScreen() {
       setError(t('auth.appleFailed'));
     } finally {
       appleBusy.current = false;
+    }
+  }
+
+  async function handleGoogleSignIn() {
+    if (googleBusy.current) return;
+    googleBusy.current = true;
+    setError(null);
+    try {
+      const response = await GoogleSignin.signIn();
+      // RNGS v16: dismissal is a RESPONSE type, not a throw — a choice,
+      // not an error (the Apple ERR_REQUEST_CANCELED twin).
+      if (response.type === 'cancelled') return;
+      const idToken = response.data.idToken;
+      if (!idToken) {
+        setError(t('auth.googleFailed'));
+        return;
+      }
+      const err = await signInWithGoogle(idToken);
+      if (err) setError(t('auth.googleFailed'));
+      // On success the auth guard in _layout.tsx redirects to (tabs).
+    } catch (e: unknown) {
+      // Legacy-throw cancel path kept for belt (pre-v16 grammar).
+      if (isErrorWithCode(e) && e.code === statusCodes.SIGN_IN_CANCELLED) return;
+      setError(t('auth.googleFailed'));
+    } finally {
+      googleBusy.current = false;
     }
   }
 
@@ -153,6 +184,18 @@ export default function SignInScreen() {
           />
         )}
 
+        {/* Google Sign In — RNGS native brand button (SDK-drawn logo +
+            system-localized "Sign in with Google" label; its radius/type
+            are Google's, not ours). Hidden while client IDs are PENDING —
+            no dead buttons (honest-interim class). */}
+        {googleConfigured && (
+          <GoogleSigninButton
+            size={GoogleSigninButton.Size.Wide}
+            color={scheme === 'dark' ? GoogleSigninButton.Color.Light : GoogleSigninButton.Color.Dark}
+            onPress={handleGoogleSignIn}
+            style={styles.googleBtn}
+          />
+        )}
 
         {/* Switch to sign up */}
         <Pressable onPress={() => router.replace('/(auth)/sign-up')} style={styles.switchLink}>
@@ -187,4 +230,7 @@ const styles = StyleSheet.create({
   // Pill grammar match: ui/Button large ≈ 56pt tall, borderRadius 9999 —
   // the native button can't take 9999, so cornerRadius = height/2.
   appleBtn:  { height: 56, alignSelf: 'stretch' },
+  // GSB draws its own chrome (fixed inner padding, ~3pt intrinsic inset) —
+  // stretch + 56pt approximates the pill grammar; radius is not settable.
+  googleBtn: { height: 56, alignSelf: 'stretch' },
 });

@@ -37,6 +37,9 @@ type Store = {
       the session lands here, then onAuthStateChange runs identity/quota/
       settings hydration and the _layout auth guard redirects to (tabs). */
   signInWithApple: (identityToken: string) => Promise<string | null>;
+  /** Google Sign In (build 13, RNGS id_token) — identical contract to
+      signInWithApple: token in, code-first error string | null out. */
+  signInWithGoogle: (idToken: string) => Promise<string | null>;
   signUp: (email: string, password: string) => Promise<string | null>;
   signOut: () => Promise<void>;
   setDisplayName: (name: string) => void;
@@ -81,6 +84,15 @@ export const useStore = create<Store>((set, get) => ({
     return null;
   },
 
+  signInWithGoogle: async (idToken) => {
+    const { data, error } = await supabase.auth.signInWithIdToken({
+      provider: 'google',
+      token: idToken,
+    });
+    if (error) return error.code ?? error.message;
+    set({ session: data.session });
+    return null;
+  },
 
   signUp: async (email, password) => {
     const { data, error } = await supabase.auth.signUp({ email, password });
