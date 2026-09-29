@@ -8,7 +8,9 @@ import { useFonts } from 'expo-font';
 import 'react-native-reanimated';
 
 import { useTokens } from '@/hooks/use-tokens';
+import { track } from '@/lib/analytics';
 import { setIdleAudioPosture } from '@/lib/audio-session';
+import { initSentry } from '@/lib/sentry';
 import { maybeSeedDeviceLang } from '@/lib/i18n';
 import { useScheme } from '@/store/use-scheme';
 import { usePushSync } from '@/lib/push';
@@ -116,7 +118,12 @@ function RootLayoutInner() {
   );
 }
 
+// 빌드 13 (9/29): 크래시 리포팅 — 모듈 스코프 1회, 렌더 전 (PENDING/DEV = no-op)
+initSentry();
+
 export default function RootLayout() {
+  // 빌드 13 (9/29): app_open — 프로세스당 1회 (마운트 = 콜드 스타트)
+  useEffect(() => { track('app_open'); }, []);
   // ── Brand fonts (designer spec 8/12, wired 8/20; owner rulings 8/20) ─────
   // Montserrat ONLY (500 labels / 600 values·numbers per the designer's
   // mapping). NotoSansKR REMOVED by owner ruling — 5.9MB/weight was the OTA

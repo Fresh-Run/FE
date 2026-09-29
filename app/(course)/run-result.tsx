@@ -22,6 +22,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useNavigation } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { track } from '@/lib/analytics';
 import { errorMessage } from '@/lib/error-copy';
 import { t, useT, tfIn, useLang } from '@/lib/i18n';
 import {
@@ -157,6 +158,8 @@ export default function RunResultScreen() {
       });
       savedRunRef.current = saved;
       setSaveState('saved');
+      // 빌드 13 (9/29): run_complete
+      track('run_complete', { distance_km: run.distanceKm, duration_sec: run.elapsedSec });
       // ③: mirror into Apple Health (opt-in gated, fire-and-forget) — the
       // safety-net save path gets the same hook as the compose path
       maybeWriteRunToHealth(run);

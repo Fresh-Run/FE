@@ -16,6 +16,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { track } from '@/lib/analytics';
 import { errorMessage } from '@/lib/error-copy';
 import { t, tfIn, tIn, useLang, getLang } from '@/lib/i18n';
 import {
@@ -381,6 +382,7 @@ export default function CreateScreen() {
       if (genCancelledRef.current) return;
       setRoute(result);
       setViewState('result');
+      track('course_generate', { target_km: distanceKm }); // 빌드 13 (9/29)
     } catch (e: unknown) {
       if (genCancelledRef.current) return;
       if (e instanceof OneWayTooFarError) {

@@ -47,6 +47,7 @@ import Svg, { Circle, Path } from 'react-native-svg';
 import { captureRef } from 'react-native-view-shot';
 
 import { Icon } from '@/components/ui';
+import { track } from '@/lib/analytics';
 import { useRunDetail } from '@/hooks/use-runs';
 import { useRunTrack } from '@/lib/track-cache';
 import { distUnit, fmtDist, fmtDuration, fmtPaceIn, paceUnit, timeTitle } from '@/lib/run-format';
@@ -887,6 +888,7 @@ export default function ShareCardScreen() {
         format: 'png', quality: 1, result: 'tmpfile',
         width: 1080, height: Math.round(1080 * (canvasH / canvasW)),
       });
+      track('share_export', { format: prefs.format }); // 빌드 13 (9/29) — 캡처 성공 시점
       await Share.share({ url: uri });
     } catch { /* dismissed or capture failure — nothing to clean */ }
     setExporting(false);

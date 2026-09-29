@@ -28,6 +28,7 @@
 import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
 
+import { track } from '@/lib/analytics';
 import type { GpsPoint } from '@/lib/runs-api';
 import { endLiveActivity, startLiveActivity, updateLiveActivity } from '@/modules/live-activity';
 import type { CrewSessionTag } from '@/store/active-course';
@@ -602,6 +603,8 @@ export const runSession = {
   beginRunning(): void {
     if (state !== 'countdown') return;
     setState('running');
+    track('run_start'); // 빌드 13 (9/29) — 카운트다운 완료 = 러닝 시작의 진실
+
     if (accumGated) return; // hunt: clocks + LA wait for beginAccumulation
     segmentStart = Date.now();
     wallStartedAt = segmentStart; // true wall-clock start (③'s HK anchor)

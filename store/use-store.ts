@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Session } from '@supabase/supabase-js';
 import { create } from 'zustand';
 
+import { track } from '@/lib/analytics';
 import { apiFetch } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
 import { useQuota } from '@/store/use-quota';
@@ -73,6 +74,7 @@ export const useStore = create<Store>((set, get) => ({
     // for older/edge errors. Callers branch on both.
     if (error) return error.code ?? error.message;
     set({ session: data.session });
+    track('sign_in', { method: 'email' }); // 빌드 13 (9/29)
     return null;
   },
 
@@ -84,6 +86,7 @@ export const useStore = create<Store>((set, get) => ({
     // code-first (9/5 alignment — the signIn/signUp contract; was message-only)
     if (error) return error.code ?? error.message;
     set({ session: data.session });
+    track('sign_in', { method: 'apple' }); // 빌드 13 (9/29)
     return null;
   },
 
@@ -94,6 +97,7 @@ export const useStore = create<Store>((set, get) => ({
     });
     if (error) return error.code ?? error.message;
     set({ session: data.session });
+    track('sign_in', { method: 'google' }); // 빌드 13 (9/29)
     return null;
   },
 
