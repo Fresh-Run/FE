@@ -1,24 +1,79 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as AppleAuthentication from 'expo-apple-authentication';
 import { router } from 'expo-router';
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { t, useT } from '@/lib/i18n';
 import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button, Icon, Input, Text } from '@/components/ui';
 import { useTokens } from '@/hooks/use-tokens';
+import { useScheme } from '@/store/use-scheme';
 import { useStore } from '@/store/use-store';
+
+// Apple sends fullName/email ONLY on the very first authorization — cache
+// them on arrival or they're gone (subsequent credentials carry null).
+const APPLE_IDENTITY_KEY = '@fr_apple_identity';
 
 export default function SignInScreen() {
   const T = useT();
   const C = useTokens();
+  const scheme = useScheme((s) => s.resolved);
   const signIn = useStore((s) => s.signIn);
+  const signInWithApple = useStore((s) => s.signInWithApple);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  // Default false = hidden until the module says otherwise (simulator /
+  // non-Apple device / Android: isAvailableAsync resolves false — no button).
+  const [appleAvailable, setAppleAvailable] = useState(false);
+  const appleBusy = useRef(false);
+
+  useEffect(() => {
+    AppleAuthentication.isAvailableAsync().then(setAppleAvailable).catch(() => {});
+  }, []);
 
   const passwordRef = useRef<TextInput>(null);
+
+  async function handleAppleSignIn() {
+    if (appleBusy.current) return;
+    appleBusy.current = true;
+    setError(null);
+    try {
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+      });
+      // First-authorization-only fields: persist when present, never
+      // overwrite the cache with the nulls of later sign-ins.
+      const given = credential.fullName?.givenName ?? null;
+      const family = credential.fullName?.familyName ?? null;
+      if (given || family || credential.email) {
+        AsyncStorage.setItem(
+          APPLE_IDENTITY_KEY,
+          JSON.stringify({ givenName: given, familyName: family, email: credential.email }),
+        ).catch(() => {});
+      }
+      if (!credential.identityToken) {
+        setError(t('auth.appleFailed'));
+        return;
+      }
+      const err = await signInWithApple(credential.identityToken);
+      if (err) setError(t('auth.appleFailed'));
+      // On success the auth guard in _layout.tsx redirects to (tabs) — the
+      // exact same path the email flow rides (session → guard).
+    } catch (e: unknown) {
+      // User dismissed Apple's sheet — a choice, not an error.
+      if ((e as { code?: string })?.code === 'ERR_REQUEST_CANCELED') return;
+      setError(t('auth.appleFailed'));
+    } finally {
+      appleBusy.current = false;
+    }
+  }
 
   async function handleSignIn() {
     setError(null);
@@ -81,6 +136,24 @@ export default function SignInScreen() {
         {/* Submit */}
         <Button label={T('auth.login')} onPress={handleSignIn} loading={loading} large />
 
+        {/* Apple Sign In — native button required by Apple HIG; it draws its
+            own system-localized label ("Apple로 계속하기" / "Continue with
+            Apple" via buttonType CONTINUE). Hidden when unavailable. */}
+        {appleAvailable && (
+          <AppleAuthentication.AppleAuthenticationButton
+            buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
+            buttonStyle={
+              scheme === 'dark'
+                ? AppleAuthentication.AppleAuthenticationButtonStyle.WHITE
+                : AppleAuthentication.AppleAuthenticationButtonStyle.BLACK
+            }
+            cornerRadius={28}
+            style={styles.appleBtn}
+            onPress={handleAppleSignIn}
+          />
+        )}
+
+
         {/* Switch to sign up */}
         <Pressable onPress={() => router.replace('/(auth)/sign-up')} style={styles.switchLink}>
           <Text variant="bodyMd" color="sub">
@@ -111,4 +184,7 @@ const styles = StyleSheet.create({
   heading:   { gap: 6 },
   form:      { gap: 16 },
   switchLink:{ alignItems: 'center', paddingVertical: 8 },
+  // Pill grammar match: ui/Button large ≈ 56pt tall, borderRadius 9999 —
+  // the native button can't take 9999, so cornerRadius = height/2.
+  appleBtn:  { height: 56, alignSelf: 'stretch' },
 });

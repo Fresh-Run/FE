@@ -33,6 +33,10 @@ type Store = {
   markProfileCreated: () => void;
 
   signIn: (email: string, password: string) => Promise<string | null>;
+  /** Apple Sign In (build 13 native module) — same post-auth path as signIn:
+      the session lands here, then onAuthStateChange runs identity/quota/
+      settings hydration and the _layout auth guard redirects to (tabs). */
+  signInWithApple: (identityToken: string) => Promise<string | null>;
   signUp: (email: string, password: string) => Promise<string | null>;
   signOut: () => Promise<void>;
   setDisplayName: (name: string) => void;
@@ -65,6 +69,18 @@ export const useStore = create<Store>((set, get) => ({
     set({ session: data.session });
     return null;
   },
+
+  signInWithApple: async (identityToken) => {
+    const { data, error } = await supabase.auth.signInWithIdToken({
+      provider: 'apple',
+      token: identityToken,
+    });
+    // code-first (9/5 alignment — the signIn/signUp contract; was message-only)
+    if (error) return error.code ?? error.message;
+    set({ session: data.session });
+    return null;
+  },
+
 
   signUp: async (email, password) => {
     const { data, error } = await supabase.auth.signUp({ email, password });
