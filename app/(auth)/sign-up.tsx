@@ -35,7 +35,16 @@ export default function SignUpScreen() {
       setError(translateError(err));
       return;
     }
-    // Navigate to onboarding regardless of whether the session exists yet.
+    // Confirm-email ON: no session until the mail link is tapped — park on
+    // the verify screen (sign-in after confirming re-enters normally).
+    // Confirm-email OFF (pre-flip): session exists → the original path.
+    if (!useStore.getState().session) {
+      router.replace({
+        pathname: '/(auth)/verify-email',
+        params: { email: email.trim().toLowerCase(), reason: 'signup' },
+      } as never);
+      return;
+    }
     router.replace('/(auth)/onboarding-name');
   }
 
@@ -110,10 +119,13 @@ export default function SignUpScreen() {
   );
 }
 
+// Store returns the GoTrue error CODE when present (message fallback) —
+// branches match both.
 function translateError(msg: string): string {
-  if (msg.includes('already registered') || msg.includes('already been registered')) return t('auth.emailTaken');
-  if (msg.includes('password'))           return t('auth.pwWeak');
-  if (msg.includes('invalid email'))      return t('auth.emailInvalid');
+  if (msg === 'user_already_exists' || msg === 'email_exists'
+    || msg.includes('already registered') || msg.includes('already been registered')) return t('auth.emailTaken');
+  if (msg === 'weak_password'     || msg.includes('password'))      return t('auth.pwWeak');
+  if (msg === 'validation_failed' || msg.includes('invalid email')) return t('auth.emailInvalid');
   return msg;
 }
 

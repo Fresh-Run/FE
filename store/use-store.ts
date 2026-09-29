@@ -68,7 +68,10 @@ export const useStore = create<Store>((set, get) => ({
   // ─── Auth actions ────────────────────────────────────────────────────────
   signIn: async (email, password) => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) return error.message;
+    // GoTrue error CODE when present ('email_not_confirmed',
+    // 'invalid_credentials', …) — stable contract; message is the fallback
+    // for older/edge errors. Callers branch on both.
+    if (error) return error.code ?? error.message;
     set({ session: data.session });
     return null;
   },
@@ -96,8 +99,10 @@ export const useStore = create<Store>((set, get) => ({
 
   signUp: async (email, password) => {
     const { data, error } = await supabase.auth.signUp({ email, password });
-    if (error) return error.message;
-    // If email confirmation is disabled in Supabase dashboard, session is set immediately.
+    if (error) return error.code ?? error.message;
+    // Confirm-email OFF: session arrives immediately. Confirm-email ON:
+    // data.session is null until the mail link is tapped — the sign-up
+    // screen parks on verify-email in that case.
     if (data.session) set({ session: data.session });
     return null;
   },

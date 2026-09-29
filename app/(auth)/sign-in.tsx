@@ -116,6 +116,14 @@ export default function SignInScreen() {
     const err = await signIn(email.trim().toLowerCase(), password);
     setLoading(false);
     if (err) {
+      // Unconfirmed account → the dedicated verify screen, not an inline error.
+      if (err === 'email_not_confirmed' || err.includes('Email not confirmed')) {
+        router.push({
+          pathname: '/(auth)/verify-email',
+          params: { email: email.trim().toLowerCase(), reason: 'login' },
+        } as never);
+        return;
+      }
       setError(translateError(err));
     }
     // On success the auth guard in _layout.tsx redirects to (tabs) automatically.
@@ -212,10 +220,12 @@ export default function SignInScreen() {
   );
 }
 
+// The store now returns the GoTrue error CODE when present (message as
+// fallback) — each branch matches both. email_not_confirmed is handled
+// upstream (routes to verify-email, never rendered inline).
 function translateError(msg: string): string {
-  if (msg.includes('Invalid login credentials')) return t('auth.badCreds');
-  if (msg.includes('Email not confirmed'))        return t('auth.emailUnverified');
-  if (msg.includes('too many requests'))          return t('auth.tryLater');
+  if (msg === 'invalid_credentials' || msg.includes('Invalid login credentials')) return t('auth.badCreds');
+  if (msg === 'over_request_rate_limit' || msg.includes('too many requests'))     return t('auth.tryLater');
   return msg;
 }
 
