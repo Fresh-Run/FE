@@ -41,6 +41,7 @@ import { RealMap } from '@/components/real-map';
 import { Icon } from '@/components/ui';
 import { track } from '@/lib/analytics';
 import { errorMessage } from '@/lib/error-copy';
+import { maybePromptPush } from '@/lib/push';
 import { distUnit, fmtDist, fmtDuration, fmtPaceIn, fmtWhen, paceUnit, timeTitle } from '@/lib/run-format';
 import { MAX_RUN_PHOTOS, reencodeForUpload } from '@/lib/run-photos';
 import { maybeWriteRunToHealth, queryRunCadenceSpm } from '@/lib/health';
@@ -245,8 +246,9 @@ export default function RunSaveScreen() {
       });
       savedOnceRef.current = true;
       markSaved(saved); // disk copy dropped — server has it now
-      // 빌드 13 (9/29): run_complete
+      // 빌드 13 (9/29): run_complete + 푸시 프롬프트 (첫 의미 트리거 — 1회성)
       track('run_complete', { distance_km: run.distanceKm, duration_sec: run.elapsedSec });
+      maybePromptPush();
       runSession.stop(); // the checkpoint's deferred teardown — GPS/LA die HERE (idempotent)
       // ③: mirror the run into Apple Health (opt-in gated, fire-and-forget —
       // the server save above is the source of truth; HK never blocks it)

@@ -24,6 +24,7 @@ import { router, useNavigation } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { track } from '@/lib/analytics';
 import { errorMessage } from '@/lib/error-copy';
+import { maybePromptPush } from '@/lib/push';
 import { t, useT, tfIn, useLang } from '@/lib/i18n';
 import {
   ActivityIndicator,
@@ -158,8 +159,9 @@ export default function RunResultScreen() {
       });
       savedRunRef.current = saved;
       setSaveState('saved');
-      // 빌드 13 (9/29): run_complete
+      // 빌드 13 (9/29): run_complete + 푸시 프롬프트 (첫 의미 트리거 — 1회성)
       track('run_complete', { distance_km: run.distanceKm, duration_sec: run.elapsedSec });
+      maybePromptPush();
       // ③: mirror into Apple Health (opt-in gated, fire-and-forget) — the
       // safety-net save path gets the same hook as the compose path
       maybeWriteRunToHealth(run);
