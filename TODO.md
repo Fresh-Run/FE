@@ -1445,6 +1445,11 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 - 동승: 44d7969 (다크 타임스탬프) · d062604 (스크리블 판정 — 오너 게이트 워크는 별도 오픈) · **칩 존속** (스트립 = 그녀 콘 스크린샷 게이트 불변).
 - **프리즈는 그 외 전부에 존속** — P1 예외는 이 슬라이스 한정, 차기 프로모션 게이트 = 칩 결정 (위 🧊 엔트리).
 
+## 🔨 빌드 13 컷 — PHASE 2 (2026-09-30): ×2 EAS 빌드 발사 (컷 커밋 = 437d163, 레인지 d53f7b7..437d163)
+- **듀얼-바이너리 독트린 집행**: staging 빌드 `02337e81-1a75-489c-89b3-b33a31c6f295` · production 빌드 `17e512dd-3e4c-4086-84ff-77d513652756` — 동일 커밋, 런타임 **1.0.7**. 크리덴셜 프리-검증 (Apple Team ZSM9CJXQ8C active, 만료 2027-07). TF 서브미션 = 양 빌드 green 후 ×2.
+- **런타임 포크 라이브**: 1.0.7 레인 오픈 — 빌드 ≤12 폰은 각자 마지막 1.0.6/1.0.5 번들 동결 (프로덕션 df9ce87f/b4fa42a6 · 스테이징 b5dd247e/2f004647), 빌드 13 설치까지 신규 OTA 불가시. 설치 전 핫픽스 = 구런타임 레인 동시-퍼블리시.
+- **게이트 리스트 (TF 프로세싱 후, 새 바이너리 워크)**: ① 인증 워크 — Apple SI 실로그인 · 이메일 인증 플로우 (verify-email 파킹→메일 링크→재로그인) · Google 버튼 부재 확인 (PENDING = 숨김 정직성) ② 멘션 E2E (지연 이미션 × 신규 렌더/라우팅 — 탭 착지) ③ 배틀 E2E (BATTLE_ENABLED 플립은 슬라이스 2 — 이 바이너리에선 탭 부재 확인만) ④ 푸시 — 첫 러닝 저장 시점 프롬프트 타이밍 + 토큰 등록 (딜리버리 = 지연 APNs 컨펌 게이트) ⑤ v193 저밀도 워크 (제주-클래스) ⑥ 가드-레일: 구런타임 폰 OTA 동결 실확인.
+
 ## 🔨 빌드 13 컷 — PHASE 1 (2026-09-29): 홀드 해산, 6-커밋 구조화
 - **홀드 (16M+4U) 전량 커밋** — a. Apple SI (d53f7b7) · b. Google SI, IDs PENDING_JIYEON (18406a6) · c. 이메일 인증 플로우 (3dc8179) · d. Sentry+Mixpanel, PENDING_OWNER (3441791) · e. 푸시 프롬프트 타이밍 (ebffdce) · f. 컷 컨피그 (이 커밋 — associatedDomains applinks:freshrun.run + version 1.0.6→**1.0.7**).
 - **⚠️ 런타임-포크 명시 (스탠딩 룰)**: runtimeVersion policy=appVersion → **OTA 타깃이 1.0.7로 이동.** 빌드 ≤12 폰은 1.0.6 마지막 번들 동결 — 빌드 13 설치까지 핫픽스 = 구런타임 레인 동시-퍼블리시. buildNumber = EAS remote (appVersionSource) — 로컬 무기록.
