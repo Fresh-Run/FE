@@ -5,8 +5,11 @@
  * 실 DSN 도착 시 이 파일 한 곳 교체. PENDING 동안 initSentry()는 no-op —
  * 죽은 계측 없음 (honest-interim 클래스). __DEV__에서도 항상 no-op.
  *
- * 빌드-타임 소스맵 업로드 (org/project/SENTRY_AUTH_TOKEN)는 컷 오더에서
- * DSN과 함께 — 그 전 빌드는 업로드 스킵 (auth 토큰 부재 = 경고만).
+ * 빌드-타임 소스맵 업로드: ~~auth 토큰 부재 = 경고만~~ [9/30 정정 — 실빌드
+ * 검거: org/slug 부재는 하드-페일]. eas.json 양 프로필 env의
+ * SENTRY_DISABLE_AUTO_UPLOAD=true가 명시 비활성 (staging은 production
+ * extends로 상속). 실 DSN + SENTRY_AUTH_TOKEN 드롭 슬라이스에서 그 env를
+ * 제거해 업로드를 켠다 — Sentry 라이브부터는 소스맵이 중요하다.
  */
 import * as Sentry from '@sentry/react-native';
 
