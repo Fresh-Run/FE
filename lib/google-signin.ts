@@ -15,8 +15,17 @@ import { GoogleSignin } from '@react-native-google-signin/google-signin';
 export const GOOGLE_WEB_CLIENT_ID = 'PENDING_JIYEON';
 export const GOOGLE_IOS_CLIENT_ID = 'PENDING_JIYEON';
 
+/** 빌드 13은 Google URL 스킴 자체가 바이너리에 없다 (9/30 룰링): 플레이스홀더
+    스킴이 Apple 검증 90158 (RFC1738 — 언더스코어)로 리젝 → app.json에서
+    iosUrlScheme 전면 제거, 실 스킴(지연 iOS 클라이언트 ID 역방향)은 빌드 14
+    네이티브 컷에 동승. 이 상수가 false인 한 클라이언트 ID를 OTA로 플립해도
+    리다이렉트가 완결될 수 없으므로 버튼은 절대 노출 금지 — googleConfigured가
+    이중 게이트한다. 빌드 14 컷 커밋에서 true로 플립 (스킴과 같은 커밋). */
+export const BUILD_HAS_GOOGLE_SCHEME = false;
+
 export const googleConfigured =
-  !GOOGLE_WEB_CLIENT_ID.startsWith('PENDING') && !GOOGLE_IOS_CLIENT_ID.startsWith('PENDING');
+  BUILD_HAS_GOOGLE_SCHEME
+  && !GOOGLE_WEB_CLIENT_ID.startsWith('PENDING') && !GOOGLE_IOS_CLIENT_ID.startsWith('PENDING');
 
 let configured = false;
 /** 1회 설정 — sign-in 마운트에서 호출 (placeholder 상태면 no-op). */
