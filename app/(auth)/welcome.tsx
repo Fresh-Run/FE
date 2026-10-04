@@ -94,9 +94,11 @@ export default function WelcomeScreen() {
 
       {/* CTAs */}
       <View style={styles.ctas}>
+        {/* 10/3 ruling: generic 시작하기 → the auth landing (Apple first-class,
+            Google slot, email secondary). The email flow itself is untouched. */}
         <Button
-          label={T('wel.emailStart')}
-          onPress={() => router.push('/(auth)/sign-up')}
+          label={T('wel.start')}
+          onPress={() => router.push('/(auth)/auth-landing')}
           large
         />
         <Pressable onPress={() => router.push('/(auth)/sign-in')} style={styles.loginLink}>
