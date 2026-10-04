@@ -1445,7 +1445,7 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 - 동승: 44d7969 (다크 타임스탬프) · d062604 (스크리블 판정 — 오너 게이트 워크는 별도 오픈) · **칩 존속** (스트립 = 그녀 콘 스크린샷 게이트 불변).
 - **프리즈는 그 외 전부에 존속** — P1 예외는 이 슬라이스 한정, 차기 프로모션 게이트 = 칩 결정 (위 🧊 엔트리).
 
-## 🔐 인증 엔트리 리디자인 — 1.0.7 레인 첫 OTA (2026-10-03, 오너 룰링 10/3) — **빌드 19 VERIFIED [21:30] (오너, 1–6 PASS) · 프로모션 HOLD: 스탬프 NOTES 브래킷 미기입 (Apple 탭 관찰) — 원-컨펌 대기**
+## 🔐 인증 엔트리 리디자인 — 1.0.7 레인 첫 OTA (2026-10-03, 오너 룰링 10/3) — **빌드 19 VERIFIED [21:30] (오너, 1–6 PASS + Apple 탭 관찰 컨펌) → ✅ PROMOTED 7e30a3a8 (프로덕션/1.0.7, 해시-타이 MATCH)**
 - **커밋 311dcfc** (7파일, +235/−88): 웰컴 CTA `이메일로 시작하기` → **`시작하기`** (라우팅만 변경, 비주얼 그래머 불변 — 1 프라이머리 필 + 1 로그인 텍스트 링크) → **신규 `app/(auth)/auth-landing.tsx`**: ① Apple 네이티브 버튼 (풀폭 56pt, CONTINUE, HIG 4.8 프로미넌스 슬롯) ② Google 슬롯 (`googleConfigured` 이중 게이트 불변 — 빌드 13 = 비노출) ③ `또는` 헤어라인 디바이더 (번들 auth-screens.jsx FrDivider 그래머) ④ `이메일로 계속하기` 세컨더리 필 → 기존 sign-up (구 CTA 목적지 동일). 카카오 슬롯 = 빌드 14 피처 동승.
 - **로직 제로 변경 (grep-증명)**: use-store/sign-up/verify-email/onboarding-name/google-signin/루트 레이아웃 diff 공집합 · Apple/Google 핸들러 64라인 **버바팀 추출** → `hooks/use-social-sign-in.ts` (구 sign-in 블록과 `diff` 동일; sign-in.tsx 추가분 = import 4 + 훅 호출 1) · 스트링: `wel.start` (시작하기/Get started) + `auth.or` (또는/or) 추가, `wel.emailStart` 제거 (0 참조), 파리티 1436/1436.
 - **캔버스 미참조 (온-레코드)**: DesignSync 세션 미인증 (`/design-login` 필요) — 룰링 + 번들 auth-screens.jsx 기반 빌드. 디바이더 포함 근거 = 번들 그래머 존재.
@@ -1453,13 +1453,15 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 - **그룹 3a630ebc-60e4-4818-bd0b-af94969fd8e7** (iOS 01a10483-f000-7592-ba8b-9929c558746e) · 서빙 runtime 1.0.7 · **해시-타이 MATCH** (IxgGJiS5…) · 퍼블리시 전 staging/1.0.7 = 204 (레인 첫 OTA). 바이트-스캔: auth-landing 라우트 1 · 이메일로 계속하기 1 · Get started 1 · 구 카피 0/0 · fly.dev 1 (localhost 4 = 기존 supabase 폴백 + 라이브러리, 이 커밋 무관).
 - **프리플라이트 가드 뉘앙스**: 더티-트리 체크라 미커밋 편집에 exit 2 → 커밋 후 클린 트리 exit 0. 해저드 소멸 후 가드 = "커밋된 트리에서만 퍼블리시" 속성만 집행 — 리타이어/리네임 = 오너 결정.
 - **롤백 플로어**: 1.0.7 레인 선행 OTA 그룹 無 — 복귀점 = 빌드 19 임베디드 번들 (7aa8278).
-- **프로모션 게이트 (스탠딩 플로우)**: `update:republish --group 3a630ebc… --destination-branch production` → 빌드 20 레인. **HOLD 사유**: 스탬프 NOTES = `[Apple 탭에서 뭐가 나왔는지]` 템플릿 브래킷 — Apple SI 실로그인은 빌드 13 게이트 ①이자 이 슬라이스의 핵심 컨트롤; 테스터-페이싱 프로모션 전 오너 관찰 1문장 필요 (스탬프 인증 룰).
+- ~~프로모션 HOLD — 스탬프 NOTES `[Apple 탭에서 뭐가 나왔는지]` 템플릿 브래킷 미기입~~ **원-컨펌 수신 (오너): Apple 시트 출현 → 완료 → 로그인 성공** — Supabase Apple provider 라이브 실증 → **빌드 13 게이트 ① (Apple SI 실로그인) CLOSED.**
+- **✅ PROMOTED (2026-10-03)**: `update:republish --group 3a630ebc… --destination-branch production` → **그룹 7e30a3a8-e5b9-4780-8644-fd4ab578b70d** (iOS 01a1048b-6c9b-741d-87e3-bb488c46695a) · 서빙 production/1.0.7 = 이 그룹 · **프로모션 해시-타이 MATCH** (IxgGJiS5… = 스테이징 3a630ebc = 로컬 dist, 바이트 동일) · 프로모션 전 production/1.0.7 = 204 (레인 첫 OTA). **구레인 불변 프로브**: production/1.0.6 = df9ce87f · 1.0.5 = b4fa42a6 (9/26 플로어 유지). **1.0.7 프로덕션 플로어 = 7e30a3a8** (롤백 복귀점은 빌드 20 임베디드 번들 — 선행 OTA 無). 수신 = 빌드 20 (production 바이너리) 설치 폰.
+- **NOTES 룰링 (오너, 10/3 — 스탠딩)**: 게이트/스탬프 템플릿은 **NOTES 포함 전 필드 프리필 상태로 출하** — 어드바이저가 기대 관찰을 미리 써넣고, 오너는 편차만 편집한다. 빈 브래킷 템플릿 금지 (이 슬라이스의 HOLD 1사이클이 그 비용).
 
 ## 🔨 빌드 13 컷 — PHASE 2 (2026-09-30): ×2 EAS 빌드 발사 (컷 커밋 = 437d163, 레인지 d53f7b7..437d163)
 - **듀얼-바이너리 독트린 집행 — FINAL 페어 (3차, 9/30)**: staging `af3f18d4` · production `048839c5` — 커밋 **1f348d1**, 런타임 **1.0.7**, 양 빌드 FINISHED. **TF 서브미션 ×2 스케줄**: staging `f156ccbb-0184-46d5-a02b-5923633d1249` · production `15008bff-f945-41c5-90ec-214dbd231187`.
 - **선행 실패 2클래스 (온-레코드)**: ① 1차 페어 (02337e81/17e512dd) — 프로비저닝 프로파일 (7/15 민트) 이 신규 capability 2종 (Associated Domains·Apple SI) 미지원 + 논-인터랙티브 = Apple 미인증이라 재생성 불가 → 오너 인터랙티브 세션이 프로파일 재생성 ② 2차 — Sentry 오토-업로드 org/slug 부재 하드-페일 (Phase-1 "경고만" 전제 오류 정정) → `SENTRY_DISABLE_AUTO_UPLOAD=true` (1f348d1, DSN 슬라이스에서 해제). ③ 3차 서브미션 — Apple 검증 90158: URL 스킴 `com.googleusercontent.apps.PENDING_JIYEON`의 언더스코어가 RFC1738 위반 → **룰링: 빌드 13은 Google URL 스킴 무동승** (app.json iosUrlScheme 제거, `BUILD_HAS_GOOGLE_SCHEME=false` 이중 게이트 — OTA ID 플립으로도 버튼 불노출), 실 스킴 = 빌드 14 컷. **클래스 레슨: 플레이스홀더는 JS 상수 전용 — Info.plist 값에는 절대 금지** (네이티브 값은 Apple 검증기를 통과해야 한다).
 - **런타임 포크 라이브**: 1.0.7 레인 오픈 — 빌드 ≤12 폰은 각자 마지막 1.0.6/1.0.5 번들 동결 (프로덕션 df9ce87f/b4fa42a6 · 스테이징 b5dd247e/2f004647), 빌드 13 설치까지 신규 OTA 불가시. 설치 전 핫픽스 = 구런타임 레인 동시-퍼블리시.
-- **게이트 리스트 (TF 프로세싱 후, 새 바이너리 워크)**: ① 인증 워크 — Apple SI 실로그인 · 이메일 인증 플로우 (verify-email 파킹→메일 링크→재로그인) · Google 버튼 부재 확인 (PENDING = 숨김 정직성) ② 멘션 E2E (지연 이미션 × 신규 렌더/라우팅 — 탭 착지) ③ 배틀 E2E (BATTLE_ENABLED 플립은 슬라이스 2 — 이 바이너리에선 탭 부재 확인만) ④ 푸시 — 첫 러닝 저장 시점 프롬프트 타이밍 + 토큰 등록 (딜리버리 = 지연 APNs 컨펌 게이트) ⑤ v193 저밀도 워크 (제주-클래스) ⑥ 가드-레일: 구런타임 폰 OTA 동결 실확인.
+- **게이트 리스트 (TF 프로세싱 후, 새 바이너리 워크)**: ① 인증 워크 — ~~Apple SI 실로그인~~ **[CLOSED 10/3 — 빌드 19 오너 컨펌, 인증 엔트리 엔트리 참조]** · 이메일 인증 플로우 (verify-email 파킹→메일 링크→재로그인) · Google 버튼 부재 확인 (PENDING = 숨김 정직성) ② 멘션 E2E (지연 이미션 × 신규 렌더/라우팅 — 탭 착지) ③ 배틀 E2E (BATTLE_ENABLED 플립은 슬라이스 2 — 이 바이너리에선 탭 부재 확인만) ④ 푸시 — 첫 러닝 저장 시점 프롬프트 타이밍 + 토큰 등록 (딜리버리 = 지연 APNs 컨펌 게이트) ⑤ v193 저밀도 워크 (제주-클래스) ⑥ 가드-레일: 구런타임 폰 OTA 동결 실확인.
 
 ## 🔨 빌드 13 컷 — PHASE 1 (2026-09-29): 홀드 해산, 6-커밋 구조화
 - **홀드 (16M+4U) 전량 커밋** — a. Apple SI (d53f7b7) · b. Google SI, IDs PENDING_JIYEON (18406a6) · c. 이메일 인증 플로우 (3dc8179) · d. Sentry+Mixpanel, PENDING_OWNER (3441791) · e. 푸시 프롬프트 타이밍 (ebffdce) · f. 컷 컨피그 (이 커밋 — associatedDomains applinks:freshrun.run + version 1.0.6→**1.0.7**).
