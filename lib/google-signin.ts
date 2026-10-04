@@ -1,19 +1,25 @@
 /**
  * Google Sign In 상수 + 설정 (build 13 native module — the auth hold).
  *
- * ★ 지연 클라이언트 ID 대기 (recon 9/5 hand-off list): 실 ID 도착 시
- * 바뀌는 곳은 이 파일 + app.json의 iosUrlScheme(역방향 iOS ID) 딱 두 곳.
+ * ~~지연 클라이언트 ID 대기~~ **도착 (지연 10/4)** — 이 파일의 두 상수는 실값.
+ * 남은 한 곳 = app.json iosUrlScheme (역방향 iOS ID, 네이티브) → 빌드 14 컷.
  *  - GOOGLE_WEB_CLIENT_ID  = GCP "Web application" 클라이언트 ID
  *    (id_token의 audience — Supabase Google provider의 Client ID와 동일값)
  *  - GOOGLE_IOS_CLIENT_ID  = GCP "iOS" 클라이언트 ID (bundle com.freshrun.app)
  *
- * PENDING 마커가 남아 있는 동안 googleConfigured=false → sign-in 화면이
- * 버튼 자체를 숨긴다 (죽은 버튼 판매 금지 — honest-no-export 클래스).
+ * 버튼 게이트 = googleConfigured (아래). ID 하프는 이제 true; 스킴 하프
+ * BUILD_HAS_GOOGLE_SCHEME=false가 빌드 19/20에서 버튼을 계속 숨긴다 (죽은
+ * 버튼 판매 금지 — honest-no-export 클래스). 빌드 14 컷 커밋에서 스킴과
+ * 함께 true로 플립.
  */
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 
-export const GOOGLE_WEB_CLIENT_ID = 'PENDING_JIYEON';
-export const GOOGLE_IOS_CLIENT_ID = 'PENDING_JIYEON';
+// 지연 10/4: Supabase Google provider 설정 완료 (Skip-nonce ON). Web ID =
+// id_token audience (Supabase가 이 값으로 토큰 검증), iOS ID = 네이티브 플로우.
+// 역방향 iOS ID (app.json iosUrlScheme, 빌드 14 컷 동승):
+//   com.googleusercontent.apps.669096073618-reks7q44la8qebd1dq8o4h79v9171dh3
+export const GOOGLE_WEB_CLIENT_ID = '669096073618-feip6r2b6arcjoaaobb63j95l60rfm9j.apps.googleusercontent.com';
+export const GOOGLE_IOS_CLIENT_ID = '669096073618-reks7q44la8qebd1dq8o4h79v9171dh3.apps.googleusercontent.com';
 
 /** 빌드 13은 Google URL 스킴 자체가 바이너리에 없다 (9/30 룰링): 플레이스홀더
     스킴이 Apple 검증 90158 (RFC1738 — 언더스코어)로 리젝 → app.json에서

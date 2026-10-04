@@ -1445,6 +1445,17 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 - 동승: 44d7969 (다크 타임스탬프) · d062604 (스크리블 판정 — 오너 게이트 워크는 별도 오픈) · **칩 존속** (스트립 = 그녀 콘 스크린샷 게이트 불변).
 - **프리즈는 그 외 전부에 존속** — P1 예외는 이 슬라이스 한정, 차기 프로모션 게이트 = 칩 결정 (위 🧊 엔트리).
 
+## 🔑 Google 클라이언트 ID 배선 (2026-10-04, 지연 10/4 — Supabase Google provider 설정 완료, Skip-nonce ON) — 스테이징 퍼블리시, 버튼은 빌드 14까지 계속 비노출
+- **lib/google-signin.ts**: PENDING_JIYEON 2상수 은퇴 → Web `669096073618-feip6r2b6arcjoaaobb63j95l60rfm9j.apps.googleusercontent.com` (configure webClientId = id_token audience, Supabase 검증값) · iOS `669096073618-reks7q44la8qebd1dq8o4h79v9171dh3.apps.googleusercontent.com` (네이티브 플로우). app.json **무접촉** (iosUrlScheme = 네이티브, 빌드 14).
+- **게이트 체인 현행 평가 (데스크 실행, 실파일)**: webPending=false · iosPending=false · **BUILD_HAS_GOOGLE_SCHEME=false → googleConfigured=false**. 버튼 렌더 2사이트 (auth-landing · sign-in) + configure 호출 1사이트 전부 googleConfigured 뒤 (grep-증명) · GoogleSignin.signIn 도달 경로 = 버튼 핸들러 단일. **빌드 19/20에서 Google 버튼 렌더 불가 — 스킴 부재 바이너리에 죽은 버튼 無.**
+- **🔨 빌드 14 컷 오더 (대기 無 — 전 입력 확보)**: ① app.json 플러그인 `@react-native-google-signin/google-signin` `iosUrlScheme` = **`com.googleusercontent.apps.669096073618-reks7q44la8qebd1dq8o4h79v9171dh3`** (역방향 iOS ID — 언더스코어 無, RFC1738 통과) ② 같은 커밋에서 `BUILD_HAS_GOOGLE_SCHEME = true` ③ version 1.0.7→1.0.8 (runtimeVersion 이동, 스탠딩 룰) ④ 동승 후보: 카카오 · 라이브 케이던스 (expo-sensors + NSMotionUsageDescription) · 위젯 #39FF14 · Health 카피 77fea82. 게이트: 빌드 14 바이너리 Google 실로그인 (시트 → Supabase 세션 → 탭 착지).
+
+## 🦶 케이던스 체인 리페어 (2026-10-04, 10/3 인베스티게이션 링크 2+3) — 커밋 0a624b8 · **스테이징 8c3741ee (1.0.7, 타이 MATCH Dt1i5eyd…) · 오너 스탬프 대기**
+- **링크 2 (루트 하이드레이트)**: use-health 스토어가 프로필 탭 (lazy) 마운트에서만 하이드레이트 → 콜드 스타트→런→저장 세션은 디폴트 false → 케이던스 리드 + HK 워크아웃 쓰기 양쪽 무음 스킵. 픽스 = `hydrateHealthAndReask()` 루트 AuthGuard 마운트 (세션 하이드레이트 옆).
+- **링크 3 (원-타임 stepCount 리-애스크)**: iOS는 per-type READ 상태 비공개 (authorizationStatusFor = SHARE 전용) → 프로브 = `getRequestStatusForAuthorization({toRead:[StepCount]})`: shouldRequest = 미결정 → 풀 세트로 시트 재제시 · unnecessary = 승인 OR 거절 → 재요청 無. 마커 `@fr_health_steps_reasked` 시트 **전** 기록 (크래시 루프 방지). 데스크 4시나리오 PASS (①저장 true→리드 발화 167spm ②false→리드·시트 無 ③미결정→시트 1회+마커 ④마커→시트 無).
+- **링크 4 룰링**: 샘플-래그 null 수용 (인-코멘트), 디퍼드 리-리드 = 미래. **폰 스크립트**: 8/27 이전 연결 폰 = OTA 첫 부팅에 걸음-온리 HK 시트 1회 (허용) → 재실행 무시트 → 프로필 미방문 콜드 런 저장 → 케이던스 타일 (150–185). 지연 폰도 동일 1회 시트 — 프로모션 시 사전 고지 가치.
+- **지연 서버 쿼리 (대기)**: 최근 14일 전 유저 `count(*)`/`count(avg_cadence_spm)` + app_version 분해 (그녀 마이그레이션 파일의 베이스 쿼리 + WHERE 1절).
+
 ## 🔐 인증 엔트리 리디자인 — 1.0.7 레인 첫 OTA (2026-10-03, 오너 룰링 10/3) — **빌드 19 VERIFIED [21:30] (오너, 1–6 PASS + Apple 탭 관찰 컨펌) → ✅ PROMOTED 7e30a3a8 (프로덕션/1.0.7, 해시-타이 MATCH)**
 - **커밋 311dcfc** (7파일, +235/−88): 웰컴 CTA `이메일로 시작하기` → **`시작하기`** (라우팅만 변경, 비주얼 그래머 불변 — 1 프라이머리 필 + 1 로그인 텍스트 링크) → **신규 `app/(auth)/auth-landing.tsx`**: ① Apple 네이티브 버튼 (풀폭 56pt, CONTINUE, HIG 4.8 프로미넌스 슬롯) ② Google 슬롯 (`googleConfigured` 이중 게이트 불변 — 빌드 13 = 비노출) ③ `또는` 헤어라인 디바이더 (번들 auth-screens.jsx FrDivider 그래머) ④ `이메일로 계속하기` 세컨더리 필 → 기존 sign-up (구 CTA 목적지 동일). 카카오 슬롯 = 빌드 14 피처 동승.
 - **로직 제로 변경 (grep-증명)**: use-store/sign-up/verify-email/onboarding-name/google-signin/루트 레이아웃 diff 공집합 · Apple/Google 핸들러 64라인 **버바팀 추출** → `hooks/use-social-sign-in.ts` (구 sign-in 블록과 `diff` 동일; sign-in.tsx 추가분 = import 4 + 훅 호출 1) · 스트링: `wel.start` (시작하기/Get started) + `auth.or` (또는/or) 추가, `wel.emailStart` 제거 (0 참조), 파리티 1436/1436.
