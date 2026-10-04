@@ -10,6 +10,7 @@ import 'react-native-reanimated';
 import { useTokens } from '@/hooks/use-tokens';
 import { track } from '@/lib/analytics';
 import { setIdleAudioPosture } from '@/lib/audio-session';
+import { hydrateHealthAndReask } from '@/lib/health';
 import { initSentry } from '@/lib/sentry';
 import { maybeSeedDeviceLang } from '@/lib/i18n';
 import { useScheme } from '@/store/use-scheme';
@@ -36,6 +37,12 @@ function AuthGuard() {
 
   // Run once on mount — checks AsyncStorage + Supabase for an existing session.
   useEffect(() => { hydrate(); }, []);
+  // Cadence chain repair (10/4, link 2): the Apple Health opt-in store must be
+  // hydrated at ROOT, before any save door can run — it used to hydrate only
+  // on the lazy profile tab, so cold-start sessions read `false` and skipped
+  // both the cadence read and the HK workout write. Also carries the one-time
+  // stepCount re-ask (link 3). Fire-and-forget; never blocks boot.
+  useEffect(() => { void hydrateHealthAndReask(); }, []);
   // Mixable-idle audio posture at boot (build-8 preventive, ruled 2026-07-24):
   // .ambient category — app presence can never hard-pause others' music
   useEffect(() => { setIdleAudioPosture(); maybeSeedDeviceLang(); }, []);

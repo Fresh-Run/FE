@@ -11,8 +11,11 @@
 // (privacy design) — requestAuthorization resolving true means "the sheet
 // was handled", not "granted". Writes to a denied store silently no-op
 // server-side... HK-side. The opt-in row copy stays honest about that.
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
+  AuthorizationRequestStatus,
   getMostRecentQuantitySample,
+  getRequestStatusForAuthorization,
   isHealthDataAvailable,
   queryStatisticsForQuantity,
   requestAuthorization,
@@ -50,6 +53,43 @@ export async function requestHealthAuthorization(): Promise<boolean> {
     return await requestAuthorization({ toShare: [...SHARE], toRead: [...READ] });
   } catch {
     return false;
+  }
+}
+
+// ── Cadence chain repair (2026-10-04, links 2+3 of the 10/3 investigation) ──
+const STEPS_REASK_KEY = '@fr_health_steps_reasked';
+
+/** Boot-time hydrate of the device-local opt-in + the ONE-TIME stepCount
+    re-ask. Link 2: the opt-in store used to hydrate only on profile-tab
+    mount (lazy tab) — a cold start → run → save read the default `false`,
+    so cadence AND the Apple Health workout write were silently skipped on
+    every session that never opened 프로필. Hydrating here, before any save
+    door can run, makes the save-time gate read real state.
+    Link 3: stepCount joined the read set on 8/27; iOS sheets only
+    UNDETERMINED types and only inside requestAuthorization — which fired
+    solely on the off→on tap, so pre-8/27 connectors were never asked and
+    HK returns empty for an unauthorized read, indistinguishable from "no
+    steps". Per-type READ status is hidden by iOS (authorizationStatusFor
+    reflects SHARE only), so the probe is getRequestStatusForAuthorization
+    scoped to stepCount alone: `shouldRequest` = undetermined → re-present
+    the sheet with the current read set; `unnecessary` = already granted OR
+    denied → never re-ask (a denier is left alone by iOS itself). A stored
+    marker makes the re-ask fire at most once per device regardless.
+    Never throws; health must never break boot. */
+export async function hydrateHealthAndReask(): Promise<void> {
+  try {
+    await useHealth.getState().hydrate();
+    if (!useHealth.getState().enabled) return;
+    if (!healthAvailable()) return;
+    if (await AsyncStorage.getItem(STEPS_REASK_KEY)) return;
+    const status = await getRequestStatusForAuthorization({
+      toRead: ['HKQuantityTypeIdentifierStepCount'],
+    });
+    if (status !== AuthorizationRequestStatus.shouldRequest) return;
+    await AsyncStorage.setItem(STEPS_REASK_KEY, '1'); // set BEFORE the sheet — a crash mid-sheet can't loop
+    await requestAuthorization({ toShare: [...SHARE], toRead: [...READ] });
+  } catch {
+    // boot must never block on health
   }
 }
 
@@ -125,7 +165,13 @@ export function maybeWriteRunToHealth(run: HealthRunInput): void {
     read denied / unavailable / no window (pre-anchor recoveries lack
     startedAtMs) / zero samples — cadence is simply absent, never an error.
     Zero steps against a real-distance run = the known post-run sample-write
-    lag → null, NEVER a persisted 0. */
+    lag → null, NEVER a persisted 0.
+    LINK 4 — RULED 2026-10-04 (owner): nulls from sample lag are ACCEPTED for
+    now. iOS flushes pedometer (CoreMotion) step samples into HealthKit in
+    batches with a lag of minutes, so a save tapped right after stopping
+    can see an empty or partial window — short runs most exposed. A
+    deferred re-read (e.g. re-query + PATCH after the flush) is a FUTURE
+    enhancement, explicitly not this slice. */
 export async function queryRunCadenceSpm(run: HealthRunInput): Promise<number | null> {
   if (!useHealth.getState().enabled) return null;
   if (run.startedAtMs == null || run.elapsedSec <= 0) return null;
