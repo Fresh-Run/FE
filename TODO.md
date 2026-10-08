@@ -1445,12 +1445,15 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 - 동승: 44d7969 (다크 타임스탬프) · d062604 (스크리블 판정 — 오너 게이트 워크는 별도 오픈) · **칩 존속** (스트립 = 그녀 콘 스크린샷 게이트 불변).
 - **프리즈는 그 외 전부에 존속** — P1 예외는 이 슬라이스 한정, 차기 프로모션 게이트 = 칩 결정 (위 🧊 엔트리).
 
-## 🔑 Google 클라이언트 ID 배선 (2026-10-04, 지연 10/4 — Supabase Google provider 설정 완료, Skip-nonce ON) — 스테이징 퍼블리시, 버튼은 빌드 14까지 계속 비노출
+## 🔑 Google 클라이언트 ID 배선 (2026-10-04, 지연 10/4 — Supabase Google provider 설정 완료, Skip-nonce ON) — ✅ PROMOTED 3cbbfa77 (10/8, 케이던스 리페어와 동일 그룹 80935225 동승) · 버튼은 빌드 14까지 계속 비노출
 - **lib/google-signin.ts**: PENDING_JIYEON 2상수 은퇴 → Web `669096073618-feip6r2b6arcjoaaobb63j95l60rfm9j.apps.googleusercontent.com` (configure webClientId = id_token audience, Supabase 검증값) · iOS `669096073618-reks7q44la8qebd1dq8o4h79v9171dh3.apps.googleusercontent.com` (네이티브 플로우). app.json **무접촉** (iosUrlScheme = 네이티브, 빌드 14).
 - **게이트 체인 현행 평가 (데스크 실행, 실파일)**: webPending=false · iosPending=false · **BUILD_HAS_GOOGLE_SCHEME=false → googleConfigured=false**. 버튼 렌더 2사이트 (auth-landing · sign-in) + configure 호출 1사이트 전부 googleConfigured 뒤 (grep-증명) · GoogleSignin.signIn 도달 경로 = 버튼 핸들러 단일. **빌드 19/20에서 Google 버튼 렌더 불가 — 스킴 부재 바이너리에 죽은 버튼 無.**
 - **🔨 빌드 14 컷 오더 (대기 無 — 전 입력 확보)**: ① app.json 플러그인 `@react-native-google-signin/google-signin` `iosUrlScheme` = **`com.googleusercontent.apps.669096073618-reks7q44la8qebd1dq8o4h79v9171dh3`** (역방향 iOS ID — 언더스코어 無, RFC1738 통과) ② 같은 커밋에서 `BUILD_HAS_GOOGLE_SCHEME = true` ③ version 1.0.7→1.0.8 (runtimeVersion 이동, 스탠딩 룰) ④ 동승 후보: 카카오 · 라이브 케이던스 (expo-sensors + NSMotionUsageDescription) · 위젯 #39FF14 · Health 카피 77fea82. 게이트: 빌드 14 바이너리 Google 실로그인 (시트 → Supabase 세션 → 탭 착지).
 
-## 🦶 케이던스 체인 리페어 (2026-10-04, 10/3 인베스티게이션 링크 2+3) — 커밋 0a624b8 · **스테이징 8c3741ee (1.0.7, 타이 MATCH Dt1i5eyd…) · 오너 스탬프 대기**
+## 🦶 케이던스 체인 리페어 (2026-10-04, 10/3 인베스티게이션 링크 2+3) — 커밋 0a624b8 · **빌드 19 VERIFIED (오너, 10/8) → ✅ PROMOTED 3cbbfa77 (production/1.0.7) · 인베스티게이션 CLOSED**
+- **오너 스탬프 (10/8, 빌드 19)**: 원-타임 Health 시트 출현 → 허용 · 30분 런 저장 · **케이던스 타일 139 spm** — 풀 서버 라운드트립 실증 (타일 = GET /runs 리드). **인베스티게이션 종결**: 지연 쿼리 fill-rate 0% = 옵트-인 모집단 ~0 (전송 경로 건전) — 링크 2+3 픽스가 옵트-인 유저의 무음 손실을 막는다; 모집단 자체는 프로덕트 과제 (옵트-인 노출 = 별도 슬라이스 후보).
+- **✅ PROMOTED (2026-10-08)**: `update:republish --group 80935225… --destination-branch production` → **그룹 3cbbfa77-39be-48ef-b510-7934a86871f9** (iOS 01a11c7a-eb56-79f2-9644-f2b5de73a142) · **해시-타이 MATCH 3자** (t0zoIPS4… = production = staging = 로컬 dist) · 구레인 불변 (df9ce87f / b4fa42a6). **1.0.7 프로덕션 플로어 전진: 7e30a3a8 → 3cbbfa77** (구 그룹 = 롤백 복귀점, republish로).
+- **그룹 정정 (10/8 감사)**: 아래 "스테이징 8c3741ee"는 퍼블리시-타임 그룹 — Google ID 퍼블리시 80935225가 같은 레인에서 수퍼시드 (양쪽 리페어 포함). 프로모션은 80935225 기준으로 집행 (8c3741ee 단독 승격 시 Google ID 탈락).
 - **링크 2 (루트 하이드레이트)**: use-health 스토어가 프로필 탭 (lazy) 마운트에서만 하이드레이트 → 콜드 스타트→런→저장 세션은 디폴트 false → 케이던스 리드 + HK 워크아웃 쓰기 양쪽 무음 스킵. 픽스 = `hydrateHealthAndReask()` 루트 AuthGuard 마운트 (세션 하이드레이트 옆).
 - **링크 3 (원-타임 stepCount 리-애스크)**: iOS는 per-type READ 상태 비공개 (authorizationStatusFor = SHARE 전용) → 프로브 = `getRequestStatusForAuthorization({toRead:[StepCount]})`: shouldRequest = 미결정 → 풀 세트로 시트 재제시 · unnecessary = 승인 OR 거절 → 재요청 無. 마커 `@fr_health_steps_reasked` 시트 **전** 기록 (크래시 루프 방지). 데스크 4시나리오 PASS (①저장 true→리드 발화 167spm ②false→리드·시트 無 ③미결정→시트 1회+마커 ④마커→시트 無).
 - **링크 4 룰링**: 샘플-래그 null 수용 (인-코멘트), 디퍼드 리-리드 = 미래. **폰 스크립트**: 8/27 이전 연결 폰 = OTA 첫 부팅에 걸음-온리 HK 시트 1회 (허용) → 재실행 무시트 → 프로필 미방문 콜드 런 저장 → 케이던스 타일 (150–185). 지연 폰도 동일 1회 시트 — 프로모션 시 사전 고지 가치.
@@ -1504,9 +1507,10 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 - **⑤ 지연 컨솔리데이티드 메시지 발송 (오너, 8/27)**: 실내 테스트 ①② · 아웃도어 ④ · AASA 검증 — 그녀가 풀 리스트 보유. 콘 재게이트 = 이 메시지의 ①.
 - **⑥ 유니버설 링크 진전**: **CNAME 설정 완료 (오너)** + AASA 실 Team ID 서빙 (BE 1ed0899, ZSM9CJXQ8C.com.freshrun.app) — [F]의 도메인·호스팅 하프 클로즈; 잔여 = associatedDomains (빌드 13 동승) + 지연 AASA 검증 (⑤에 포함).
 - **스탠딩 룰 (신규)**: **OpenAPI/docs 레인 사망 (BE c6f095d — 프로덕션 /docs·/openapi.json 404)** — 향후 "OpenAPI 마커 체크"류는 전부 **라이브 프로브로 대체** (엔드포인트 실호출이 유일한 배포 마커).
-- **빌드-13 컷 리스트 (현행)**: Apple Sign In (빌트, 홀드) · Google · Kakao · Mixpanel/Amplitude (**벤더 미결**) · Health 카피 픽스 77fea82 (infoPlist) · 유니버설 링크 (associatedDomains) · 라이브 케이던스 (expo-sensors + NSMotionUsageDescription) · 위젯 #39FF14. Google/Kakao/애널리틱스/라이브-케이던스 = 미빌드 — 컷 타이밍·스코프 = 오너 결정.
+- ~~**빌드-13 컷 리스트 (현행)**~~ **[RETIRED 10/8 — 빌드 13 = 빌드 19/20 완료; 잔여 항목은 "빌드 14 컷 오더" (Google 섹션)로 승계. Mixpanel = 9/29 출하로 벤더 결정 (3441791), 토큰 PENDING_OWNER.]** Apple Sign In (빌트, 홀드) · Google · Kakao · Mixpanel/Amplitude (~~벤더 미결~~) · Health 카피 픽스 77fea82 (infoPlist) · 유니버설 링크 (associatedDomains) · 라이브 케이던스 (expo-sensors + NSMotionUsageDescription) · 위젯 #39FF14. Google/Kakao/애널리틱스/라이브-케이던스 = 미빌드 — 컷 타이밍·스코프 = 오너 결정.
 
 ## ⚔️ 배틀 계약 전면 클로즈 (2026-08-25 — 룰링 온-레코드, 지연 스펙 1ff6c75의 오픈이슈 6건 전항 해소)
+- **[10/8 감사 — 서버 딜리버리 미기록 정정] 지연 서버 측 LANDED**: ① **배틀 서버 7bc2e4f (9/7)** — 3테이블 · verified-only 스코어 · 무료 30일 롤링 3 + 동시 3캡 · KST 정산 · **8 엔드포인트 라이브** (API_GUIDE §배틀 "이반 목데이터→실연결") · 잔여 = **pace_bonus 이반값 (오너 대기)** · Q4 = ran_at. ② **IAP Apple Track B 9ef5c6c (8/27)** — JWS 오프라인 검증 + 웹훅 (`POST /iap/notifications`). ③ **IAP Google Play 착수 75af59f (9/17)** — common/apple/google 리팩터 + 스텁 + store 스키마 (마이그레이션 `2026-09-17_iap_google_store.sql`, "안드 동시출시 P1" 전제). **클라 상태**: 배틀 = 목 스토어 + BATTLE_ENABLED=false → **실배선 = 빌드-레디 (외부 의존 0, pace_bonus 플레이스홀더 가능)** · IAP 클라 = 미착수 (StoreKit 네이티브 → 빌드 14 동승 후보, ASC 프로덕트 = 오너).
 - **룰링 3종**: ① **윈도 앵커 = 수락 시각** (accept → accept + duration) · ② **자격 = 전 유저 − 차단/비공개** (404-은닉 준수, 팔로우 요건 무, v1 = 초대-온리) · ③ **동시 캡 = 활성 배틀 3** (스키마는 N 허용 — 캡은 정책값).
 - **§6 오픈이슈 해소 (그녀 스펙 "이반/오너 대기" 6건)**: 1. 완주 인정 = **≥1.5km + 정상 저장** (어밴던 보너스 무) · 2. 얼리버드 = **< 07:00** (06:59 인, 07:00 아웃 — 8/21 하니스 경계 케이스와 일치) · 3. 팀 임밸런스 = **스킵** (v1 = 1v1) · 4. 포핏 = **즉시 패배, 상대 포인트 존치** · 5. 듀레이션 플로어 = **최소 1일** · 6. 캡 수치 = **3** (룰링 ③).
 - **스트릭 = ran_at 기준 일일 KST 정산** (라이브 아님).
@@ -1527,13 +1531,13 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 ## 📋 거버넌스 클로즈 3종 (2026-08-21, 오너 룰링)
 - **[G] 답글-카피 E2E [시각] — CLOSED as-arrived**: 목격 타임스탬프 없음 확정 수용 · 리페어 패스 기문서화 · 8/5 거버넌스 패스의 마지막 오픈 브래킷 소멸 (잔여 = [E] 그녀-사이드 단독).
 - **노션 스테일 2종 — 오너 직접 삭제 (8/21)**: 쿠도스 시트 (기출하 8/3, [01:25] 관찰) · S2 마이그레이션 (기출하 7/13, 78edc1d) — 8/8 어드바이저리의 스테일-캐리 정정이 페이지에 반영 완료.
-- **텔레메트리 — 의도적 갭 룰링**: 제로 SDK = 사고 아닌 **인지된 갭**; 애널리틱스 (Mixpanel or Amplitude) **퍼블릭 런치 전 도입** 예정. 도입 시점 = 네이티브 컷 동승 후보 (SDK = 네이티브 모듈 개연). 8/6 테스터-시그널 감사의 원-라인 룰링 후보 해소.
+- ~~**텔레메트리 — 의도적 갭 룰링**~~ **[CLOSED 10/8 감사: Mixpanel 결정·출하 9/29 (3441791, 6사이트) + Sentry — 양쪽 토큰 PENDING_OWNER = no-op 상태; 토큰 도착 = 상수 1교체 + OTA]** 제로 SDK = 사고 아닌 **인지된 갭**; 애널리틱스 (Mixpanel or Amplitude) **퍼블릭 런치 전 도입** 예정. 도입 시점 = 네이티브 컷 동승 후보 (SDK = 네이티브 모듈 개연). 8/6 테스터-시그널 감사의 원-라인 룰링 후보 해소.
 
 ## 📡 테스터-시그널 감사 (2026-08-06, 오너 지시 — ASC API 라이브 풀, 첫 자동화 체크)
 - **(a) ASC 크래시 제출 5건 — 최초 레저 기록**: 7/23 "It crashed" (빌드-5 사가, 기지) · **8/3Z ×4 = AIRMap P1 그 자체**: 15:33 "It crashed" · 15:51 "코스생성 하는거 보고있다가 죽음" · 16:30 **"ㅗㅗ" (테스터 분노 센티먼트 — 베타 최초 기록)** · 16:43 "코스 생성 테스트하다가 죽음 (집 가는길)". 스크린샷 피드백 = 전 기간 0.
 - **(c) 픽스 이후 제출 0건** (8/4 [15:35] → 현재, 커맨드 검증 exit 0) — [A] 클린 클로즈의 독립 확증 (해당 엔트리에 정정 기입).
 - **② 자동화 + 케이던스 (스탠딩 룰)**: `python3 scripts/asc-feedback-check.py` — 신규 크래시 존재 시 exit 1. **케이던스: 주 1회 + 모든 P1-클래스 프로모션 직후** (프로모션 플로우의 표준 스텝으로 편입 — 실행자 = 나, P1 프로모션은 내가 집행하므로 자가-트리거). 8/3 라인의 "체크마다 날짜 추가" 습관-지시는 미작동으로 은퇴 — 커맨드+스케줄이 대체. 주의: .p8 키는 로컬-온리 — 클라우드 무인 자동화는 의도적 미구현 (ASC 프라이빗 키 반출 불가).
-- **클라이언트 시그널 현황 (기록)**: 애널리틱스/크래시 SDK/텔레메트리 = **제로 (전수 그렙)** — ~~명시 룰링 없는 상태~~ **[RULED 8/21: 의도적 갭, 곧 추가]** — 애널리틱스 (Mixpanel or Amplitude) **퍼블릭 런치 전 도입 예정**; 갭은 인지된 상태로 온-레코드. 유저지 데이터 (엔드포인트 히트·en 로케일 채택률·런/일) = 지연 서버 데이터 필요 (834/834 전례 있음).
+- **클라이언트 시그널 현황 (기록)**: ~~애널리틱스/크래시 SDK/텔레메트리 = **제로 (전수 그렙)**~~ **[10/8: SDK 양쪽 탑재 (Mixpanel+Sentry, 9/29) — 토큰 PENDING_OWNER라 런타임 no-op]** — ~~명시 룰링 없는 상태~~ **[RULED 8/21: 의도적 갭, 곧 추가]** — 애널리틱스 (Mixpanel or Amplitude) **퍼블릭 런치 전 도입 예정**; 갭은 인지된 상태로 온-레코드. 유저지 데이터 (엔드포인트 히트·en 로케일 채택률·런/일) = 지연 서버 데이터 필요 (834/834 전례 있음).
 
 ## 📋 거버넌스 패스 (2026-08-05, 오너 지시) — 구두-온리 오픈 아이템 전수 레저화 (8/4 어드바이저리 플래그 5건 + 스윕 발견분; "구두 룰은 레저 라인을 가진다" 스탠딩 룰 집행)
 - ~~[A] 48h AIRMap.m:138 크래시 워치~~ **[CLOSED CLEAN — 오너 스탬프 8/6]**: 윈도우 [8/4 15:35 → 8/6 15:35] 완주 · 전 기간 오너 헤비 유즈 · 재발 0 · 지연 릴레이 리포트 0. **크래시 클래스 은퇴 확정** (a1dfef2d의 3중 픽스 — 파이나이트-가드·터너리-투-널·프래그먼트-전삭 — 필드 검증 완결). **재오픈 조건: 향후 AIRMap.m:138 시그니처 = 즉시 재오픈** (핫픽스-그레이드). **[8/6 정정 — ASC API 라이브 풀]: "ASC = 약한 디텍터 (픽스 전에도 0건)" 클레임은 거짓 — ASC가 P1을 4건 캡처했음 (8/3 15:33-16:43Z = 8/4 00:33-01:43 KST, 8/3 주간 체크 이후 도착). 디텍터는 약한 게 아니라 **미열람**이었다. 픽스 프로모션 [15:35] 이후 제출 0건 = 클린 클로즈의 독립 데이터 확증.**
