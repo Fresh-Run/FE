@@ -43,6 +43,56 @@ function HK(): HealthKitModule | null {
   return hkModule;
 }
 
+// ── Android twin (Health Connect) — big-five ② skeleton (2026-10-09) ────────
+// Same exported surface, mirrored: HC() lazy-loads react-native-health-connect
+// on Android only (its JS entry is a throwing Proxy off Android, and its
+// expo-module.config is platforms ["android"] — iOS autolinking never sees
+// it, exactly as the HealthKit package has no android/ dir). Scope here =
+// availability + permission + cadence READ parity; the workout write and
+// body-mass read are honest TODOs (see each export).
+type HealthConnectModule = typeof import('react-native-health-connect');
+let hcModule: HealthConnectModule | null | undefined;
+function HC(): HealthConnectModule | null {
+  if (Platform.OS !== 'android') return null;
+  if (hcModule === undefined) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports -- conditional native load (the HK() twin)
+      hcModule = require('react-native-health-connect') as HealthConnectModule;
+    } catch {
+      hcModule = null;
+    }
+  }
+  return hcModule;
+}
+const HC_STEPS_READ = { accessType: 'read', recordType: 'Steps' } as const;
+const hasStepsRead = (granted: readonly { accessType?: string; recordType?: string }[]) =>
+  granted.some(p => p.accessType === 'read' && p.recordType === 'Steps');
+// Availability has THREE states on Android (getSdkStatus): SDK_AVAILABLE (HC
+// built into Android 14+, or the HC app installed on 13↓) ·
+// SDK_UNAVAILABLE_PROVIDER_UPDATE_REQUIRED (installed but stale) ·
+// SDK_UNAVAILABLE (device without HC). Only the first is "available"; the
+// other two fall to the same no-op defaults iOS-unavailable uses. The probe
+// is async but the shared healthAvailable() is sync by contract (the 연결 row
+// reads it on tap), so the answer is CACHED here at root hydrate.
+let hcSdkAvailable: boolean | undefined;
+let hcInitialized = false;
+/** Resolve the HC module ready for calls: status probed+cached, initialize()
+    done once. null = not Android / unavailable / init failed. */
+async function hcReady(): Promise<HealthConnectModule | null> {
+  const hc = HC();
+  if (!hc) return null;
+  try {
+    if (hcSdkAvailable === undefined) {
+      hcSdkAvailable = (await hc.getSdkStatus()) === hc.SdkAvailabilityStatus.SDK_AVAILABLE;
+    }
+    if (!hcSdkAvailable) return null;
+    if (!hcInitialized) hcInitialized = await hc.initialize();
+    return hcInitialized ? hc : null;
+  } catch {
+    return null;
+  }
+}
+
 const SHARE = [
   'HKWorkoutTypeIdentifier',
   'HKWorkoutRouteTypeIdentifier',
@@ -60,14 +110,26 @@ const READ = [
 ] as const;
 
 export function healthAvailable(): boolean {
+  if (Platform.OS === 'android') return hcSdkAvailable === true; // cached by hydrateHealthAndReask (root)
   const hk = HK();
   if (!hk) return false;
   try { return hk.isHealthDataAvailable(); } catch { return false; }
 }
 
 /** Present the HealthKit permission sheet (first time) — resolves true when
-    the request was processed. iOS hides per-type write denial by design. */
+    the request was processed. iOS hides per-type write denial by design.
+    Android: Health Connect's own permission ACTIVITY (not a runtime dialog)
+    for READ Steps; true iff the grant came back in the result list. */
 export async function requestHealthAuthorization(): Promise<boolean> {
+  if (Platform.OS === 'android') {
+    const hc = await hcReady();
+    if (!hc) return false;
+    try {
+      return hasStepsRead(await hc.requestPermission([HC_STEPS_READ]));
+    } catch {
+      return false;
+    }
+  }
   const hk = HK();
   if (!hk) return false;
   try {
@@ -100,8 +162,24 @@ const STEPS_REASK_KEY = '@fr_health_steps_reasked';
 export async function hydrateHealthAndReask(): Promise<void> {
   try {
     await useHealth.getState().hydrate();
+    // Android: prime the sync availability cache at boot regardless of opt-in
+    // (the 연결 row's unavailable-alert branch reads it before any opt-in).
+    if (Platform.OS === 'android') await hcReady();
     if (!useHealth.getState().enabled) return;
     if (!healthAvailable()) return;
+    if (Platform.OS === 'android') {
+      // Android twin of the one-time re-ask: "undetermined" ≈ Steps READ not
+      // in getGrantedPermissions(). Same marker key (device-local, platform-
+      // neutral) → at most one boot-time ask; HC itself stops showing the
+      // activity after repeated denials, so a denier is left alone twice over.
+      const hc = await hcReady();
+      if (!hc) return;
+      if (await AsyncStorage.getItem(STEPS_REASK_KEY)) return;
+      if (hasStepsRead(await hc.getGrantedPermissions())) return;
+      await AsyncStorage.setItem(STEPS_REASK_KEY, '1');
+      await hc.requestPermission([HC_STEPS_READ]);
+      return;
+    }
     const hk = HK();
     if (!hk) return;
     if (await AsyncStorage.getItem(STEPS_REASK_KEY)) return;
@@ -131,6 +209,11 @@ export type HealthRunInput = {
 /** Write the finished run as an HKWorkout (+ route when a track exists).
     Fire-and-forget from the save flow — never throws, never blocks. */
 export async function writeRunToHealth(run: HealthRunInput): Promise<boolean> {
+  // TODO(android, follow-up slice): Health Connect ExerciseSession write
+  // (insertRecords ExerciseSessionRecord RUNNING + Distance/Calories +
+  // ExerciseRoute) — needs WRITE_EXERCISE/WRITE_DISTANCE/… permissions and
+  // its own 연결 copy. Skeleton = honest false (mirror never claims a write).
+  if (Platform.OS === 'android') return false;
   const hk = HK();
   if (!hk) return false;
   try {
@@ -200,6 +283,28 @@ export function maybeWriteRunToHealth(run: HealthRunInput): void {
 export async function queryRunCadenceSpm(run: HealthRunInput): Promise<number | null> {
   if (!useHealth.getState().enabled) return null;
   if (run.startedAtMs == null || run.elapsedSec <= 0) return null;
+  if (Platform.OS === 'android') {
+    // Health Connect twin — IDENTICAL computation: total steps over the
+    // run's wall-clock window ÷ moving duration (duration_sec). aggregate
+    // COUNT_TOTAL is HC's cumulativeSum; same null-on-zero (sample lag) rule.
+    const hc = await hcReady();
+    if (!hc) return null;
+    try {
+      const agg = await hc.aggregateRecord({
+        recordType: 'Steps',
+        timeRangeFilter: {
+          operator: 'between',
+          startTime: new Date(run.startedAtMs).toISOString(),
+          endTime: new Date(run.endedAt).toISOString(),
+        },
+      });
+      const steps = agg?.COUNT_TOTAL ?? 0;
+      if (steps <= 0) return null;
+      return Math.round(steps / (run.elapsedSec / 60));
+    } catch {
+      return null;
+    }
+  }
   const hk = HK();
   if (!hk) return null;
   try {
@@ -222,6 +327,9 @@ export async function queryRunCadenceSpm(run: HealthRunInput): Promise<number | 
 /** Most-recent body mass (kg) from 건강 — the 체중 가져오기 affordance.
     undefined = none recorded / not authorized / unavailable. */
 export async function fetchBodyMassKg(): Promise<number | undefined> {
+  // TODO(android, follow-up): Health Connect Weight record (readRecords
+  // 'Weight', latest) — needs READ_WEIGHT; skeleton = undefined (= "none").
+  if (Platform.OS === 'android') return undefined;
   const hk = HK();
   if (!hk) return undefined;
   try {
