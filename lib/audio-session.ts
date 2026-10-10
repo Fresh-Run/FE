@@ -18,6 +18,9 @@
  * so post-commit exports can only target the 1.0.4 lane.
  */
 import { setAudioModeAsync, setIsAudioActiveAsync } from 'expo-audio';
+import { Platform } from 'react-native';
+
+import { abandonAudioFocus, requestTransientDuckFocus } from '@/modules/audio-focus';
 
 export function activateRunAudioSession(): void {
   // fire-and-forget: a session failure must never break tracking itself —
@@ -45,10 +48,22 @@ export function engageCueAudioSession(): void {
     interruptionMode: 'duckOthers',
   }).catch(() => {});
   setIsAudioActiveAsync(true).catch(() => {});
+  // ANDROID (big-five ⑤, 2026-10-09): the duck EDGE on Android is audio focus,
+  // and expo-audio's setIsAudioActiveAsync(true) requests none (recon:
+  // AudioModule.kt requests focus only from AudioPlayer.play(); expo-speech
+  // never touches AudioManager). Our native module asks for
+  // AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK here — same fire-and-forget grammar as
+  // the iOS engage above; a denial (another app holds exclusive focus, e.g. a
+  // call) is ignored and TTS proceeds, exactly as iOS does. iOS: not reached.
+  if (Platform.OS === 'android') requestTransientDuckFocus();
 }
 
 export function deactivateRunAudioSession(): void {
   setIsAudioActiveAsync(false).catch(() => {});
+  // ANDROID: the release EDGE — every cue's onDone/onStopped/onError lands
+  // here (audio-coach's shared `done`), so focus is never held between cues;
+  // also the tracking-unmount path. Idempotent. iOS: not reached.
+  if (Platform.OS === 'android') abandonAudioFocus();
   setIdleAudioPosture(); // back to the mixable idle posture after every run
 }
 
