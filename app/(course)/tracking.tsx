@@ -41,6 +41,7 @@ import Svg, { Circle } from 'react-native-svg';
 import { Icon } from '@/components/ui';
 import { SEOUL_FALLBACK, useCurrentLocation } from '@/hooks/use-current-location';
 import { courseLengthM, courseTangentAt, nearestOnCourse, nextTurn, OFF_COURSE_ENTER_M, OFF_COURSE_EXIT_M, pointAhead, sliceAhead, snapToCourse } from '@/lib/course-nav';
+import { androidMapProps } from '@/lib/map-android';
 import { runSession } from '@/store/run-session';
 import { useRunTracker } from '@/hooks/use-run-tracker';
 import { composeFinishCue, composeSplitCue, composeStartCue, setSessionMuted, speakCue, stopSpeech } from '@/lib/audio-coach';
@@ -1295,6 +1296,7 @@ export default function TrackingScreen() {
         <MapView
           ref={mapRef}
           userInterfaceStyle={resolved}
+          {...androidMapProps(resolved, { lite: false })} // Android dark style only; {} on iOS
           style={StyleSheet.absoluteFill}
           initialRegion={{
             latitude: courseCoords[0]?.latitude ?? hereCoord?.lat ?? SEOUL_FALLBACK.lat,

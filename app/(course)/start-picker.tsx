@@ -27,6 +27,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CurrentLocationButton } from '@/components/current-location-button';
 import { t, useT } from '@/lib/i18n';
+import { androidMapProps } from '@/lib/map-android';
 import { Icon } from '@/components/ui';
 import { SEOUL_FALLBACK } from '@/hooks/use-current-location';
 import { searchPlaces, type Place } from '@/lib/places-api';
@@ -147,6 +148,7 @@ export default function StartPickerScreen() {
       <MapView
         ref={mapRef}
         userInterfaceStyle={resolved}
+        {...androidMapProps(resolved, { lite: false })} // Android dark style only; {} on iOS
         style={StyleSheet.absoluteFillObject}
         initialRegion={{
           latitude: initLat,

@@ -18,6 +18,7 @@ import MapView, { Marker, Polyline } from 'react-native-maps';
 
 import { Icon } from '@/components/ui';
 
+import { androidMapProps } from '@/lib/map-android';
 import { KM_PER_MI } from '@/lib/run-format';
 import { distanceCrossings } from '@/lib/run-metrics';
 import { routeStroke } from '@/lib/theme';
@@ -202,6 +203,10 @@ export function RealMap({ height, borderRadius = 0, polyline, center, marker = f
         showsPointsOfInterest={showsPoi}
         compassOffset={compassOffset}
         toolbarEnabled={false}
+        // Android code-half (10/9): liteMode mirrors cacheEnabled's predicate
+        // exactly (thumb-class = static), dark style on dark scheme. Spreads
+        // to {} on iOS — zero new props (lib/map-android.ts).
+        {...androidMapProps(resolved, { lite: cache && !interactive })}
       >
         {marker && center && !line ? (
           <Marker coordinate={{ latitude: center.lat, longitude: center.lng }} />
