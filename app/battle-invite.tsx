@@ -15,7 +15,7 @@ import { BattleTermsCard } from '@/components/battle-terms';
 import { Icon } from '@/components/ui';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { tfIn, useLang, useT } from '@/lib/i18n';
-import { BATTLE_ENABLED, useBattleMock } from '@/store/battle-mock';
+import { BATTLE_ENABLED, directionOf, useBattleMock } from '@/store/battle-mock';
 import { radius as R, spacing as S, shadows, type Tokens } from '@/lib/theme';
 
 export default function BattleInviteScreen() {
@@ -26,7 +26,7 @@ export default function BattleInviteScreen() {
   const lang = useLang();
   const { id } = useLocalSearchParams<{ id: string }>();
 
-  const battle = useBattleMock(s => s.battles.find(b => b.id === id && b.direction === 'in' && b.status === 'pending'));
+  const battle = useBattleMock(s => s.battles.find(b => b.id === id && directionOf(b) === 'in' && b.status === 'pending'));
 
   // 9/16 플래그 (훅 뒤 — rules-of-hooks): 슬라이스 2까지 inert-리다이렉트
   if (!BATTLE_ENABLED) return <Redirect href="/(tabs)/community" />;
@@ -61,7 +61,7 @@ export default function BattleInviteScreen() {
               <Text style={st.inviteSub}>{tfIn(lang, 'bat.inviteSub', { name: battle.opponent.nickname })}</Text>
               {battle.title ? <Text style={st.battleTitle}>{battle.title}</Text> : null}
               {/* 룰 명시 (spec Q4 필수 — 30분 정산 마감 포함) */}
-              <BattleTermsCard durationDays={battle.durationDays} />
+              <BattleTermsCard durationDays={battle.duration_days} />
             </View>
           </ScrollView>
           <View style={[st.footer, { paddingBottom: insets.bottom + 10 }]}>

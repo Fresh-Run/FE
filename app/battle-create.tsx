@@ -9,7 +9,7 @@
  * 항상 ok지만, 무료 30일-롤링 3회 게이팅이 이 함수 교체만으로 들어온다.
  * 라우트: /battle-create (8/29 클로즈아웃에서 -demo 은퇴).
  */
-import { Redirect, router } from 'expo-router';
+import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import React, { useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -39,8 +39,13 @@ export default function BattleCreateScreen() {
   const T = useT();
   const lang = useLang();
 
-  const [step, setStep] = useState(0);
-  const [opponent, setOpponent] = useState<MockFriend | null>(null);
+  // 슬라이스 3 다시-도전 프리필: /battle-create?opponent=<id> (정산 화면 CTA).
+  // 프리필 시 1단계(상대)는 이미 충족 — 설정 단계에서 시작. slice 2: id는
+  // 실 user_id, 조회는 맞팔 소스.
+  const { opponent: prefillId } = useLocalSearchParams<{ opponent?: string }>();
+  const prefill = prefillId ? MOCK_FRIENDS.find(u => u.id === prefillId) ?? null : null;
+  const [step, setStep] = useState(prefill ? 1 : 0);
+  const [opponent, setOpponent] = useState<MockFriend | null>(prefill);
   // 프리셋과 직접 입력은 하나의 선택 그룹: days가 단일 진실이고 custom은
   // 어느 칩이 켜져 있는지만 가른다 — 확인/약관은 days만 읽으므로 두 경로의
   // 표시가 구조적으로 동일하다.
