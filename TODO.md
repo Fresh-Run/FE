@@ -1445,6 +1445,12 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 - 동승: 44d7969 (다크 타임스탬프) · d062604 (스크리블 판정 — 오너 게이트 워크는 별도 오픈) · **칩 존속** (스트립 = 그녀 콘 스크린샷 게이트 불변).
 - **프리즈는 그 외 전부에 존속** — P1 예외는 이 슬라이스 한정, 차기 프로모션 게이트 = 칩 결정 (위 🧊 엔트리).
 
+## 🛡️ Sentry DSN 라이브 (2026-10-09, 오너 프로젝트 생성 10/9) — 커밋 76c392c · **빌드 19 VERIFIED [21:25] (오너: 릴리즈 1.0.7 (19) 가시 · 100% crash-free · 0 이슈) → ✅ PROMOTED e5ae1efa (production/1.0.7)**
+- **lib/sentry.ts**: `SENTRY_DSN` PENDING_OWNER → 실 DSN (o4512221831561216 / 4512229278154752). `sentryConfigured` 게이트 개방 → `initSentry()` 모듈-스코프 1회 (`tracesSampleRate: 0`, 크래시/에러만). `__DEV__` no-op 유지. **PENDING_OWNER 잔존 = Mixpanel 토큰 1건** (lib/analytics.ts).
+- **소스맵 = 빌드 14**: eas.json 양 프로필 `SENTRY_DISABLE_AUTO_UPLOAD=true` **유지** (SENTRY_AUTH_TOKEN 미존재) → 라이브 스택은 minified (발생 사실·빈도·디바이스 컨텍스트 유효, 심볼 無). 컷 오더 ③-b (Google 섹션)에 토큰 발급 + env 제거 등재.
+- **스테이징 08ff5b3e** (1.0.7, 타이 MATCH PVS8DaQy…) → **프로모션 e5ae1efa-d077-409b-9587-d63bbcddab47** (iOS 01a1236a-e0d9-7c7b-8e0b-8a2fa7a33aa2) · **해시-타이 MATCH 3자** (production = staging = 로컬 dist) · 구레인 불변 (df9ce87f / b4fa42a6). **1.0.7 프로덕션 플로어 전진: 3cbbfa77 → e5ae1efa** (구 그룹 = 롤백 복귀점).
+- **스탬프 = 프로모션 게이트 (스탠딩 플로우, 7/27)**: NOTES 프리필 → 오너 관찰 일치 → 즉시 승격. 프로덕션 수신 = 빌드 20 폰; 지연 폰은 빌드 20 설치 전까지 미수신 (그녀 크래시는 Sentry에 아직 안 잡힌다 — 설치 독촉 근거 +1).
+
 ## 🔑 Google 클라이언트 ID 배선 (2026-10-04, 지연 10/4 — Supabase Google provider 설정 완료, Skip-nonce ON) — ✅ PROMOTED 3cbbfa77 (10/8, 케이던스 리페어와 동일 그룹 80935225 동승) · 버튼은 빌드 14까지 계속 비노출
 - **lib/google-signin.ts**: PENDING_JIYEON 2상수 은퇴 → Web `669096073618-feip6r2b6arcjoaaobb63j95l60rfm9j.apps.googleusercontent.com` (configure webClientId = id_token audience, Supabase 검증값) · iOS `669096073618-reks7q44la8qebd1dq8o4h79v9171dh3.apps.googleusercontent.com` (네이티브 플로우). app.json **무접촉** (iosUrlScheme = 네이티브, 빌드 14).
 - **게이트 체인 현행 평가 (데스크 실행, 실파일)**: webPending=false · iosPending=false · **BUILD_HAS_GOOGLE_SCHEME=false → googleConfigured=false**. 버튼 렌더 2사이트 (auth-landing · sign-in) + configure 호출 1사이트 전부 googleConfigured 뒤 (grep-증명) · GoogleSignin.signIn 도달 경로 = 버튼 핸들러 단일. **빌드 19/20에서 Google 버튼 렌더 불가 — 스킴 부재 바이너리에 죽은 버튼 無.**
