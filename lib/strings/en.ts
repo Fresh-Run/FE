@@ -179,6 +179,8 @@ export const en: Record<keyof typeof ko, string> = {
   'pit.farWarn': 'The selected pitstop is far from the start — your course may run longer than the target.',
   'run.cadence': 'Cadence',
   'run.cadenceUnit': 'spm',
+  'run.fgNotifTitle': 'FreshRun is recording your run',
+  'run.fgNotifBody': 'Your route keeps recording with the screen off.',
   'pit.clearA11y': 'Clear selected place',
   'pit.closeA11y': 'Close',
   'surface.any': 'Any surface',

@@ -191,6 +191,8 @@ export const ko = {
   'pit.farWarn': '선택한 경유지가 출발지에서 멀어요 — 코스가 목표 거리보다 길어질 수 있어요.',
   'run.cadence': '케이던스',
   'run.cadenceUnit': '걸음/분',
+  'run.fgNotifTitle': 'FreshRun 러닝 기록 중',
+  'run.fgNotifBody': '화면을 꺼도 경로를 계속 기록하고 있어요.',
   'pit.clearA11y': '경유지 선택 해제',
   'pit.closeA11y': '닫기',
   'surface.any': '노면 무관',

@@ -29,6 +29,7 @@ import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
 
 import { track } from '@/lib/analytics';
+import { t } from '@/lib/i18n';
 import type { GpsPoint } from '@/lib/runs-api';
 import { endLiveActivity, startLiveActivity, updateLiveActivity } from '@/modules/live-activity';
 import type { CrewSessionTag } from '@/store/active-course';
@@ -539,6 +540,25 @@ async function startUpdates(): Promise<void> {
       activityType: Location.ActivityType.Fitness,
       pausesUpdatesAutomatically: false,      // never let iOS pause a run
       showsBackgroundLocationIndicator: true, // honest blue indicator
+      // ── Android slice ③ runtime follow-up (2026-10-09, flagged at slice ①) ──
+      // ANDROID ONLY: expo-location's `foregroundService` is the Android
+      // foreground-service notification (LocationTaskServiceOptions). The iOS
+      // native module never reads the key (zero references under
+      // expo-location/ios; the type's siblings activityType /
+      // pausesUpdatesAutomatically are the ones marked @platform ios) — the
+      // iOS call is unchanged by construction. On Android it is load-bearing
+      // twice: (1) without it the task dies on backgrounding (Android 8+
+      // background-execution limits), (2) LocationModule.kt treats a
+      // foreground-service start as USER-INITIATED and stops requiring
+      // ACCESS_BACKGROUND_LOCATION — the pocketed run survives on the
+      // When-In-Use grant, matching the iOS foreground-started-session rule.
+      // Copy is call-time t() (locale honored per run start); color = the
+      // native-surface brand lime (#39FF14 — the widget's, build 13).
+      foregroundService: {
+        notificationTitle: t('run.fgNotifTitle'),
+        notificationBody: t('run.fgNotifBody'),
+        notificationColor: '#39FF14',
+      },
     });
   } catch {
     // Task path unavailable (e.g. Android without the bg permission we
