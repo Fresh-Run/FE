@@ -1,8 +1,9 @@
 /**
  * Mixpanel 애널리틱스 래퍼 (빌드 13 — 9/29 매니페스트, 9/5 승인 이벤트 드래프트).
  *
- * ★ 오너 토큰 대기 (PENDING_OWNER): 실 토큰 도착 시 이 파일 한 곳 교체.
- * PENDING 동안 track()은 완전 no-op — SDK 인스턴스 자체를 만들지 않는다.
+ * ~~오너 토큰 대기 (PENDING_OWNER)~~ **토큰 도착 (오너, 프로젝트 생성 10/9) —
+ * 애널리틱스 LIVE 이 슬라이스부터** (OTA; analyticsConfigured 게이트 개방,
+ * 트리 마지막 PENDING_OWNER 은퇴). trackAutomaticEvents=false 유지.
  * track은 어떤 경로에서도 앱을 깨지 않는다 (전체 try/catch).
  *
  * 이벤트 유니언 = 승인 드래프트의 전 카테고리 (auth/run/generation/battle/
@@ -12,7 +13,7 @@
  */
 import { Mixpanel } from 'mixpanel-react-native';
 
-export const MIXPANEL_TOKEN = 'PENDING_OWNER';
+export const MIXPANEL_TOKEN = '077fc19a9517ab0decf64019a83fc6ae';
 
 export const analyticsConfigured = !MIXPANEL_TOKEN.startsWith('PENDING');
 
