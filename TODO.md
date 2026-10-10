@@ -1445,7 +1445,9 @@ Internal TF (owner + 지연 only) proceeds NOW; the outdoor dry run happens ON t
 - 동승: 44d7969 (다크 타임스탬프) · d062604 (스크리블 판정 — 오너 게이트 워크는 별도 오픈) · **칩 존속** (스트립 = 그녀 콘 스크린샷 게이트 불변).
 - **프리즈는 그 외 전부에 존속** — P1 예외는 이 슬라이스 한정, 차기 프로모션 게이트 = 칩 결정 (위 🧊 엔트리).
 
-## 📊 Mixpanel 토큰 라이브 (2026-10-09, 오너 프로젝트 생성 10/9) — **트리 마지막 PENDING_OWNER 은퇴** · 스테이징 퍼블리시 (아래) · 오너 스탬프 대기
+## 📊 Mixpanel 토큰 라이브 (2026-10-09, 오너 프로젝트 생성 10/9) — **트리 마지막 PENDING_OWNER 은퇴** · **빌드 19 VERIFIED [22:02] (오너: Events에 app_open + course_generate + run_start 가시, iOS, Washington) → ✅ PROMOTED bf5255c1 (production/1.0.7) · 애널리틱스 아크 CLOSED (토큰 → 이벤트 당일 실증)**
+- **스테이징 42aea73b** (1.0.7, 타이 MATCH wxt4tEgN…) → **프로모션 bf5255c1-1aa0-48f5-b80b-7abcdef37d55** (iOS 01a1238d-0e7b-7958-90b3-a7740228d7d0) · **해시-타이 MATCH 3자** (production = staging = 로컬 dist) · 구레인 불변 (df9ce87f / b4fa42a6). **1.0.7 프로덕션 플로어 전진: e5ae1efa → bf5255c1** (구 그룹 = 롤백 복귀점). 동승: Android 슬라이스 ① health.ts 가드 (iOS 등가 증명됨, 유저-비가시).
+- **📌 보드 노트 (오너, 10/9)**: **서드파티 통합 전부 라이브 or 배선 완료 — 코드베이스 플레이스홀더 0.** Sentry (DSN 라이브 10/9, 소스맵 = 빌드 14) · Mixpanel (토큰 라이브 10/9) · Google 로그인 (ID 배선 10/4, 버튼 = 빌드 14 스킴) · Apple 로그인 (라이브 10/3). 잔여 외부 입력은 전부 **파일/네이티브 클래스** (google-services.json · Maps 실키 · SENTRY_AUTH_TOKEN · Play 서비스 계정) — 상수 플레이스홀더 이디엄은 종결.
 - **lib/analytics.ts**: `MIXPANEL_TOKEN` PENDING_OWNER → 실 토큰 (hex32). `analyticsConfigured` 개방 → 첫 track()에서 SDK 인스턴스 생성 (`new Mixpanel(token, false)` — trackAutomaticEvents OFF 유지, 수동 계측만) · 전체 try/catch 래퍼 불변 (애널리틱스는 앱을 절대 깨지 않는다).
 - **라이브 이벤트 6종 / 9사이트**: app_open (루트 마운트 1) · sign_in (3 — 이메일/Apple/Google 경로) · run_start (1, beginRunning) · run_complete (2 — run-save·run-result 양 저장 도어, distance_km·duration_sec 프롭) · course_generate (1) · share_export (1). 나머지 유니언 (battle_*/kudos_give/comment_post/follow/screen_view) = 각 피처 슬라이스 동승.
 - **PENDING 스윕 (트리)**: 라이브 `PENDING_*` 상수 **0** — 잔존 참조 3건 전부 스트라이크스루 코멘트 (sentry.ts 1, analytics.ts 2). PENDING_JIYEON (Google ID) 10/4 은퇴, PENDING_OWNER (Sentry DSN) 10/9 은퇴, PENDING_OWNER (Mixpanel) 이 슬라이스 — **플레이스홀더 이디엄 종결** (신규 PENDING은 발생 시 새 라인).
