@@ -12,19 +12,36 @@
 // was handled", not "granted". Writes to a denied store silently no-op
 // server-side... HK-side. The opt-in row copy stays honest about that.
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {
-  AuthorizationRequestStatus,
-  getMostRecentQuantitySample,
-  getRequestStatusForAuthorization,
-  isHealthDataAvailable,
-  queryStatisticsForQuantity,
-  requestAuthorization,
-  saveWorkoutSample,
-  WorkoutActivityType,
-} from '@kingstinct/react-native-healthkit';
+import { Platform } from 'react-native';
 
 import type { GpsPoint } from '@/lib/runs-api';
 import { useHealth } from '@/store/use-health';
+
+// ── Android slice ① (2026-10-09): PLATFORM-GATED LAZY LOAD ───────────────────
+// The HealthKit package is never imported at module scope. On iOS the first
+// call requires it (Metro resolves the real Nitro-backed healthkit.ios); on
+// any other platform HK() returns null and every export below is a no-op
+// with the same default it already returned for "unavailable/denied".
+// Finding (9/22 audit candidate, verified against v14.0.2 sources): the
+// package does NOT throw on import under Android — Metro resolves its
+// platform-split `healthkit.js`, a pure-JS mock set (console.warn once,
+// default values), and that file never imports the Nitro `modules.ts`. The
+// guard here is belt-and-suspenders: it also removes the warn and keeps the
+// Android bundle from pulling the package graph at all.
+type HealthKitModule = typeof import('@kingstinct/react-native-healthkit');
+let hkModule: HealthKitModule | null | undefined;
+function HK(): HealthKitModule | null {
+  if (Platform.OS !== 'ios') return null;
+  if (hkModule === undefined) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports -- conditional native load; a static import would evaluate on every platform
+      hkModule = require('@kingstinct/react-native-healthkit') as HealthKitModule;
+    } catch {
+      hkModule = null; // native absent (e.g. a binary predating the module) → no-op surface
+    }
+  }
+  return hkModule;
+}
 
 const SHARE = [
   'HKWorkoutTypeIdentifier',
@@ -43,14 +60,18 @@ const READ = [
 ] as const;
 
 export function healthAvailable(): boolean {
-  try { return isHealthDataAvailable(); } catch { return false; }
+  const hk = HK();
+  if (!hk) return false;
+  try { return hk.isHealthDataAvailable(); } catch { return false; }
 }
 
 /** Present the HealthKit permission sheet (first time) — resolves true when
     the request was processed. iOS hides per-type write denial by design. */
 export async function requestHealthAuthorization(): Promise<boolean> {
+  const hk = HK();
+  if (!hk) return false;
   try {
-    return await requestAuthorization({ toShare: [...SHARE], toRead: [...READ] });
+    return await hk.requestAuthorization({ toShare: [...SHARE], toRead: [...READ] });
   } catch {
     return false;
   }
@@ -81,13 +102,15 @@ export async function hydrateHealthAndReask(): Promise<void> {
     await useHealth.getState().hydrate();
     if (!useHealth.getState().enabled) return;
     if (!healthAvailable()) return;
+    const hk = HK();
+    if (!hk) return;
     if (await AsyncStorage.getItem(STEPS_REASK_KEY)) return;
-    const status = await getRequestStatusForAuthorization({
+    const status = await hk.getRequestStatusForAuthorization({
       toRead: ['HKQuantityTypeIdentifierStepCount'],
     });
-    if (status !== AuthorizationRequestStatus.shouldRequest) return;
+    if (status !== hk.AuthorizationRequestStatus.shouldRequest) return;
     await AsyncStorage.setItem(STEPS_REASK_KEY, '1'); // set BEFORE the sheet — a crash mid-sheet can't loop
-    await requestAuthorization({ toShare: [...SHARE], toRead: [...READ] });
+    await hk.requestAuthorization({ toShare: [...SHARE], toRead: [...READ] });
   } catch {
     // boot must never block on health
   }
@@ -108,6 +131,8 @@ export type HealthRunInput = {
 /** Write the finished run as an HKWorkout (+ route when a track exists).
     Fire-and-forget from the save flow — never throws, never blocks. */
 export async function writeRunToHealth(run: HealthRunInput): Promise<boolean> {
+  const hk = HK();
+  if (!hk) return false;
   try {
     const start = new Date(run.startedAtMs ?? run.endedAt - run.elapsedSec * 1000);
     const end = new Date(run.endedAt);
@@ -126,8 +151,8 @@ export async function writeRunToHealth(run: HealthRunInput): Promise<boolean> {
         quantity: Math.round(run.kcal), unit: 'kcal',
       }] : []),
     ];
-    const workout = await saveWorkoutSample(
-      WorkoutActivityType.running, quantities, start, end,
+    const workout = await hk.saveWorkoutSample(
+      hk.WorkoutActivityType.running, quantities, start, end,
       { distance: distanceM, ...(run.kcal != null && run.kcal > 0 ? { energyBurned: Math.round(run.kcal) } : {}) },
     );
 
@@ -175,8 +200,10 @@ export function maybeWriteRunToHealth(run: HealthRunInput): void {
 export async function queryRunCadenceSpm(run: HealthRunInput): Promise<number | null> {
   if (!useHealth.getState().enabled) return null;
   if (run.startedAtMs == null || run.elapsedSec <= 0) return null;
+  const hk = HK();
+  if (!hk) return null;
   try {
-    const res = await queryStatisticsForQuantity(
+    const res = await hk.queryStatisticsForQuantity(
       'HKQuantityTypeIdentifierStepCount',
       ['cumulativeSum'],
       {
@@ -195,8 +222,10 @@ export async function queryRunCadenceSpm(run: HealthRunInput): Promise<number | 
 /** Most-recent body mass (kg) from 건강 — the 체중 가져오기 affordance.
     undefined = none recorded / not authorized / unavailable. */
 export async function fetchBodyMassKg(): Promise<number | undefined> {
+  const hk = HK();
+  if (!hk) return undefined;
   try {
-    const s = await getMostRecentQuantitySample('HKQuantityTypeIdentifierBodyMass', 'kg');
+    const s = await hk.getMostRecentQuantitySample('HKQuantityTypeIdentifierBodyMass', 'kg');
     const kg = s?.quantity;
     return kg != null && kg >= 20 && kg <= 300 ? Math.round(kg * 10) / 10 : undefined;
   } catch {
