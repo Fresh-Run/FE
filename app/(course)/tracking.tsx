@@ -55,7 +55,7 @@ import { getLang, t, tfIn, useLang } from '@/lib/i18n';
 import { getPendingRun, refreshPendingRun, setPendingRun } from '@/store/pending-run';
 import { useLocalProfile } from '@/store/use-local-profile';
 import { useSettings } from '@/store/use-settings';
-import { distUnit, fmtDist, fmtPaceIn, paceUnit } from '@/lib/run-format';
+import { distUnit, fmtDateAbs, fmtDist, fmtPaceIn, paceUnit } from '@/lib/run-format';
 import { accentShadow, radius as R, routeStroke, shadows, spacing as S, type Tokens, DENSE_MAX_FONT_SCALE} from '@/lib/theme';
 import { useScheme } from '@/store/use-scheme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
@@ -1647,6 +1647,39 @@ export default function TrackingScreen() {
           pointerEvents={detent === 'expanded' ? 'auto' : 'none'}
           style={[st.expandedWrap, !idle ? expandedFade : null]}
         >
+          {/* BISECT A1: RunLive stack as a plain View (no toggle, no inset pad) */}
+          {!idle && (
+            <View style={st.live}>
+              <Text style={st.liveCaption}>{course ? course.title : tfIn(lang, 'rl.caption', { date: fmtDateAbs(new Date().toISOString(), lang) })}</Text>
+              <Text style={st.liveLbl}>{t('rl.time')}</Text>
+              <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.liveTime}>{fmtElapsed(elapsedSec)}</Text>
+              <View style={st.liveRule} />
+              <Text style={st.liveLbl}>{t('rl.pace')}</Text>
+              <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.liveBig}>{paceDisplay}</Text>
+              <View style={st.liveRule} />
+              <Text style={st.liveLbl}>{t('trk.dist')}</Text>
+              <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.liveBig}>{fmtDist(distanceKm, units, 2)}<Text style={st.liveUnit}> {distUnit(units)}</Text></Text>
+              {(() => {
+                const liveAvgPace = distanceKm >= 0.05 && elapsedSec > 0 ? Math.round(elapsedSec / distanceKm) : null;
+                return (
+                  <Text style={st.liveSub}>
+                    {t('res.avgPace')} {liveAvgPace != null ? fmtPaceIn(liveAvgPace, units) : "--'--\""}{kcal != null ? `  ·  ${kcal} kcal` : ''}
+                  </Text>
+                );
+              })()}
+              {hasCoursePath && (() => {
+                const remainM = Math.max(0, courseLenM - alongM);
+                const avgPace = distanceKm > 0.05 ? elapsedSec / distanceKm : null;
+                const etaMin = avgPace != null ? Math.round(((remainM / 1000) * avgPace) / 60) : null;
+                return (
+                  <Text style={st.liveSub}>
+                    {t('trk.remaining')} {fmtDist(remainM / 1000, units, 2)} {distUnit(units)}  ·  {t('trk.eta')} {etaMin != null ? tfIn(lang, 'trk.etaMin', { n: etaMin }) : '—'}
+                  </Text>
+                );
+              })()}
+            </View>
+          )}
+          {idle && (<>
           <View style={{ alignItems: 'center', marginTop: 8 }}>
             <Text style={st.timeLabel}>{t('trk.elapsed')}</Text>
             <Text style={st.timeValue}>{fmtElapsed(elapsedSec)}</Text>
@@ -1725,6 +1758,7 @@ export default function TrackingScreen() {
             <Waveform active={running} />
           </View>
 
+          </>)}
           {/* ── Controls — directly under the coach card (dead space died) ── */}
           {idle ? (
             <View style={st.controls}>
