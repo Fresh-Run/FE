@@ -55,7 +55,7 @@ import { getLang, t, tfIn, useLang } from '@/lib/i18n';
 import { getPendingRun, refreshPendingRun, setPendingRun } from '@/store/pending-run';
 import { useLocalProfile } from '@/store/use-local-profile';
 import { useSettings } from '@/store/use-settings';
-import { distUnit, fmtDateAbs, fmtDist, fmtPaceIn, paceUnit } from '@/lib/run-format';
+import { distUnit, fmtDist, fmtPaceIn, paceUnit } from '@/lib/run-format';
 import { accentShadow, radius as R, routeStroke, shadows, spacing as S, type Tokens, DENSE_MAX_FONT_SCALE} from '@/lib/theme';
 import { useScheme } from '@/store/use-scheme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
@@ -129,6 +129,7 @@ const SHEET_TOP = MAP_H - 22;         // sheet's expanded top edge (canvas -22 o
 // 4b (RunLive/RunMap boards, 2026-11-19): fixed control bar below the sheet +
 // compact banner above it. The sheet is bottom-anchored, so its content pads
 // by the bar's footprint and the compact detent = banner + that footprint.
+const COMPACT_VISIBLE = 100;          // compact detent: handle + strip (4a)
 const CONTROL_H = 84;
 const CONTROL_GAP = 14;
 const BANNER_H = 96;
@@ -1184,18 +1185,7 @@ export default function TrackingScreen() {
   // hand-validate). Built on the SAME RNGH+Reanimated already in the tree;
   // pure JS, Expo Go-safe. ──
   const sheetH = winH - SHEET_TOP;
-  // 4b: control-bar footprint the sheet content must clear (bottom-anchored sheet)
-  const controlSpace = insets.bottom + CONTROL_GAP + CONTROL_H + 12;
-  // Free runs: RunLive covers the map — expanded = the FULL window (the sheet
-  // content pads its own top by the status-bar inset). No `topInset` prop:
-  // 4b shipped with it and the sheet never appeared on device (owner report
-  // 2026-11-19); it is the one prop that changes the library's hosting
-  // container, so it is gone. Course runs keep today's expanded height — the
-  // map stays visible for the turn overlays (stated deviation, 4b).
-  const runSnaps = useMemo(
-    () => [BANNER_H + controlSpace, course ? sheetH : winH],
-    [sheetH, controlSpace, course, winH],
-  );
+  const runSnaps = useMemo(() => [COMPACT_VISIBLE, sheetH], [sheetH]); // BISECT baseline = 4a
   const [detent, setDetent] = useState<'expanded' | 'compact'>('expanded');
   // Slidable only mid-run; idle needs the start button, countdown is locked
   const canSlide = state === 'running' || state === 'paused';
@@ -1206,7 +1196,7 @@ export default function TrackingScreen() {
   // .current is swapped to the detent's hold. RNGH re-resolves relation refs
   // in a microtask on every detector update, so the swap lands on the next
   // render after a detent change.
-  const sheetRef = useRef<BottomSheet>(null); // 4b: tap-to-toggle detents
+  const holdRefBar = useRef<GestureType | undefined>(undefined); // control bar's own hold (bisect baseline)
   const holdRefExpanded = useRef<GestureType | undefined>(undefined);
   const holdRefCompact = useRef<GestureType | undefined>(undefined);
   const activeHoldRef = useRef<GestureType | undefined>(undefined);
@@ -1214,7 +1204,6 @@ export default function TrackingScreen() {
     activeHoldRef.current = detent === 'compact' ? holdRefCompact.current : holdRefExpanded.current;
   }, [detent, state]);
 
-  const toggleDetent = () => { sheetRef.current?.snapToIndex(detent === 'compact' ? 1 : 0); };
   const onSheetChange = (index: number) => {
     const d = index === 0 ? 'compact' : 'expanded';
     setDetent(d);
@@ -1617,7 +1606,6 @@ export default function TrackingScreen() {
              run = [compact 100, expanded] with countdown locked. ── */}
       {!freeIdle && (
       <BottomSheet
-        ref={sheetRef}
         key={idle ? 'idle' : 'run'}
         enableDynamicSizing={idle}
         {...(!idle ? { snapPoints: runSnaps, index: 1 } : {})}
@@ -1632,21 +1620,23 @@ export default function TrackingScreen() {
         backgroundStyle={st.sheetBg}
         handleIndicatorStyle={st.handleIndicator}
       >
-        <BottomSheetView style={{ paddingBottom: idle ? Math.max(insets.bottom, 12) : controlSpace }}>
+        <BottomSheetView style={{ paddingBottom: Math.max(insets.bottom, 12) }}>
         {/* Compact strip — glanceable time/distance + pause + mini hold-stop */}
-        {/* 4b compact = RunMap banner: one line, tap/drag up to expand. Pause
-            and 종료 live in the fixed control bar below. */}
         {!idle && (
           <Reanimated.View
             pointerEvents={detent === 'compact' ? 'auto' : 'none'}
-            style={[st.banner, compactFade]}
+            style={[st.compactStrip, compactFade]}
           >
-            <Pressable onPress={toggleDetent} style={st.bannerPress} accessibilityRole="button" accessibilityLabel={t('rl.hintUp')}>
-              <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.bannerLine} numberOfLines={1}>
-                {fmtElapsed(elapsedSec)}<Text style={st.bannerSep}>  ·  </Text>{paceDisplay}<Text style={st.bannerSep}>  ·  </Text>{fmtDist(distanceKm, units, 2)}<Text style={st.bannerUnit}> {distUnit(units)}</Text>
-              </Text>
-              <Text style={st.bannerHint}>{t('rl.hintUp')}</Text>
-            </Pressable>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={st.compactTime}>{fmtElapsed(elapsedSec)}</Text>
+              <Text style={st.compactDist}>{fmtDist(distanceKm, units, 2)} {distUnit(units)}</Text>
+            </View>
+            <View style={st.compactCluster}>
+              <Pressable onPress={togglePause} style={[st.compactPauseBtn, accentShadow(C.accent)]}>
+                <Icon name={running ? 'pause' : 'play'} size={20} color={C.accentText} />
+              </Pressable>
+              <HoldStop onComplete={endRun} size={44} showLabel={false} gestureRef={holdRefCompact} />
+            </View>
           </Reanimated.View>
         )}
 
@@ -1657,46 +1647,6 @@ export default function TrackingScreen() {
           pointerEvents={detent === 'expanded' ? 'auto' : 'none'}
           style={[st.expandedWrap, !idle ? expandedFade : null]}
         >
-          {/* 4b expanded = RunLive: caption · 시간 (88) · 페이스 (62) · 거리 (62,
-              owner-ruled in the cadence slot — no live cadence) · a small
-              평균/kcal line (preserves the 8/4 tester ask) · course nav strip
-              (course runs) · 내려서 지도 보기. Tap anywhere → compact. */}
-          {!idle && (
-            <Pressable onPress={toggleDetent} style={[st.live, !course && { paddingTop: insets.top }]} accessibilityRole="button" accessibilityLabel={t('rl.hintDown')}>
-              <Text style={st.liveCaption}>{course ? course.title : tfIn(lang, 'rl.caption', { date: fmtDateAbs(new Date().toISOString(), lang) })}</Text>
-              <Text style={st.liveLbl}>{t('rl.time')}</Text>
-              <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.liveTime}>{fmtElapsed(elapsedSec)}</Text>
-              <View style={st.liveRule} />
-              <Text style={st.liveLbl}>{t('rl.pace')}</Text>
-              <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.liveBig}>{paceDisplay}</Text>
-              <View style={st.liveRule} />
-              <Text style={st.liveLbl}>{t('trk.dist')}</Text>
-              <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.liveBig}>{fmtDist(distanceKm, units, 2)}<Text style={st.liveUnit}> {distUnit(units)}</Text></Text>
-              {(() => {
-                const liveAvgPace = distanceKm >= 0.05 && elapsedSec > 0 ? Math.round(elapsedSec / distanceKm) : null;
-                return (
-                  <Text style={st.liveSub}>
-                    {t('res.avgPace')} {liveAvgPace != null ? fmtPaceIn(liveAvgPace, units) : "--'--\""}{kcal != null ? `  ·  ${kcal} kcal` : ''}
-                  </Text>
-                );
-              })()}
-              {hasCoursePath && (() => {
-                const remainM = Math.max(0, courseLenM - alongM);
-                const avgPace = distanceKm > 0.05 ? elapsedSec / distanceKm : null;
-                const etaMin = avgPace != null ? Math.round(((remainM / 1000) * avgPace) / 60) : null;
-                return (
-                  <Text style={st.liveSub}>
-                    {t('trk.remaining')} {fmtDist(remainM / 1000, units, 2)} {distUnit(units)}  ·  {t('trk.eta')} {etaMin != null ? tfIn(lang, 'trk.etaMin', { n: etaMin }) : '—'}
-                  </Text>
-                );
-              })()}
-              <View style={st.liveHintWrap}>
-                <Icon name="chevron-down" size={16} color={C.sub} />
-                <Text style={st.bannerHint}>{t('rl.hintDown')}</Text>
-              </View>
-            </Pressable>
-          )}
-          {idle && (<>
           <View style={{ alignItems: 'center', marginTop: 8 }}>
             <Text style={st.timeLabel}>{t('trk.elapsed')}</Text>
             <Text style={st.timeValue}>{fmtElapsed(elapsedSec)}</Text>
@@ -1775,18 +1725,37 @@ export default function TrackingScreen() {
             <Waveform active={running} />
           </View>
 
-          {/* ── Controls (course idle only — running controls moved to the
-                 fixed bar, 4b; the coach mute keeps its top-right mirror) ── */}
-          <View style={st.controls}>
-            <Pressable
-              onPress={handleStart}
-              style={({ pressed }) => [st.startBtn, accentShadow(C.accent), { opacity: pressed ? 0.9 : 1 }]}
-            >
-              <Icon name="play" size={22} color={C.accentText} />
-              <Text style={st.startTxt}>{t('trk.start')}</Text>
-            </Pressable>
-          </View>
-          </>)}
+          {/* ── Controls — directly under the coach card (dead space died) ── */}
+          {idle ? (
+            <View style={st.controls}>
+              <Pressable
+                onPress={handleStart}
+                style={({ pressed }) => [st.startBtn, accentShadow(C.accent), { opacity: pressed ? 0.9 : 1 }]}
+              >
+                <Icon name="play" size={22} color={C.accentText} />
+                <Text style={st.startTxt}>{t('trk.start')}</Text>
+              </Pressable>
+            </View>
+          ) : (
+            <View style={[st.controls, st.controlsRow]}>
+              {/* 8/8 recon: this button was a Pressable wired to NOTHING (dead
+                  affordance). Now the same session mute as the map-chrome pill —
+                  one state, two mirrors. No coach (free / voice_cue off) =
+                  dimmed-disabled: nothing to mute, shown honestly. */}
+              <Pressable
+                disabled={!(isPremium && voiceCue)}
+                onPress={() => { setCoachMuted(m => { setSessionMuted(!m); return !m; }); }}
+                accessibilityLabel={coachMuted ? t('trk.voiceOn') : t('trk.voiceOff')}
+                style={[st.speakerBtn, shadows.sm, !(isPremium && voiceCue) && { opacity: 0.35 }]}
+              >
+                <Icon name={coachMuted ? 'volume-mute-outline' : 'volume-medium-outline'} size={22} color={coachMuted ? C.sub : C.text} />
+              </Pressable>
+              <Pressable onPress={togglePause} style={[st.pauseBtn, accentShadow(C.accent)]}>
+                <Icon name={running ? 'pause' : 'play'} size={32} color={C.accentText} />
+              </Pressable>
+              <HoldStop onComplete={endRun} gestureRef={holdRefExpanded} />
+            </View>
+          )}
         </Reanimated.View>
         </BottomSheetView>
       </BottomSheet>
@@ -1801,7 +1770,7 @@ export default function TrackingScreen() {
             <Icon name={running ? 'pause' : 'play'} size={16} color={C.text} />
             <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.ctrlTxt}>{running ? t('rl.pause') : t('rl.resume')}</Text>
           </Pressable>
-          <HoldStop onComplete={endRun} gestureRef={holdRefExpanded} variant="bar" />
+          <HoldStop onComplete={endRun} gestureRef={holdRefBar} variant="bar" />
         </View>
       )}
 
