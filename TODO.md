@@ -8,6 +8,7 @@
   - TODO(redesign/v1, ruled 2026-11-19): run-save (×2) + run-result (×1) `/(tabs)` landings point at **Feed** until Home is designed — revisit at the Home item.
   - TODO(redesign/v1): remove MY's temporary 기록 row in item ②.
   - Icons are placeholders (canvas note ⑦ "아이콘 미정"). Global palette swap (#F4F4EC / #121712 / #C3FF3C accent) is an OPEN ruling — item ① kept existing tokens.
+- **Redesign build #21 (1.0.7, channel `redesign`, commit 653046c) — EAS GREEN + SUBMITTED to ASC 2026-11-19** (build 72eaa815-cec8-4d56-ba77-49247e9c2dc6, submission fb536d80-e85a-46a0-b931-9827ed2654f0). Owner ruling at submit (thread, 2026-11-19): internal group 내부 테스팅 (auto-distribution ON, 3 testers) RECEIVES redesign builds; the external group is NOT given this build. Gate: owner [HH:MM] on build 21 against the item ① phone script → verified-ledger entry.
 - **② MY page — NEXT.** Pre-plan: probe the API for streak calendar, personal bests, 12-week chart, tagged posts; list gaps as asks for 지연, never invent data.
 
 ## THE OUTDOOR SESSION — RAN 2026-07-11 (debrief complete; scorecard below)
