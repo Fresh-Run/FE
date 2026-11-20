@@ -108,7 +108,7 @@ export default function ActivityScreen() {
       // The run (and this stack's screens for it) no longer exist —
       // land on the 기록 tab (crew-delete-modal's exit grammar)
       router.dismissAll?.();
-      router.replace('/(tabs)/records' as never);
+      router.replace({ pathname: '/(tabs)/my', params: { tab: 'records' } } as never); // 2b: Records lives in MY
     } catch (e: unknown) {
       setDeleting(false);
       Alert.alert(t('annd.delFailT'), errorMessage(e));

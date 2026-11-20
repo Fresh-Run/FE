@@ -198,7 +198,7 @@ export default function RunPostScreen() {
       await deleteRun(run.id);
       setDelOpen(false);
       router.dismissAll?.();
-      router.replace('/(tabs)/records' as never);
+      router.replace({ pathname: '/(tabs)/my', params: { tab: 'records' } } as never); // 2b: Records lives in MY
     } catch (e: unknown) {
       setDeleting(false);
       Alert.alert(t('annd.delFailT'), errorMessage(e));

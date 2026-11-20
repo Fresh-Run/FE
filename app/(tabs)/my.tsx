@@ -1,8 +1,9 @@
 // MY tab (redesign item 2, owner-ruled 2026-11-19) — canvas "MY 통계/기록/게시물
 // — Figma 원본" boards. Header (avatar · nickname · 프로필 보기 · gear → 설정)
-// + segmented 통계 / 기록 / 게시물. 2a ships the shell + 통계; 기록 and 게시물
-// land in 2b (interim panes below — TODO(redesign/v1 2b): replace).
-// The pre-redesign 프로필 tab content now lives at app/settings.tsx.
+// + segmented 통계 / 기록 / 게시물. 2a shipped the shell + 통계; 2b the 기록 and
+// 게시물 tabs (the old (tabs)/records screen is retired — post-save redirects
+// land here with ?tab=records). The pre-redesign 프로필 tab lives at
+// app/settings.tsx.
 import { useFocusEffect } from '@react-navigation/native';
 import { router, useLocalSearchParams, useNavigation } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -11,9 +12,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/avatar';
 import { useTabBarInset } from '@/components/fresh-tab-bar';
+import { MyPostsTab } from '@/components/my-posts-tab';
+import { MyRecordsTab } from '@/components/my-records-tab';
 import { MyStatsTab } from '@/components/my-stats-tab';
 import { Icon } from '@/components/ui';
 import { useProfile } from '@/hooks/use-profile';
+import { useRuns } from '@/hooks/use-runs';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { useT, type StringKey } from '@/lib/i18n';
 import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
@@ -34,7 +38,7 @@ export default function MyScreen() {
   const tabBarInset = useTabBarInset();
   const { tab: tabParam } = useLocalSearchParams<{ tab?: string }>();
   const [tab, setTab] = useState<MyTab>(isMyTab(tabParam) ? tabParam : 'stats');
-  // Deep links / post-save redirects select a tab via ?tab= (2b wires records)
+  // Deep links / post-save redirects select a tab via ?tab=records
   useEffect(() => { if (isMyTab(tabParam)) setTab(tabParam); }, [tabParam]);
 
   // 재탭 = 맨 위로 (owner-ruled 8/5 pattern, carried from the old 프로필 tab)
@@ -45,11 +49,27 @@ export default function MyScreen() {
   }), [navigation]);
 
   const { profile, refetch } = useProfile();
-  useFocusEffect(useCallback(() => { refetch(); }, [refetch]));
+  // One run list shared by 기록 and 게시물 (cursor-paginated, newest first)
+  const runList = useRuns();
+  const refetchRuns = runList.refetch;
+  useFocusEffect(useCallback(() => { refetch(); refetchRuns(); }, [refetch, refetchRuns]));
+
+  const listTab = tab === 'records' || tab === 'posts';
 
   return (
     <View style={[st.root, { paddingTop: insets.top }]}>
-      <ScrollView ref={scrollRef} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: tabBarInset }}>
+      <ScrollView
+        ref={scrollRef}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: tabBarInset }}
+        onScroll={({ nativeEvent: e }) => {
+          if (listTab && runList.hasMore && !runList.loadingMore
+              && e.contentOffset.y + e.layoutMeasurement.height > e.contentSize.height - 600) {
+            runList.loadMore();
+          }
+        }}
+        scrollEventThrottle={120}
+      >
         {/* Header */}
         <View style={st.header}>
           <Pressable
@@ -96,19 +116,31 @@ export default function MyScreen() {
 
         {tab === 'stats' && <MyStatsTab />}
         {tab === 'records' && (
-          <View style={st.interim}>
-            <Text style={st.interimTxt}>{T('my.interimRecords')}</Text>
-            <Pressable onPress={() => router.navigate('/(tabs)/records' as never)} style={st.interimBtn} accessibilityRole="button">
-              <Text style={st.interimBtnTxt}>{T('my.openOldRecords')}</Text>
-            </Pressable>
-          </View>
+          runList.error
+            ? <ErrorState message={runList.error} onRetry={runList.refetch} />
+            : <MyRecordsTab runs={runList.runs} loading={runList.loading} loadingMore={runList.loadingMore} hasMore={runList.hasMore} loadMore={runList.loadMore} />
         )}
         {tab === 'posts' && (
-          <View style={st.interim}>
-            <Text style={st.interimTxt}>{T('my.interimPosts')}</Text>
-          </View>
+          runList.error
+            ? <ErrorState message={runList.error} onRetry={runList.refetch} />
+            : <MyPostsTab runs={runList.runs} loading={runList.loading} loadingMore={runList.loadingMore} />
         )}
       </ScrollView>
+    </View>
+  );
+}
+
+function ErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
+  const C = useTokens();
+  const st = useStyles(makeSt);
+  const T = useT();
+  return (
+    <View style={st.errorWrap}>
+      <Icon name="warning-outline" size={30} color={C.faint} />
+      <Text style={st.errorTxt}>{message}</Text>
+      <Pressable onPress={onRetry} style={st.retryBtn} accessibilityRole="button">
+        <Text style={st.retryTxt}>{T('common.retry')}</Text>
+      </Pressable>
     </View>
   );
 }
@@ -125,8 +157,8 @@ const makeSt = (C: Tokens) => StyleSheet.create({
   segOn:       { backgroundColor: C.surface },
   segTxt:      { fontSize: 13, fontWeight: '600', color: C.sub },
   segTxtOn:    { color: C.text, fontWeight: '700' },
-  interim:     { margin: S.gutter, padding: 18, borderRadius: R.xl, backgroundColor: C.surface, gap: 12 },
-  interimTxt:  { fontSize: 13, color: C.sub },
-  interimBtn:  { alignSelf: 'flex-start', paddingHorizontal: 14, paddingVertical: 9, borderRadius: R.md, backgroundColor: C.surfaceAlt },
-  interimBtnTxt:{ fontSize: 13, fontWeight: '700', color: C.text },
+  errorWrap:   { alignItems: 'center', gap: 10, paddingVertical: 36, paddingHorizontal: S.gutter },
+  errorTxt:    { fontSize: 13, color: C.sub, textAlign: 'center' },
+  retryBtn:    { paddingHorizontal: 16, paddingVertical: 9, borderRadius: R.md, backgroundColor: C.surface },
+  retryTxt:    { fontSize: 13, fontWeight: '700', color: C.text },
 });

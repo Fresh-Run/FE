@@ -257,7 +257,7 @@ export default function RunResultScreen() {
     const leave = () => {
       exitingRef.current = true;
       clearPendingRun();
-      router.replace('/(tabs)/records' as any); // canvas: 완료 → Records tab
+      router.replace({ pathname: '/(tabs)/my', params: { tab: 'records' } } as never); // canvas: 완료 → Records (MY › 기록, 2b)
     };
     if (saveState === 'error') {
       Alert.alert(t('res.unsavedTitle'), t('res.unsavedBody'), [
