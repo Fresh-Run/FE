@@ -9,6 +9,7 @@
   - TODO(redesign/v1): remove MY's temporary 기록 row in item ②.
   - Icons are placeholders (canvas note ⑦ "아이콘 미정"). Global palette swap (#F4F4EC / #121712 / #C3FF3C accent) is an OPEN ruling — item ① kept existing tokens.
 - **Redesign build #21 (1.0.7, channel `redesign`, commit 653046c) — EAS GREEN + SUBMITTED to ASC 2026-11-19** (build 72eaa815-cec8-4d56-ba77-49247e9c2dc6, submission fb536d80-e85a-46a0-b931-9827ed2654f0). Owner ruling at submit (thread, 2026-11-19): internal group 내부 테스팅 (auto-distribution ON, 3 testers) RECEIVES redesign builds; the external group is NOT given this build. Gate: owner [HH:MM] on build 21 against the item ① phone script → verified-ledger entry.
+- **ITMS-90725 (ASC warning on build #21, 2026-11-19, not blocking):** built with the iOS 26.0 SDK; Apple requires the iOS 27 SDK for uploads from **April 2027**. Action before then: move EAS builds to an image with Xcode 27 (`eas.json` `image` on the production/staging/redesign profiles) and re-verify native modules (HC, audio-focus, live-activity) on that toolchain.
 - **② MY page — NEXT.** Pre-plan: probe the API for streak calendar, personal bests, 12-week chart, tagged posts; list gaps as asks for 지연, never invent data.
 
 ## THE OUTDOOR SESSION — RAN 2026-07-11 (debrief complete; scorecard below)
