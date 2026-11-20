@@ -1,10 +1,11 @@
-// 런 랜딩 (redesign item ③, owner-ruled 2026-11-19; FULL-SCREEN amendment
-// same day) — canvas FreeRunD1 (자유러닝 메인) + AICourse (C2 · AI 코스런,
-// 스와이프). The nav bar's run button PUSHES this route (the (course) group:
-// no tab bar, modal presentation); X top-left goes back to the tab you came
-// from. Bottom content sits on the safe-area inset. Full-screen map behind a
-// two-page pager:
-//   page 0 자유러닝: 이번 주 km · 스트릭 chips + 뛰러가기 → (course)/tracking
+// 런 랜딩 chrome (redesign ③ → ④a, 2026-11-19) — canvas FreeRunD1 (자유러닝
+// 메인) + AICourse (C2 · AI 코스런, 스와이프). Since 4a this is NOT a screen:
+// (course)/tracking mounts it over ITS OWN map in the free-run idle state, so
+// 뛰러가기 starts the countdown on the same screen and this chrome unmounts
+// on the state change (owner direction: no separate page). X → onClose (the
+// tab you came from). Bottom content sits on the safe-area inset. Two-page
+// pager:
+//   page 0 자유러닝: 이번 주 km · 스트릭 chips + 뛰러가기 → onStart (tracker.start)
 //   page 1 AI 코스런: quick-config sheet (거리 · 3K/5K/10K · 원점 복귀/일방통행)
 //     → 코스 생성하기 seeds the existing (course)/create form (seedKm +
 //     seedOneWay). Generation fires ONLY from that form's CTA — the 8/28
@@ -21,7 +22,6 @@ import { Alert, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensio
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/avatar';
-import { RealMap } from '@/components/real-map';
 import { SeededSlider } from '@/components/seeded-slider';
 import { Icon } from '@/components/ui';
 import { useCurrentLocation } from '@/hooks/use-current-location';
@@ -44,17 +44,17 @@ const EST_MIN_PER_KM = 6.5; // same placeholder pace the form uses pre-generatio
 
 type Mode = 0 | 1; // 0 = 자유러닝, 1 = AI 코스런
 
-export default function RunTabScreen() {
+export function RunLanding({ onStart, onClose }: { onStart: () => void; onClose: () => void }) {
   const T = useT();
   const lang = useLang();
   const C = useTokens();
   const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
   const bottomPad = insets.bottom + 14; // was the tab-bar inset; the bar is gone on this route
-  const { width, height } = useWindowDimensions();
+  const { width } = useWindowDimensions();
   const units = useSettings(s => s.settings.units);
 
-  const { coordinate, status: locStatus } = useCurrentLocation();
+  const { status: locStatus } = useCurrentLocation();
   const { weather } = useWeather();
   const { profile } = useProfile();
 
@@ -101,22 +101,15 @@ export default function RunTabScreen() {
     : tfIn(lang, 'rt.quotaWeekly', { n: quota.remaining ?? 0 });
 
   return (
-    <View style={st.root}>
-      {/* Map background — real map centered on the user once granted; the
-          plain ground while locating / denied (no Seoul-fallback latch:
-          gate = granted, key = remount when GPS refines) */}
-      {locStatus === 'granted' ? (
-        <View style={StyleSheet.absoluteFill} pointerEvents="none">
-          <RealMap key={`${coordinate.lat},${coordinate.lng}`} height={height} center={coordinate} showsUser cache={false} />
-        </View>
-      ) : null}
+    <View style={st.root} pointerEvents="box-none">
+      {/* The map is the host screen's (tracking's MapView) — nothing here */}
       {/* Top fade so the segment reads over any map */}
       <View style={[st.topFade, { height: insets.top + 90 }]} pointerEvents="none" />
 
       {/* Top row: close (left) · mode segment (center) · avatar (right) */}
       <View style={[st.topRow, { top: insets.top + 12 }]} pointerEvents="box-none">
         <Pressable
-          onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)' as never))}
+          onPress={onClose}
           hitSlop={8}
           style={[st.closeBtn, shadows.sm]}
           accessibilityRole="button"
@@ -191,7 +184,7 @@ export default function RunTabScreen() {
             </View>
           </View>
           <Pressable
-            onPress={() => router.push('/(course)/tracking' as never)}
+            onPress={onStart}
             style={({ pressed }) => [st.goBtn, { backgroundColor: C.neon }, pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] }]}
             accessibilityRole="button"
             accessibilityLabel={T('rt.go')}
@@ -286,7 +279,7 @@ export default function RunTabScreen() {
 }
 
 const makeSt = (C: Tokens) => StyleSheet.create({
-  root:        { flex: 1, backgroundColor: C.surfaceAlt },
+  root:        { ...StyleSheet.absoluteFillObject, backgroundColor: 'transparent' },
   topFade:     { position: 'absolute', left: 0, right: 0, top: 0, backgroundColor: C.bg, opacity: 0.55 },
   topRow:      { position: 'absolute', left: 0, right: 0, alignItems: 'center', justifyContent: 'center' },
   segment:     { flexDirection: 'row', gap: 4, padding: 5, borderRadius: 14, backgroundColor: C.surface },

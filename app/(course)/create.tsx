@@ -627,7 +627,7 @@ export default function CreateScreen() {
       <View style={st.header}>
         {/* dead-X belt (7/31): at stack base router.back() is a NO-OP — the
             trap's second half. Fall to the chooser when there's no history. */}
-        <Pressable onPress={() => router.canGoBack() ? router.back() : router.replace('/(course)/run' as never)} hitSlop={12} style={st.closeBtn}>
+        <Pressable onPress={() => router.canGoBack() ? router.back() : router.replace('/(course)/tracking' as never)} hitSlop={12} style={st.closeBtn}>
           <Icon name="close" size={20} color={C.text} />
         </Pressable>
         <Text style={st.headerTitle}>{t('crt.header')}</Text>

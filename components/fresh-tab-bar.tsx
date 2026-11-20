@@ -54,9 +54,10 @@ const TABS: TabDef[] = [
   { route: 'my',     iconOutline: 'person-outline', iconFilled: 'person', label: 'tab.my' },
 ];
 
-// Run button → PUSH the full-screen landing (owner amendment 2026-11-19):
-// (course)/run has no tab bar; its X returns to the tab that was focused.
-const RUN_ROUTE = '/(course)/run';
+// Run button → PUSH the full-screen run screen (owner amendment 2026-11-19;
+// 4a: tracking HOSTS the landing chrome in its idle state — no separate
+// page). No tab bar; its X returns to the tab that was focused.
+const RUN_ROUTE = '/(course)/tracking';
 
 // Canvas dock shadow: 0 6px 24px rgba(18,23,18,.16) (+ a 1px 4px .07 underline
 // RN can't stack). RN shadowRadius ≈ CSS blur / 2.

@@ -272,7 +272,7 @@ export default function WeatherDetailScreen() {
           style={({ pressed }) => [styles.cta, accentShadow(C.accent), { opacity: pressed ? 0.88 : 1 }]}
           // Direct target — this used to push the (course) GROUP ROOT, which
           // resolved through the deleted index shim's Redirect to the chooser
-          onPress={() => router.push('/(course)/run' as never)}
+          onPress={() => router.push('/(course)/tracking' as never)}
         >
           <Icon name="play-circle" size={20} color={C.accentText} />
           <Text style={styles.ctaLabel}>{T('wx.cta')}</Text>

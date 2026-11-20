@@ -38,6 +38,7 @@ import Reanimated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
 
+import { RunLanding } from '@/components/run-landing';
 import { Icon } from '@/components/ui';
 import { SEOUL_FALLBACK, useCurrentLocation } from '@/hooks/use-current-location';
 import { courseLengthM, courseTangentAt, nearestOnCourse, nextTurn, OFF_COURSE_ENTER_M, OFF_COURSE_EXIT_M, pointAhead, sliceAhead, snapToCourse } from '@/lib/course-nav';
@@ -1281,6 +1282,9 @@ export default function TrackingScreen() {
 
   const running = state === 'running';
   const idle    = state === 'idle';
+  // 4a (2026-11-19): free-run idle shows the D1/C2 landing chrome over this
+  // map instead of the idle sheet; course runs keep the course idle sheet.
+  const freeIdle = idle && !course;
   const units   = useSettings(s => s.settings.units);
   const coachMsg = !moving ? t('trk.coachReady') : t('trk.coachPace');
   const paceDisplay = moving ? fmtPaceIn(paceSecPerKm, units) : "--'--\"";
@@ -1491,8 +1495,9 @@ export default function TrackingScreen() {
             </View>
           </View>
         )}
-        {/* X exits only in idle — once countdown starts, hold-stop is the only way out */}
-        {idle && (
+        {/* X exits only in idle — once countdown starts, hold-stop is the only way out.
+            Free-run idle: the landing chrome carries its own X (4a). */}
+        {idle && course && (
           <Pressable
             onPress={() => router.back()}
             hitSlop={8}
@@ -1535,7 +1540,14 @@ export default function TrackingScreen() {
       {/* Re-center — anchored ABOVE the sheet's top edge, right side; rides
           the sheet via its animatedPosition. A sibling, not a sheet child:
           iOS drops touches outside a parent's bounds. */}
-      {recenterVisible && (
+      {freeIdle && (
+        <RunLanding
+          onStart={handleStart}
+          onClose={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)' as never))}
+        />
+      )}
+
+      {recenterVisible && !freeIdle && (
         <Reanimated.View style={[st.recenterWrap, recenterRide]}>
           <Pressable onPress={recenter} style={st.recenterBtn} hitSlop={6}>
             <Icon name="locate" size={18} color={C.text} />
@@ -1547,6 +1559,7 @@ export default function TrackingScreen() {
              the lib's job (drag anywhere, 1:1 tracking, velocity fling, both
              directions). idle = content-hugging single detent, locked;
              run = [compact 100, expanded] with countdown locked. ── */}
+      {!freeIdle && (
       <BottomSheet
         key={idle ? 'idle' : 'run'}
         enableDynamicSizing={idle}
@@ -1701,6 +1714,7 @@ export default function TrackingScreen() {
         </Reanimated.View>
         </BottomSheetView>
       </BottomSheet>
+      )}
 
       {state === 'countdown' && <CountdownOverlay value={countdownValue} />}
       {/* keep-awake GATED on 화면 항상 켜기 (①, closes the always-on TODO):
