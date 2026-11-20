@@ -101,6 +101,7 @@ export const ko = {
   'my.emptyMonth': '이 달에는 기록이 없어요',
   'my.noPosts': '아직 게시물이 없어요',
   // ── 런 탭 (redesign ③, 2026-11-19) ──
+  'rt.close': '닫기',
   'rt.modeFree': '자유러닝',
   'rt.modeAi': 'AI 코스런',
   'rt.weekChip': '이번 주',

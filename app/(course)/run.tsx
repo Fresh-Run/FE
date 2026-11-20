@@ -1,6 +1,9 @@
-// 런 탭 (redesign item ③, owner-ruled 2026-11-19) — canvas FreeRunD1 (자유러닝
-// 메인) + AICourse (C2 · AI 코스런, 스와이프). The run button in the nav bar
-// opens this screen. Full-screen map behind a two-page pager:
+// 런 랜딩 (redesign item ③, owner-ruled 2026-11-19; FULL-SCREEN amendment
+// same day) — canvas FreeRunD1 (자유러닝 메인) + AICourse (C2 · AI 코스런,
+// 스와이프). The nav bar's run button PUSHES this route (the (course) group:
+// no tab bar, modal presentation); X top-left goes back to the tab you came
+// from. Bottom content sits on the safe-area inset. Full-screen map behind a
+// two-page pager:
 //   page 0 자유러닝: 이번 주 km · 스트릭 chips + 뛰러가기 → (course)/tracking
 //   page 1 AI 코스런: quick-config sheet (거리 · 3K/5K/10K · 원점 복귀/일방통행)
 //     → 코스 생성하기 seeds the existing (course)/create form (seedKm +
@@ -18,7 +21,6 @@ import { Alert, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensio
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/avatar';
-import { useTabBarInset } from '@/components/fresh-tab-bar';
 import { RealMap } from '@/components/real-map';
 import { SeededSlider } from '@/components/seeded-slider';
 import { Icon } from '@/components/ui';
@@ -48,7 +50,7 @@ export default function RunTabScreen() {
   const C = useTokens();
   const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
-  const tabBarInset = useTabBarInset();
+  const bottomPad = insets.bottom + 14; // was the tab-bar inset; the bar is gone on this route
   const { width, height } = useWindowDimensions();
   const units = useSettings(s => s.settings.units);
 
@@ -111,8 +113,17 @@ export default function RunTabScreen() {
       {/* Top fade so the segment reads over any map */}
       <View style={[st.topFade, { height: insets.top + 90 }]} pointerEvents="none" />
 
-      {/* Top row: mode segment (center) · avatar (right) */}
+      {/* Top row: close (left) · mode segment (center) · avatar (right) */}
       <View style={[st.topRow, { top: insets.top + 12 }]} pointerEvents="box-none">
+        <Pressable
+          onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)' as never))}
+          hitSlop={8}
+          style={[st.closeBtn, shadows.sm]}
+          accessibilityRole="button"
+          accessibilityLabel={T('rt.close')}
+        >
+          <Icon name="close" size={20} color={C.text} />
+        </Pressable>
         <View style={[st.segment, shadows.sm]}>
           {([0, 1] as Mode[]).map(m => {
             const on = mode === m;
@@ -168,7 +179,7 @@ export default function RunTabScreen() {
         scrollEventThrottle={16}
       >
         {/* Page 0 — 자유러닝 */}
-        <View style={[st.page, { width, paddingBottom: tabBarInset + 10 }]} pointerEvents="box-none">
+        <View style={[st.page, { width, paddingBottom: bottomPad }]} pointerEvents="box-none">
           <View style={st.chipRow}>
             <View style={[st.chip, shadows.sm]}>
               <Text style={st.chipLbl}>{T('rt.weekChip')} </Text>
@@ -191,7 +202,7 @@ export default function RunTabScreen() {
 
         {/* Page 1 — AI 코스런 sheet */}
         <View style={[st.page, { width, paddingHorizontal: 0 }]} pointerEvents="box-none">
-          <View style={[st.sheet, { paddingBottom: tabBarInset + 6 }]}>
+          <View style={[st.sheet, { paddingBottom: bottomPad }]}>
             <View style={st.sheetTitleRow}>
               <Pressable onPress={() => goTo(0)} hitSlop={8} accessibilityRole="button" accessibilityLabel={T('rt.modeFree')}>
                 <Text style={st.sheetBack}>‹ {T('rt.modeFree')}</Text>
@@ -282,6 +293,7 @@ const makeSt = (C: Tokens) => StyleSheet.create({
   segBtn:      { paddingHorizontal: 16, paddingVertical: 7, borderRadius: 10 },
   segTxt:      { fontSize: 12.5 },
   avatarBtn:   { position: 'absolute', right: 22, top: 0 },
+  closeBtn:    { position: 'absolute', left: 16, top: 0, width: 38, height: 38, borderRadius: 19, backgroundColor: C.surface, alignItems: 'center', justifyContent: 'center' },
   weatherChip: { position: 'absolute', left: 22, backgroundColor: C.surface, borderRadius: 12, paddingHorizontal: 13, paddingVertical: 8 },
   weatherTxt:  { fontSize: 11.5, fontWeight: '700', color: C.text },
   locNote:     { position: 'absolute', left: 22, flexDirection: 'row', alignItems: 'center', gap: 4 },

@@ -1,6 +1,7 @@
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { useT } from '@/lib/i18n';
 import * as Haptics from 'expo-haptics';
+import { router } from 'expo-router';
 import React from 'react';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -53,7 +54,9 @@ const TABS: TabDef[] = [
   { route: 'my',     iconOutline: 'person-outline', iconFilled: 'person', label: 'tab.my' },
 ];
 
-const RUN_ROUTE = 'create'; // interim: today's create screen; later the D1 free-run landing
+// Run button → PUSH the full-screen landing (owner amendment 2026-11-19):
+// (course)/run has no tab bar; its X returns to the tab that was focused.
+const RUN_ROUTE = '/(course)/run';
 
 // Canvas dock shadow: 0 6px 24px rgba(18,23,18,.16) (+ a 1px 4px .07 underline
 // RN can't stack). RN shadowRadius ≈ CSS blur / 2.
@@ -71,14 +74,18 @@ export function FreshTabBar({ state, navigation }: BottomTabBarProps) {
   const styles = useStyles(makeStyles);
   const insets = useSafeAreaInsets();
 
-  function handlePress(routeName: string, routeKey: string, isFocused: boolean) {
-    // Toggle-scope ruling (2026-07-23): 햅틱 피드백 governs ALL app-origin
-    // haptics — the tab bar was the audit's ungated control group, now a
-    // convicted scope violation. Fire-time snapshot (the staleness-class
-    // idiom): no render-path subscription needed for a press handler.
+  // Toggle-scope ruling (2026-07-23): 햅틱 피드백 governs ALL app-origin
+  // haptics — the tab bar was the audit's ungated control group, now a
+  // convicted scope violation. Fire-time snapshot (the staleness-class
+  // idiom): no render-path subscription needed for a press handler.
+  function buzz() {
     if (Platform.OS === 'ios' && useSettings.getState().settings.run.haptics) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
+  }
+
+  function handlePress(routeName: string, routeKey: string, isFocused: boolean) {
+    buzz();
     const event = navigation.emit({
       type: 'tabPress',
       target: routeKey,
@@ -94,8 +101,6 @@ export function FreshTabBar({ state, navigation }: BottomTabBarProps) {
     if (!route) return null;
     return { key: route.key, focused: state.index === state.routes.indexOf(route) };
   }
-
-  const run = focusOf(RUN_ROUTE);
 
   return (
     <View
@@ -133,7 +138,7 @@ export function FreshTabBar({ state, navigation }: BottomTabBarProps) {
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={T('tab.run')}
-        onPress={() => run && handlePress(RUN_ROUTE, run.key, run.focused)}
+        onPress={() => { buzz(); router.push(RUN_ROUTE as never); }}
         style={({ pressed }) => [
           styles.runBtn,
           dockShadow,

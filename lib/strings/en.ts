@@ -92,6 +92,7 @@ export const en: Record<keyof typeof ko, string> = {
   'my.emptyMonth': 'No runs this month',
   'my.noPosts': 'No posts yet',
   // ── 런 탭 (redesign ③, 2026-11-19) ──
+  'rt.close': 'Close',
   'rt.modeFree': 'Free run',
   'rt.modeAi': 'AI course run',
   'rt.weekChip': 'This week',
