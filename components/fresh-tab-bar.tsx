@@ -27,9 +27,9 @@ type TabDef = {
 // Geometry — single source of truth for the bar's screen footprint.
 // The wrapper is position:absolute (floating look), so the navigator never
 // insets content; tab screens self-compensate via useTabBarInset().
-const PILL_HEIGHT = 72;     // canvas: dock 72px
-const PILL_RADIUS = 26;     // canvas: border-radius 26px (not a full capsule)
-const RUN_SIZE = 80;        // canvas: run button 80px, "살짝 크게" than the dock
+const PILL_HEIGHT = 68;     // canvas: dock 72px — owner trim 2026-11-19 (build 21 feedback: too big)
+const PILL_RADIUS = 24;     // canvas: 26px — owner trim 2026-11-19
+const RUN_SIZE = 74;        // canvas: 80px — owner trim 2026-11-19, still taller than the dock
 const SIDE = 14;            // canvas: left/right 14px
 const BOTTOM_BASE = 14;     // canvas: bottom 14px — + insets.bottom at runtime
 const GAP = 10;             // canvas: gap between dock and run button
@@ -40,7 +40,7 @@ const BREATHING = 12; // owner call 2026-07-10, pending 지연's taste vote
 
 /** Recommended contentContainerStyle.paddingBottom for every tab screen's
     scroll container: full bar occlusion + breathing room. The run button
-    (80) is the tallest element, so it sets the occlusion height. */
+    (RUN_SIZE) is the tallest element, so it sets the occlusion height. */
 export function useTabBarInset(): number {
   const insets = useSafeAreaInsets();
   return RUN_SIZE + BOTTOM_BASE + insets.bottom + BREATHING;
@@ -140,7 +140,7 @@ export function FreshTabBar({ state, navigation }: BottomTabBarProps) {
           { backgroundColor: C.neon, transform: [{ scale: pressed ? 0.93 : 1 }] },
         ]}
       >
-        <Icon name="play" size={26} color="#121712" />
+        <Icon name="play" size={24} color="#121712" />
       </Pressable>
     </View>
   );
