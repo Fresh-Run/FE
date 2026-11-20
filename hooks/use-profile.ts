@@ -12,6 +12,7 @@ import { ApiError, apiFetch } from '@/lib/api';
 import { t } from '@/lib/i18n';
 import { errorMessage } from '@/lib/error-copy';
 import { supabase } from '@/lib/supabase';
+import { useStore } from '@/store/use-store';
 
 export type Profile = {
   nickname: string;
@@ -35,7 +36,14 @@ const FALLBACK_PROFILE: Profile = { nickname: '사용자', avatar_url: null, bio
 const EMPTY_STATS: RunStats     = { totalRuns: 0, totalDistKm: 0, bestPaceSec: null };
 
 export function useProfile() {
-  const [profile, setProfile]     = useState<Profile | null>(null);
+  // Cache-first seed (landing polish 2026-11-19): the auth store keeps the
+  // per-user display name + photo URL (AsyncStorage, hydrated at boot) — the
+  // same cache the feed header paints from. Seeding here kills the 러-initials
+  // flash on every consumer; the server fetch below still corrects it.
+  const [profile, setProfile]     = useState<Profile | null>(() => {
+    const { displayName, photoUrl } = useStore.getState();
+    return displayName ? { nickname: displayName, avatar_url: photoUrl, bio: null } : null;
+  });
   const [stats, setStats]         = useState<RunStats>(EMPTY_STATS);
   const [loading, setLoading]     = useState(true);
   const [error, setError]         = useState<string | null>(null);

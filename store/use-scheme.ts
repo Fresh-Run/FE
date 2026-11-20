@@ -31,6 +31,9 @@ const resolve = (mode: Mode): Resolved =>
 type SchemeStore = {
   mode: Mode;
   resolved: Resolved;
+  /** AsyncStorage mode read landed (boot gate — explicit-mode users never
+      see a system-scheme first frame; landing polish 2026-11-19). */
+  hydrated: boolean;
   /** Apply + persist (device-local). Explicit server sync is the caller's
       job (theme.tsx PATCHes light/dark; 시스템 is local-only). */
   setMode: (m: Mode) => void;
@@ -39,6 +42,7 @@ type SchemeStore = {
 export const useScheme = create<SchemeStore>(set => ({
   mode: 'system',
   resolved: resolve('system'),
+  hydrated: false,
   setMode: (m: Mode) => {
     set({ mode: m, resolved: resolve(m) });
     AsyncStorage.setItem(KEY, m).catch(() => {});
@@ -49,10 +53,12 @@ export const useScheme = create<SchemeStore>(set => ({
 AsyncStorage.getItem(KEY)
   .then(v => {
     if (v === 'light' || v === 'dark' || v === 'system') {
-      useScheme.setState({ mode: v, resolved: resolve(v) });
+      useScheme.setState({ mode: v, resolved: resolve(v), hydrated: true });
+    } else {
+      useScheme.setState({ hydrated: true });
     }
   })
-  .catch(() => {});
+  .catch(() => { useScheme.setState({ hydrated: true }); });
 
 // 시스템 mode follows the OS live.
 Appearance.addChangeListener(({ colorScheme }) => {

@@ -592,6 +592,17 @@ export default function TrackingScreen() {
 
   // ── T-A: real map (consumer of the tracker's read-only surface ONLY) ──
   const { coordinate: hereCoord, status: locStatus } = useCurrentLocation();
+  // Map curtain (landing polish 2026-11-19, owner standard: no visible flicker
+  // on screen open): an opaque bg-colored cover over the map until it reports
+  // ready + a short settle, then a 200ms fade. Hides the OS-style→app-style
+  // switch of the native map and tile/geometry load-in. Mount-only.
+  const [mapCurtain, setMapCurtain] = useState(true);
+  const curtainOpacity = useRef(new Animated.Value(1)).current;
+  const liftCurtain = useCallback(() => {
+    setTimeout(() => {
+      Animated.timing(curtainOpacity, { toValue: 0, duration: 200, useNativeDriver: true }).start(() => setMapCurtain(false));
+    }, 250);
+  }, [curtainOpacity]);
   const mapRef = useRef<MapView>(null);
   // Follow-camera suspension (v2, her 8/3 tester relay): any user gesture
   // pauses following INDEFINITELY — the 8s timeout WAS the defect (adjusted
@@ -1341,7 +1352,7 @@ export default function TrackingScreen() {
             latitudeDelta: 0.006,
             longitudeDelta: 0.006,
           }}
-          onMapReady={fitCourse}
+          onMapReady={() => { fitCourse(); liftCurtain(); }}
           onLayout={fitCourse}
           onPanDrag={onUserPan}
           // T1.5 zoom agency: pinch-zoom joins the indefinite suspension (onPanDrag
@@ -1451,7 +1462,9 @@ export default function TrackingScreen() {
               </View>
             </Marker>
           ) : null}
-          {drawnPath.length > 1 ? (
+          {/* No live-track line while idle (polish belt 2026-11-19): closes the
+              stale-path class whether or not it was the reported stray lines */}
+          {!idle && drawnPath.length > 1 ? (
             <Polyline coordinates={drawnPath} strokeColor={C.accent} strokeWidth={5} />
           ) : null}
           {/* nav v4: the custom runner dot — the Apple look, fixed pixel
@@ -1579,6 +1592,10 @@ export default function TrackingScreen() {
       {/* Re-center — anchored ABOVE the sheet's top edge, right side; rides
           the sheet via its animatedPosition. A sibling, not a sheet child:
           iOS drops touches outside a parent's bounds. */}
+      {mapCurtain && (
+        <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: C.bg, opacity: curtainOpacity }]} />
+      )}
+
       {freeIdle && (
         <RunLanding
           onStart={handleStart}

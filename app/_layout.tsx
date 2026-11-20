@@ -105,9 +105,13 @@ function RootLayoutInner() {
   // listener). Navigator chrome + status bar ride `resolved` with the rest
   // of the app. The Phase-0 pin and the dev override are history.
   const resolved = useScheme((s) => s.resolved);
+  // Boot gate also waits for the persisted theme mode (one AsyncStorage read,
+  // already in flight; the session hydrate is far longer) — explicit-mode
+  // users never get a system-scheme first frame (landing polish 2026-11-19).
+  const schemeHydrated = useScheme((s) => s.hydrated);
 
   // Block rendering until we know the session state to prevent flash.
-  if (sessionLoading) return <LoadingScreen />;
+  if (sessionLoading || !schemeHydrated) return <LoadingScreen />;
 
   return (
     <NavThemeProvider value={resolved === 'dark' ? DarkTheme : DefaultTheme}>

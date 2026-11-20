@@ -260,7 +260,7 @@ export function RunLanding({ onStart, onClose }: { onStart: () => void; onClose:
           accessibilityRole="button"
           accessibilityLabel={T('tab.my')}
         >
-          <Avatar name={profile?.nickname} size={38} photoUrl={profile?.avatar_url} ring={C.surface} />
+          <Avatar name={profile?.nickname} size={38} photoUrl={profile?.avatar_url} ring={C.surface} pending={!profile} />
         </Pressable>
       </View>
 

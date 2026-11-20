@@ -78,7 +78,7 @@ export default function MyScreen() {
             accessibilityRole="button"
             accessibilityLabel={T('my.viewProfile')}
           >
-            <Avatar name={profile?.nickname} size={40} photoUrl={profile?.avatar_url} ring={C.border} />
+            <Avatar name={profile?.nickname} size={40} photoUrl={profile?.avatar_url} ring={C.border} pending={!profile} />
             <View style={{ minWidth: 0 }}>
               <Text style={st.name} numberOfLines={1}>{profile?.nickname ?? ' '}</Text>
               <Text style={st.viewProfile}>{T('my.viewProfile')}</Text>
