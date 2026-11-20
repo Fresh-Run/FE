@@ -1175,12 +1175,15 @@ export default function TrackingScreen() {
   const sheetH = winH - SHEET_TOP;
   // 4b: control-bar footprint the sheet content must clear (bottom-anchored sheet)
   const controlSpace = insets.bottom + CONTROL_GAP + CONTROL_H + 12;
-  // Free runs: RunLive covers the map (expanded = everything under the status
-  // bar). Course runs keep today's expanded height — the map stays visible
-  // for the turn overlays (stated deviation, 4b).
+  // Free runs: RunLive covers the map — expanded = the FULL window (the sheet
+  // content pads its own top by the status-bar inset). No `topInset` prop:
+  // 4b shipped with it and the sheet never appeared on device (owner report
+  // 2026-11-19); it is the one prop that changes the library's hosting
+  // container, so it is gone. Course runs keep today's expanded height — the
+  // map stays visible for the turn overlays (stated deviation, 4b).
   const runSnaps = useMemo(
-    () => [BANNER_H + controlSpace, course ? sheetH : winH - insets.top],
-    [sheetH, controlSpace, course, winH, insets.top],
+    () => [BANNER_H + controlSpace, course ? sheetH : winH],
+    [sheetH, controlSpace, course, winH],
   );
   const [detent, setDetent] = useState<'expanded' | 'compact'>('expanded');
   // Slidable only mid-run; idle needs the start button, countdown is locked
@@ -1599,7 +1602,6 @@ export default function TrackingScreen() {
       <BottomSheet
         ref={sheetRef}
         key={idle ? 'idle' : 'run'}
-        topInset={insets.top}
         enableDynamicSizing={idle}
         {...(!idle ? { snapPoints: runSnaps, index: 1 } : {})}
         animateOnMount={false}
@@ -1643,7 +1645,7 @@ export default function TrackingScreen() {
               평균/kcal line (preserves the 8/4 tester ask) · course nav strip
               (course runs) · 내려서 지도 보기. Tap anywhere → compact. */}
           {!idle && (
-            <Pressable onPress={toggleDetent} style={st.live} accessibilityRole="button" accessibilityLabel={t('rl.hintDown')}>
+            <Pressable onPress={toggleDetent} style={[st.live, !course && { paddingTop: insets.top }]} accessibilityRole="button" accessibilityLabel={t('rl.hintDown')}>
               <Text style={st.liveCaption}>{course ? course.title : tfIn(lang, 'rl.caption', { date: fmtDateAbs(new Date().toISOString(), lang) })}</Text>
               <Text style={st.liveLbl}>{t('rl.time')}</Text>
               <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.liveTime}>{fmtElapsed(elapsedSec)}</Text>
@@ -1872,7 +1874,7 @@ const makeSt = (C: Tokens) => StyleSheet.create({
   // anti-theft rect hit-test; content wrappers carry their own gutters.
   sheetBg:         { backgroundColor: C.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24 },
   // 4b — RunMap banner (compact) / RunLive stack (expanded) / control bar
-  banner:       { paddingHorizontal: S.gutter },
+  banner:       { position: 'absolute', top: 0, left: S.gutter, right: S.gutter },
   bannerPress:  { alignItems: 'center', paddingTop: 6, paddingBottom: 8, minHeight: BANNER_H - 24 },
   bannerLine:   { fontSize: 25, fontWeight: '800', letterSpacing: -0.5, color: C.text, fontVariant: ['tabular-nums'] },
   bannerSep:    { color: C.faint, fontWeight: '700', fontSize: 20 },
