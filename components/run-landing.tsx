@@ -106,59 +106,6 @@ export function RunLanding({ onStart, onClose }: { onStart: () => void; onClose:
       {/* Top fade so the segment reads over any map */}
       <View style={[st.topFade, { height: insets.top + 90 }]} pointerEvents="none" />
 
-      {/* Top row: close (left) · mode segment (center) · avatar (right) */}
-      <View style={[st.topRow, { top: insets.top + 12 }]} pointerEvents="box-none">
-        <Pressable
-          onPress={onClose}
-          hitSlop={8}
-          style={[st.closeBtn, shadows.sm]}
-          accessibilityRole="button"
-          accessibilityLabel={T('rt.close')}
-        >
-          <Icon name="close" size={20} color={C.text} />
-        </Pressable>
-        <View style={[st.segment, shadows.sm]}>
-          {([0, 1] as Mode[]).map(m => {
-            const on = mode === m;
-            return (
-              <Pressable
-                key={m}
-                onPress={() => goTo(m)}
-                style={[st.segBtn, on && { backgroundColor: C.text }]}
-                accessibilityRole="tab"
-                accessibilityState={{ selected: on }}
-                accessibilityLabel={T(m === 0 ? 'rt.modeFree' : 'rt.modeAi')}
-              >
-                <Text style={[st.segTxt, { color: on ? C.bg : C.sub, fontWeight: on ? '700' : '500' }]}>{T(m === 0 ? 'rt.modeFree' : 'rt.modeAi')}</Text>
-              </Pressable>
-            );
-          })}
-        </View>
-        <Pressable
-          onPress={() => router.navigate('/(tabs)/my' as never)}
-          style={st.avatarBtn}
-          accessibilityRole="button"
-          accessibilityLabel={T('tab.my')}
-        >
-          <Avatar name={profile?.nickname} size={38} photoUrl={profile?.avatar_url} ring={C.surface} />
-        </Pressable>
-      </View>
-
-      {/* Weather chip (C2) — AI mode only; quiet while loading */}
-      {mode === 1 && weather && (
-        <View style={[st.weatherChip, shadows.sm, { top: insets.top + 66 }]} pointerEvents="none">
-          <Text style={st.weatherTxt}>{tfIn(lang, 'rt.weatherChip', { t: Math.round(weather.temp_c), label: weather.running_index.label })}</Text>
-        </View>
-      )}
-
-      {/* Location state (not granted) — the only copy on the empty ground */}
-      {locStatus !== 'granted' && (
-        <View style={[st.locNote, { top: insets.top + 70 }]} pointerEvents="none">
-          <Icon name="location-outline" size={13} color={C.sub} />
-          <Text style={st.locNoteTxt}>{locStatus === 'denied' ? T('trk.locPermTitle') : T('wx.locating')}</Text>
-        </View>
-      )}
-
       {/* Pager */}
       <ScrollView
         ref={pagerRef}
@@ -274,6 +221,64 @@ export function RunLanding({ onStart, onClose }: { onStart: () => void; onClose:
           </View>
         </View>
       </ScrollView>
+      {/* Top row: close (left) · mode segment (center) · avatar (right).
+          RENDERED AFTER the pager on purpose (fix 2026-11-19, owner report:
+          the whole top of the landing ignored taps): the pager is a full-screen
+          ScrollView, and a sibling drawn before it sits UNDER it — its taps
+          went to the scroll view. 뛰러가기 lives inside the pager, which is why
+          only the bottom worked. Later sibling = on top. */}
+      <View style={[st.topRow, { top: insets.top + 12 }]} pointerEvents="box-none">
+        <Pressable
+          onPress={onClose}
+          hitSlop={8}
+          style={[st.closeBtn, shadows.sm]}
+          accessibilityRole="button"
+          accessibilityLabel={T('rt.close')}
+        >
+          <Icon name="close" size={20} color={C.text} />
+        </Pressable>
+        <View style={[st.segment, shadows.sm]}>
+          {([0, 1] as Mode[]).map(m => {
+            const on = mode === m;
+            return (
+              <Pressable
+                key={m}
+                onPress={() => goTo(m)}
+                style={[st.segBtn, on && { backgroundColor: C.text }]}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: on }}
+                accessibilityLabel={T(m === 0 ? 'rt.modeFree' : 'rt.modeAi')}
+              >
+                <Text style={[st.segTxt, { color: on ? C.bg : C.sub, fontWeight: on ? '700' : '500' }]}>{T(m === 0 ? 'rt.modeFree' : 'rt.modeAi')}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
+        <Pressable
+          onPress={() => router.navigate('/(tabs)/my' as never)}
+          style={st.avatarBtn}
+          accessibilityRole="button"
+          accessibilityLabel={T('tab.my')}
+        >
+          <Avatar name={profile?.nickname} size={38} photoUrl={profile?.avatar_url} ring={C.surface} />
+        </Pressable>
+      </View>
+
+      {/* Weather chip (C2) — AI mode only; quiet while loading */}
+      {mode === 1 && weather && (
+        <View style={[st.weatherChip, shadows.sm, { top: insets.top + 66 }]} pointerEvents="none">
+          <Text style={st.weatherTxt}>{tfIn(lang, 'rt.weatherChip', { t: Math.round(weather.temp_c), label: weather.running_index.label })}</Text>
+        </View>
+      )}
+
+      {/* Location state (not granted) — the only copy on the empty ground */}
+      {locStatus !== 'granted' && (
+        <View style={[st.locNote, { top: insets.top + 70 }]} pointerEvents="none">
+          <Icon name="location-outline" size={13} color={C.sub} />
+          <Text style={st.locNoteTxt}>{locStatus === 'denied' ? T('trk.locPermTitle') : T('wx.locating')}</Text>
+        </View>
+      )}
+
     </View>
   );
 }
