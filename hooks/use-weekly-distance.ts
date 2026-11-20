@@ -77,6 +77,19 @@ export function monthsInWindow(weeks: number, now = Date.now()): { year: number;
   return res;
 }
 
+/** Current streak in days: consecutive KST run-days ending today, or ending
+    yesterday when today has no run yet (a run later today extends it). 0 when
+    neither. `days` = runs-only KST dates (any months, any order). Derived
+    client-side — no server field (지연 ask ④, 2026-11-19). */
+export function currentStreakDays(days: { date: string; run_count: number }[], now = Date.now()): number {
+  const set = new Set(days.filter(d => d.run_count > 0).map(d => d.date));
+  let cursor = kstTodayUtc(now);
+  if (!set.has(dateKey(cursor))) cursor = new Date(cursor.getTime() - DAY_MS);
+  let n = 0;
+  while (set.has(dateKey(cursor))) { n += 1; cursor = new Date(cursor.getTime() - DAY_MS); }
+  return n;
+}
+
 export function useWeeklyDistance(weeks = 12) {
   const [buckets, setBuckets] = useState<WeekBucket[]>(() => bucketWeeks([], weeks));
   const [monthly, setMonthly] = useState<Record<string, MonthlyStats>>({});

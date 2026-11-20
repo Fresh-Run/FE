@@ -1,346 +1,322 @@
+// 런 탭 (redesign item ③, owner-ruled 2026-11-19) — canvas FreeRunD1 (자유러닝
+// 메인) + AICourse (C2 · AI 코스런, 스와이프). The run button in the nav bar
+// opens this screen. Full-screen map behind a two-page pager:
+//   page 0 자유러닝: 이번 주 km · 스트릭 chips + 뛰러가기 → (course)/tracking
+//   page 1 AI 코스런: quick-config sheet (거리 · 3K/5K/10K · 원점 복귀/일방통행)
+//     → 코스 생성하기 seeds the existing (course)/create form (seedKm +
+//     seedOneWay). Generation fires ONLY from that form's CTA — the 8/28
+//     auto-fire deletion stands (review-first ruling), so this sheet is a
+//     hand-off, not a generator.
+// Data: 이번 주 = server GET /me/stats `week` (the old tab summed page-one
+// runs — corrected); 스트릭 = derived (currentStreakDays, 지연 ask ④); quota =
+// weekly (owner ruling: "이번 주 무료 생성 N회 남음"). 저장된 코스 = small link
+// in the sheet (owner ruling). Colors via tokens (Figma light-only).
 import { useFocusEffect } from '@react-navigation/native';
 import { router } from 'expo-router';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  Alert,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Avatar } from '@/components/avatar';
 import { useTabBarInset } from '@/components/fresh-tab-bar';
-import { t, tf, tfIn, useLang, useT } from '@/lib/i18n';
-import { MiniMap } from '@/components/mini-map';
 import { RealMap } from '@/components/real-map';
-import { setRouteMap } from '@/store/route-map';
+import { SeededSlider } from '@/components/seeded-slider';
 import { Icon } from '@/components/ui';
 import { useCurrentLocation } from '@/hooks/use-current-location';
-import { useRuns } from '@/hooks/use-runs';
-import { getBookmarkedRoutes } from '@/lib/bookmarks-api';
+import { useProfile } from '@/hooks/use-profile';
+import { useStyles, useTokens } from '@/hooks/use-tokens';
+import { useWeather } from '@/hooks/use-weather';
+import { currentStreakDays, useWeeklyDistance } from '@/hooks/use-weekly-distance';
+import { t, tf, tfIn, useLang, useT } from '@/lib/i18n';
 import { distUnit, fmtDist } from '@/lib/run-format';
-import type { PublicRoute } from '@/lib/routes-api';
+import { getMyStats, type MyStats } from '@/lib/stats-api';
+import { radius as R, shadows, type Tokens, DENSE_MAX_FONT_SCALE } from '@/lib/theme';
 import { useQuota } from '@/store/use-quota';
 import { useSettings } from '@/store/use-settings';
-import { useWeather } from '@/hooks/use-weather';
-import { weatherIcon } from '@/lib/weather-api';
-import { radius as R,
-  shadows,
-  spacing as S,
-  type as T, type Tokens } from '@/lib/theme';
-import { useStyles, useTokens } from '@/hooks/use-tokens';
 
-function getWeekBounds(): [Date, Date] {
-  const now = new Date();
-  const daysFromMon = (now.getDay() + 6) % 7;
-  const mon = new Date(now);
-  mon.setHours(0, 0, 0, 0);
-  mon.setDate(mon.getDate() - daysFromMon);
-  const sun = new Date(mon);
-  sun.setDate(sun.getDate() + 6);
-  sun.setHours(23, 59, 59, 999);
-  return [mon, sun];
-}
+// C2 sheet range (km). The form's own floor/cap apply after hand-off.
+const SHEET_MIN_KM = 2;
+const SHEET_MAX_KM = 13;
+const PRESETS_KM = [3, 5, 10];
+const EST_MIN_PER_KM = 6.5; // same placeholder pace the form uses pre-generation
 
-export default function CreateTabScreen() {
-  const T = useT(); // tab = long-lived mount
+type Mode = 0 | 1; // 0 = 자유러닝, 1 = AI 코스런
+
+export default function RunTabScreen() {
+  const T = useT();
   const lang = useLang();
   const C = useTokens();
   const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
   const tabBarInset = useTabBarInset();
-  const { placeName, coordinate, status: locStatus } = useCurrentLocation();
-  const { weather } = useWeather();
-  const { runs, signedOut } = useRuns();
+  const { width, height } = useWindowDimensions();
+  const units = useSettings(s => s.settings.units);
 
-  // Tier + weekly AI quota (design: PREMIUM badge for premium users; lock
-  // the AI card only once a free user's weekly quota is exhausted)
+  const { coordinate, status: locStatus } = useCurrentLocation();
+  const { weather } = useWeather();
+  const { profile } = useProfile();
+
+  // 이번 주 (server) + 스트릭 (derived from the monthly days the hook fetches)
+  const [stats, setStats] = useState<MyStats | null>(null);
+  const { monthly, refetch: refetchMonthly } = useWeeklyDistance(12);
+  useFocusEffect(useCallback(() => {
+    let cancelled = false;
+    getMyStats().then(res => { if (!cancelled) setStats(res); }).catch(() => { /* last value stands */ });
+    void refetchMonthly();
+    return () => { cancelled = true; };
+  }, [refetchMonthly]));
+  const streak = currentStreakDays(Object.values(monthly).flatMap(m => m.days));
+  const weekKm = stats?.week.total_distance_km ?? 0;
+
+  // Tier + weekly AI quota
   const isPremium = useQuota(s => s.isPremium);
   const quota     = useQuota(s => s.aiGeneration);
-  const units     = useSettings(s => s.settings.units);
   useEffect(() => { useQuota.getState().hydrate(); }, []);
   const aiLocked = !isPremium && !quota.unlimited && (quota.remaining ?? 1) <= 0;
 
-  function handleAiPress() {
-    if (!aiLocked) { router.push('/(course)/create'); return; }
-    // TODO(PR-2): push the premium upsell screen once it exists
-    // eslint-disable-next-line no-restricted-syntax -- imperative fire-time read (Alert/share/handler), not render-path
-    Alert.alert(t('ct.quotaOutT'), tf('ct.quotaOutB', { n: quota.limit ?? 3 }));
+  // Pager — segment taps and horizontal swipes both switch mode
+  const pagerRef = useRef<ScrollView>(null);
+  const [mode, setMode] = useState<Mode>(0);
+  const goTo = (m: Mode) => { setMode(m); pagerRef.current?.scrollTo({ x: m * width, animated: true }); };
+
+  // Sheet state (quick config)
+  const [distanceKm, setDistanceKm] = useState(5);
+  const [oneWay, setOneWay] = useState(false);
+  const [sliding, setSliding] = useState(false); // pager yields to the slider's drag
+  const estMin = Math.round(distanceKm * EST_MIN_PER_KM);
+
+  function handleGenerate() {
+    if (aiLocked) {
+      // eslint-disable-next-line no-restricted-syntax -- imperative fire-time read (Alert), not render-path
+      Alert.alert(t('ct.quotaOutT'), tf('ct.quotaOutB', { n: quota.limit ?? 3 }));
+      return;
+    }
+    router.push({ pathname: '/(course)/create', params: { seedKm: String(distanceKm), seedOneWay: oneWay ? '1' : '0' } } as never);
   }
 
-  // 저장된 코스 entry card — live count + recent titles (canvas: FrRunChoice
-  // bottom card). Focus-refetch keeps it honest after unsaves elsewhere.
-  const [saved, setSaved] = useState<PublicRoute[] | null>(null);
-  const [savedError, setSavedError] = useState(false);
-  useFocusEffect(useCallback(() => {
-    getBookmarkedRoutes()
-      .then(rows => { setSaved(rows); setSavedError(false); })
-      // Honest failure sub (debt batch 1): the 북마크해보세요 hint on a
-      // FAILED load was a lie — say it failed; every focus retries.
-      .catch(() => setSavedError(true));
-  }, []));
-  const savedSub = savedError && !saved
-    ? T('ct.savedLoadFail')
-    : !saved || saved.length === 0
-      ? T('ct.savedEmpty')
-      : saved.slice(0, 2).map(r => r.summary).join(', ') || tfIn(lang, 'ct.nCourses', { n: saved.length });
-
-  const weeklyKm = useMemo(() => {
-    if (signedOut) return 0;
-    const [mon, sun] = getWeekBounds();
-    return runs
-      .filter(r => { const d = new Date(r.ran_at); return d >= mon && d <= sun; })
-      .reduce((s, r) => s + r.distance_km, 0);
-  }, [runs, signedOut]);
+  const quotaLine = isPremium || quota.unlimited
+    ? T('rt.quotaUnlimited')
+    : tfIn(lang, 'rt.quotaWeekly', { n: quota.remaining ?? 0 });
 
   return (
-    <View style={[st.root, { paddingTop: insets.top }]}>
+    <View style={st.root}>
+      {/* Map background — real map centered on the user once granted; the
+          plain ground while locating / denied (no Seoul-fallback latch:
+          gate = granted, key = remount when GPS refines) */}
+      {locStatus === 'granted' ? (
+        <View style={StyleSheet.absoluteFill} pointerEvents="none">
+          <RealMap key={`${coordinate.lat},${coordinate.lng}`} height={height} center={coordinate} showsUser cache={false} />
+        </View>
+      ) : null}
+      {/* Top fade so the segment reads over any map */}
+      <View style={[st.topFade, { height: insets.top + 90 }]} pointerEvents="none" />
+
+      {/* Top row: mode segment (center) · avatar (right) */}
+      <View style={[st.topRow, { top: insets.top + 12 }]} pointerEvents="box-none">
+        <View style={[st.segment, shadows.sm]}>
+          {([0, 1] as Mode[]).map(m => {
+            const on = mode === m;
+            return (
+              <Pressable
+                key={m}
+                onPress={() => goTo(m)}
+                style={[st.segBtn, on && { backgroundColor: C.text }]}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: on }}
+                accessibilityLabel={T(m === 0 ? 'rt.modeFree' : 'rt.modeAi')}
+              >
+                <Text style={[st.segTxt, { color: on ? C.bg : C.sub, fontWeight: on ? '700' : '500' }]}>{T(m === 0 ? 'rt.modeFree' : 'rt.modeAi')}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
+        <Pressable
+          onPress={() => router.navigate('/(tabs)/my' as never)}
+          style={st.avatarBtn}
+          accessibilityRole="button"
+          accessibilityLabel={T('tab.my')}
+        >
+          <Avatar name={profile?.nickname} size={38} photoUrl={profile?.avatar_url} ring={C.surface} />
+        </Pressable>
+      </View>
+
+      {/* Weather chip (C2) — AI mode only; quiet while loading */}
+      {mode === 1 && weather && (
+        <View style={[st.weatherChip, shadows.sm, { top: insets.top + 66 }]} pointerEvents="none">
+          <Text style={st.weatherTxt}>{tfIn(lang, 'rt.weatherChip', { t: Math.round(weather.temp_c), label: weather.running_index.label })}</Text>
+        </View>
+      )}
+
+      {/* Location state (not granted) — the only copy on the empty ground */}
+      {locStatus !== 'granted' && (
+        <View style={[st.locNote, { top: insets.top + 70 }]} pointerEvents="none">
+          <Icon name="location-outline" size={13} color={C.sub} />
+          <Text style={st.locNoteTxt}>{locStatus === 'denied' ? T('trk.locPermTitle') : T('wx.locating')}</Text>
+        </View>
+      )}
+
+      {/* Pager */}
       <ScrollView
-        style={st.scroll}
-        contentContainerStyle={[st.content, { paddingBottom: tabBarInset }]}
-        showsVerticalScrollIndicator={false}
+        ref={pagerRef}
+        horizontal
+        pagingEnabled
+        scrollEnabled={!sliding}
+        showsHorizontalScrollIndicator={false}
+        style={StyleSheet.absoluteFill}
+        contentContainerStyle={{ width: width * 2 }}
+        onMomentumScrollEnd={e => setMode(Math.round(e.nativeEvent.contentOffset.x / width) as Mode)}
+        scrollEventThrottle={16}
       >
-        {/* ── Title ─────────────────────────────────────────────────── */}
-        <Text style={st.title}>{T('ct.title')}</Text>
-        <Text style={st.subtitle}>{T('ct.subtitle')}</Text>
-
-        {/* ── Card 1: AI course (PREMIUM badge for premium users; locked
-               only when a free user's weekly quota is exhausted) ────── */}
-        <Pressable
-          onPress={handleAiPress}
-          style={({ pressed }) => [st.card, st.cardAi, { opacity: pressed ? 0.92 : 1 }]}
-        >
-          <View style={st.cardCircle} pointerEvents="none" />
-          {isPremium && (
-            <View style={st.premiumBadge}>
-              <Icon name="flash" size={11} color="#fff" />
-              <Text style={st.premiumBadgeTxt}>PREMIUM</Text>
+        {/* Page 0 — 자유러닝 */}
+        <View style={[st.page, { width, paddingBottom: tabBarInset + 10 }]} pointerEvents="box-none">
+          <View style={st.chipRow}>
+            <View style={[st.chip, shadows.sm]}>
+              <Text style={st.chipLbl}>{T('rt.weekChip')} </Text>
+              <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.chipVal}>{fmtDist(weekKm, units, 1)} {distUnit(units)}</Text>
             </View>
-          )}
-          <View style={st.iconSq}>
-            <Icon name="sparkles" size={26} color={C.accentText} />
-          </View>
-          <Text style={st.cardTitle}>{T('ct.aiCard')}</Text>
-          <Text style={st.cardDesc}>
-            {T('ct.aiCardSub')}
-          </Text>
-          <View style={st.cardCta}>
-            {aiLocked && <Icon name="lock-closed" size={13} color={C.accentGrn} />}
-            <Text style={st.cardCtaTxt}>{aiLocked ? T('ct.unlockPremium') : T('ct.seeCourses')}</Text>
-            <Icon name="chevron-forward" size={14} color={C.accentGrn} />
-          </View>
-        </Pressable>
-
-        {/* ── Card 2: Free running ─────────────────────────────────── */}
-        <Pressable
-          onPress={() => router.push('/(course)/tracking' as any)}
-          style={({ pressed }) => [st.card, { opacity: pressed ? 0.88 : 1 }]}
-        >
-          <View style={st.iconSq}>
-            <Icon name="walk" size={26} color={C.accentText} />
-          </View>
-          <Text style={st.cardTitle}>{T('ct.freeCard')}</Text>
-          <Text style={st.cardDesc}>
-            {T('ct.freeCardSub')}
-          </Text>
-          <View style={st.cardCta}>
-            <Text style={st.cardCtaTxt}>{T('ct.startTracking')}</Text>
-            <Icon name="chevron-forward" size={14} color={C.accentGrn} />
-          </View>
-        </Pressable>
-
-        {/* ── Stats row: two separate cards ────────────────────────── */}
-        <View style={st.statsRow}>
-          <View style={[st.statCard, shadows.sm]}>
-            <Text style={st.statLabel}>{T('ct.weeklyDist')}</Text>
-            <Text style={st.statVal}>
-              {fmtDist(weeklyKm, units, 1)}<Text style={st.statUnit}> {distUnit(units)}</Text>
-            </Text>
-          </View>
-          <View style={[st.statCard, shadows.sm]}>
-            <Text style={st.statLabel}>{T('ct.currentTemp')}</Text>
-            <View style={st.tempRow}>
-              {/* icon from the SAME source/mapping the 홈 banner uses (one
-                  source of truth — the hardcoded sun was a decoration bug,
-                  owner-caught 2026-07-14); loading → neutral, no weather claim */}
-              {(() => { const wi = weather ? weatherIcon(weather.condition_code, weather.is_day) : { name: 'cloud-outline', color: C.faint }; return <Icon name={wi.name} size={16} color={wi.color} />; })()}
-              {/* Real weather (W1); quiet dashes while loading/offline */}
-              <Text style={st.statVal}>{weather ? `${Math.round(weather.temp_c)}°` : '--°'}</Text>
+            <View style={[st.chip, shadows.sm]}>
+              <Text style={st.chipLbl}>{T('rt.streakChip')} </Text>
+              <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.chipVal}>{tfIn(lang, 'rt.streakDays', { n: streak })}</Text>
             </View>
           </View>
+          <Pressable
+            onPress={() => router.push('/(course)/tracking' as never)}
+            style={({ pressed }) => [st.goBtn, { backgroundColor: C.neon }, pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] }]}
+            accessibilityRole="button"
+            accessibilityLabel={T('rt.go')}
+          >
+            <Text style={st.goTxt}>{T('rt.go')}</Text>
+          </Pressable>
         </View>
 
-        {/* ── Location map card — real Apple map centered on the user
-               (slice 1); stylized fallback while location resolves ──── */}
-        <View style={[st.mapCard, shadows.sm]}>
-          {/* Seoul-fallback class (occurrence 4): coordinate is Seoul-seeded
-              and never null — the old truthiness gate mounted the map on 시청
-              and initialRegion latched it (no key). Gate = granted; key =
-              remount when GPS refines. */}
-          {locStatus === 'granted' ? (
-            // showsUser: the blue you-are-here dot (native layer; cache=false
-            // so the async dot isn't frozen out of the snapshot). Tap → the
-            // CYCLING viewer (8/3 owner ask): route-map's point-subject lane —
-            // opens labeled (POI/store names), cycles labeled→clean→satellite,
-            // same as run-card maps. (Was meet-map user-mode: labels
-            // suppressed, no cycle — rerouted; meet-map keeps the crew pin.)
-            <Pressable onPress={() => {
-              setRouteMap({ title: placeName ?? t('ct.currentLoc'), center: coordinate, showsUser: true });
-              router.push('/(course)/route-map' as never);
-            }}>
-              <RealMap key={`${coordinate.lat},${coordinate.lng}`} height={164} borderRadius={R.xl} center={coordinate} showsUser cache={false} />
+        {/* Page 1 — AI 코스런 sheet */}
+        <View style={[st.page, { width, paddingHorizontal: 0 }]} pointerEvents="box-none">
+          <View style={[st.sheet, { paddingBottom: tabBarInset + 6 }]}>
+            <View style={st.sheetTitleRow}>
+              <Pressable onPress={() => goTo(0)} hitSlop={8} accessibilityRole="button" accessibilityLabel={T('rt.modeFree')}>
+                <Text style={st.sheetBack}>‹ {T('rt.modeFree')}</Text>
+              </Pressable>
+              <Text style={st.sheetTitle}>{T('rt.modeAi')}</Text>
+              <View style={st.premiumBadge}><Text style={st.premiumTxt}>{T('rt.premium')}</Text></View>
+            </View>
+            <View style={st.dots}>
+              <View style={[st.dot, { backgroundColor: C.border }]} />
+              <View style={[st.dot, { backgroundColor: C.text }]} />
+            </View>
+
+            <View style={{ alignItems: 'center', marginTop: 12 }}>
+              <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.heroNum}>
+                {fmtDist(distanceKm, units, 1)}<Text style={st.heroUnit}> {distUnit(units)}</Text>
+              </Text>
+              <Text style={st.heroSub}>{tfIn(lang, 'rt.estLine', { m: estMin })}</Text>
+            </View>
+
+            <View style={{ marginTop: 10, marginHorizontal: 6 }}>
+              <SeededSlider
+                siteId="run-tab-sheet"
+                value={distanceKm}
+                minimumValue={SHEET_MIN_KM}
+                maximumValue={SHEET_MAX_KM}
+                step={0.5}
+                onValueChange={v => setDistanceKm(Math.round(v * 2) / 2)}
+                onSlidingStart={() => setSliding(true)}
+                onSlidingComplete={() => setSliding(false)}
+                minimumTrackTintColor={C.accent}
+                maximumTrackTintColor={C.surfaceAlt}
+                thumbTintColor={C.surface}
+              />
+              <View style={st.rangeRow}>
+                <Text style={st.rangeTxt}>{fmtDist(SHEET_MIN_KM, units, 0)} {distUnit(units)}</Text>
+                <Text style={st.rangeTxt}>{fmtDist(SHEET_MAX_KM, units, 0)} {distUnit(units)}</Text>
+              </View>
+            </View>
+
+            <View style={st.presetRow}>
+              {PRESETS_KM.map(km => {
+                const on = distanceKm === km;
+                return (
+                  <Pressable key={km} onPress={() => setDistanceKm(km)} style={[st.preset, on ? st.presetOn : st.presetOff]} accessibilityRole="button" accessibilityState={{ selected: on }}>
+                    <Text style={[st.presetTxt, { color: on ? C.text : C.sub, fontWeight: on ? '700' : '500' }]}>{km}K</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            <View style={st.typeRow}>
+              {([[false, 'crt.loop'], [true, 'crt.oneWay']] as [boolean, 'crt.loop' | 'crt.oneWay'][]).map(([ow, key]) => {
+                const on = oneWay === ow;
+                return (
+                  <Pressable key={key} onPress={() => setOneWay(ow)} style={[st.typeBtn, on ? st.presetOn : st.presetOff]} accessibilityRole="button" accessibilityState={{ selected: on }}>
+                    <Text style={[st.typeTxt, { color: on ? C.text : C.sub, fontWeight: on ? '700' : '500' }]}>{T(key)}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            <Pressable
+              onPress={handleGenerate}
+              style={({ pressed }) => [st.genBtn, { backgroundColor: C.neon }, pressed && { opacity: 0.9 }]}
+              accessibilityRole="button"
+              accessibilityLabel={T('crt.generate')}
+            >
+              <Icon name="sparkles" size={15} color="#121712" />
+              <Text style={st.genTxt}>{T('crt.generate')}</Text>
             </Pressable>
-          ) : (
-            <MiniMap seed="chooser-map" height={164} borderRadius={R.xl} />
-          )}
-          <View style={st.locationPill}>
-            <Icon name="location" size={13} color={C.accentGrn} />
-            <Text style={st.locationTxt} numberOfLines={1}>
-              {locStatus === 'granted' ? tfIn(lang, 'ct.currentLocIs', { name: placeName ?? '' })
-                : locStatus === 'denied' ? T('trk.locPermTitle')
-                : T('wx.locating')}
-            </Text>
+            <Text style={st.quotaTxt}>{quotaLine}</Text>
+            <Pressable onPress={() => router.push('/saved-courses' as never)} hitSlop={8} style={st.savedLink} accessibilityRole="link">
+              <Icon name="bookmark-outline" size={12} color={C.sub} />
+              <Text style={st.savedLinkTxt}>{T('rt.savedLink')}</Text>
+            </Pressable>
           </View>
         </View>
-
-        {/* ── Saved courses row → 저장된 코스 list (canvas: savedCourses) ── */}
-        <Pressable
-          onPress={() => router.push('/saved-courses' as any)}
-          style={({ pressed }) => [st.savedRow, shadows.sm, { opacity: pressed ? 0.85 : 1 }]}
-        >
-          <View style={st.savedIcon}>
-            <Icon name={saved && saved.length > 0 ? 'bookmark' : 'bookmark-outline'} size={20} color={C.accentGrn} />
-          </View>
-          <View style={st.savedBody}>
-            <Text style={st.savedTitle}>{T('sc.title')}</Text>
-            <Text style={st.savedSub} numberOfLines={1}>{savedSub}</Text>
-          </View>
-          {saved !== null && saved.length > 0 && (
-            <View style={st.savedCountPill}>
-              <Text style={st.savedCountTxt}>{tfIn(lang, 'sc.nCount', { n: saved.length })}</Text>
-            </View>
-          )}
-          <Icon name="chevron-forward" size={18} color={C.faint} />
-        </Pressable>
       </ScrollView>
     </View>
   );
 }
 
 const makeSt = (C: Tokens) => StyleSheet.create({
-  root:    { flex: 1, backgroundColor: C.bg },
-  scroll:  { flex: 1 },
-  content: { paddingHorizontal: S.gutter },
-
-  // Title
-  title:    { fontSize: 26, fontWeight: '800', letterSpacing: -0.8, color: C.text, marginTop: S.xl, marginBottom: 6 },
-  subtitle: { ...T.bodyMd, color: C.sub, marginBottom: S.xl },
-
-  // Option cards
-  card: {
-    backgroundColor: C.surface,
-    borderRadius:    R.xl,
-    borderWidth:     1,
-    borderColor:     C.border,
-    padding:         S.lg,
-    marginBottom:    S.md,
-    overflow:        'hidden',
-  },
-  cardAi: {
-    borderColor: C.accent + '55',
-  },
-  premiumBadge: {
-    position: 'absolute', top: 16, right: 16, zIndex: 1,
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: C.accentGrn, borderRadius: R.pill,
-    paddingLeft: 9, paddingRight: 11, paddingVertical: 5,
-  },
-  premiumBadgeTxt: { fontSize: 10.5, fontWeight: '800', letterSpacing: 0.6, color: '#fff' },
-  cardCircle: {
-    position:        'absolute',
-    top:             -40,
-    right:           -40,
-    width:           130,
-    height:          130,
-    borderRadius:    65,
-    backgroundColor: C.accentDim,
-  },
-  iconSq: {
-    width:           52,
-    height:          52,
-    borderRadius:    R.lg,
-    backgroundColor: C.accent,
-    alignItems:      'center',
-    justifyContent:  'center',
-    marginBottom:    S.md,
-  },
-  cardTitle: { fontSize: 18, fontWeight: '800', letterSpacing: -0.5, color: C.text, marginBottom: 6 },
-  cardDesc:  { ...T.bodyMd, color: C.sub, marginBottom: S.md },
-  cardCta:   { flexDirection: 'row', alignItems: 'center', gap: 3 },
-  cardCtaTxt:{ ...T.labelLg, color: C.accentGrn, fontWeight: '700' },
-
-  // Stats row
-  statsRow: { flexDirection: 'row', gap: S.md, marginBottom: S.md },
-  statCard: {
-    flex:              1,
-    backgroundColor:   C.surface,
-    borderRadius:      R.xl,
-    borderWidth:       1,
-    borderColor:       C.border,
-    paddingHorizontal: S.lg,
-    paddingVertical:   S.md,
-  },
-  statLabel: { ...T.labelSm, color: C.sub, marginBottom: 5 },
-  statVal:   { ...T.metricLg, color: C.text },
-  statUnit:  { ...T.labelMd, color: C.sub },
-  tempRow:   { flexDirection: 'row', alignItems: 'center', gap: 5 },
-
-  // Map card
-  mapCard: { height: 164, borderRadius: R.xl, overflow: 'hidden', marginBottom: S.md },
-  // Re-pair (half-converted-pair class, inverse limb, 2026-07-23): the bg
-  // was a white FIXTURE while the label went token — white-on-white in dark.
-  // Joins the pills-over-maps convention (route-map/meet-map titlePill):
-  // scheme-keyed surface × token text, contrast by construction both schemes.
-  locationPill: {
-    position:          'absolute',
-    top:               12,
-    left:              12,
-    flexDirection:     'row',
-    alignItems:        'center',
-    gap:               5,
-    backgroundColor:   C.surface,
-    borderRadius:      R.pill,
-    paddingHorizontal: 10,
-    paddingVertical:   6,
-    ...shadows.sm,
-  },
-  locationTxt: { fontSize: 12, fontWeight: '600', color: C.text, letterSpacing: -0.2 },
-
-  // Saved courses
-  savedRow: {
-    flexDirection:   'row',
-    alignItems:      'center',
-    backgroundColor: C.surface,
-    borderRadius:    R.xl,
-    borderWidth:     1,
-    borderColor:     C.border,
-    padding:         S.md,
-    gap:             S.md,
-  },
-  savedIcon: {
-    width:           44,
-    height:          44,
-    borderRadius:    R.lg,
-    backgroundColor: C.accentDim,
-    alignItems:      'center',
-    justifyContent:  'center',
-    flexShrink:      0,
-  },
-  savedBody:  { flex: 1, gap: 3 },
-  savedTitle: { ...T.headingSm, color: C.text },
-  savedSub:   { ...T.labelMd, color: C.sub },
-  savedCountPill: { backgroundColor: C.accentDim, borderRadius: R.pill, paddingHorizontal: 10, paddingVertical: 4 },
-  savedCountTxt:  { fontSize: 12.5, fontWeight: '700', color: C.accentGrn, letterSpacing: -0.2 },
+  root:        { flex: 1, backgroundColor: C.surfaceAlt },
+  topFade:     { position: 'absolute', left: 0, right: 0, top: 0, backgroundColor: C.bg, opacity: 0.55 },
+  topRow:      { position: 'absolute', left: 0, right: 0, alignItems: 'center', justifyContent: 'center' },
+  segment:     { flexDirection: 'row', gap: 4, padding: 5, borderRadius: 14, backgroundColor: C.surface },
+  segBtn:      { paddingHorizontal: 16, paddingVertical: 7, borderRadius: 10 },
+  segTxt:      { fontSize: 12.5 },
+  avatarBtn:   { position: 'absolute', right: 22, top: 0 },
+  weatherChip: { position: 'absolute', left: 22, backgroundColor: C.surface, borderRadius: 12, paddingHorizontal: 13, paddingVertical: 8 },
+  weatherTxt:  { fontSize: 11.5, fontWeight: '700', color: C.text },
+  locNote:     { position: 'absolute', left: 22, flexDirection: 'row', alignItems: 'center', gap: 4 },
+  locNoteTxt:  { fontSize: 11.5, color: C.sub },
+  page:        { height: '100%', justifyContent: 'flex-end', paddingHorizontal: 22 },
+  chipRow:     { flexDirection: 'row', justifyContent: 'center', gap: 10, marginBottom: 12 },
+  chip:        { flexDirection: 'row', alignItems: 'baseline', backgroundColor: C.surface, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 5 },
+  chipLbl:     { fontSize: 12, color: C.sub },
+  chipVal:     { fontSize: 12.5, fontWeight: '800', color: C.text },
+  goBtn:       { height: 64, borderRadius: R.xl, alignItems: 'center', justifyContent: 'center', shadowColor: '#121712', shadowOpacity: 0.14, shadowRadius: 13, shadowOffset: { width: 0, height: 8 }, elevation: 6 },
+  goTxt:       { fontSize: 17, fontWeight: '900', color: '#121712' },
+  sheet:       { backgroundColor: C.surface, borderTopLeftRadius: 26, borderTopRightRadius: 26, paddingHorizontal: 22, paddingTop: 18 },
+  sheetTitleRow:{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center', gap: 18 },
+  sheetBack:   { fontSize: 14, fontWeight: '500', color: C.sub },
+  sheetTitle:  { fontSize: 16, fontWeight: '900', color: C.text },
+  premiumBadge:{ backgroundColor: C.accent, borderRadius: 9, paddingHorizontal: 9, paddingVertical: 3 },
+  premiumTxt:  { fontSize: 9.5, fontWeight: '700', color: C.accentText },
+  dots:        { flexDirection: 'row', justifyContent: 'center', gap: 6, marginTop: 8 },
+  dot:         { width: 6, height: 6, borderRadius: 3 },
+  heroNum:     { fontSize: 44, fontWeight: '800', letterSpacing: -1, color: C.text },
+  heroUnit:    { fontSize: 17, fontWeight: '700', letterSpacing: 0 },
+  heroSub:     { fontSize: 11, color: C.sub, marginTop: 2 },
+  rangeRow:    { flexDirection: 'row', justifyContent: 'space-between', marginTop: 2 },
+  rangeTxt:    { fontSize: 10, color: C.sub },
+  presetRow:   { flexDirection: 'row', justifyContent: 'center', gap: 8, marginTop: 12 },
+  preset:      { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 12 },
+  presetOn:    { backgroundColor: C.surface, borderWidth: 1.5, borderColor: C.text },
+  presetOff:   { backgroundColor: C.surfaceAlt, borderWidth: 1.5, borderColor: 'transparent' },
+  presetTxt:   { fontSize: 12 },
+  typeRow:     { flexDirection: 'row', gap: 8, marginTop: 12 },
+  typeBtn:     { flex: 1, paddingVertical: 11, borderRadius: 14, alignItems: 'center' },
+  typeTxt:     { fontSize: 12.5 },
+  genBtn:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, height: 56, borderRadius: R.xl, marginTop: 14 },
+  genTxt:      { fontSize: 15, fontWeight: '900', color: '#121712' },
+  quotaTxt:    { textAlign: 'center', fontSize: 10, color: C.sub, marginTop: 8 },
+  savedLink:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, marginTop: 10, paddingVertical: 4 },
+  savedLinkTxt:{ fontSize: 11.5, fontWeight: '600', color: C.sub, textDecorationLine: 'underline' },
 });

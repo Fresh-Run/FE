@@ -228,7 +228,10 @@ export default function CreateScreen() {
   // user's configuration (pitstop dropped) and fired on the OS-cached stale
   // fix. (Note: the parked funnel-v1 branch carries its own seedKm intake —
   // merge point when it unparks, flagged.)
-  const { seedKm: seedParam } = useLocalSearchParams<{ seedKm?: string }>();
+  // seedOneWay (redesign ③, 2026-11-19): the run tab's AI 코스런 sheet hands
+  // off its 일방통행 choice. Seed ONLY — generation still fires from the CTA
+  // tap on this reviewed form (the 8/28 auto-fire deletion stands).
+  const { seedKm: seedParam, seedOneWay } = useLocalSearchParams<{ seedKm?: string; seedOneWay?: string }>();
   // First-generation prefs onboarding (8/2, recon shape B): the normal
   // door's FIRST visit detours to ai-course-prefs?firstRun=1 (create stays
   // mounted beneath — state untouched). Flag is DEVICE-scoped AsyncStorage:
@@ -294,7 +297,7 @@ export default function CreateScreen() {
   // ── 일방통행 (v2.3 unlock) ──────────────────────────────────────────────────
   // end is sent ONLY in one-way mode (the server's one-way semantics key on
   // end PRESENCE — prefer_loop stays settings-backed and untouched).
-  const [oneWay, setOneWay] = useState(false);
+  const [oneWay, setOneWay] = useState(seedOneWay === '1');
   const manualEnd = useEndPoint(s => s.point);
   useEffect(() => () => useEndPoint.getState().clear(), []);
   const endCoord = manualEnd ? { lat: manualEnd.lat, lng: manualEnd.lng } : null;
