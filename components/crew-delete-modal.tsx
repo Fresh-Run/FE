@@ -39,7 +39,7 @@ export function CrewDeleteModal({ visible, crewId, crewName, memberCount, onClos
       onClose();
       // The crew (and this stack's screens for it) no longer exist
       router.dismissAll?.();
-      router.replace('/(tabs)/community' as never);
+      router.replace('/(tabs)/groups' as never);
     } catch (e: unknown) {
       setDeleting(false);
       Alert.alert(t('crw.deleteFail'), errorMessage(e));

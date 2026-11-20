@@ -192,7 +192,9 @@ export default function RunSaveScreen() {
   }
 
   // No pending run (cold navigation) → home
-  useEffect(() => { if (!run) router.replace('/(tabs)' as any); }, [run]);
+  // TODO(redesign/v1): revisit when Home is designed — owner ruling 2026-11-19:
+  // land on Feed, not the Home placeholder.
+  useEffect(() => { if (!run) router.replace('/(tabs)/feed' as any); }, [run]);
 
   // Back-button ruling (2026-07-27): this screen is a revisitable CHECKPOINT.
   // 종료 no longer kills the session — it pauses it and pushes here, so ‹
@@ -279,7 +281,7 @@ export default function RunSaveScreen() {
     runSession.stop(); // discard also owns the deferred teardown (idempotent)
     clearPendingRun();
     exitingRef.current = true;
-    router.replace('/(tabs)' as any);
+    router.replace('/(tabs)/feed' as any); // TODO(redesign/v1): revisit when Home is designed
   }
 
   // ‹ = back to the paused run (checkpoint) — or the discard confirm when no

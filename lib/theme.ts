@@ -88,6 +88,10 @@ export const colors = {
   accentText:  '#0D1A06',
   accentDim:   palette.lime50,
   accentGrn:   palette.green700,    // dark-green text / icons on accentDim
+  // Redesign (canvas FreshRun 홈 리디자인, 2026-11-19): nav-bar run button
+  // neon. Same value both schemes — the canvas is light-only; the global
+  // accent swap is a separate ruling, not this token.
+  neon:        '#C3FF3C',
 
   // Semantic
   blue:        palette.blue400,
@@ -303,6 +307,7 @@ export const darkColors: Tokens = {
   accentText: '#0D1A06',
   accentDim:  '#18260D',
   accentGrn:  '#39FF14',
+  neon:       '#C3FF3C',
   // Semantic — blue/sun scheme-invariant per canvas; danger from FR_DARK;
   // crown DERIVED (no canvas source — canvas debt)
   blue:   palette.blue400,

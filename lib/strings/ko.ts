@@ -68,10 +68,13 @@ export const ko = {
 
   // ── tab labels ──────────────────────────────────────────────────────────
   'tab.home': '홈',
-  'tab.community': '커뮤니티',
+  'tab.feed': '피드',
+  'tab.groups': '그룹',
   'tab.run': '뛰러 가기',
   'tab.records': '기록',
-  'tab.profile': '프로필',
+  'tab.my': 'MY',
+  'home.comingSoon': '홈 준비 중',
+  'home.comingSoonSub': '새 홈 화면은 리디자인 마지막에 들어와요.',
 
   // ── auth (sign-in / sign-up) ────────────────────────────────────────────
   'auth.email': '이메일',

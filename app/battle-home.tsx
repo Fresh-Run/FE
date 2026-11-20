@@ -11,6 +11,6 @@ import { BATTLE_ENABLED } from '@/store/battle-mock';
 
 export default function BattleHomeScreen() {
   // 9/16 플래그: 슬라이스 2까지 inert — 딥링크 표면은 존치, 착지만 우회
-  if (!BATTLE_ENABLED) return <Redirect href="/(tabs)/community" />;
+  if (!BATTLE_ENABLED) return <Redirect href="/(tabs)/groups" />;
   return <BattleHomeBody mode="route" />;
 }

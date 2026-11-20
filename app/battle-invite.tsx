@@ -29,7 +29,7 @@ export default function BattleInviteScreen() {
   const battle = useBattleMock(s => s.battles.find(b => b.id === id && directionOf(b) === 'in' && b.status === 'pending'));
 
   // 9/16 플래그 (훅 뒤 — rules-of-hooks): 슬라이스 2까지 inert-리다이렉트
-  if (!BATTLE_ENABLED) return <Redirect href="/(tabs)/community" />;
+  if (!BATTLE_ENABLED) return <Redirect href="/(tabs)/groups" />;
 
   function accept() {
     if (!battle) return;

@@ -375,6 +375,18 @@ export default function ProfileScreen() {
           />
         </View>
 
+        {/* TEMPORARY 기록 entry (redesign item 1, owner-ruled 2026-11-19):
+            Records left the tab bar; this row keeps it reachable until item 2
+            rebuilds MY with Stats / Records / Posts tabs. TODO(redesign/v1):
+            remove in item 2. */}
+        <SettingGroup title={T('tab.records')}>
+          <SettingRow
+            icon={<Icon name="list-outline" size={19} color={C.sub} />}
+            label={T('tab.records')}
+            onPress={() => router.navigate('/(tabs)/records' as never)}
+          />
+        </SettingGroup>
+
         {/* Premium upsell — lite only (canvas premium variant hides it) */}
         {!isPremium && (
           <View style={{ paddingHorizontal: S.gutter, paddingTop: S.md }}>

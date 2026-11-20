@@ -7,7 +7,7 @@
 3. After each item, give a checkpoint report: files touched, deviations from design, new dependencies, what to verify.
 4. Never proceed to the next item without the user's explicit "next".
 5. Every commit is immediately followed by `git push origin` in the same step — committing and pushing are one action from now on. Never force-push. If a push fails, report and stop.
-6. The design source of truth is the LIVE canvas via the `claude_design` MCP (project: FreshRun), page **"FreshRun App.html" ONLY**. Other pages (FreshRun Home, Lite Lock Options, Nav Options, etc.) are exploration/archive — never implement from them; consult only when the user explicitly points there. The repo handoff bundle (`~/Documents/FreshRun/design`) is the FALLBACK reference and may be stale. On mismatch with existing code, the design wins. If the design needs data the schema lacks, stop and list the mismatches instead of improvising.
+6. **On `redesign/v1` (ruled 2026-11-19): the design source of truth is the NEW canvas "FreshRun 홈 리디자인" — https://claude.ai/artifact/8LC8MHV56JJF38VxWvFp5A — read as files through the Artifact tool (`list_files` / `read_file` on `project/<Board>.dc.html`; `project/canvas.json` is the index). The old page below is FALLBACK ONLY, for screens the new canvas does not cover, and every fallback must be announced to the owner in the checkpoint.** Pre-redesign rule: the design source of truth is the LIVE canvas via the `claude_design` MCP (project: FreshRun), page **"FreshRun App.html" ONLY**. Other pages (FreshRun Home, Lite Lock Options, Nav Options, etc.) are exploration/archive — never implement from them; consult only when the user explicitly points there. The repo handoff bundle (`~/Documents/FreshRun/design`) is the FALLBACK reference and may be stale. On mismatch with existing code, the design wins. If the design needs data the schema lacks, stop and list the mismatches instead of improvising.
 
 ## Design MCP usage
 
@@ -43,6 +43,16 @@ Compensating controls, standing — every production publish:
 **RULED at the external gate (2026-07-27): STAGING-GATED PIPELINE (option B adopted).** Every publish goes `--channel staging` FIRST; the owner's [HH:MM] on the staging binary is the PROMOTION GATE (the verified-ledger flow, formalized); then `npx eas-cli update:republish --group <id> --branch production` promotes the EXACT verified bytes — hash-tie re-checked against production after promotion. Strangers never receive unverified bundles: **the floor recalls bad bytes; it cannot recall a stranger's first impression.** Standing guardrails: staging-channel builds are NEVER assigned to 외부테스팅1 · native cycles build ×2 (staging + production binaries per runtime, same commit). Rollout-percentage (`eas channel:rollout`) retained as an optional post-verification layer for high-risk slices. **EFFECTIVE since 2026-07-27 [17:40]** — rehearsal passed end-to-end (staging group 23061081 → owner stamp on build 10 → promoted 25ec8814, promotion hash-tie MATCH); the pre-B flow is retired. Residual: 지연's phone stays a production-lane device (build 9) until she installs build 10 — by design, she receives promotions, not staging. Mechanics note: cross-branch promotion uses `--destination-branch` (NOT `--branch`, which conflicts with `--group`).
 
 Mechanics: manual publish only, no CI — `npx eas-cli update --channel production -m "<message>" --non-interactive` (bare `eas` is not on PATH). Project `99f17a15-d9ba-4497-adb2-a25a8ac93c61` under the `freshrun1` account; runtimeVersion policy stays `sdkVersion` until the first custom-native-module build (that switch rides the same commit, per the standing rule).
+
+## Redesign lane (ruled 2026-11-19, branch `redesign/v1`)
+
+A THIRD lane beside staging → production, so the redesign never blocks the main pipeline:
+
+- eas.json build profile **`redesign`** (extends `production`, `channel: redesign`) + submit profile `redesign` (same ASC app). Builds go to a separate partner TestFlight group that the owner creates in App Store Connect.
+- **Branch guard (standing pre-flight line):** on `redesign/v1` the ONLY legal channel for `eas build` and `eas update` is `redesign`. Never `production` or `staging` from this branch; never `redesign` from `main`. Show `git branch --show-current` next to the channel in every publish/build pre-flight.
+- OTA after the first redesign build: `npx eas-cli update --channel redesign -m "<message>" --non-interactive`, same hash-tied byte-scan as production.
+- **Before every `eas submit` of a redesign build: remind the owner to check App Store Connect for any TestFlight group with automatic distribution ON**, so the redesign build is not offered to existing testers. Submit waits for his word.
+- Backend stays read-only; staging API (`https://freshrun-api.fly.dev`) unchanged.
 
 ## Data access
 

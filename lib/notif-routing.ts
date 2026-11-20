@@ -85,7 +85,7 @@ export function deepLink(n: DeepLinkTarget): (() => void) | null {
       // payload): land on the crew list — an honest imperfect landing beats
       // a dead tap (owner ruling, Slice B 2026-07-21).
       const crewId = n.payload?.crew_id;
-      if (!crewId) return () => router.push('/(tabs)/community' as any);
+      if (!crewId) return () => router.push('/(tabs)/groups' as any);
       if (n.target_id) {
         return () => router.push({
           pathname: '/(community)/announcement-detail' as any,

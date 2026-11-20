@@ -33,6 +33,10 @@
         "buildType": "apk"
       }
     },
+    "redesign": {
+      "extends": "production",
+      "channel": "redesign"
+    },
     "production": {
       "distribution": "store",
       "channel": "production",
@@ -50,6 +54,14 @@
   },
   "submit": {
     "staging": {
+      "ios": {
+        "ascAppId": "6789668009",
+        "ascApiKeyPath": "/Users/ivanchung/.freshrun-eas/AuthKey_SND9MTC84D.p8",
+        "ascApiKeyId": "SND9MTC84D",
+        "ascApiKeyIssuerId": "55ed01ad-d164-4678-8bd0-621f0234f792"
+      }
+    },
+    "redesign": {
       "ios": {
         "ascAppId": "6789668009",
         "ascApiKeyPath": "/Users/ivanchung/.freshrun-eas/AuthKey_SND9MTC84D.p8",

@@ -59,10 +59,13 @@ export const en: Record<keyof typeof ko, string> = {
   'runSave.saveFailBody': 'Please try again in a moment',
 
   'tab.home': 'Home',
-  'tab.community': 'Community',
+  'tab.feed': 'Feed',
+  'tab.groups': 'Groups',
   'tab.run': 'Run',
   'tab.records': 'Records',
-  'tab.profile': 'Profile',
+  'tab.my': 'MY',
+  'home.comingSoon': 'Home coming soon',
+  'home.comingSoonSub': 'The new Home screen lands at the end of the redesign.',
 
   'auth.email': 'Email',
   'auth.password': 'Password',

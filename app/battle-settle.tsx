@@ -32,7 +32,7 @@ export default function BattleSettleScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const battle = useBattleMock(s => s.battles.find(b => b.id === id));
 
-  if (!BATTLE_ENABLED) return <Redirect href="/(tabs)/community" />;
+  if (!BATTLE_ENABLED) return <Redirect href="/(tabs)/groups" />;
   if (battle && !isDone(battle)) return <Redirect href={{ pathname: '/battle-detail', params: { id: battle.id } } as never} />;
 
   const outcome = battle ? outcomeOf(battle) : null;

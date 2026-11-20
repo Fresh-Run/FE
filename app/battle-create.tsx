@@ -58,7 +58,7 @@ export default function BattleCreateScreen() {
   const canNext = step === 0 ? opponent != null : true;
 
   // 9/16 플래그 (훅 뒤 — rules-of-hooks): 슬라이스 2까지 inert-리다이렉트
-  if (!BATTLE_ENABLED) return <Redirect href="/(tabs)/community" />;
+  if (!BATTLE_ENABLED) return <Redirect href="/(tabs)/groups" />;
 
   function submit() {
     if (!opponent) return;

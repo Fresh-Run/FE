@@ -241,7 +241,7 @@ export default function RunResultScreen() {
 
   // ── No pending run → nothing to show ───────────────────────────────────────
   useEffect(() => {
-    if (!run) router.replace('/(tabs)' as any);
+    if (!run) router.replace('/(tabs)/feed' as any); // TODO(redesign/v1): revisit when Home is designed
   }, [run]);
 
   // ── Exit lock — the buttons are the only exits ──────────────────────────────
