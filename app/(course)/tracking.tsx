@@ -1199,6 +1199,7 @@ export default function TrackingScreen() {
   // in a microtask on every detector update, so the swap lands on the next
   // render after a detent change.
   const holdRefBar = useRef<GestureType | undefined>(undefined); // control bar's own hold (bisect baseline)
+  const sheetRef = useRef<BottomSheet>(null); // BISECT B: tap-to-toggle detents
   const holdRefExpanded = useRef<GestureType | undefined>(undefined);
   const holdRefCompact = useRef<GestureType | undefined>(undefined);
   const activeHoldRef = useRef<GestureType | undefined>(undefined);
@@ -1206,6 +1207,7 @@ export default function TrackingScreen() {
     activeHoldRef.current = detent === 'compact' ? holdRefCompact.current : holdRefExpanded.current;
   }, [detent, state]);
 
+  const toggleDetent = () => { sheetRef.current?.snapToIndex(detent === 'compact' ? 1 : 0); };
   const onSheetChange = (index: number) => {
     const d = index === 0 ? 'compact' : 'expanded';
     setDetent(d);
@@ -1608,6 +1610,7 @@ export default function TrackingScreen() {
              run = [compact 100, expanded] with countdown locked. ── */}
       {!freeIdle && (
       <BottomSheet
+        ref={sheetRef}
         key={idle ? 'idle' : 'run'}
         enableDynamicSizing={idle}
         {...(!idle ? { snapPoints: runSnaps, index: 1 } : {})}
@@ -1623,20 +1626,20 @@ export default function TrackingScreen() {
         handleIndicatorStyle={st.handleIndicator}
       >
         <BottomSheetView style={{ paddingBottom: idle ? Math.max(insets.bottom, 12) : controlSpace }}>
-        {/* BISECT A2: compact = RunMap banner (one line, plain view — no
-            Pressable/toggle yet, that is slice B). Pause + 종료 live in the
-            fixed control bar below; the in-sheet controls row is gone. */}
+        {/* BISECT A2: compact = RunMap banner (one line). Pause + 종료 live in
+            the fixed control bar below; the in-sheet controls row is gone.
+            BISECT B: tap toggles the detent (Pressable + sheetRef). */}
         {!idle && (
           <Reanimated.View
             pointerEvents={detent === 'compact' ? 'auto' : 'none'}
             style={[st.banner, compactFade]}
           >
-            <View style={st.bannerPress}>
+            <Pressable onPress={toggleDetent} style={st.bannerPress} accessibilityRole="button" accessibilityLabel={t('rl.hintUp')}>
               <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.bannerLine} numberOfLines={1}>
                 {fmtElapsed(elapsedSec)}<Text style={st.bannerSep}>  ·  </Text>{paceDisplay}<Text style={st.bannerSep}>  ·  </Text>{fmtDist(distanceKm, units, 2)}<Text style={st.bannerUnit}> {distUnit(units)}</Text>
               </Text>
               <Text style={st.bannerHint}>{t('rl.hintUp')}</Text>
-            </View>
+            </Pressable>
           </Reanimated.View>
         )}
 
@@ -1647,9 +1650,9 @@ export default function TrackingScreen() {
           pointerEvents={detent === 'expanded' ? 'auto' : 'none'}
           style={[st.expandedWrap, !idle ? expandedFade : null]}
         >
-          {/* BISECT A1: RunLive stack as a plain View (no toggle, no inset pad) */}
+          {/* BISECT A1: RunLive stack (no inset pad — slice D). BISECT B: tap toggles the detent. */}
           {!idle && (
-            <View style={st.live}>
+            <Pressable onPress={toggleDetent} style={st.live} accessibilityRole="button" accessibilityLabel={t('rl.hintDown')}>
               <Text style={st.liveCaption}>{course ? course.title : tfIn(lang, 'rl.caption', { date: fmtDateAbs(new Date().toISOString(), lang) })}</Text>
               <Text style={st.liveLbl}>{t('rl.time')}</Text>
               <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.liveTime}>{fmtElapsed(elapsedSec)}</Text>
@@ -1677,7 +1680,10 @@ export default function TrackingScreen() {
                   </Text>
                 );
               })()}
-            </View>
+              <View style={st.liveHintWrap}>
+                <Text style={st.bannerHint}>{t('rl.hintDown')}</Text>
+              </View>
+            </Pressable>
           )}
           {idle && (<>
           <View style={{ alignItems: 'center', marginTop: 8 }}>
