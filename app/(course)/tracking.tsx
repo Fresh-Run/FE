@@ -129,14 +129,15 @@ const BACKWARD_COOLDOWN_MS = 60_000;
 // temp-probe doctrine without needing its session.
 const SHEET_TOP = MAP_H - 22;         // sheet's expanded top edge (canvas -22 overlap)
 // 4b (RunLive/RunMap boards, 2026-11-19): compact banner above the sheet.
-// RunCtrl board P1 (owner-ruled 2026-11-21): the control BAR is gone —
-// floating round buttons (running: one pause, centered; paused: 종료 hold
-// 54 + 재개 64) sit over sheet and map. The sheet is bottom-anchored, so its
-// content pads by the buttons' footprint.
-const CTRL_LG = 64;                   // pause / 재개
-const CTRL_SM = 54;                   // 종료 (hold)
+// RunDock board Q1 (owner-ruled 2026-11-21, replaces RunCtrl P1): the
+// controls own a reserved strip at the very bottom — sheet surface, hairline
+// divider on top, 84 px above the home indicator. Running: one neon pause
+// 58; paused: neutral 종료 hold 50 + neon 재개 58, gap 10. Nothing overlaps
+// it: the sheet is bottom-anchored, so its content pads by the strip.
+const DOCK_H = 84;
+const CTRL_LG = 58;                   // pause / 재개
+const CTRL_SM = 50;                   // 종료 (hold)
 const CTRL_GAP = 10;
-const CTRL_BOTTOM = 12;               // above the safe area
 const BANNER_H = 96;
 const HANDLE_H = 25;                  // gorhom default handle: padding 10 + our 5px indicator + 10
 
@@ -365,10 +366,11 @@ function HoldStop({ onComplete, size = 72, showLabel = true, gestureRef, variant
   const dashOffset = progress.interpolate({ inputRange: [0, 1], outputRange: [HOLD_CIRC, 0] });
 
   if (variant === 'round') {
-    // P1 종료: a CTRL_SM circle; the hold's progress is a 3px neon arc just
-    // outside it (the board shows a static circle — the arc is the stated
-    // deviation: a hold with no cue regresses both the ring and the bar).
-    const RING_SZ = CTRL_SM + 8, RING_R = RING_SZ / 2 - 2, RING_CIRC = 2 * Math.PI * RING_R;
+    // Q1 종료: a `size` circle (neutral surface token, text-token square);
+    // the hold's progress is a 3px neon arc just outside it (the board shows
+    // a static circle — the arc is the owner-accepted deviation: a hold with
+    // no cue regresses both the ring and the bar).
+    const RING_SZ = size + 8, RING_R = RING_SZ / 2 - 2, RING_CIRC = 2 * Math.PI * RING_R;
     const ringOffset = progress.interpolate({ inputRange: [0, 1], outputRange: [RING_CIRC, 0] });
     return (
       <View style={{ width: RING_SZ, height: RING_SZ, alignItems: 'center', justifyContent: 'center' }}>
@@ -381,10 +383,10 @@ function HoldStop({ onComplete, size = 72, showLabel = true, gestureRef, variant
         </Svg>
         <GestureDetector gesture={hold}>
           <View
-            style={[st.ctrlSm, st.ctrlShadow, { backgroundColor: fill ?? '#121712', transform: [{ scale: holding ? 0.92 : 1 }] }]}
+            style={[st.ctrlSm, { width: size, height: size, borderRadius: size / 2, backgroundColor: fill ?? C.surfaceAlt, transform: [{ scale: holding ? 0.92 : 1 }] }]}
             accessibilityRole="button" accessibilityLabel={t('rl.stopA11y')}
           >
-            <View style={[st.ctrlSquare, { backgroundColor: glyph ?? '#fff' }]} />
+            <View style={[st.ctrlSquare, { backgroundColor: glyph ?? C.text }]} />
           </View>
         </GestureDetector>
       </View>
@@ -474,11 +476,6 @@ export default function TrackingScreen() {
   // title, and the finished run links route_id. Absent → free run, as before.
   const [course] = useState(() => getActiveCourse());
   const resolved = useScheme(s => s.resolved); // course under-layer stroke keys on scheme
-  // RunCtrl P1 (owner amendment 2026-11-21): ink circles in light mode; on
-  // the dark sheet an ink circle vanishes, so dark mode flips to a white
-  // circle with an ink glyph. 재개 is neon in both.
-  const ctrlFill = resolved === 'dark' ? '#FFFFFF' : '#121712';
-  const ctrlGlyph = resolved === 'dark' ? '#121712' : '#FFFFFF';
   useEffect(() => () => clearActiveCourse(), []);
 
   // Settings (run.haptics gates hold-stop feedback) — hydrate in case the
@@ -1214,7 +1211,7 @@ export default function TrackingScreen() {
   // pure JS, Expo Go-safe. ──
   const sheetH = winH - SHEET_TOP;
   // BISECT A2: the sheet content pads by the floating controls' footprint
-  const controlSpace = insets.bottom + CTRL_BOTTOM + CTRL_LG + 12;
+  const controlSpace = insets.bottom + DOCK_H + 8; // dock + breathing room above the divider
   // Compact detent = banner + that footprint. Expanded (free runs) = the
   // full-screen RunLive look, but NEVER a detent at position 0: @gorhom/
   // bottom-sheet 5.2.14 normalizes a snap point to `containerHeight - snap`
@@ -1846,29 +1843,31 @@ export default function TrackingScreen() {
         <Reanimated.View pointerEvents="none" style={[st.statusCap, { height: insets.top, backgroundColor: C.surface }, capFade]} />
       )}
 
-      {/* RunCtrl P1 floating controls — no bar. Running: one pause, centered.
+      {/* RunDock Q1 — the controls' own strip at the very bottom (sheet
+          surface, hairline divider). Opaque: it captures touches, so the
+          sheet pan under it never reacts. Running: one neon pause, centered.
           Paused: 종료 (hold-to-stop, round variant — the SAME LongPress
           gesture; outside the sheet's subtree, so no pan competition) left,
           neon 재개 right. The swap is instant (safety-sensitive screen — no
           layout animation). Countdown: hidden. */}
       {(state === 'running' || state === 'paused') && (
-        <View pointerEvents="box-none" style={[st.ctrlRow, { bottom: insets.bottom + CTRL_BOTTOM }]}>
+        <View style={[st.dock, { height: DOCK_H + insets.bottom, paddingBottom: insets.bottom }]}>
           {running ? (
             <Pressable
               onPress={togglePause}
-              style={({ pressed }) => [st.ctrlLg, st.ctrlShadow, { backgroundColor: ctrlFill }, pressed && { transform: [{ scale: 0.93 }] }]}
+              style={({ pressed }) => [st.ctrlLg, { backgroundColor: C.neon }, pressed && { transform: [{ scale: 0.93 }] }]}
               accessibilityRole="button" accessibilityLabel={t('rl.pause')}
             >
-              <Icon name="pause" size={24} color={ctrlGlyph} />
+              <Icon name="pause" size={22} color="#121712" />
             </Pressable>
           ) : (<>
-            <HoldStop onComplete={endRun} gestureRef={holdRefBar} variant="round" fill={ctrlFill} glyph={ctrlGlyph} />
+            <HoldStop onComplete={endRun} gestureRef={holdRefBar} variant="round" size={CTRL_SM} />
             <Pressable
               onPress={togglePause}
-              style={({ pressed }) => [st.ctrlLg, st.ctrlShadow, { backgroundColor: C.neon }, pressed && { transform: [{ scale: 0.93 }] }]}
+              style={({ pressed }) => [st.ctrlLg, { backgroundColor: C.neon }, pressed && { transform: [{ scale: 0.93 }] }]}
               accessibilityRole="button" accessibilityLabel={t('rl.resume')}
             >
-              <Icon name="play" size={26} color="#121712" />
+              <Icon name="play" size={24} color="#121712" />
             </Pressable>
           </>)}
         </View>
@@ -1979,12 +1978,11 @@ const makeSt = (C: Tokens) => StyleSheet.create({
   liveHintWrap: { alignItems: 'center' },
   runChip:      { position: 'absolute', left: 22, backgroundColor: C.surface, borderRadius: 12, paddingHorizontal: 13, paddingVertical: 7 },
   runChipTxt:   { fontSize: 11.5, fontWeight: '700', color: C.text, fontVariant: ['tabular-nums'] },
-  // RunCtrl P1 — floating round controls (board: 64 / 54, gap 10, shadow 0 4 14 @18% ink)
-  ctrlRow:      { position: 'absolute', left: 0, right: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: CTRL_GAP, zIndex: 20 },
+  // RunDock Q1 — reserved control strip (board: 84 tall, divider, 58 / 50, gap 10, flat)
+  dock:         { position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: C.surface, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: C.border, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: CTRL_GAP, paddingHorizontal: 12, zIndex: 20 },
   ctrlLg:       { width: CTRL_LG, height: CTRL_LG, borderRadius: CTRL_LG / 2, alignItems: 'center', justifyContent: 'center' },
-  ctrlSm:       { width: CTRL_SM, height: CTRL_SM, borderRadius: CTRL_SM / 2, alignItems: 'center', justifyContent: 'center' },
-  ctrlSquare:   { width: 15, height: 15, borderRadius: 3.5 },
-  ctrlShadow:   { shadowColor: '#121712', shadowOpacity: 0.18, shadowRadius: 14, shadowOffset: { width: 0, height: 4 }, elevation: 6 },
+  ctrlSm:       { alignItems: 'center', justifyContent: 'center' },
+  ctrlSquare:   { width: 14, height: 14, borderRadius: 3.5 },
   handleIndicator: { width: 38, height: 5, borderRadius: 99, backgroundColor: C.border },
   expandedWrap: { paddingHorizontal: S.gutter },
   // Absolute within the sheet content (which starts below the lib handle)
