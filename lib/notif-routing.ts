@@ -23,16 +23,15 @@ export type DeepLinkTarget = Pick<AppNotification, 'type' | 'target_id' | 'paylo
 export function deepLink(n: DeepLinkTarget): (() => void) | null {
   switch (n.type) {
     case 'battle_invited':
+      // redesign 8b (2026-11-21): real battle screens — target_id = battle id
+      // (her contract); thin/old payloads without it stay inert.
+      if (!n.target_id) return null;
+      return () => router.push({ pathname: '/battle-invite' as any, params: { id: n.target_id! } });
     case 'battle_overtaken':
     case 'battle_won':
-      // 8/21 battle pre-wire: DELIBERATELY inert (null) — the battle screen
-      // doesn't exist yet; a wrong-guess route is worse than no route.
-      // TODO(contract): point at the battle detail when her shape lands.
-      // [9/15 REGRESSION FIX] this group was INSERTED MID-FALL-THROUGH between
-      // run_kudoed/run_commented and their shared run-post return (de1a5f9) —
-      // hijacking both into this null since 8/21 (kudos/comment taps inert;
-      // reached production 9/5). Group separated; the pair routes again below.
-      return null;
+      // detail redirects to the settle view once the battle is done.
+      if (!n.target_id) return null;
+      return () => router.push({ pathname: '/battle-detail' as any, params: { id: n.target_id! } });
     case 'run_kudoed':
     case 'run_commented': // target_type "run", target_id = run id (probed)
     case 'run_mentioned': // 9/15 지연 계약: run_commented의 자매 — 동일 페이로드/딥링크

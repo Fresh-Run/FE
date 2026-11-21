@@ -1,17 +1,15 @@
 /**
- * 배틀 생성 플로우 — 슬라이스 1 (spec §2.6-2, v0 LOCKED 8/29). MOCK ONLY:
- * 상대 목록 = 맞팔 목 (spec Q3 — searchUsers 라이브 콜은 8/21 데모의
- * 흔적이었고 이 슬라이스에서 제거, 실 mutual-follows는 slice 2), 제출 =
- * useBattleMock.createBattle (네트워크 0). v0 확정으로 죽은 것: 포맷/지표
- * 선택 (§2.1 — v1은 1v1 점수 배틀 단일 모드).
- *
- * 쿼터 슬롯 (spec Q6): 진입/제출 모두 canCreate() 경유 — 베타 무제한이라
- * 항상 ok지만, 무료 30일-롤링 3회 게이팅이 이 함수 교체만으로 들어온다.
- * 라우트: /battle-create (8/29 클로즈아웃에서 -demo 은퇴).
+ * 배틀 생성 플로우 — spec §2.6-2 (v0 LOCKED 8/29) · redesign 8b (2026-11-21):
+ * REAL wire-in. Opponent = any user via GET /users/search (contract ruling
+ * ②: eligibility = everyone minus blocked/private, enforced server-side as a
+ * hidden 404 — no follow requirement, v1 = invite-only). Submit = POST
+ * /battles (403 battle_free_limit · 409 battle_active_cap · 404 → honest
+ * alerts). v1 = 1v1 points battle (format/metric pickers died with v0).
+ * Route: /battle-create (?opponent=<uid> prefill = the rematch CTA).
  */
-import { Redirect, router, useLocalSearchParams } from 'expo-router';
-import React, { useState } from 'react';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { router, useLocalSearchParams } from 'expo-router';
+import React, { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/avatar';
@@ -19,18 +17,20 @@ import { BattleTermsCard } from '@/components/battle-terms';
 import { SeededSlider } from '@/components/seeded-slider';
 import { Icon } from '@/components/ui';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
-import { tfIn, useLang, useT } from '@/lib/i18n';
-import { BATTLE_EMOJIS, BATTLE_ENABLED, DEFAULT_BATTLE_EMOJI, MOCK_FRIENDS, useBattleMock, type MockFriend } from '@/store/battle-mock';
+import { track } from '@/lib/analytics';
+import { ApiError } from '@/lib/api';
+import { BATTLE_DAYS_MAX, BATTLE_DAYS_MIN, BATTLE_EMOJIS, DEFAULT_BATTLE_EMOJI } from '@/lib/battles-api';
+import { errorMessage } from '@/lib/error-copy';
+import { t, tfIn, useLang, useT } from '@/lib/i18n';
+import { searchUsers, type UserSearchItem } from '@/lib/profile-api';
 import { radius as R, spacing as S, shadows, type Tokens } from '@/lib/theme';
+import { useBattles, type BattleProfile } from '@/store/use-battles';
+import { useStore } from '@/store/use-store';
 
-const DURATIONS = [3, 7, 14, 30] as const; // spec §2.2 프리셋 칩 (30d max)
-// 직접 입력 (9/5 오너 룰링) — spec 바운드 그대로: 1–30일, 정수만.
-// 이디엄 = 코스 생성의 거리 슬라이더 문법 (SeededSlider + 값 표시 + 양끝
-// 라벨); step 1 + clamp가 정수·범위를 이중으로 보증한다.
-const DAYS_MIN = 1;
-const DAYS_MAX = 30;
-const clampDays = (v: number) => Math.min(DAYS_MAX, Math.max(DAYS_MIN, Math.round(v)));
+const DURATIONS = [3, 7, 14, 30] as const; // spec §2.2 preset chips (30d max)
+const clampDays = (v: number) => Math.min(BATTLE_DAYS_MAX, Math.max(BATTLE_DAYS_MIN, Math.round(v)));
 const TITLE_MAX = 30;
+type Opp = { user_id: string; nickname: string; avatar_url: string | null };
 
 export default function BattleCreateScreen() {
   const C = useTokens();
@@ -38,34 +38,70 @@ export default function BattleCreateScreen() {
   const insets = useSafeAreaInsets();
   const T = useT();
   const lang = useLang();
+  const myName = useStore(s => s.displayName);
+  const myPhoto = useStore(s => s.photoUrl);
 
-  // 슬라이스 3 다시-도전 프리필: /battle-create?opponent=<id> (정산 화면 CTA).
-  // 프리필 시 1단계(상대)는 이미 충족 — 설정 단계에서 시작. slice 2: id는
-  // 실 user_id, 조회는 맞팔 소스.
+  // Rematch prefill: /battle-create?opponent=<uid> — the profile is already in
+  // the battles store (the settle screen came from it); fall back to a fetch.
   const { opponent: prefillId } = useLocalSearchParams<{ opponent?: string }>();
-  const prefill = prefillId ? MOCK_FRIENDS.find(u => u.id === prefillId) ?? null : null;
+  const profiles = useBattles(s => s.profiles);
+  const prefill: Opp | null = prefillId ? (profiles[prefillId] as BattleProfile | undefined) ?? null : null;
   const [step, setStep] = useState(prefill ? 1 : 0);
-  const [opponent, setOpponent] = useState<MockFriend | null>(prefill);
-  // 프리셋과 직접 입력은 하나의 선택 그룹: days가 단일 진실이고 custom은
-  // 어느 칩이 켜져 있는지만 가른다 — 확인/약관은 days만 읽으므로 두 경로의
-  // 표시가 구조적으로 동일하다.
+  const [opponent, setOpponent] = useState<Opp | null>(prefill);
+  useEffect(() => {
+    if (prefillId && !opponent) {
+      useBattles.getState().ensureProfiles([prefillId]).then(() => {
+        const p = useBattles.getState().profiles[prefillId];
+        if (p) { setOpponent(p); setStep(1); }
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prefillId]);
+
+  // Opponent search — the start-picker idiom (300ms debounce + seq stale-guard); q ≥ 2 (server 422 below).
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<UserSearchItem[] | null>(null);
+  const seq = useRef(0);
+  useEffect(() => {
+    const q = query.trim();
+    if (q.length < 2) { seq.current++; setResults(null); return; }
+    const mine = ++seq.current;
+    const h = setTimeout(() => {
+      searchUsers(q, 20)
+        .then(rows => { if (seq.current === mine) setResults(rows); })
+        .catch(() => { if (seq.current === mine) setResults([]); });
+    }, 300);
+    return () => clearTimeout(h);
+  }, [query]);
+
   const [days, setDays] = useState<number>(7);
   const [custom, setCustom] = useState(false);
   const [emoji, setEmoji] = useState<string>(DEFAULT_BATTLE_EMOJI);
   const [title, setTitle] = useState('');
+  const [busy, setBusy] = useState(false);
 
   const steps = [T('bc.stepOpponent'), T('bc.stepSettings'), T('bc.stepConfirm')];
   const canNext = step === 0 ? opponent != null : true;
 
-  // 9/16 플래그 (훅 뒤 — rules-of-hooks): 슬라이스 2까지 inert-리다이렉트
-  if (!BATTLE_ENABLED) return <Redirect href="/(tabs)/groups" />;
-
-  function submit() {
-    if (!opponent) return;
-    // 쿼터 슬롯 — 베타: 항상 ok (spec Q6); slice 2에서 실 게이트로 교체
-    if (!useBattleMock.getState().canCreate().ok) return;
-    useBattleMock.getState().createBattle(opponent, days, title, emoji);
-    router.back(); // 홈 대기 탭에 pending 카드로 나타난다
+  async function submit() {
+    if (!opponent || busy) return;
+    setBusy(true);
+    try {
+      const finalTitle = title.trim() || tfIn(lang, 'bat.vsName', { name: opponent.nickname });
+      await useBattles.getState().create(opponent.user_id, days, finalTitle.slice(0, 60), emoji);
+      track('battle_create', { duration_days: days });
+      router.back(); // lands on the 그룹 › 배틀 view as a pending (sent) row
+    } catch (e: unknown) {
+      const code = e instanceof ApiError ? e.code : null;
+      const status = e instanceof ApiError ? e.status : 0;
+      const msg = code === 'battle_free_limit' ? t('bat.freeLimit')
+        : code === 'battle_active_cap' ? t('bat.activeCap')
+        : status === 404 ? t('bat.oppUnavailable')
+        : errorMessage(e);
+      Alert.alert(t('bat.createFail'), msg);
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -77,7 +113,6 @@ export default function BattleCreateScreen() {
         <Text style={st.appTitle}>{T('bc.title')}</Text>
         <View style={{ width: 20 }} />
       </View>
-      {/* step dots */}
       <View style={st.stepRow}>
         {steps.map((label, i) => (
           <View key={label} style={st.stepItem}>
@@ -90,14 +125,27 @@ export default function BattleCreateScreen() {
       <ScrollView contentContainerStyle={{ padding: S.lg, paddingBottom: insets.bottom + 90 }} keyboardShouldPersistTaps="handled">
         {step === 0 && (
           <>
-            <Text style={st.hint}>{T('bat.friendsHint')}</Text>
-            {MOCK_FRIENDS.map(u => (
-              <Pressable key={u.id} onPress={() => setOpponent(u)} style={[st.userRow, opponent?.id === u.id && st.userRowSel]}>
-                <Avatar name={u.nickname} size={36} photoUrl={null} />
+            <Text style={st.hint}>{T('bc.searchHint')}</Text>
+            <View style={st.searchBar}>
+              <Icon name="search" size={16} color={C.faint} />
+              <TextInput value={query} onChangeText={setQuery} placeholder={T('bc.searchPh')} placeholderTextColor={C.faint} autoCorrect={false} autoCapitalize="none" returnKeyType="search" style={st.searchInput} />
+              {query.length > 0 && <Pressable onPress={() => setQuery('')} hitSlop={8}><Icon name="close-circle" size={16} color={C.faint} /></Pressable>}
+            </View>
+            {opponent && (
+              <View style={[st.userRow, st.userRowSel]}>
+                <Avatar name={opponent.nickname} size={36} photoUrl={opponent.avatar_url} />
+                <Text style={[st.userName, { flex: 1 }]} numberOfLines={1}>{opponent.nickname}</Text>
+                <Icon name="checkmark-circle" size={20} color={C.accent} />
+              </View>
+            )}
+            {query.trim().length >= 2 && results === null && <ActivityIndicator size="small" color={C.faint} style={{ paddingVertical: 16 }} />}
+            {results?.filter(u => u.user_id !== opponent?.user_id).map(u => (
+              <Pressable key={u.user_id} onPress={() => setOpponent(u)} style={st.userRow}>
+                <Avatar name={u.nickname} size={36} photoUrl={u.avatar_url} />
                 <Text style={[st.userName, { flex: 1 }]} numberOfLines={1}>{u.nickname}</Text>
-                {opponent?.id === u.id && <Icon name="checkmark-circle" size={20} color={C.accent} />}
               </Pressable>
             ))}
+            {results && results.length === 0 && <Text style={st.hint}>{T('region.noResults')}</Text>}
           </>
         )}
 
@@ -110,8 +158,6 @@ export default function BattleCreateScreen() {
                   <Text style={[st.chipTxt, !custom && days === d && st.chipTxtSel]}>{tfIn(lang, 'bc.days', { n: d })}</Text>
                 </Pressable>
               ))}
-              {/* 직접 입력 — 프리셋과 같은 그룹: 이 칩이 켜지면 프리셋 해제,
-                  프리셋을 고르면 이 칩 해제 (days는 계속 단일 진실) */}
               <Pressable onPress={() => setCustom(true)} style={[st.chip, custom && st.chipSel]}>
                 <Text style={[st.chipTxt, custom && st.chipTxtSel]}>{T('bc.durationCustom')}</Text>
               </Pressable>
@@ -119,25 +165,14 @@ export default function BattleCreateScreen() {
             {custom && (
               <View style={st.customBox}>
                 <Text style={st.customValue}>{tfIn(lang, 'bc.days', { n: days })}</Text>
-                <SeededSlider
-                  siteId="battle-days"
-                  style={st.slider}
-                  minimumValue={DAYS_MIN}
-                  maximumValue={DAYS_MAX}
-                  step={1}
-                  value={days}
-                  onValueChange={v => setDays(clampDays(v))}
-                  minimumTrackTintColor={C.accent}
-                  maximumTrackTintColor={C.border}
-                  thumbTintColor={C.accent}
-                />
+                <SeededSlider siteId="battle-days" style={st.slider} minimumValue={BATTLE_DAYS_MIN} maximumValue={BATTLE_DAYS_MAX} step={1} value={days}
+                  onValueChange={v => setDays(clampDays(v))} minimumTrackTintColor={C.accent} maximumTrackTintColor={C.border} thumbTintColor={C.accent} />
                 <View style={st.sliderLabels}>
-                  <Text style={st.sliderLabel}>{tfIn(lang, 'bc.days', { n: DAYS_MIN })}</Text>
-                  <Text style={st.sliderLabel}>{tfIn(lang, 'bc.days', { n: DAYS_MAX })}</Text>
+                  <Text style={st.sliderLabel}>{tfIn(lang, 'bc.days', { n: BATTLE_DAYS_MIN })}</Text>
+                  <Text style={st.sliderLabel}>{tfIn(lang, 'bc.days', { n: BATTLE_DAYS_MAX })}</Text>
                 </View>
               </View>
             )}
-            {/* 배틀 이모지 — 큐레이션 12종 단일 선택, 자유 입력 없음 (9/5) */}
             <Text style={st.secLabel}>{T('bc.emojiLabel')}</Text>
             <View style={st.emojiRow}>
               {BATTLE_EMOJIS.map(e => (
@@ -148,14 +183,7 @@ export default function BattleCreateScreen() {
             </View>
             <Text style={st.secLabel}>{T('bat.optTitle')}</Text>
             <View style={st.titleBox}>
-              <TextInput
-                style={st.titleInput}
-                value={title}
-                onChangeText={v => setTitle(v.slice(0, TITLE_MAX))}
-                placeholder={T('bat.titlePh')}
-                placeholderTextColor={C.faint}
-                maxLength={TITLE_MAX}
-              />
+              <TextInput style={st.titleInput} value={title} onChangeText={v => setTitle(v.slice(0, TITLE_MAX))} placeholder={T('bat.titlePh')} placeholderTextColor={C.faint} maxLength={TITLE_MAX} />
             </View>
           </>
         )}
@@ -165,17 +193,16 @@ export default function BattleCreateScreen() {
             <Text style={st.confirmEmoji}>{emoji}</Text>
             <View style={st.vsRow}>
               <View style={st.vsSide}>
-                <Avatar name={T('bat.me')} size={48} photoUrl={null} />
+                <Avatar name={myName ?? T('bat.me')} size={48} photoUrl={myPhoto} />
                 <Text style={st.userName}>{T('bat.me')}</Text>
               </View>
               <Text style={st.vsTxt}>{T('bc.vs')}</Text>
               <View style={st.vsSide}>
-                <Avatar name={opponent.nickname} size={48} photoUrl={null} />
+                <Avatar name={opponent.nickname} size={48} photoUrl={opponent.avatar_url} />
                 <Text style={st.userName} numberOfLines={1}>{opponent.nickname}</Text>
               </View>
             </View>
             {title.trim().length > 0 && <Text style={st.battleTitle}>{title.trim()}</Text>}
-            {/* 룰 명시 (spec Q4 필수 — 30분 정산 마감 포함) */}
             <BattleTermsCard durationDays={days} />
           </View>
         )}
@@ -187,8 +214,8 @@ export default function BattleCreateScreen() {
             <Text style={st.ctaTxt}>{T('bc.next')}</Text>
           </Pressable>
         ) : (
-          <Pressable onPress={submit} style={st.cta}>
-            <Text style={st.ctaTxt}>{T('bc.start')}</Text>
+          <Pressable onPress={submit} disabled={busy} style={[st.cta, busy && { opacity: 0.6 }]}>
+            {busy ? <ActivityIndicator size="small" color="#0D1A06" /> : <Text style={st.ctaTxt}>{T('bc.start')}</Text>}
           </Pressable>
         )}
       </View>
@@ -205,6 +232,8 @@ const makeSt = (C: Tokens) => ({
   stepDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: C.border },
   stepLbl: { fontSize: 11, color: C.faint },
   hint: { fontSize: 13, color: C.faint, marginBottom: S.md },
+  searchBar: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 8, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 14, paddingHorizontal: 12, height: 44, marginBottom: 10 },
+  searchInput: { flex: 1, fontSize: 14.5, fontWeight: '600' as const, color: C.text, paddingVertical: 0 },
   userRow: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 10, backgroundColor: C.surface, borderRadius: R.lg, borderWidth: 1, borderColor: C.border, padding: 10, marginBottom: 8 },
   userRowSel: { borderColor: C.accent },
   userName: { fontSize: 14, fontWeight: '700' as const, color: C.text },
@@ -214,7 +243,6 @@ const makeSt = (C: Tokens) => ({
   chipSel: { backgroundColor: C.accent, borderColor: C.accent },
   chipTxt: { fontSize: 13, fontWeight: '600' as const, color: C.text },
   chipTxtSel: { color: '#0D1A06', fontWeight: '800' as const },
-  // 직접 입력 — 코스 생성 거리 슬라이더 문법 (값 표시 + 슬라이더 + 양끝 라벨)
   customBox: { marginTop: 10, backgroundColor: C.surface, borderRadius: R.lg, borderWidth: 1, borderColor: C.border, padding: 12 },
   customValue: { fontSize: 17, fontWeight: '800' as const, color: C.text, textAlign: 'center' as const, fontVariant: ['tabular-nums' as const] },
   slider: { marginTop: 4 },

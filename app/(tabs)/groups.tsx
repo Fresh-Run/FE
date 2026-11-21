@@ -14,7 +14,7 @@
  */
 import { useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router, useNavigation } from 'expo-router';
+import { router, useLocalSearchParams, useNavigation } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -28,13 +28,13 @@ import { useCrewWeeklyKm } from '@/hooks/use-crew-weekly-km';
 import { joinCrew, useBrowseCrews, useMyCrews, type Crew } from '@/hooks/use-crews';
 import { useCurrentLocation } from '@/hooks/use-current-location';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
-import { apiFetch } from '@/lib/api';
-import { battleDaysLeft, getBattle, listBattles, type Battle } from '@/lib/battles-api';
+import { battleDaysLeft, isDone, opponentIdOf, outcomeOf, scoreOf, type Battle } from '@/lib/battles-api';
 import { errorMessage } from '@/lib/error-copy';
 import { t, tfIn, useLang, useT } from '@/lib/i18n';
 import { spacing as S, type Tokens, DENSE_MAX_FONT_SCALE } from '@/lib/theme';
 import { useJoinRequests } from '@/store/join-requests';
 import { useQuota } from '@/store/use-quota';
+import { useBattles } from '@/store/use-battles';
 import { useStore } from '@/store/use-store';
 
 type Tab = 'crew' | 'battle';
@@ -238,9 +238,12 @@ function CrewTab({ scrollRef }: { scrollRef: React.RefObject<ScrollView | null> 
   );
 }
 
-// ─── 배틀 view — B1 scoreboard, READ-ONLY in 8a ───────────────────────────────
-
-type Profile = { nickname: string; avatar_url: string | null };
+// ─── 배틀 view — BattleB1 scoreboard (8b: real endpoints via store/use-battles) ─
+// 진행 중인 배틀 (card → detail) · 대기 (받은 초대 → invite screen · 보낸 초대 =
+// waiting) · 새 배틀 = 친구 초대 only (owner: 랜덤 매칭 omitted — no endpoint)
+// · 전적 = {w}승 {l}패 + last-4 dots from the ended/forfeited rows, each row →
+// settle. Scores are POINTS (owner ruling; the board's km is not a server
+// format) and "어제까지 집계" (KST midnight batch).
 
 function ActiveBattleCard({ battle }: { battle: Battle }) {
   const C = useTokens();
@@ -250,54 +253,40 @@ function ActiveBattleCard({ battle }: { battle: Battle }) {
   const myUid = useStore(s => s.session?.user.id);
   const myName = useStore(s => s.displayName);
   const myPhoto = useStore(s => s.photoUrl);
-  const oppId = battle.created_by === myUid ? battle.opponent : battle.created_by;
-  const [opp, setOpp] = useState<Profile | null>(null);
-  const [detail, setDetail] = useState<Battle | null>(battle.scores ? battle : null);
-  useEffect(() => {
-    let alive = true;
-    apiFetch<Profile>(`/api/users/${oppId}/profile`).then(p => { if (alive) setOpp(p); }).catch(() => {});
-    if (!battle.scores) getBattle(battle.id).then(d => { if (alive) setDetail(d); }).catch(() => {});
-    return () => { alive = false; };
-  }, [battle.id, battle.scores, oppId]);
-  const scoreOf = (uid: string | undefined) => detail?.scores?.find(s => s.user_id === uid)?.score ?? 0;
-  const mine = scoreOf(myUid), theirs = scoreOf(oppId);
+  const profiles = useBattles(s => s.profiles);
+  const oppId = opponentIdOf(battle, myUid);
+  useEffect(() => { if (!battle.scores) void useBattles.getState().loadDetail(battle.id); }, [battle.id, battle.scores]);
+  const mine = scoreOf(battle, myUid), theirs = scoreOf(battle, oppId);
   const total = mine + theirs;
   const myShare = total > 0 ? mine / total : 0.5;
   const diff = Math.round(mine - theirs);
-  const days = battleDaysLeft(battle);
-  const oppName = opp?.nickname ?? T('bat.opponent');
+  const oppName = profiles[oppId]?.nickname ?? T('bat.opponent');
   return (
-    <View>
-      <View style={[st.secHead, { marginTop: 20 }]}>
-        <Text style={st.secTitle}>{T('bat.activeSection')}</Text>
-        <Text style={st.secStrong}>{tfIn(lang, 'bat.daysLeft', { n: days })}</Text>
-      </View>
-      <View style={[st.battleCard, { backgroundColor: C.surface }]}>
-        <Text style={st.battleSub} numberOfLines={1}>{battle.emoji ? `${battle.emoji} ` : ''}{battle.title} · {T('bat.standingNote')}</Text>
-        <View style={st.vsRow}>
-          <View style={st.vsSide}>
-            <Avatar name={myName ?? T('bat.me')} size={60} photoUrl={myPhoto} ring={C.neon} />
-            <Text style={st.vsName} numberOfLines={1}>{T('bat.me')}</Text>
-            <Text style={[st.vsScore, { color: C.text }]}>{Math.round(mine)}</Text>
-            <Text style={st.vsUnit}>{T('bat.ptUnit')}</Text>
-          </View>
-          <Text style={st.vs}>VS</Text>
-          <View style={st.vsSide}>
-            <Avatar name={oppName} size={60} photoUrl={opp?.avatar_url ?? null} ring={C.border} />
-            <Text style={st.vsName} numberOfLines={1}>{oppName}</Text>
-            <Text style={[st.vsScore, { color: C.sub }]}>{Math.round(theirs)}</Text>
-            <Text style={st.vsUnit}>{T('bat.ptUnit')}</Text>
-          </View>
+    <Pressable onPress={() => router.push({ pathname: '/battle-detail', params: { id: battle.id } } as never)} style={({ pressed }) => [st.battleCard, { backgroundColor: C.surface }, pressed && { opacity: 0.92 }]} accessibilityRole="button">
+      <Text style={st.battleSub} numberOfLines={1}>{battle.emoji ? `${battle.emoji} ` : ''}{battle.title} · {T('bat.standingNote')}</Text>
+      <View style={st.vsRow}>
+        <View style={st.vsSide}>
+          <Avatar name={myName ?? T('bat.me')} size={60} photoUrl={myPhoto} ring={C.neon} />
+          <Text style={st.vsName} numberOfLines={1}>{T('bat.me')}</Text>
+          <Text style={[st.vsScore, { color: C.text }]}>{Math.round(mine)}</Text>
+          <Text style={st.vsUnit}>{T('bat.ptUnit')}</Text>
         </View>
-        <View style={st.bar}>
-          <View style={[st.barFill, { flex: Math.max(myShare, 0.02), backgroundColor: C.neon }]} />
-          <View style={[st.barFill, { flex: Math.max(1 - myShare, 0.02), backgroundColor: C.border }]} />
+        <Text style={st.vs}>VS</Text>
+        <View style={st.vsSide}>
+          <Avatar name={oppName} size={60} photoUrl={profiles[oppId]?.avatar_url ?? null} ring={C.border} />
+          <Text style={st.vsName} numberOfLines={1}>{oppName}</Text>
+          <Text style={[st.vsScore, { color: C.sub }]}>{Math.round(theirs)}</Text>
+          <Text style={st.vsUnit}>{T('bat.ptUnit')}</Text>
         </View>
-        <Text style={st.standing}>
-          {diff > 0 ? tfIn(lang, 'bat.leading', { n: diff }) : diff < 0 ? tfIn(lang, 'bat.trailing', { n: -diff }) : T('bat.tied')}
-        </Text>
       </View>
-    </View>
+      <View style={st.bar}>
+        <View style={[st.barFill, { flex: Math.max(myShare, 0.02), backgroundColor: C.neon }]} />
+        <View style={[st.barFill, { flex: Math.max(1 - myShare, 0.02), backgroundColor: C.border }]} />
+      </View>
+      <Text style={st.standing}>
+        {diff > 0 ? tfIn(lang, 'bat.leading', { n: diff }) : diff < 0 ? tfIn(lang, 'bat.trailing', { n: -diff }) : T('bat.tied')}
+      </Text>
+    </Pressable>
   );
 }
 
@@ -305,26 +294,95 @@ function BattleTab({ scrollRef }: { scrollRef: React.RefObject<ScrollView | null
   const C = useTokens();
   const st = useStyles(makeSt);
   const T = useT();
+  const lang = useLang();
   const tabBarInset = useTabBarInset();
-  const [battles, setBattles] = useState<Battle[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const load = useCallback(() => {
-    let alive = true;
-    listBattles('active').then(rows => { if (alive) { setBattles(rows); setError(null); } })
-      .catch((e: unknown) => { if (alive) setError(errorMessage(e)); });
-    return () => { alive = false; };
-  }, []);
-  useFocusEffect(load);
-  if (error && !battles) return <ErrorState message={error} onRetry={() => { load(); }} />;
-  if (!battles) return <Centered><ActivityIndicator size="large" color={C.accent} /></Centered>;
-  const active = battles.find(b => b.status === 'active') ?? null;
+  const myUid = useStore(s => s.session?.user.id);
+  const { battles, profiles, loaded, error, refresh } = useBattles();
+  useFocusEffect(useCallback(() => { void refresh(); }, [refresh]));
+  if (!loaded && error) return <ErrorState message={error} onRetry={() => { void refresh(); }} />;
+  if (!loaded) return <Centered><ActivityIndicator size="large" color={C.accent} /></Centered>;
+
+  const active = battles.filter(b => b.status === 'active');
+  const pendingIn = battles.filter(b => b.status === 'pending' && b.opponent === myUid);
+  const pendingOut = battles.filter(b => b.status === 'pending' && b.created_by === myUid);
+  // 전적 = battles that actually ran: a cancelled row with no started_at is a
+  // declined/expired INVITE (probed 2026-11-21: decline → status cancelled,
+  // started_at null) — spec §2.2 hides those; mutual cancels (started) = draw.
+  const done = battles.filter(b => isDone(b) && !(b.status === 'cancelled' && !b.started_at)).sort((a, b) => (b.settled_at ?? b.ends_at ?? b.created_at ?? '').localeCompare(a.settled_at ?? a.ends_at ?? a.created_at ?? ''));
+  const wins = done.filter(b => outcomeOf(b, myUid) === 'won').length;
+  const losses = done.filter(b => outcomeOf(b, myUid) === 'lost').length;
+  const nameOf = (b: Battle) => profiles[opponentIdOf(b, myUid)]?.nickname ?? T('bat.opponent');
+
   return (
     <ScrollView ref={scrollRef} contentContainerStyle={{ paddingHorizontal: S.gutter + 2, paddingBottom: tabBarInset }} showsVerticalScrollIndicator={false}>
-      {active ? <ActiveBattleCard battle={active} /> : (
-        <Centered>
-          <Icon name="flash-outline" size={42} color={C.faint} />
+      {/* 진행 중인 배틀 */}
+      <View style={[st.secHead, { marginTop: 20 }]}>
+        <Text style={st.secTitle}>{T('bat.activeSection')}</Text>
+        {active[0] ? <Text style={st.secStrong}>{tfIn(lang, 'bat.daysLeft', { n: battleDaysLeft(active[0]) })}</Text> : null}
+      </View>
+      {active.length === 0 ? (
+        <View style={[st.battleCard, { backgroundColor: C.surface, alignItems: 'center', gap: 6 }]}>
+          <Icon name="flash-outline" size={30} color={C.faint} />
           <Text style={st.stateTitle}>{T('bat.emptyActive')}</Text>
-        </Centered>
+          <Text style={st.stateSub}>{T('bat.emptyActiveSub')}</Text>
+        </View>
+      ) : (
+        <View style={{ gap: 10 }}>{active.map(b => <ActiveBattleCard key={b.id} battle={b} />)}</View>
+      )}
+
+      {/* 대기 — 받은 초대 (→ invite screen) · 보낸 초대 (waiting) */}
+      {(pendingIn.length > 0 || pendingOut.length > 0) && (
+        <View style={{ gap: 8, marginTop: 14 }}>
+          {pendingIn.map(b => (
+            <Pressable key={b.id} onPress={() => router.push({ pathname: '/battle-invite', params: { id: b.id } } as never)} style={({ pressed }) => [st.pendRow, { backgroundColor: C.surface, borderColor: C.neon }, pressed && { opacity: 0.8 }]} accessibilityRole="button">
+              <Text style={st.pendEmoji}>{b.emoji ?? '⚡'}</Text>
+              <Text style={st.pendTxt} numberOfLines={1}>{tfIn(lang, 'bat.pendingIn', { name: nameOf(b) })}</Text>
+              <Icon name="chevron-forward" size={16} color={C.faint} />
+            </Pressable>
+          ))}
+          {pendingOut.map(b => (
+            <View key={b.id} style={[st.pendRow, { backgroundColor: C.surface, borderColor: C.border }]}>
+              <Text style={st.pendEmoji}>{b.emoji ?? '⚡'}</Text>
+              <Text style={[st.pendTxt, { color: C.sub }]} numberOfLines={1}>{tfIn(lang, 'bat.pendingOut', { name: nameOf(b) })}</Text>
+            </View>
+          ))}
+        </View>
+      )}
+
+      {/* 새 배틀 — 친구 초대 (랜덤 매칭 omitted by ruling) */}
+      <Text style={[st.secTitle, { marginTop: 20 }]}>{T('bat.newSection')}</Text>
+      <Pressable onPress={() => router.push('/battle-create' as never)} style={({ pressed }) => [st.newBtn, { backgroundColor: C.surface }, pressed && { opacity: 0.8 }]} accessibilityRole="button">
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text style={st.newTitle}>{T('bat.inviteFriend')}</Text>
+          <Text style={st.newSub}>{T('bat.inviteFriendSub')}</Text>
+        </View>
+        <Icon name="chevron-forward" size={16} color={C.faint} />
+      </Pressable>
+
+      {/* 전적 */}
+      <View style={[st.secHead, { marginTop: 18, alignItems: 'center' }]}>
+        <Text style={st.secTitle}>{T('bat.recordSection')}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          <Text style={st.secStrong}>{tfIn(lang, 'bat.recordLine', { w: wins, l: losses })}</Text>
+          {done.slice(0, 4).map(b => {
+            const o = outcomeOf(b, myUid);
+            return <View key={b.id} style={[st.dot, { backgroundColor: o === 'won' ? C.neon : o === 'lost' ? C.border : 'transparent', borderColor: o === 'draw' ? C.border : 'transparent' }]} />;
+          })}
+        </View>
+      </View>
+      {done.length > 0 && (
+        <View style={{ gap: 8, marginTop: 8 }}>
+          {done.slice(0, 4).map(b => {
+            const o = outcomeOf(b, myUid);
+            return (
+              <Pressable key={b.id} onPress={() => router.push({ pathname: '/battle-settle', params: { id: b.id } } as never)} style={({ pressed }) => [st.pendRow, { backgroundColor: C.surface, borderColor: C.border }, pressed && { opacity: 0.8 }]} accessibilityRole="button">
+                <Text style={st.pendEmoji}>{b.emoji ?? '⚡'}</Text>
+                <Text style={st.pendTxt} numberOfLines={1}>{tfIn(lang, 'bat.vsName', { name: nameOf(b) })}</Text>
+                <Text style={[st.doneTag, { color: o === 'won' ? C.text : C.sub }]}>{o === 'won' ? T('bat.won') : o === 'lost' ? T('bat.lost') : T('bd.drawTitle')}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
       )}
     </ScrollView>
   );
@@ -337,7 +395,9 @@ export default function CommunityScreen() {
   const T = useT();
   const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
-  const [tab, setTab] = useState<Tab>('crew');
+  const { tab: tabParam } = useLocalSearchParams<{ tab?: string }>();
+  const [tab, setTab] = useState<Tab>(tabParam === 'battle' ? 'battle' : 'crew');
+  useEffect(() => { if (tabParam === 'battle') setTab('battle'); }, [tabParam]);
   // 재탭 = 맨 위로 (owner-ruled 8/5): own tabPress only; isFocused at emit
   // time = re-tap → scroll; arriving from another tab → position preserved.
   const crewScrollRef = useRef<ScrollView>(null);
@@ -411,6 +471,14 @@ const makeSt = (C: Tokens) => StyleSheet.create({
   bar:       { flexDirection: 'row', height: 10, gap: 3, marginTop: 16 },
   barFill:   { borderRadius: 5 },
   standing:  { textAlign: 'center', fontSize: 13, fontWeight: '900', color: C.text, marginTop: 12 },
+  pendRow:   { flexDirection: 'row', alignItems: 'center', gap: 10, borderRadius: 16, borderWidth: 1.5, paddingHorizontal: 14, paddingVertical: 12 },
+  pendEmoji: { fontSize: 18 },
+  pendTxt:   { flex: 1, minWidth: 0, fontSize: 13, fontWeight: '700', color: C.text },
+  doneTag:   { fontSize: 12, fontWeight: '800' },
+  newBtn:    { flexDirection: 'row', alignItems: 'center', gap: 10, height: 64, borderRadius: 18, paddingHorizontal: 16, marginTop: 8 },
+  newTitle:  { fontSize: 14, fontWeight: '900', color: C.text },
+  newSub:    { fontSize: 10.5, color: C.sub, marginTop: 2 },
+  dot:       { width: 9, height: 9, borderRadius: 5, borderWidth: 1 },
   // states
   centered:  { alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 48, paddingHorizontal: S.gutter },
   stateTitle:{ fontSize: 14, fontWeight: '600', color: C.faint, textAlign: 'center' },

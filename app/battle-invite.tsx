@@ -1,22 +1,26 @@
 /**
- * 배틀 초대 화면 — 슬라이스 1 (spec §2.6-3, v0 LOCKED 8/29). MOCK ONLY:
- * 대상 = useBattleMock의 direction:'in' pending 행 (?id=). 수락 → active
- * (홈 진행 중 탭), 거절 → 행 제거 (리스트에서 사라짐 — spec 2.2). 푸시
- * 도착 경로는 빌드 13 (de1a5f9 프리-와이어 dormant 유지); slice 2가 실
- * invite 엔드포인트로 교체한다.
+ * 배틀 초대 화면 — spec §2.6-3 (v0 LOCKED 8/29) · redesign 8b (2026-11-21):
+ * REAL wire-in. Target = a pending battle where I am the opponent (?id=).
+ * 수락 → POST /battles/{id}/accept (410 battle_invite_expired = honest
+ * "만료" state) · 거절 → POST /battles/{id}/decline (server: cancelled —
+ * gone from the list). Landing for the battle_invited notification.
  */
-import { Redirect, router, useLocalSearchParams } from 'expo-router';
-import React from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { router, useLocalSearchParams } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/avatar';
 import { BattleTermsCard } from '@/components/battle-terms';
 import { Icon } from '@/components/ui';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
-import { tfIn, useLang, useT } from '@/lib/i18n';
-import { BATTLE_ENABLED, directionOf, useBattleMock } from '@/store/battle-mock';
+import { track } from '@/lib/analytics';
+import { ApiError } from '@/lib/api';
+import { errorMessage } from '@/lib/error-copy';
+import { t, tfIn, useLang, useT } from '@/lib/i18n';
 import { radius as R, spacing as S, shadows, type Tokens } from '@/lib/theme';
+import { useBattles } from '@/store/use-battles';
+import { useStore } from '@/store/use-store';
 
 export default function BattleInviteScreen() {
   const C = useTokens();
@@ -25,21 +29,30 @@ export default function BattleInviteScreen() {
   const T = useT();
   const lang = useLang();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const me = useStore(s => s.session?.user.id);
+  const loaded = useBattles(s => s.loaded);
+  const profiles = useBattles(s => s.profiles);
+  const row = useBattles(s => s.battles.find(b => b.id === id));
+  const [busy, setBusy] = useState(false);
+  useEffect(() => { if (!loaded || !row) void useBattles.getState().loadDetail(id); }, [id, loaded, row]);
 
-  const battle = useBattleMock(s => s.battles.find(b => b.id === id && directionOf(b) === 'in' && b.status === 'pending'));
+  const battle = row && row.status === 'pending' && row.opponent === me ? row : null;
+  const fromName = battle ? profiles[battle.created_by]?.nickname ?? T('bat.opponent') : '';
 
-  // 9/16 플래그 (훅 뒤 — rules-of-hooks): 슬라이스 2까지 inert-리다이렉트
-  if (!BATTLE_ENABLED) return <Redirect href="/(tabs)/groups" />;
-
-  function accept() {
-    if (!battle) return;
-    useBattleMock.getState().acceptInvite(battle.id);
-    router.back();
-  }
-  function decline() {
-    if (!battle) return;
-    useBattleMock.getState().declineInvite(battle.id);
-    router.back();
+  async function act(kind: 'accept' | 'decline') {
+    if (!battle || busy) return;
+    setBusy(true);
+    try {
+      if (kind === 'accept') { await useBattles.getState().accept(battle.id); track('battle_accept'); }
+      else await useBattles.getState().decline(battle.id);
+      router.back();
+    } catch (e: unknown) {
+      const code = e instanceof ApiError ? e.code : null;
+      Alert.alert(t('bat.inviteTitle'), code === 'battle_invite_expired' ? t('bat.inviteExpired') : errorMessage(e));
+      void useBattles.getState().refresh();
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -56,25 +69,25 @@ export default function BattleInviteScreen() {
         <>
           <ScrollView contentContainerStyle={{ padding: S.lg, paddingBottom: insets.bottom + 120 }}>
             <View style={[st.card, shadows.sm]}>
-              <Text style={st.inviteEmoji}>{battle.emoji}</Text>
-              <Avatar name={battle.opponent.nickname} size={64} photoUrl={null} />
-              <Text style={st.inviteSub}>{tfIn(lang, 'bat.inviteSub', { name: battle.opponent.nickname })}</Text>
+              <Text style={st.inviteEmoji}>{battle.emoji ?? '⚡'}</Text>
+              <Avatar name={fromName} size={64} photoUrl={profiles[battle.created_by]?.avatar_url ?? null} />
+              <Text style={st.inviteSub}>{tfIn(lang, 'bat.inviteSub', { name: fromName })}</Text>
               {battle.title ? <Text style={st.battleTitle}>{battle.title}</Text> : null}
-              {/* 룰 명시 (spec Q4 필수 — 30분 정산 마감 포함) */}
               <BattleTermsCard durationDays={battle.duration_days} />
             </View>
           </ScrollView>
           <View style={[st.footer, { paddingBottom: insets.bottom + 10 }]}>
-            <Pressable onPress={decline} style={[st.btn, st.btnDecline]}>
+            <Pressable onPress={() => act('decline')} disabled={busy} style={[st.btn, st.btnDecline]}>
               <Text style={st.btnDeclineTxt}>{T('bat.declineBtn')}</Text>
             </Pressable>
-            <Pressable onPress={accept} style={[st.btn, st.btnAccept]}>
-              <Text style={st.btnAcceptTxt}>{T('bat.acceptBtn')}</Text>
+            <Pressable onPress={() => act('accept')} disabled={busy} style={[st.btn, st.btnAccept, busy && { opacity: 0.6 }]}>
+              {busy ? <ActivityIndicator size="small" color="#0D1A06" /> : <Text style={st.btnAcceptTxt}>{T('bat.acceptBtn')}</Text>}
             </Pressable>
           </View>
         </>
+      ) : !loaded && !row ? (
+        <View style={st.goneWrap}><ActivityIndicator size="large" color={C.accent} /></View>
       ) : (
-        // 이미 처리됐거나 만료된 초대 — 정직한 부재 상태 (dead space 금지)
         <View style={st.goneWrap}>
           <Icon name="mail-open-outline" size={36} color={C.faint} />
           <Text style={st.goneTxt}>{T('bat.inviteGone')}</Text>
