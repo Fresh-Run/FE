@@ -1213,7 +1213,12 @@ export default function TrackingScreen() {
   // BISECT A2: the sheet content pads by the floating controls' footprint
   const controlSpace = insets.bottom + CTRL_BOTTOM + CTRL_LG + 12;
   // BISECT C: compact detent = banner + that footprint (was COMPACT_VISIBLE 100)
-  const runSnaps = useMemo(() => [BANNER_H + controlSpace, sheetH], [sheetH, controlSpace]);
+  // BISECT D: expanded = the full window for free runs (RunLive board — the
+  // map is gone behind the stats); course runs keep the map strip (sheetH).
+  const runSnaps = useMemo(
+    () => [BANNER_H + controlSpace, course ? sheetH : winH],
+    [sheetH, controlSpace, course, winH],
+  );
   const [detent, setDetent] = useState<'expanded' | 'compact'>('expanded');
   // Slidable only mid-run; idle needs the start button, countdown is locked
   const canSlide = state === 'running' || state === 'paused';
@@ -1676,9 +1681,11 @@ export default function TrackingScreen() {
           pointerEvents={detent === 'expanded' ? 'auto' : 'none'}
           style={[st.expandedWrap, !idle ? expandedFade : null]}
         >
-          {/* BISECT A1: RunLive stack (no inset pad — slice D). BISECT B: tap toggles the detent. */}
+          {/* BISECT A1: RunLive stack. BISECT B: tap toggles the detent.
+              BISECT D: free runs pad by the top inset (the sheet covers the
+              status bar at full height). */}
           {!idle && (
-            <Pressable onPress={toggleDetent} style={st.live} accessibilityRole="button" accessibilityLabel={t('rl.hintDown')}>
+            <Pressable onPress={toggleDetent} style={[st.live, !course && { paddingTop: insets.top }]} accessibilityRole="button" accessibilityLabel={t('rl.hintDown')}>
               <Text style={st.liveCaption}>{course ? course.title : tfIn(lang, 'rl.caption', { date: fmtDateAbs(new Date().toISOString(), lang) })}</Text>
               <Text style={st.liveLbl}>{t('rl.time')}</Text>
               <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.liveTime}>{fmtElapsed(elapsedSec)}</Text>
