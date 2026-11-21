@@ -1186,6 +1186,8 @@ export default function TrackingScreen() {
   // pure JS, Expo Go-safe. ──
   const sheetH = winH - SHEET_TOP;
   const runSnaps = useMemo(() => [COMPACT_VISIBLE, sheetH], [sheetH]); // BISECT baseline = 4a
+  // BISECT A2: the sheet content pads by the fixed control bar's footprint
+  const controlSpace = insets.bottom + CONTROL_GAP + CONTROL_H + 12;
   const [detent, setDetent] = useState<'expanded' | 'compact'>('expanded');
   // Slidable only mid-run; idle needs the start button, countdown is locked
   const canSlide = state === 'running' || state === 'paused';
@@ -1620,22 +1622,20 @@ export default function TrackingScreen() {
         backgroundStyle={st.sheetBg}
         handleIndicatorStyle={st.handleIndicator}
       >
-        <BottomSheetView style={{ paddingBottom: Math.max(insets.bottom, 12) }}>
-        {/* Compact strip — glanceable time/distance + pause + mini hold-stop */}
+        <BottomSheetView style={{ paddingBottom: idle ? Math.max(insets.bottom, 12) : controlSpace }}>
+        {/* BISECT A2: compact = RunMap banner (one line, plain view — no
+            Pressable/toggle yet, that is slice B). Pause + 종료 live in the
+            fixed control bar below; the in-sheet controls row is gone. */}
         {!idle && (
           <Reanimated.View
             pointerEvents={detent === 'compact' ? 'auto' : 'none'}
-            style={[st.compactStrip, compactFade]}
+            style={[st.banner, compactFade]}
           >
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={st.compactTime}>{fmtElapsed(elapsedSec)}</Text>
-              <Text style={st.compactDist}>{fmtDist(distanceKm, units, 2)} {distUnit(units)}</Text>
-            </View>
-            <View style={st.compactCluster}>
-              <Pressable onPress={togglePause} style={[st.compactPauseBtn, accentShadow(C.accent)]}>
-                <Icon name={running ? 'pause' : 'play'} size={20} color={C.accentText} />
-              </Pressable>
-              <HoldStop onComplete={endRun} size={44} showLabel={false} gestureRef={holdRefCompact} />
+            <View style={st.bannerPress}>
+              <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.bannerLine} numberOfLines={1}>
+                {fmtElapsed(elapsedSec)}<Text style={st.bannerSep}>  ·  </Text>{paceDisplay}<Text style={st.bannerSep}>  ·  </Text>{fmtDist(distanceKm, units, 2)}<Text style={st.bannerUnit}> {distUnit(units)}</Text>
+              </Text>
+              <Text style={st.bannerHint}>{t('rl.hintUp')}</Text>
             </View>
           </Reanimated.View>
         )}
@@ -1759,8 +1759,9 @@ export default function TrackingScreen() {
           </View>
 
           </>)}
-          {/* ── Controls — directly under the coach card (dead space died) ── */}
-          {idle ? (
+          {/* ── Controls (idle only — running controls live in the fixed
+                 bar; BISECT A2 removed the in-sheet row) ── */}
+          {idle && (
             <View style={st.controls}>
               <Pressable
                 onPress={handleStart}
@@ -1769,25 +1770,6 @@ export default function TrackingScreen() {
                 <Icon name="play" size={22} color={C.accentText} />
                 <Text style={st.startTxt}>{t('trk.start')}</Text>
               </Pressable>
-            </View>
-          ) : (
-            <View style={[st.controls, st.controlsRow]}>
-              {/* 8/8 recon: this button was a Pressable wired to NOTHING (dead
-                  affordance). Now the same session mute as the map-chrome pill —
-                  one state, two mirrors. No coach (free / voice_cue off) =
-                  dimmed-disabled: nothing to mute, shown honestly. */}
-              <Pressable
-                disabled={!(isPremium && voiceCue)}
-                onPress={() => { setCoachMuted(m => { setSessionMuted(!m); return !m; }); }}
-                accessibilityLabel={coachMuted ? t('trk.voiceOn') : t('trk.voiceOff')}
-                style={[st.speakerBtn, shadows.sm, !(isPremium && voiceCue) && { opacity: 0.35 }]}
-              >
-                <Icon name={coachMuted ? 'volume-mute-outline' : 'volume-medium-outline'} size={22} color={coachMuted ? C.sub : C.text} />
-              </Pressable>
-              <Pressable onPress={togglePause} style={[st.pauseBtn, accentShadow(C.accent)]}>
-                <Icon name={running ? 'pause' : 'play'} size={32} color={C.accentText} />
-              </Pressable>
-              <HoldStop onComplete={endRun} gestureRef={holdRefExpanded} />
             </View>
           )}
         </Reanimated.View>
