@@ -191,6 +191,11 @@ export const ko = {
 
   // ── home greeting + AI banner (core subset — the rest of home stays ko) ─
   'home.greeting': '안녕하세요, {name}님',
+  'home.greetMorning': '좋은 아침, {name}님',
+  'home.greetAfternoon': '좋은 오후, {name}님',
+  'home.greetEvening': '좋은 저녁, {name}님',
+  'home.recommend': '추천: {course} {km}',
+  'home.bellA11y': '알림',
   'home.runner': '러너',
   'home.aiBadge': 'AI 추천 코스',
   'home.aiQuotaOut': '이번 주 무료 생성을\n다 썼어요',

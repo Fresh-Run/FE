@@ -9,8 +9,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { KudosSheet } from '@/components/kudos-sheet';
 import { SuggestedRunnersRow, useSuggestedRunners } from '@/components/suggested-runners';
-import { tfIn, tIn, useLang, useT } from '@/lib/i18n';
-import { DAY_KEYS_FULL, fmtMonthDay, foldMinutes } from '@/lib/run-format';
+import { tfIn, useLang, useT } from '@/lib/i18n';
+import { DAY_KEYS_FULL, distUnit, fmtDist, foldMinutes } from '@/lib/run-format';
 import { useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useNavigation } from 'expo-router';
@@ -27,8 +27,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Avatar } from '@/components/avatar';
-import { useTabBarInset } from '@/components/fresh-tab-bar';
+import { RUN_ROUTE, useTabBarInset } from '@/components/fresh-tab-bar';
 import { PendingRunRecovery } from '@/components/pending-run-recovery';
 import { Icon } from '@/components/ui';
 import * as Location from 'expo-location';
@@ -41,16 +40,17 @@ import { getUnreadCount } from '@/lib/notifications-api';
 import { openProfile } from '@/lib/profile-nav';
 import { type FeedRun } from '@/lib/feed-api';
 import { kudosRun, unkudosRun } from '@/lib/run-social-api';
-import { shadows, spacing as S, type Tokens } from '@/lib/theme';
+import { spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { useQuota } from '@/store/use-quota';
 import { getMyRecentRuns } from '@/lib/runs-api';
+import { getMyRoutes } from '@/lib/routes-api';
+import { getBookmarkedRoutes } from '@/lib/bookmarks-api';
 import { prewarmTracks } from '@/lib/track-cache';
 import { useSettings } from '@/store/use-settings';
 import { useStore } from '@/store/use-store';
 import type { Coordinate } from '@/types';
 import { useWeather } from '@/hooks/use-weather';
-import { weatherIcon, weatherTone, type WeatherTone } from '@/lib/weather-api';
 
 // 8/28: home feed list slots — run cards + two sentinel kinds (suggest row,
 // AI banner). Sentinels are data-driven so placement scrolls WITH the feed.
@@ -65,217 +65,99 @@ const SUGGEST_AFTER_N = 3;
 // the flagship CTA is never absent (see the footer's invariant note).
 const BANNER_EVERY_N = 10;
 
-// ─── Constants / helpers ──────────────────────────────────────────────────────
-
-// Plain helper — tokens passed in (hooks live in components only)
-function verdictColor(C: Tokens, tone: WeatherTone): string {
-  if (tone === 'good') return C.accent;
-  if (tone === 'ok')   return C.sun;
-  return C.danger;
+// ─── Header (redesign item 7a, 2026-11-21 — canvas "피드 퍼스트 홈", Main.dc.html) ──
+// Greeting by hour · one sub-line (weather temp + verdict · 추천 course) ·
+// bell (owner ruling: small bell left of 뛰러가기, unread dot kept) · neon
+// 뛰러가기 → the run screen (same route as the nav bar's run button). The
+// old date line, avatar door and weather strip are gone — the sub-line is
+// the weather-detail door; the profile door lives on the MY tab.
+//
+// 추천 source: the server has no recommendation endpoint (probed
+// 2026-11-21) — newest own course (GET /routes), else newest bookmarked
+// course (GET /routes/bookmarked), else the clause is omitted.
+function greetKey(hour: number): 'home.greetMorning' | 'home.greetAfternoon' | 'home.greetEvening' {
+  if (hour >= 5 && hour < 11) return 'home.greetMorning';
+  if (hour >= 11 && hour < 18) return 'home.greetAfternoon';
+  return 'home.greetEvening';
 }
 
-// 8/6 consolidation: date words live in lib/run-format (the one home)
-function formatDate(lang: 'ko' | 'en'): string {
-  const d = new Date();
-  const day = tIn(lang, DAY_KEYS_FULL[d.getDay()]);
-  return `${day}, ${fmtMonthDay(d, lang)}`;
-}
-
-// ─── Greeting header ──────────────────────────────────────────────────────────
-
-function Greeting({ name, photoUrl, showBellDot, onBell }: { name: string; photoUrl: string | null; showBellDot: boolean; onBell: () => void }) {
+function Header({ name, showBellDot, onBell }: { name: string; showBellDot: boolean; onBell: () => void }) {
   const C = useTokens();
-  const gst = useStyles(makeGst);
-  // own lang subscription (2026-08-03 formatter-cache fix): this component
-  // renders under the header useMemo (no lang dep) — without subscribing it
-  // never re-renders on a flip; with it, the memo's element-reference bailout
-  // is irrelevant. lang passed into formatDate/tfIn keeps the compiler's
-  // expression cache locale-keyed.
-  const lang = useLang();
-  return (
-    <View style={gst.row}>
-      <View style={{ minWidth: 0, flex: 1 }}>
-        <RNText style={gst.date}>{formatDate(lang)}</RNText>
-        <RNText style={gst.heading} numberOfLines={1}>{tfIn(lang, 'home.greeting', { name })}</RNText>
-      </View>
-      <View style={gst.actions}>
-        <Pressable onPress={onBell} style={[gst.bellBtn, shadows.sm]}>
-          <Icon name="notifications-outline" size={20} color={C.text} />
-          {/* Truthful dot (S-cluster batch 2): real unread count on focus —
-              the item-17-era hardcoded dot is retired */}
-          {showBellDot && <View style={gst.notifDot} />}
-        </Pressable>
-        {/* Avatar → 내 프로필 (social profile; canvas 2026-07-07) */}
-        <Pressable onPress={() => router.push('/my-profile' as any)} hitSlop={6}>
-          <Avatar name={name} size={38} ring={C.border} photoUrl={photoUrl} letterSpacing={-0.3} />
-        </Pressable>
-      </View>
-    </View>
-  );
-}
-
-const makeGst = (C: Tokens) => StyleSheet.create({
-  row:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
-  date:     { fontSize: 12.5, color: C.faint, letterSpacing: -0.2, fontWeight: '600' },
-  heading:  { fontSize: 20, fontWeight: '700', letterSpacing: -0.7, color: C.text, marginTop: 3 },
-  actions:  { flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 0 },
-  bellBtn:  { width: 42, height: 42, borderRadius: 999, borderWidth: 1, borderColor: C.border, backgroundColor: C.surface, alignItems: 'center', justifyContent: 'center' },
-  notifDot: { position: 'absolute', top: 9, right: 10, width: 7, height: 7, borderRadius: 4, backgroundColor: C.danger, borderWidth: 1.5, borderColor: C.surface },
-});
-
-// ─── Weather strip ────────────────────────────────────────────────────────────
-
-function WeatherStrip({ onPress }: { onPress: () => void }) {
-  const C = useTokens();
-  const wst = useStyles(makeWst);
-  const wT = useT();
-  const wLang = useLang(); // 8/6 ruling ②: en-only name floor 58
-  // W2: live data (shared useWeather cache/TTL; quiet dashes; Seoul fallback).
-  // SINGLE ROW, FIXED-SIZE (⑥ final, owner ruling 2026-07-16): every text
-  // in THIS strip is allowFontScaling={false} — a deliberate one-component
-  // design-control exception, sized at the written font sizes (the 1.0
-  // render), pixel-identical across devices/OS text settings. The global
-  // Dynamic Type question stays OPEN for a future ruling (ledgered).
-  // Owner-ruled 7/29 (v3) + v4 (8/3, live screenshot — eyes overrule math):
-  // divider fixed; right side never yields; name ellipsizes ONLY beyond the
-  // 5-6-ko-char floor. v4 killed the AQI grade WORD (dot color carries it,
-  // traffic-light C.aqi) to buy the name its room; 5-char domestic names
-  // render WHOLE at 375pt — the binding constraint the layout solves for.
-  const { weather: w, placeName } = useWeather();
-  const tone = w ? weatherTone(w.running_index.score) : null;
-  const vc = tone ? verdictColor(C, tone) : null;
-  // T4 (phase-2 ruling): fallback sun color via token
-  const icon = w ? weatherIcon(w.condition_code, w.is_day) : { name: 'sunny', color: C.sun };
-  return (
-    <Pressable onPress={onPress} style={[wst.strip, shadows.sm]}>
-      <Icon name={icon.name as any} size={26} color={icon.color} />
-      <View style={wst.tempGroup}>
-        <RNText style={wst.temp} allowFontScaling={false}>{w ? `${Math.round(w.temp_c)}°` : '--°'}</RNText>
-        {/* 8/6 ruling ②: en floor 58 — the v4 BINDING constraint is 5-ko-char
-            names whole (≈58px); 68 was the 6-char nicety. ko keeps 68. At 58,
-            en states Fair/Good render fully clean; Caution/Excellent/Not-
-            recommended still engage the chip belt (11/25/50px) until her
-            short-label map lands (ask on record). */}
-        <RNText style={[wst.area, wLang === 'en' && { minWidth: 58 }]} numberOfLines={1} ellipsizeMode="tail" allowFontScaling={false}>{placeName ?? wT('wx.locating')}</RNText>
-      </View>
-      <View style={wst.divider} />
-      <View style={wst.metrics}>
-        <View style={wst.metric}>
-          <Icon name="water-outline" size={13} color={C.faint} />
-          <RNText style={wst.metricTxt} allowFontScaling={false}>{w ? `${w.humidity_pct}%` : '—'}</RNText>
-        </View>
-        {/* pm10 nullable on upstream outage — hide, don't fake */}
-        {w?.pm10 ? (
-          <View style={wst.pmGroup}>
-            <View style={[wst.aqiDot, { backgroundColor: C.aqi[w.pm10.grade] ?? C.faint }]} />
-            {/* v4 (owner-ruled): the grade WORD is gone — the dot's traffic-
-                light color carries it. Weather-detail keeps full grade words.
-                RE-FIXTURE (8/6, the last i18n docket): label keyed — en
-                "Air quality" (OWNER RULING 8/6, overriding the pm10-vs-CAI
-                semantic-precision argument: user comprehension wins).
-                Width math (실측-델타): ko 미세먼지 ≈50px ↔ en ≈62px
-                (Δ≈+12px) → base 298 ≤ 309, slack 11px — absorbed, no
-                layout change. The REAL
-                en pressure is the server-lang verdict chip (최고 24px ↔
-                "Excellent" ≈60px, pre-existing since v118, not this fix):
-                worst-case en ≈ +39px → the NAME yields, but its minWidth 68
-                still fits a 5-ko-char domestic name whole (≈58px) — the v4
-                binding constraint survives; 6+/latin names ellipsize (the
-                accepted Hobart rule). Off-edge impossible: single flexible
-                box + numberOfLines=1. Glyph-model caveat on record — the
-                gate's device look is the 실측. */}
-            <RNText style={wst.metricTxt} allowFontScaling={false}>
-              {wT('wx.pmLabel')}
-            </RNText>
-          </View>
-        ) : null}
-      </View>
-      {w && vc ? (
-        <View style={[wst.verdict, { backgroundColor: vc + '1A' }]}>
-          <View style={[wst.verdictDot, { backgroundColor: vc }]} />
-          <RNText style={wst.verdictTxt} numberOfLines={1} allowFontScaling={false}>{w.running_index.label}</RNText>
-        </View>
-      ) : null}
-      <View style={{ marginLeft: 2 }}>
-        <Icon name="chevron-forward" size={16} color={C.faint} />
-      </View>
-    </Pressable>
-  );
-}
-
-const makeWst = (C: Tokens) => StyleSheet.create({
-  strip:      { width: '100%', flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 16, paddingTop: 11, paddingBottom: 11, paddingLeft: 14, paddingRight: 12 },
-  // Owner-ruled 7/29: divider fixed; right side never yields; name
-  // ellipsizes. Supersedes v1 (all-rigid) and v2 (dual-floor flex).
-  // Mechanics: metrics = natural width, shrink-0, AUTO basis (the v0
-  // zero-box overlap lesson stands — never basis 0); tempGroup is the
-  // ONLY flexible box (grows into slack, shrinks first and alone).
-  tempGroup:  { flexDirection: 'row', alignItems: 'baseline', gap: 6, flexGrow: 1, flexShrink: 1, minWidth: 0 },
-  temp:       { fontSize: 22, fontWeight: '700', color: C.text, letterSpacing: -0.8, flexShrink: 0 },
-  // v4: the v2 name floor RETURNS (binding constraint: 5-6 ko chars whole
-  // at 375pt — the grade word died to buy this room); ellipsis is for
-  // genuinely long names only.
-  area:       { fontSize: 11.5, color: C.faint, letterSpacing: -0.2, flexShrink: 10, minWidth: 68 },
-  divider:    { width: 1, height: 26, backgroundColor: C.border, flexShrink: 0 },
-  metrics:    { flexDirection: 'row', gap: 8, flexShrink: 0, alignItems: 'center' },
-  metric:     { flexDirection: 'row', alignItems: 'center', gap: 4, flexShrink: 0 },
-  // v3: the ⑥-r4 minWidth-floor/seam compact machinery is REMOVED — with a
-  // shrink-0 right side the label can never compress, so the floor and the
-  // ellipsis seam protect nothing. Natural box, full '미세먼지 {grade}'.
-  pmGroup:    { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  metricTxt:  { fontSize: 12.5, fontWeight: '600', color: C.text },
-  aqiDot:     { width: 6, height: 6, borderRadius: 3, flexShrink: 0 },
-  // 8/6 re-fixture BELT (judgment, flagged for the gate): shrink-0 → shrink-1
-  // + maxWidth. The 7/29 "right side never yields" ruling protected the ko
-  // layout; her v118 en chip labels ("Not recommended" ≈97px vs 비추천 36px)
-  // can push the row OFF-EDGE at 375pt — clipping past the border is worse
-  // than a contained yield. With ko labels (≤36px) and the proposed short en
-  // map this belt NEVER engages; it exists only so the two long en states
-  // truncate visibly instead of clipping silently. The FIX is her map
-  // (ask drafted): Excellent→Great · Not recommended→Avoid.
-  verdict:    { flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5, flexShrink: 1, maxWidth: 120 },
-  verdictDot: { width: 7, height: 7, borderRadius: 4 },
-  verdictTxt: { fontSize: 12, fontWeight: '700', color: C.text, letterSpacing: -0.2 },
-});
-
-// ─── Feed tabs ────────────────────────────────────────────────────────────────
-
-function FeedTabs({ tab, setTab }: { tab: string; setTab: (v: string) => void }) {
-  const C = useTokens();
-  const ftt = useStyles(makeFtt);
-  // 8/4 global (amended same-day: 전국 was FALSE — her scope=all includes
-  // overseas runs, the SeYoon-NY example): scope-neutral label (hardcoded
-  // ko, slice-7 file — census note). Content stays 20km-bounded until her
-  // deploy (expected, ledgered).
+  const hst = useStyles(makeHst);
   const T = useT();
-  const radiusLabel = T('home.allRunners');
+  const lang = useLang();
+  const units = useSettings(s => s.settings.units);
+  const { weather: w } = useWeather(); // shared cache/TTL, Seoul fallback — the strip's source, unchanged
+  const [course, setCourse] = useState<{ name: string; km: number } | null>(null);
+  useEffect(() => {
+    let alive = true;
+    getMyRoutes()
+      .then(rs => rs[0]
+        ? { name: rs[0].summary, km: rs[0].total_distance_km }
+        : getBookmarkedRoutes().then(bs => (bs[0] ? { name: bs[0].summary, km: bs[0].total_distance_km } : null)))
+      .then(c => { if (alive) setCourse(c); })
+      .catch(() => { /* clause omitted — never invented */ });
+    return () => { alive = false; };
+  }, []);
+  const wx = w ? `${Math.round(w.temp_c)}° ${w.running_index.label}` : null;
+  const rec = course ? tfIn(lang, 'home.recommend', { course: course.name, km: `${fmtDist(course.km, units, 1)} ${distUnit(units)}` }) : null;
+  const sub = [wx, rec].filter(Boolean).join(' · ');
   return (
-    <View style={ftt.row}>
-      <View style={ftt.seg}>
-        {/* ids = SENTINEL VALUES (~12 comparison sites key on them — the
-            region-'전체' pattern); display resolves through keys */}
-        {([['친구', 'home.tabFriends'], ['전체', 'home.tabAll']] as const).map(([id, labelKey]) => (
-          <Pressable key={id} onPress={() => setTab(id)} style={[ftt.btn, tab === id && ftt.btnActive, tab === id && shadows.sm]}>
-            <RNText style={[ftt.btnTxt, { color: tab === id ? C.text : C.faint }]}>{T(labelKey)}</RNText>
-          </Pressable>
-        ))}
+    <View style={hst.row}>
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <RNText style={hst.greet} numberOfLines={1}>{tfIn(lang, greetKey(new Date().getHours()), { name })}</RNText>
+        <Pressable onPress={() => router.push('/weather-detail')} hitSlop={6} accessibilityRole="link">
+          <RNText style={hst.sub} numberOfLines={1}>{sub || T('wx.locating')}</RNText>
+        </Pressable>
       </View>
-      <View style={ftt.loc}>
-        <Icon name="location-outline" size={13} color={C.faint} />
-        <RNText style={ftt.locTxt}>{tab === '전체' ? radiusLabel : T('home.followingLabel')}</RNText>
+      <Pressable onPress={onBell} hitSlop={8} style={({ pressed }) => [hst.bell, pressed && { opacity: 0.7 }]} accessibilityRole="button" accessibilityLabel={T('home.bellA11y')}>
+        <Icon name="notifications-outline" size={20} color={C.text} />
+        {showBellDot && <View style={hst.dot} />}
+      </Pressable>
+      <Pressable onPress={() => router.push(RUN_ROUTE as never)} style={({ pressed }) => [hst.go, pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] }]} accessibilityRole="button">
+        <RNText style={hst.goTxt}>{T('rt.go')}</RNText>
+      </Pressable>
+    </View>
+  );
+}
+
+// 피드 title + 친구 / 전체 chips (board: 26/900 title; chips 12px, radius 12,
+// active = surface, inactive = neutral). ids stay the SENTINEL VALUES
+// ('친구' / '전체' — ~12 comparison sites key on them); labels via keys.
+function FeedTitle({ tab, setTab }: { tab: string; setTab: (v: string) => void }) {
+  const C = useTokens();
+  const hst = useStyles(makeHst);
+  const T = useT();
+  return (
+    <View style={hst.titleRow}>
+      <RNText style={hst.title}>{T('tab.feed')}</RNText>
+      <View style={hst.chips}>
+        {([['친구', 'home.tabFriends'], ['전체', 'home.tabAll']] as const).map(([id, labelKey]) => {
+          const on = tab === id;
+          return (
+            <Pressable key={id} onPress={() => setTab(id)} style={[hst.chip, { backgroundColor: on ? C.surface : C.surfaceAlt }]} accessibilityRole="tab" accessibilityState={{ selected: on }}>
+              <RNText style={[hst.chipTxt, on ? { fontWeight: '700', color: C.text } : { fontWeight: '500', color: C.sub }]}>{T(labelKey)}</RNText>
+            </Pressable>
+          );
+        })}
       </View>
     </View>
   );
 }
 
-const makeFtt = (C: Tokens) => StyleSheet.create({
-  row:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
-  seg:      { flexDirection: 'row', gap: 3, backgroundColor: C.surfaceAlt, borderWidth: 1, borderColor: C.border, borderRadius: 999, padding: 3 },
-  btn:      { height: 32, borderRadius: 999, paddingHorizontal: 18, alignItems: 'center', justifyContent: 'center' },
-  btnActive:{ backgroundColor: C.surface },
-  btnTxt:   { fontSize: 13, fontWeight: '700', letterSpacing: -0.3 },
-  loc:      { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  locTxt:   { fontSize: 12, color: C.faint, letterSpacing: -0.2, fontWeight: '600' },
+const makeHst = (C: Tokens) => StyleSheet.create({
+  row:      { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  greet:    { fontSize: 15, fontWeight: '700', color: C.text, letterSpacing: -0.3 },
+  sub:      { fontSize: 11, color: C.sub, marginTop: 2, letterSpacing: -0.1 },
+  bell:     { width: 40, height: 40, borderRadius: 20, backgroundColor: C.surface, alignItems: 'center', justifyContent: 'center' },
+  dot:      { position: 'absolute', top: 9, right: 10, width: 7, height: 7, borderRadius: 4, backgroundColor: C.danger, borderWidth: 1.5, borderColor: C.surface },
+  go:       { backgroundColor: C.neon, borderRadius: 14, paddingHorizontal: 18, paddingVertical: 11 },
+  goTxt:    { fontSize: 13.5, fontWeight: '900', color: '#121712', letterSpacing: -0.2 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  title:    { fontSize: 26, fontWeight: '900', color: C.text, letterSpacing: -0.4 },
+  chips:    { flexDirection: 'row', gap: 8 },
+  chip:     { borderRadius: 12, paddingHorizontal: 14, paddingVertical: 7 },
+  chipTxt:  { fontSize: 12, letterSpacing: -0.2 },
 });
 
 // ─── AI banner ────────────────────────────────────────────────────────────────
@@ -469,7 +351,6 @@ export default function HomeScreen() {
   const insets      = useSafeAreaInsets();
   const tabBarInset = useTabBarInset(); // 홈 was the last clipper — floating pill overlap
   const displayName = useStore((s) => s.displayName);
-  const photoUrl    = useStore((s) => s.photoUrl);
   const signOut     = useStore((s) => s.signOut);
   useEffect(() => { useQuota.getState().hydrate(); }, []); // banner quota truth
 
@@ -617,16 +498,13 @@ export default function HomeScreen() {
   const header = useMemo(() => (
     <View>
       <View style={{ paddingTop: insets.top + 12, paddingHorizontal: S.gutter }}>
-        <Greeting name={name} photoUrl={photoUrl} showBellDot={unread > 0} onBell={() => router.push('/notifications' as any)} />
+        <Header name={name} showBellDot={unread > 0} onBell={() => router.push('/notifications' as any)} />
       </View>
-      <View style={{ paddingTop: 14, paddingHorizontal: S.gutter }}>
-        <WeatherStrip onPress={() => router.push('/weather-detail')} />
-      </View>
-      <View style={{ paddingTop: 22, paddingBottom: 14, paddingHorizontal: S.gutter }}>
-        <FeedTabs tab={tab} setTab={setTab} />
+      <View style={{ paddingTop: 22, paddingBottom: 6, paddingHorizontal: S.gutter }}>
+        <FeedTitle tab={tab} setTab={setTab} />
       </View>
     </View>
-  ), [insets.top, name, photoUrl, unread, tab]);
+  ), [insets.top, name, unread, tab]);
 
   return (
     <View style={{ flex: 1, backgroundColor: C.bg }}>
