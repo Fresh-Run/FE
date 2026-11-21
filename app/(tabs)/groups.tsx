@@ -1,78 +1,63 @@
 /**
- * 커뮤니티 tab — crew browse + my crews.
+ * 그룹 tab — redesign item 8 (2026-11-21). Shell + 크루 view from canvas
+ * CommV1.dc.html ("커뮤니티 · 크루 탭 (V1 확정 구조)"): 커뮤니티 title ·
+ * search · 크루 / 배틀 text tabs · 내 크루 cover cards (이번 주 함께 달린
+ * 거리) · 크루 둘러보기 (two cards + 전체 보기 ›). 배틀 view from BattleB1
+ * (scoreboard) — 8a = READ-ONLY on the real list/detail endpoints (empty
+ * state when none); creation · invites · 전적 ride 8b.
+ *
+ * Owner rulings (2026-11-21): 만들기 › link at the 내 크루 header · 초대 코드
+ * row moved to the browse screen · 랜덤 매칭 omitted (no endpoint) · points
+ * as the score. NOT REDESIGNED, kept behind the cards: crew-detail and every
+ * inside-crew screen, crew-create, crew-browse (today's 둘러보기 verbatim),
+ * user-search, the battle create/invite/detail/settle screens.
  */
 import { useFocusEffect } from '@react-navigation/native';
-import { errorMessage } from '@/lib/error-copy';
-import { regionName } from '@/lib/korea-regions';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router, useNavigation } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  FlatList,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { useTabBarInset } from '@/components/fresh-tab-bar';
+import { Avatar } from '@/components/avatar';
 import { CrewGlyph } from '@/components/crew-glyph';
+import { useTabBarInset } from '@/components/fresh-tab-bar';
 import { SafeImage } from '@/components/safe-image';
 import { Icon } from '@/components/ui';
-import {
-  joinCrew,
-  joinCrewByCode,
-  previewCrewByCode,
-  useBrowseCrews,
-  useMyCrews,
-  type Crew,
-} from '@/hooks/use-crews';
+import { useCrewWeeklyKm } from '@/hooks/use-crew-weekly-km';
+import { joinCrew, useBrowseCrews, useMyCrews, type Crew } from '@/hooks/use-crews';
 import { useCurrentLocation } from '@/hooks/use-current-location';
-import { levelLabel, getMyJoinRequests, searchCrews } from '@/lib/crews-api';
-import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
-import { getCrewFilter, type CrewLocationFilter } from '@/store/crew-filter';
+import { apiFetch } from '@/lib/api';
+import { battleDaysLeft, getBattle, listBattles, type Battle } from '@/lib/battles-api';
+import { errorMessage } from '@/lib/error-copy';
+import { t, tfIn, useLang, useT } from '@/lib/i18n';
+import { spacing as S, type Tokens, DENSE_MAX_FONT_SCALE } from '@/lib/theme';
 import { useJoinRequests } from '@/store/join-requests';
 import { useQuota } from '@/store/use-quota';
-import { t, tfIn, useLang, useT } from '@/lib/i18n';
-import { BattleHomeBody } from '@/components/battle-home-body';
-import { BATTLE_ENABLED } from '@/store/battle-mock';
-import { DAY_LABEL_KEY } from '@/lib/run-format';
+import { useStore } from '@/store/use-store';
 
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+type Tab = 'crew' | 'battle';
 
 function isFull(crew: Crew): boolean {
-  // null max_members = unlimited — never treat as full
   return crew.max_members !== null && crew.member_count >= crew.max_members;
 }
+const fmtKm1 = (km: number) => (Math.round(km * 10) / 10).toFixed(1);
 
-// ─── Tab bar ─────────────────────────────────────────────────────────────────
+// ─── Tabs (board: 16px text, 3px ink underline over a hairline) ───────────────
 
-function CommTabs({ active, onChange }: { active: string; onChange: (v: string) => void }) {
+function CommTabs({ active, onChange }: { active: Tab; onChange: (v: Tab) => void }) {
   const C = useTokens();
   const st = useStyles(makeSt);
-  const T = useT(); // 8/5 stale-locale fix: bare t() froze this tab's strings
+  const T = useT();
   return (
     <View style={st.tabRow}>
-      {([
-        { id: 'crew', label: T('com.tabCrew') },
-        { id: 'discover', label: T('com.tabDiscover') },
-        // 9/1 재룰링: 배틀 = 3번째 톱탭 · 9/16 플래그: 슬라이스 2까지 숨김
-        ...(BATTLE_ENABLED ? [{ id: 'battle', label: T('com.tabBattle') }] : []),
-      ]).map(tab => {
-        const on = active === tab.id;
+      {([['crew', 'com.tabCrew'], ['battle', 'com.tabBattle']] as const).map(([id, key]) => {
+        const on = active === id;
         return (
-          <Pressable key={tab.id} onPress={() => onChange(tab.id)} style={st.tabBtn}>
-            <Text style={[st.tabTxt, { color: on ? C.text : C.faint }]}>{tab.label}</Text>
-            {on && <View style={st.tabUnderline} />}
+          <Pressable key={id} onPress={() => onChange(id)} style={st.tabBtn} accessibilityRole="tab" accessibilityState={{ selected: on }}>
+            <Text style={[st.tabTxt, on ? { color: C.text, fontWeight: '900' } : { color: C.faint, fontWeight: '700' }]}>{T(key)}</Text>
+            {on && <View style={[st.tabUnderline, { backgroundColor: C.text }]} />}
           </Pressable>
         );
       })}
@@ -80,634 +65,267 @@ function CommTabs({ active, onChange }: { active: string; onChange: (v: string) 
   );
 }
 
-// ─── 검색 위치 card (당근식 둘러보기 — level chips removed per canvas) ────────
-
-function LocationCard({ filter, placeName, onPress }: {
-  filter: CrewLocationFilter;
-  placeName: string | null;
-  onPress: () => void;
-}) {
-  const C = useTokens();
-  const st = useStyles(makeSt);
-  const T = useT();
-  const lang = useLang(); // compiler-visible locale for render-path tfIn
-  const label = filter.mode === 'current'
-    ? tfIn(lang, 'com.currentLoc', { name: placeName ?? T('com.locating') })
-    : `${regionName(filter.sido)}${filter.sigungu ? ` · ${regionName(filter.sigungu)}` : ''}`;
-  return (
-    <Pressable onPress={onPress} style={({ pressed }) => [st.locCard, shadows.sm, pressed && { opacity: 0.8 }]}>
-      <View style={st.locIcon}>
-        <Icon name={filter.mode === 'current' ? 'locate' : 'location'} size={16} color={C.accentGrn} />
-      </View>
-      <View style={{ flex: 1, minWidth: 0 }}>
-        <Text style={st.locLabel}>{T('com.searchLoc')}</Text>
-        <Text style={st.locValue} numberOfLines={1}>{label}</Text>
-      </View>
-      <Icon name="chevron-forward" size={16} color={C.faint} />
-    </Pressable>
-  );
-}
-
 // ─── Shared states ────────────────────────────────────────────────────────────
 
-function LoadingState() {
-  const C = useTokens();
+function Centered({ children }: { children: React.ReactNode }) {
   const st = useStyles(makeSt);
-  return (
-    <View style={st.centered}>
-      <ActivityIndicator size="large" color={C.accent} />
-    </View>
-  );
+  return <View style={st.centered}>{children}</View>;
 }
-
 function ErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
   const T = useT();
   const C = useTokens();
   const st = useStyles(makeSt);
   return (
-    <View style={st.centered}>
+    <Centered>
       <Icon name="warning-outline" size={36} color={C.faint} />
       <Text style={st.stateTitle}>{T('com.loadFail')}</Text>
       <Text style={[st.stateSub, { marginTop: 2 }]}>{message}</Text>
-      <Pressable onPress={onRetry} style={st.retryBtn}>
-        <Text style={st.retryTxt}>{T('common.retry')}</Text>
-      </Pressable>
-    </View>
+      <Pressable onPress={onRetry} style={st.retryBtn}><Text style={st.retryTxt}>{T('common.retry')}</Text></Pressable>
+    </Centered>
   );
 }
 
-function EmptyState({ text }: { text: string }) {
+// ─── 내 크루 cover card (board: 206, cover + gradient, 멤버 badge, weekly km) ──
+
+function MyCrewHero({ crew, onPress }: { crew: Crew; onPress: () => void }) {
   const C = useTokens();
   const st = useStyles(makeSt);
-  return (
-    <View style={st.centered}>
-      <Icon name="people-outline" size={42} color={C.faint} />
-      <Text style={st.stateTitle}>{text}</Text>
-    </View>
-  );
-}
-
-// ─── Browse crew card ─────────────────────────────────────────────────────────
-
-function BrowseCrewCard({
-  crew, pending, isMember, onPress, onJoin,
-}: {
-  crew: Crew;
-  pending: boolean;
-  isMember: boolean;
-  onPress: () => void;
-  onJoin: () => void;
-}) {
-  const C = useTokens();
-  const st = useStyles(makeSt);
-  const full = isFull(crew);
-  const tags = crew.active_days?.slice(0, 4) ?? [];
-  // Badge state priority: member > pending (shared store) > full > policy label
   const T = useT();
   const lang = useLang();
-  const badgeLabel = isMember ? T('com.joined')
-    : pending ? T('com.pending')
-    : full ? T('com.closed')
-    : crew.join_policy === 'approval' ? T('com.apply') : T('com.join');
-  const badgeDisabled = isMember || pending || full;
-
+  const km = useCrewWeeklyKm(crew.id);
   return (
-    <Pressable onPress={full ? undefined : onPress} style={[st.card, { opacity: full ? 0.62 : 1 }]}>
-      <View style={st.thumbWrap}>
-        <SafeImage uri={crew.icon_url} style={{ width: '100%', height: 54 }}
-          fallback={<CrewGlyph height={54} />} />
+    <Pressable onPress={onPress} style={({ pressed }) => [st.hero, pressed && { opacity: 0.92 }]} accessibilityRole="button" accessibilityLabel={crew.name}>
+      <SafeImage uri={crew.cover_url ?? crew.icon_url} style={StyleSheet.absoluteFillObject} resizeMode="cover"
+        fallback={<View style={[StyleSheet.absoluteFillObject, { backgroundColor: crew.color ?? C.surfaceAlt }]}><CrewGlyph height={206} /></View>} />
+      <LinearGradient colors={['rgba(18,23,18,0)', 'rgba(18,23,18,0.72)']} locations={[0.35, 1]} style={StyleSheet.absoluteFillObject} />
+      <View style={[st.heroBadge, { backgroundColor: C.surface }]}>
+        <Text style={[st.heroBadgeTxt, { color: C.text }]}>{tfIn(lang, 'com.memberBadge', { n: crew.member_count })}</Text>
       </View>
-
-      <View style={st.cardBody}>
-        <Text style={st.cardName} numberOfLines={1}>{crew.name}</Text>
-        <View style={st.cardMeta}>
-          <Icon name="people-outline" size={12} color={C.faint} />
-          <Text style={st.cardMetaTxt} numberOfLines={1}>
-            {tfIn(lang, 'com.nOfMax', { n: `${crew.member_count}${crew.max_members !== null ? `/${crew.max_members}` : ''}` })} · {crew.area ?? ''}
-          </Text>
+      <View style={st.heroBottom}>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.heroName} numberOfLines={1}>{crew.name}</Text>
+          <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.heroSub}>{T('com.weeklyTogether')}</Text>
         </View>
-        {/* 당근식 location line — distance only in lat/lng mode; location-
-            less crews fall back to region/area text alone */}
-        {(crew.sigungu || crew.distance_km != null) && (
-          <View style={st.cardMeta}>
-            <Icon name="location-outline" size={12} color={C.accentGrn} />
-            <Text style={st.cardLocTxt} numberOfLines={1}>
-              {crew.sigungu ? regionName(crew.sigungu) : crew.area ?? ''}
-              {crew.distance_km != null ? ` · ${crew.distance_km.toFixed(1)}km` : ''}
-            </Text>
-          </View>
-        )}
-        {(tags.length > 0 || crew.level !== '무관') && (
-          <View style={st.tagsRow}>
-            {crew.level !== '무관' && <View style={st.tag}><Text style={st.tagTxt}>{levelLabel(crew.level)}</Text></View>}
-            {tags.map(d => <View key={d} style={st.tag}><Text style={st.tagTxt}>{T(DAY_LABEL_KEY[d] ?? 'dayS.mon')}</Text></View>)}
-          </View>
-        )}
-      </View>
-
-      {/* Join badge — pressable only when actionable */}
-      <Pressable
-        onPress={badgeDisabled ? undefined : onJoin}
-        disabled={badgeDisabled}
-        style={[
-          st.joinBadge,
-          isMember ? st.joinMember : pending ? st.joinPending : full ? st.joinFull : st.joinOpen,
-        ]}
-        hitSlop={6}
-      >
-        <Text style={[st.joinTxt, {
-          color: isMember ? C.sub : pending ? C.accentGrn : full ? C.faint : C.accentText,
-        }]}>
-          {badgeLabel}
+        <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.heroKm}>
+          {km == null ? '–' : fmtKm1(km)}<Text style={st.heroKmUnit}> km</Text>
         </Text>
-      </Pressable>
+      </View>
     </Pressable>
   );
 }
 
-// ─── My crew card ─────────────────────────────────────────────────────────────
+// ─── 둘러보기 mini card (board: cover 92, name, 멤버 N · 주간 X km, 가입) ────────
 
-function MyCrewCard({ crew, onPress }: { crew: Crew; onPress: () => void }) {
-  const C = useTokens();
-  const st = useStyles(makeSt);
-  const T = useT();
-  const lang = useLang();
-  return (
-    <Pressable onPress={onPress} style={[st.card, shadows.sm]}>
-      <View style={st.thumbWrap}>
-        <SafeImage uri={crew.icon_url} style={{ width: '100%', height: 54 }}
-          fallback={<CrewGlyph height={54} />} />
-        {crew.color && !crew.icon_url && (
-          <View style={[st.colorDot, { backgroundColor: crew.color }]} />
-        )}
-      </View>
-
-      <View style={st.cardBody}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-          <Text style={st.cardName} numberOfLines={1}>{crew.name}</Text>
-          {crew.myRole === 'owner' && (
-            <View style={st.ownerBadge}><Text style={st.ownerTxt}>{T('crw.roleOwner')}</Text></View>
-          )}
-        </View>
-        <View style={st.cardMeta}>
-          <Icon name="people-outline" size={12} color={C.faint} />
-          <Text style={st.cardMetaTxt} numberOfLines={1}>
-            {tfIn(lang, 'crw.nMembers', { n: crew.member_count })} · {crew.area ?? ''}
-          </Text>
-        </View>
-        {(crew.level !== '무관' || crew.sport) && (
-          <View style={st.tagsRow}>
-            {crew.level !== '무관' && <View style={st.tag}><Text style={st.tagTxt}>{levelLabel(crew.level)}</Text></View>}
-            {crew.sport && <View style={st.tag}><Text style={st.tagTxt}>{crew.sport}</Text></View>}
-          </View>
-        )}
-      </View>
-
-      <Icon name="chevron-forward" size={16} color={C.faint} />
-    </Pressable>
-  );
-}
-
-// ─── Discover tab ─────────────────────────────────────────────────────────────
-
-function DiscoverTab({ listRef }: { listRef: React.RefObject<FlatList<Crew> | null> }) {
-  const C = useTokens();
-  const st = useStyles(makeSt);
-  const T = useT();
-  const lang = useLang();
-  const tabBarInset = useTabBarInset();
-  const [showFull, setShowFull] = useState(false);
-  // Location filter — set by the region picker (module store), read on focus
-  const [locFilter, setLocFilter] = useState<CrewLocationFilter>(getCrewFilter());
-  const { coordinate, placeName, status: locStatus } = useCurrentLocation();
-
-  // 당근식 params: current mode sends lat/lng once resolved (parameterless
-  // until then). Seoul-fallback class fix: the old `coordinate?.lat` was a
-  // truthiness gate on a never-null value — it sent 시청 coords during the
-  // fetch window; the comment's "once resolved" intent now matches the code.
-  const { crews, loading, error, refetch } = useBrowseCrews(
-    locFilter.mode === 'current'
-      ? {
-          lat: locStatus === 'granted' ? coordinate.lat : undefined,
-          lng: locStatus === 'granted' ? coordinate.lng : undefined,
-          includeFull: showFull,
-        }
-      : { sido: locFilter.sido, sigungu: locFilter.sigungu, includeFull: showFull },
-  );
-  // 신청됨 state lives in the shared store (written here on 202/409, corrected
-  // authoritatively by crew-detail visits) — fixes the stale-badge bug.
-  const pendingMap = useJoinRequests(s => s.pendingByCrewId);
-  const setPending = useJoinRequests(s => s.setPending);
-  const { crews: myCrewList } = useMyCrews();
-  const memberIds = new Set(myCrewList.map(c => c.id));
-
-  // Stage B (S-cluster batch 2): GET /me/join-requests shipped — hydrate the
-  // shared store once per browse mount so 신청중 badges survive relaunch
-  // (pending only; approved/rejected rows are not requests anymore).
-  useEffect(() => {
-    getMyJoinRequests()
-      .then(rows => useJoinRequests.getState().hydrate(
-        rows.filter(r => r.status === 'pending').map(r => r.crew_id)))
-      .catch(() => { /* offline — in-session optimistic state stands */ });
-  }, []);
-
-  // Refetch on focus (back from crew-detail or the region picker) — also
-  // pick up the picker's selection from the module store
-  useFocusEffect(useCallback(() => {
-    setLocFilter(getCrewFilter());
-    refetch();
-  }, [refetch]));
-
-  // 크루 검색 (S-batch2 #7): text search via GET /crews/search — the
-  // start-picker pattern (300ms debounce + seq stale-guard). COMPOSITION:
-  // search OVERRIDES the region filter (the endpoint has no region params —
-  // global name/area/description 부분일치); clearing the query returns to
-  // the filtered browse. Joined-crew exclusion applies to results too.
-  const [query, setQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<Crew[] | null>(null);
-  const searchSeq = useRef(0);
-  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => {
-    if (debounceTimer.current) clearTimeout(debounceTimer.current);
-    const q = query.trim();
-    if (!q) { searchSeq.current++; setSearchResults(null); return; }
-    const seq = ++searchSeq.current;
-    debounceTimer.current = setTimeout(() => {
-      searchCrews(q)
-        .then(rows => { if (searchSeq.current === seq) setSearchResults(rows); })
-        .catch(() => { if (searchSeq.current === seq) setSearchResults([]); });
-    }, 300);
-    return () => { if (debounceTimer.current) clearTimeout(debounceTimer.current); };
-  }, [query]);
-  const searching = query.trim().length > 0;
-
-  if (loading) return <LoadingState />;
-  if (error)   return <ErrorState message={error} onRetry={refetch} />;
-
-  // Full-crew exclusion is server-side (include_full param); joined-crew
-  // exclusion is CLIENT-side (owner ruling ⑥, batch 2) — the browse payload
-  // carries no joined field (probed 2026-07-14), so the useMyCrews set we
-  // already fetch is the source. The at-scale server param stays a docketed
-  // ask. List = server order (distance-ascending when lat/lng were sent).
-  const visible = (searching ? (searchResults ?? []) : crews).filter(c => !memberIds.has(c.id));
-
-  async function handleJoin(crew: Crew) {
-    try {
-      const result = await joinCrew(crew.id);
-      if (result === 'joined') {
-        refetch();
-        router.push({ pathname: '/(community)/crew-detail' as any, params: { crewId: crew.id } });
-      } else if (result === 'pending') {
-        setPending(crew.id, true);
-        Alert.alert(t('crw.appliedDone'), t('crw.appliedDoneSub'));
-      } else {
-        Alert.alert(t('com.joinFail'), t('crw.alreadyJoined'));
-      }
-    } catch (e: unknown) {
-      Alert.alert(t('com.joinFail'), errorMessage(e));
-    }
-  }
-
-  return (
-    <FlatList
-      ref={listRef}
-      data={visible}
-      keyExtractor={c => c.id}
-      renderItem={({ item }) => (
-        <BrowseCrewCard
-          crew={item}
-          pending={!!pendingMap[item.id]}
-          isMember={memberIds.has(item.id)}
-          onPress={() => router.push({ pathname: '/(community)/crew-detail' as any, params: { crewId: item.id } })}
-          onJoin={() => handleJoin(item)}
-        />
-      )}
-      keyboardShouldPersistTaps="handled"
-      ListHeaderComponent={
-        <View>
-          {/* 크루 검색 (#7) — search overrides the region filter (global) */}
-          <View style={st.searchBar}>
-            <Icon name="search" size={16} color={C.faint} />
-            <TextInput
-              value={query}
-              onChangeText={setQuery}
-              placeholder={T('com.searchPh')}
-              placeholderTextColor={C.faint}
-              autoCorrect={false}
-              returnKeyType="search"
-              style={st.searchInput}
-            />
-            {query.length > 0 && (
-              <Pressable onPress={() => setQuery('')} hitSlop={8}>
-                <Icon name="close-circle" size={16} color={C.faint} />
-              </Pressable>
-            )}
-          </View>
-          {searching ? (
-            <View style={st.toggleRow}>
-              <Text style={st.toggleCount}>
-                {searchResults === null ? T('com.searching') : tfIn(lang, 'com.nResults', { n: visible.length })}
-              </Text>
-            </View>
-          ) : (
-            <>
-              <LocationCard
-                filter={locFilter}
-                placeName={placeName}
-                onPress={() => router.push('/region-picker' as never)}
-              />
-              <View style={st.toggleRow}>
-                <Text style={st.toggleCount}>{tfIn(lang, 'com.nCrews', { n: visible.length })}</Text>
-                <Pressable onPress={() => setShowFull(v => !v)} style={st.toggleBtn}>
-                  <Text style={[st.toggleLabel, { color: showFull ? C.accentGrn : C.sub }]}>
-                    {showFull ? T('com.onlyOpen') : T('com.showFull')}
-                  </Text>
-                  <View style={[st.switch, { backgroundColor: showFull ? C.accent : C.border }]}>
-                    <View style={[st.switchThumb, { left: showFull ? 18 : 2 }]} />
-                  </View>
-                </Pressable>
-              </View>
-            </>
-          )}
-        </View>
-      }
-      ListEmptyComponent={
-        searching && searchResults === null
-          ? <ActivityIndicator size="small" color={C.faint} style={{ paddingTop: 40 }} />
-          : <EmptyState text={searching ? T('region.noResults') : T('com.noMatch')} />
-      }
-      contentContainerStyle={{ paddingHorizontal: S.gutter, paddingBottom: tabBarInset }}
-      ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
-      showsVerticalScrollIndicator={false}
-    />
-  );
-}
-
-// ─── Invite code sheet ────────────────────────────────────────────────────────
-// Invented UI (no bundle design yet — canvas design to follow, per approval):
-// code input → preview-by-code → confirm join. Codes are 8 chars, A-Z/2-9.
-
-function InviteCodeSheet({
-  visible, onClose, onJoined,
-}: {
-  visible: boolean;
-  onClose: () => void;
-  onJoined: (crewId: string) => void;
+function BrowseMini({ crew, pending, isMember, onPress, onJoin }: {
+  crew: Crew; pending: boolean; isMember: boolean; onPress: () => void; onJoin: () => void;
 }) {
   const C = useTokens();
-  const ics = useStyles(makeIcs);
+  const st = useStyles(makeSt);
   const T = useT();
   const lang = useLang();
-  const st = useStyles(makeSt);
-  const insets = useSafeAreaInsets();
-  const [code, setCode]       = useState('');
-  const [preview, setPreview] = useState<Crew | null>(null);
-  const [busy, setBusy]       = useState(false);
-  const [error, setError]     = useState<string | null>(null);
-
-  const reset = () => { setCode(''); setPreview(null); setBusy(false); setError(null); };
-  const close = () => { reset(); onClose(); };
-
-  async function handlePreview() {
-    if (code.trim().length < 4 || busy) return;
-    setBusy(true);
-    setError(null);
-    try {
-      const row = await previewCrewByCode(code);
-      setPreview({ ...row, join_policy: (row.join_policy as 'open' | 'approval') ?? 'open' } as unknown as Crew);
-    } catch (e: unknown) {
-      const msg = errorMessage(e);
-      setError(msg.includes('(404)') || msg.includes('찾을 수') ? t('com.codeCheck') : msg || t('com.codeCheck'));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function handleJoin() {
-    if (!preview || busy) return;
-    setBusy(true);
-    setError(null);
-    try {
-      const joined = await joinCrewByCode(code);
-      close();
-      onJoined(joined.id);
-    } catch (e: unknown) {
-      setError(errorMessage(e));
-      setBusy(false);
-    }
-  }
-
+  const km = useCrewWeeklyKm(crew.id);
+  const full = isFull(crew);
+  const label = isMember ? T('com.joined') : pending ? T('com.pending') : full ? T('com.closed') : crew.join_policy === 'approval' ? T('com.apply') : T('com.join');
+  const disabled = isMember || pending || full;
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={close}>
-      {/* ④ keyboard sweep: the code input lives in a BOTTOM sheet — without
-          KAV the keyboard rises straight over it (the named offender) */}
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <Pressable style={ics.overlay} onPress={close}>
-        <Pressable style={[ics.sheet, { paddingBottom: Math.max(insets.bottom, 12) + 12 }]} onPress={() => {}}>
-          <View style={ics.handleRow}><View style={ics.handle} /></View>
-          <Text style={ics.title}>{T('com.codeTitle')}</Text>
-          <Text style={ics.sub}>{T('com.codeSub8')}</Text>
-
-          {!preview ? (
-            <>
-              <TextInput
-                value={code}
-                onChangeText={t => { setCode(t.toUpperCase()); setError(null); }}
-                placeholder={T('com.codePh')}
-                placeholderTextColor={C.faint}
-                autoCapitalize="characters"
-                autoCorrect={false}
-                maxLength={8}
-                style={ics.input}
-              />
-              {error && <Text style={ics.errTxt}>{error}</Text>}
-              <Pressable
-                onPress={handlePreview}
-                disabled={code.trim().length < 4 || busy}
-                style={[ics.primaryBtn, { opacity: code.trim().length < 4 || busy ? 0.4 : 1 }]}
-              >
-                {busy
-                  ? <ActivityIndicator size="small" color={C.accentText} />
-                  : <Text style={ics.primaryTxt}>{T('com.confirm')}</Text>}
-              </Pressable>
-            </>
-          ) : (
-            <>
-              {/* Crew preview card */}
-              <View style={[ics.previewCard, shadows.sm]}>
-                <View style={ics.previewThumb}>
-                  <SafeImage uri={preview.icon_url} style={{ width: '100%', height: 54 }}
-                    fallback={<CrewGlyph height={54} />} />
-                </View>
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text style={st.cardName} numberOfLines={1}>{preview.name}</Text>
-                  <View style={st.cardMeta}>
-                    <Icon name="people-outline" size={12} color={C.faint} />
-                    <Text style={st.cardMetaTxt} numberOfLines={1}>
-                      {tfIn(lang, 'crw.nMembers', { n: preview.member_count })} · {preview.area ?? ''}{preview.is_public ? '' : T('com.privateSuffix')}
-                    </Text>
-                  </View>
-                </View>
-              </View>
-              {error && <Text style={ics.errTxt}>{error}</Text>}
-              <Pressable onPress={handleJoin} disabled={busy} style={[ics.primaryBtn, { opacity: busy ? 0.6 : 1 }]}>
-                {busy
-                  ? <ActivityIndicator size="small" color={C.accentText} />
-                  : <Text style={ics.primaryTxt}>{T('com.joinThis')}</Text>}
-              </Pressable>
-              <Pressable onPress={() => { setPreview(null); setError(null); }} style={ics.secondaryBtn}>
-                <Text style={ics.secondaryTxt}>{T('com.otherCode')}</Text>
-              </Pressable>
-            </>
-          )}
+    <Pressable onPress={onPress} style={({ pressed }) => [st.mini, pressed && { opacity: 0.92 }]} accessibilityRole="button" accessibilityLabel={crew.name}>
+      <View style={st.miniCover}>
+        <SafeImage uri={crew.cover_url ?? crew.icon_url} style={{ width: '100%', height: 92 }} resizeMode="cover" fallback={<CrewGlyph height={92} />} />
+      </View>
+      <View style={st.miniBody}>
+        <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.miniName} numberOfLines={1}>{crew.name}</Text>
+        <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.miniMeta} numberOfLines={1}>
+          {tfIn(lang, 'com.membersWeekly', { n: crew.member_count, km: km == null ? '–' : fmtKm1(km) })}
+        </Text>
+        <Pressable onPress={disabled ? undefined : onJoin} disabled={disabled} style={[st.miniBtn, { borderColor: disabled ? C.border : C.text }]} hitSlop={4} accessibilityRole="button">
+          <Text style={[st.miniBtnTxt, { color: disabled ? C.faint : C.text }]}>{label}</Text>
         </Pressable>
-      </Pressable>
-      </KeyboardAvoidingView>
-    </Modal>
+      </View>
+    </Pressable>
   );
 }
 
-const makeIcs = (C: Tokens) => StyleSheet.create({
-  overlay:   { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.42)' },
-  sheet:     { backgroundColor: C.bg, borderTopLeftRadius: 26, borderTopRightRadius: 26, paddingHorizontal: S.gutter },
-  handleRow: { alignItems: 'center', paddingTop: 10, paddingBottom: 2 },
-  handle:    { width: 38, height: 5, borderRadius: 99, backgroundColor: C.border },
-  title:     { fontSize: 18, fontWeight: '700', color: C.text, letterSpacing: -0.5, marginTop: 12 },
-  sub:       { fontSize: 13, color: C.sub, letterSpacing: -0.2, marginTop: 4, marginBottom: 16 },
-  input:     { height: 54, borderRadius: R.lg, borderWidth: 1.5, borderColor: C.border, backgroundColor: C.surface, paddingHorizontal: 16, fontSize: 18, fontWeight: '700', letterSpacing: 2, color: C.text },
-  errTxt:    { fontSize: 12.5, color: C.danger, letterSpacing: -0.2, marginTop: 8 },
-  primaryBtn:   { height: 52, borderRadius: R.lg, backgroundColor: C.accent, alignItems: 'center', justifyContent: 'center', marginTop: 14 },
-  primaryTxt:   { fontSize: 15.5, fontWeight: '700', color: C.accentText, letterSpacing: -0.3 },
-  secondaryBtn: { height: 44, alignItems: 'center', justifyContent: 'center', marginTop: 4 },
-  secondaryTxt: { fontSize: 14, fontWeight: '600', color: C.sub, letterSpacing: -0.2 },
-  previewCard:  { flexDirection: 'row', alignItems: 'center', gap: 13, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 18, padding: 13 },
-  previewThumb: { width: 54, height: 54, borderRadius: 15, overflow: 'hidden', flexShrink: 0 },
-});
+// ─── 크루 view ────────────────────────────────────────────────────────────────
 
-// ─── My crews tab ─────────────────────────────────────────────────────────────
-
-function MyCrewsTab({ scrollRef }: { scrollRef: React.RefObject<ScrollView | null> }) {
+function CrewTab({ scrollRef }: { scrollRef: React.RefObject<ScrollView | null> }) {
   const C = useTokens();
   const st = useStyles(makeSt);
   const T = useT();
   const tabBarInset = useTabBarInset();
   const { crews, loading, error, signedOut, refetch } = useMyCrews();
-  const [codeSheetOpen, setCodeSheetOpen] = useState(false);
-
-  // Crew-create gate (API_GUIDE 크루 생성 row): free tier may OWN 1 crew;
-  // premium unlimited. Server enforces via 403 premium_required {feature:
-  // "crew_create", limit} — ApiError surfaces that message verbatim when a
-  // real create call exists (creation flow itself is still a later item).
+  const { coordinate, status: locStatus } = useCurrentLocation();
+  // 둘러보기: nearest first when location is granted (server distance order),
+  // server order otherwise; full crews excluded server-side.
+  const browse = useBrowseCrews(locStatus === 'granted' ? { lat: coordinate.lat, lng: coordinate.lng, includeFull: false } : { includeFull: false });
+  const pendingMap = useJoinRequests(s => s.pendingByCrewId);
+  const setPending = useJoinRequests(s => s.setPending);
   const isPremium = useQuota(s => s.isPremium);
   useEffect(() => { useQuota.getState().hydrate(); }, []);
+  const browseRefetch = browse.refetch;
+  useFocusEffect(useCallback(() => { refetch(); browseRefetch(); }, [refetch, browseRefetch]));
 
-  // Refetch whenever the community tab regains focus (e.g. back from crew-detail)
-  useFocusEffect(useCallback(() => {
-    refetch();
-  }, [refetch]));
+  const memberIds = new Set(crews.map(c => c.id));
+  const owned = crews.filter(c => c.myRole === 'owner');
+  const others = crews.filter(c => c.myRole !== 'owner');
+  const mine = [...owned, ...others];
+  const picks = browse.crews.filter(c => !memberIds.has(c.id)).slice(0, 2);
+  const createLocked = !isPremium && owned.length >= 1;
 
-  if (loading)   return <LoadingState />;
-  if (signedOut) return <EmptyState text={T('com.loginNeeded')} />;
-  if (error)     return <ErrorState message={error} onRetry={refetch} />;
+  const openCrew = (c: Crew) => router.push({ pathname: '/(community)/crew-detail' as any, params: { crewId: c.id } });
+  const create = () => createLocked
+    ? Alert.alert(t('com.premiumTitle'), t('com.premiumBody'))
+    : router.push('/(community)/crew-create' as any);
+  async function handleJoin(crew: Crew) {
+    try {
+      const result = await joinCrew(crew.id);
+      if (result === 'joined') { refetch(); openCrew(crew); }
+      else if (result === 'pending') { setPending(crew.id, true); Alert.alert(t('crw.appliedDone'), t('crw.appliedDoneSub')); }
+      else Alert.alert(t('com.joinFail'), t('crw.alreadyJoined'));
+    } catch (e: unknown) {
+      Alert.alert(t('com.joinFail'), errorMessage(e));
+    }
+  }
 
-  // Split by ownership (myRole is derived from crews.owner_id — the backend's
-  // authority field), not by crew_members.role.
-  const owned  = crews.filter(c => c.myRole === 'owner');
-  const joined = crews.filter(c => c.myRole !== 'owner');
-
-  const openCrew = (c: Crew) =>
-    router.push({ pathname: '/(community)/crew-detail' as any, params: { crewId: c.id } });
+  if (loading) return <Centered><ActivityIndicator size="large" color={C.accent} /></Centered>;
+  if (signedOut) return <Centered><Icon name="people-outline" size={42} color={C.faint} /><Text style={st.stateTitle}>{T('com.loginNeeded')}</Text></Centered>;
+  if (error) return <ErrorState message={error} onRetry={refetch} />;
 
   return (
-    <ScrollView ref={scrollRef} contentContainerStyle={{ paddingBottom: tabBarInset }} showsVerticalScrollIndicator={false}>
-      {/* Owned crews — dashed create-placeholder is the empty state */}
-      <View style={{ paddingHorizontal: S.gutter, paddingTop: S.xl }}>
-        <View style={st.sectionHead}>
-          <Text style={st.sectionTitle}>{T('com.myCrews')}</Text>
-          {(() => {
-            // Lock only when free tier already owns a crew (guide: 무료 1개 한도)
-            const createLocked = !isPremium && owned.length >= 1;
-            return (
-              <Pressable
-                onPress={() => createLocked
-                  ? Alert.alert(
-                      t('com.premiumTitle'),
-                      t('com.premiumBody'),
-                    ) // TODO(PR-2): push the premium upsell screen once it exists
-                  : router.push('/(community)/crew-create' as any)}
-                style={({ pressed }) => [st.createBtn, { opacity: pressed ? 0.7 : createLocked ? 0.45 : 1 }]}
-              >
-                <Icon name={createLocked ? 'lock-closed-outline' : 'add'} size={13} color={C.accentGrn} />
-                <Text style={st.createTxt}>{T('crw.title')}</Text>
-              </Pressable>
-            );
-          })()}
-        </View>
-        {owned.length === 0 ? (
-          // Live create entry — the old "다음 업데이트에서 지원돼요" copy was a
-          // stale lie (crew-create shipped; the header button above pushes it).
-          // owned==0 ⇒ the free 1-crew limit can't be hit — no gate needed.
-          <Pressable
-            onPress={() => router.push('/(community)/crew-create' as any)}
-            style={({ pressed }) => [st.emptyDashed, pressed && { opacity: 0.7 }]}
-          >
-            <View style={st.emptyDashedIcon}>
-              <Icon name="people-outline" size={20} color={C.accentGrn} />
-            </View>
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={st.emptyDashedTitle}>{T('com.makeCrew')}</Text>
-              <Text style={st.emptyDashedSub}>{T('com.makeCrewSub')}</Text>
-            </View>
-            <Icon name="chevron-forward" size={16} color={C.faint} />
-          </Pressable>
-        ) : (
-          <View style={{ gap: 13 }}>
-            {owned.map(c => (
-              <MyCrewCard key={c.id} crew={c} onPress={() => openCrew(c)} />
-            ))}
-          </View>
-        )}
+    <ScrollView ref={scrollRef} contentContainerStyle={{ paddingHorizontal: S.gutter + 2, paddingBottom: tabBarInset }} showsVerticalScrollIndicator={false}>
+      {/* 내 크루 · 만들기 › (owner ruling: the create door lives here, free-tier lock kept) */}
+      <View style={[st.secHead, { marginTop: 20 }]}>
+        <Text style={st.secTitle}>{T('com.myCrewSection')}</Text>
+        <Pressable onPress={create} hitSlop={8} style={({ pressed }) => pressed && { opacity: 0.6 }} accessibilityRole="button">
+          <Text style={[st.secLink, createLocked && { opacity: 0.5 }]}>{T('com.createLink')} ›</Text>
+        </Pressable>
       </View>
-
-      {/* Invite code entry — invented UI, canvas design to follow */}
-      <View style={{ paddingHorizontal: S.gutter, paddingTop: S.md }}>
-        <Pressable
-          onPress={() => setCodeSheetOpen(true)}
-          style={({ pressed }) => [st.codeRow, { opacity: pressed ? 0.8 : 1 }]}
-        >
-          <View style={st.codeIcon}>
-            <Icon name="ticket-outline" size={18} color={C.accentGrn} />
-          </View>
+      {mine.length === 0 ? (
+        <Pressable onPress={() => router.push('/(community)/crew-create' as any)} style={({ pressed }) => [st.emptyDashed, pressed && { opacity: 0.7 }]}>
+          <View style={st.emptyDashedIcon}><Icon name="people-outline" size={20} color={C.accentGrn} /></View>
           <View style={{ flex: 1, minWidth: 0 }}>
-            <Text style={st.codeTitle}>{T('com.codeTitle')}</Text>
-            <Text style={st.codeSub}>{T('com.codeSub')}</Text>
+            <Text style={st.emptyDashedTitle}>{T('com.makeCrew')}</Text>
+            <Text style={st.emptyDashedSub}>{T('com.makeCrewSub')}</Text>
           </View>
           <Icon name="chevron-forward" size={16} color={C.faint} />
         </Pressable>
+      ) : (
+        <View style={{ gap: 10, marginTop: 8 }}>
+          {mine.map(c => <MyCrewHero key={c.id} crew={c} onPress={() => openCrew(c)} />)}
+        </View>
+      )}
+
+      {/* 크루 둘러보기 · 전체 보기 › → today's full browse (crew-browse) */}
+      <View style={[st.secHead, { marginTop: 22 }]}>
+        <Text style={st.secTitle}>{T('com.browseSection')}</Text>
+        <Pressable onPress={() => router.push('/(community)/crew-browse' as any)} hitSlop={8} style={({ pressed }) => pressed && { opacity: 0.6 }} accessibilityRole="link">
+          <Text style={st.secLink}>{T('com.seeAll')} ›</Text>
+        </Pressable>
       </View>
+      {browse.loading ? (
+        <ActivityIndicator size="small" color={C.faint} style={{ paddingVertical: 28 }} />
+      ) : browse.error ? (
+        <Pressable onPress={browseRefetch} style={st.inlineRetry}><Text style={st.stateSub}>{T('com.loadFail')} · {T('common.retry')}</Text></Pressable>
+      ) : picks.length === 0 ? (
+        <Text style={[st.stateSub, { paddingVertical: 20 }]}>{T('com.noMatch')}</Text>
+      ) : (
+        <View style={{ flexDirection: 'row', gap: 10, marginTop: 8 }}>
+          {picks.map(c => (
+            <BrowseMini key={c.id} crew={c} pending={!!pendingMap[c.id]} isMember={memberIds.has(c.id)} onPress={() => openCrew(c)} onJoin={() => handleJoin(c)} />
+          ))}
+        </View>
+      )}
+    </ScrollView>
+  );
+}
 
-      <InviteCodeSheet
-        visible={codeSheetOpen}
-        onClose={() => setCodeSheetOpen(false)}
-        onJoined={(crewId) => {
-          refetch();
-          router.push({ pathname: '/(community)/crew-detail' as any, params: { crewId } });
-        }}
-      />
+// ─── 배틀 view — B1 scoreboard, READ-ONLY in 8a ───────────────────────────────
 
-      {/* Joined crews */}
-      <View style={{ paddingHorizontal: S.gutter, paddingTop: S.xl }}>
-        <Text style={[st.sectionTitle, { marginBottom: 13 }]}>{T('com.joinedCrews')}</Text>
-        {joined.length === 0 ? (
-          <EmptyState text={T('com.noJoined')} />
-        ) : (
-          <View style={{ gap: 13 }}>
-            {joined.map(c => (
-              <MyCrewCard key={c.id} crew={c} onPress={() => openCrew(c)} />
-            ))}
+type Profile = { nickname: string; avatar_url: string | null };
+
+function ActiveBattleCard({ battle }: { battle: Battle }) {
+  const C = useTokens();
+  const st = useStyles(makeSt);
+  const T = useT();
+  const lang = useLang();
+  const myUid = useStore(s => s.session?.user.id);
+  const myName = useStore(s => s.displayName);
+  const myPhoto = useStore(s => s.photoUrl);
+  const oppId = battle.created_by === myUid ? battle.opponent : battle.created_by;
+  const [opp, setOpp] = useState<Profile | null>(null);
+  const [detail, setDetail] = useState<Battle | null>(battle.scores ? battle : null);
+  useEffect(() => {
+    let alive = true;
+    apiFetch<Profile>(`/api/users/${oppId}/profile`).then(p => { if (alive) setOpp(p); }).catch(() => {});
+    if (!battle.scores) getBattle(battle.id).then(d => { if (alive) setDetail(d); }).catch(() => {});
+    return () => { alive = false; };
+  }, [battle.id, battle.scores, oppId]);
+  const scoreOf = (uid: string | undefined) => detail?.scores?.find(s => s.user_id === uid)?.score ?? 0;
+  const mine = scoreOf(myUid), theirs = scoreOf(oppId);
+  const total = mine + theirs;
+  const myShare = total > 0 ? mine / total : 0.5;
+  const diff = Math.round(mine - theirs);
+  const days = battleDaysLeft(battle);
+  const oppName = opp?.nickname ?? T('bat.opponent');
+  return (
+    <View>
+      <View style={[st.secHead, { marginTop: 20 }]}>
+        <Text style={st.secTitle}>{T('bat.activeSection')}</Text>
+        <Text style={st.secStrong}>{tfIn(lang, 'bat.daysLeft', { n: days })}</Text>
+      </View>
+      <View style={[st.battleCard, { backgroundColor: C.surface }]}>
+        <Text style={st.battleSub} numberOfLines={1}>{battle.emoji ? `${battle.emoji} ` : ''}{battle.title} · {T('bat.standingNote')}</Text>
+        <View style={st.vsRow}>
+          <View style={st.vsSide}>
+            <Avatar name={myName ?? T('bat.me')} size={60} photoUrl={myPhoto} ring={C.neon} />
+            <Text style={st.vsName} numberOfLines={1}>{T('bat.me')}</Text>
+            <Text style={[st.vsScore, { color: C.text }]}>{Math.round(mine)}</Text>
+            <Text style={st.vsUnit}>{T('bat.ptUnit')}</Text>
           </View>
-        )}
+          <Text style={st.vs}>VS</Text>
+          <View style={st.vsSide}>
+            <Avatar name={oppName} size={60} photoUrl={opp?.avatar_url ?? null} ring={C.border} />
+            <Text style={st.vsName} numberOfLines={1}>{oppName}</Text>
+            <Text style={[st.vsScore, { color: C.sub }]}>{Math.round(theirs)}</Text>
+            <Text style={st.vsUnit}>{T('bat.ptUnit')}</Text>
+          </View>
+        </View>
+        <View style={st.bar}>
+          <View style={[st.barFill, { flex: Math.max(myShare, 0.02), backgroundColor: C.neon }]} />
+          <View style={[st.barFill, { flex: Math.max(1 - myShare, 0.02), backgroundColor: C.border }]} />
+        </View>
+        <Text style={st.standing}>
+          {diff > 0 ? tfIn(lang, 'bat.leading', { n: diff }) : diff < 0 ? tfIn(lang, 'bat.trailing', { n: -diff }) : T('bat.tied')}
+        </Text>
       </View>
+    </View>
+  );
+}
+
+function BattleTab({ scrollRef }: { scrollRef: React.RefObject<ScrollView | null> }) {
+  const C = useTokens();
+  const st = useStyles(makeSt);
+  const T = useT();
+  const tabBarInset = useTabBarInset();
+  const [battles, setBattles] = useState<Battle[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const load = useCallback(() => {
+    let alive = true;
+    listBattles('active').then(rows => { if (alive) { setBattles(rows); setError(null); } })
+      .catch((e: unknown) => { if (alive) setError(errorMessage(e)); });
+    return () => { alive = false; };
+  }, []);
+  useFocusEffect(load);
+  if (error && !battles) return <ErrorState message={error} onRetry={() => { load(); }} />;
+  if (!battles) return <Centered><ActivityIndicator size="large" color={C.accent} /></Centered>;
+  const active = battles.find(b => b.status === 'active') ?? null;
+  return (
+    <ScrollView ref={scrollRef} contentContainerStyle={{ paddingHorizontal: S.gutter + 2, paddingBottom: tabBarInset }} showsVerticalScrollIndicator={false}>
+      {active ? <ActiveBattleCard battle={active} /> : (
+        <Centered>
+          <Icon name="flash-outline" size={42} color={C.faint} />
+          <Text style={st.stateTitle}>{T('bat.emptyActive')}</Text>
+        </Centered>
+      )}
     </ScrollView>
   );
 }
@@ -719,52 +337,26 @@ export default function CommunityScreen() {
   const T = useT();
   const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
-  const [tab, setTab] = useState<'crew' | 'discover' | 'battle'>('crew');
-
-  // 재탭 = 맨 위로 (owner-ruled 8/5, 홈 패턴 버바팀 — index.tsx의
-  // conviction 코멘트 참조): 자기 탭 tabPress만 수신, emit-타임 isFocused()
-  // 분기 (true = 재탭 → 스크롤 / false = 타-탭발 도착 → 무동작 = 위치 보존).
-  // SCROLL ONLY — 리페치 무동승 (refresh는 pull-to-refresh 소관).
-  // Multi-container twist: the sub-views own their scrollables, so the
-  // root (the tab's focus owner) holds ALL refs and branches on the active
-  // sub-view at press time. `tab` in deps re-subscribes on switch — the
-  // closure always sees the live branch.
+  const [tab, setTab] = useState<Tab>('crew');
+  // 재탭 = 맨 위로 (owner-ruled 8/5): own tabPress only; isFocused at emit
+  // time = re-tap → scroll; arriving from another tab → position preserved.
   const crewScrollRef = useRef<ScrollView>(null);
-  const discoverListRef = useRef<FlatList<Crew>>(null);
   const battleScrollRef = useRef<ScrollView>(null);
   const navigation = useNavigation();
-  useEffect(() => {
-    return navigation.addListener('tabPress' as never, () => {
-      if (navigation.isFocused()) {
-        if (tab === 'crew') crewScrollRef.current?.scrollTo({ y: 0, animated: true });
-        else if (tab === 'discover') discoverListRef.current?.scrollToOffset({ offset: 0, animated: true });
-        else battleScrollRef.current?.scrollTo({ y: 0, animated: true });
-      }
-    });
-  }, [navigation, tab]);
-
+  useEffect(() => navigation.addListener('tabPress' as never, () => {
+    if (navigation.isFocused()) (tab === 'crew' ? crewScrollRef : battleScrollRef).current?.scrollTo({ y: 0, animated: true });
+  }), [navigation, tab]);
   return (
     <View style={[st.root, { paddingTop: insets.top }]}>
       <View style={st.header}>
-        <View style={{ flex: 1, minWidth: 0 }}>
-          <Text style={st.title}>{T('com.title')}</Text>
-          <Text style={st.subtitle}>{T('com.subtitle')}</Text>
-        </View>
-        {/* 검색 (canvas FrUserSearch entry) — 유저/크루 통합 검색 */}
-        <Pressable onPress={() => router.push('/(community)/user-search' as never)} hitSlop={10} style={st.searchIconBtn}>
-          <Icon name="search" size={20} color={C.text} />
+        <Text style={st.title}>{T('com.title')}</Text>
+        <Pressable onPress={() => router.push('/(community)/user-search' as never)} hitSlop={6} style={({ pressed }) => [st.searchBtn, pressed && { opacity: 0.7 }]} accessibilityRole="button" accessibilityLabel={T('com.searchA11y')}>
+          <Icon name="search" size={21} color={C.text} />
         </Pressable>
       </View>
-
-      <CommTabs active={tab} onChange={v => setTab(v as 'crew' | 'discover' | 'battle')} />
-
+      <CommTabs active={tab} onChange={setTab} />
       <View style={{ flex: 1 }}>
-        {tab === 'crew'
-          ? <MyCrewsTab scrollRef={crewScrollRef} />
-          : tab === 'discover'
-            ? <DiscoverTab listRef={discoverListRef} />
-            : <BattleHomeBody mode="embedded" scrollRef={battleScrollRef} />
-        }
+        {tab === 'crew' ? <CrewTab scrollRef={crewScrollRef} /> : <BattleTab scrollRef={battleScrollRef} />}
       </View>
     </View>
   );
@@ -773,87 +365,56 @@ export default function CommunityScreen() {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const makeSt = (C: Tokens) => StyleSheet.create({
-  root:     { flex: 1, backgroundColor: C.bg },
-
-  header:   { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: S.gutter, paddingTop: 12, paddingBottom: 4 },
-  searchIconBtn: { width: 42, height: 42, borderRadius: 999, borderWidth: 1, borderColor: C.border, backgroundColor: C.surface, alignItems: 'center', justifyContent: 'center', flexShrink: 0, ...shadows.sm },
-  title:    { fontSize: 26, fontWeight: '700', letterSpacing: -0.7, color: C.text },
-  subtitle: { fontSize: 13.5, color: C.sub, letterSpacing: -0.3, marginTop: 5 },
-
-  // Tabs
-  tabRow:       { flexDirection: 'row', gap: 22, paddingHorizontal: S.gutter, borderBottomWidth: 1, borderBottomColor: C.border },
-  tabBtn:       { position: 'relative', paddingTop: 16, paddingBottom: 12 },
-  tabTxt:       { fontSize: 15, fontWeight: '700', letterSpacing: -0.3 },
-  tabUnderline: { position: 'absolute', bottom: -1, left: 0, right: 0, height: 2.5, borderRadius: 99, backgroundColor: C.accent },
-
-  // 검색 위치 card (replaced the level chips, per canvas)
-  locCard:  { flexDirection: 'row', alignItems: 'center', gap: 11, marginTop: 14, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 16, padding: 12 },
-  searchBar:   { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 14, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 14, paddingHorizontal: 12, height: 44 },
-  searchInput: { flex: 1, fontSize: 14.5, fontWeight: '600', color: C.text, letterSpacing: -0.3, paddingVertical: 0 },
-  locIcon:  { width: 34, height: 34, borderRadius: 10, backgroundColor: C.accentDim, alignItems: 'center', justifyContent: 'center' },
-  locLabel: { fontSize: 10.5, fontWeight: '600', color: C.faint, letterSpacing: -0.1 },
-  locValue: { fontSize: 14, fontWeight: '700', color: C.text, letterSpacing: -0.3, marginTop: 2 },
-  cardLocTxt: { fontSize: 12, fontWeight: '600', color: C.accentGrn, letterSpacing: -0.2 },
-
-  // Full toggle row
-  toggleRow:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 2, paddingTop: 14, paddingBottom: 4 },
-  toggleCount: { fontSize: 12.5, color: C.faint, fontWeight: '600' },
-  toggleBtn:   { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  toggleLabel: { fontSize: 13, fontWeight: '700', letterSpacing: -0.2 },
-  switch:      { width: 40, height: 24, borderRadius: R.pill },
-  switchThumb: {
-    position: 'absolute', top: 2, width: 20, height: 20, borderRadius: R.pill,
-    backgroundColor: '#fff',
-    shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 2, shadowOffset: { width: 0, height: 1 },
-    elevation: 2,
-  },
-
-  // Cards (shared shape)
-  card:     { flexDirection: 'row', alignItems: 'center', gap: 13, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 18, padding: 13, ...shadows.sm },
-  thumbWrap:{ width: 54, height: 54, borderRadius: 15, overflow: 'hidden', flexShrink: 0, position: 'relative' },
-  colorDot: { position: 'absolute', bottom: 4, right: 4, width: 10, height: 10, borderRadius: 5, borderWidth: 1.5, borderColor: '#0C0F14' },
-  cardBody: { flex: 1, minWidth: 0, gap: 4 },
-  cardName: { fontSize: 15.5, fontWeight: '700', letterSpacing: -0.4, color: C.text },
-  cardMeta: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  cardMetaTxt: { fontSize: 12, color: C.faint, letterSpacing: -0.2 },
-  tagsRow:  { flexDirection: 'row', gap: 5, marginTop: 4, flexWrap: 'wrap' },
-  tag:      { backgroundColor: C.surfaceAlt, borderWidth: 1, borderColor: C.border, borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2 },
-  tagTxt:   { fontSize: 10.5, fontWeight: '700', color: C.sub },
-
-  // Join badge
-  joinBadge:  { flexShrink: 0, height: 32, paddingHorizontal: 14, borderRadius: R.pill, alignItems: 'center', justifyContent: 'center' },
-  joinOpen:   { backgroundColor: C.accent },
-  joinFull:   { backgroundColor: C.surfaceAlt, borderWidth: 1, borderColor: C.border },
-  joinPending:{ backgroundColor: C.accentDim, borderWidth: 1, borderColor: C.accent + '66' },
-  joinMember: { backgroundColor: C.surfaceAlt, borderWidth: 1, borderColor: C.border },
-  joinTxt:    { fontSize: 12.5, fontWeight: '700', letterSpacing: -0.2 },
-
-  // Invite code entry row
-  codeRow:   { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: C.surface, borderWidth: 1.5, borderColor: C.border, borderRadius: 18, padding: 14 },
-  codeIcon:  { width: 40, height: 40, borderRadius: 12, backgroundColor: C.accentDim, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  codeTitle: { fontSize: 14.5, fontWeight: '700', letterSpacing: -0.3, color: C.text },
-  codeSub:   { fontSize: 12.5, color: C.faint, letterSpacing: -0.2, marginTop: 2 },
-
-  // Owner badge
-  ownerBadge:{ backgroundColor: C.crown, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
-  ownerTxt:  { fontSize: 10, fontWeight: '800', color: C.accentText, letterSpacing: 0.2 },
-
-  // Section head + create CTA
-  sectionHead:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 13 },
-  sectionTitle: { fontSize: 17, fontWeight: '700', letterSpacing: -0.4, color: C.text },
-  createBtn:    { flexDirection: 'row', alignItems: 'center', gap: 4, height: 32, paddingHorizontal: 12, borderRadius: R.pill, borderWidth: 1.5, borderColor: C.accent, backgroundColor: C.accentDim },
-  createTxt:    { fontSize: 13, fontWeight: '700', color: C.accentGrn, letterSpacing: -0.2 },
-
-  // Empty dashed placeholder card
-  emptyDashed:     { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: C.surface, borderWidth: 1.5, borderColor: C.border, borderRadius: 18, padding: 16 },
-  emptyDashedIcon: { width: 40, height: 40, borderRadius: 12, backgroundColor: C.accentDim, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  emptyDashedTitle:{ fontSize: 14.5, fontWeight: '700', letterSpacing: -0.3, color: C.text },
-  emptyDashedSub:  { fontSize: 12.5, color: C.faint, letterSpacing: -0.2, marginTop: 2 },
-
-  // Loading / error / empty states
-  centered:   { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, paddingVertical: 60 },
-  stateTitle: { fontSize: 14, color: C.faint, letterSpacing: -0.2, fontWeight: '600' },
-  stateSub:   { fontSize: 12, color: C.faint, letterSpacing: -0.2, textAlign: 'center' },
-  retryBtn:   { marginTop: 4, paddingHorizontal: 20, paddingVertical: 10, borderRadius: R.md, backgroundColor: C.surfaceAlt, borderWidth: 1, borderColor: C.border },
-  retryTxt:   { fontSize: 14, fontWeight: '700', color: C.text },
+  root:      { flex: 1, backgroundColor: C.bg },
+  header:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: S.gutter + 2, paddingTop: 14 },
+  title:     { fontSize: 26, fontWeight: '900', letterSpacing: -0.4, color: C.text },
+  searchBtn: { width: 46, height: 46, borderRadius: 23, backgroundColor: C.surfaceAlt, alignItems: 'center', justifyContent: 'center' },
+  tabRow:    { flexDirection: 'row', gap: 24, paddingHorizontal: S.gutter + 2, paddingTop: 14, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: C.border },
+  tabBtn:    { alignItems: 'center' },
+  tabTxt:    { fontSize: 16, letterSpacing: -0.3, paddingBottom: 9 },
+  tabUnderline: { height: 3, alignSelf: 'stretch', borderTopLeftRadius: 2, borderTopRightRadius: 2 },
+  secHead:   { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
+  secTitle:  { fontSize: 13, fontWeight: '700', color: C.sub },
+  secLink:   { fontSize: 11.5, color: C.sub },
+  secStrong: { fontSize: 11.5, fontWeight: '700', color: C.text },
+  // 내 크루 hero
+  hero:      { height: 206, borderRadius: 22, overflow: 'hidden', backgroundColor: C.surfaceAlt },
+  heroBadge: { position: 'absolute', right: 14, top: 14, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 4 },
+  heroBadgeTxt: { fontSize: 10.5, fontWeight: '700' },
+  heroBottom: { position: 'absolute', left: 18, right: 18, bottom: 16, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12 },
+  heroName:  { fontSize: 21, fontWeight: '900', color: '#FFFFFF', letterSpacing: -0.2 },
+  heroSub:   { fontSize: 11.5, color: 'rgba(255,255,255,0.9)', marginTop: 3 },
+  heroKm:    { fontSize: 30, fontWeight: '800', color: '#FFFFFF', letterSpacing: -0.6, fontVariant: ['tabular-nums'] },
+  heroKmUnit:{ fontSize: 12, fontWeight: '700', color: '#FFFFFF' },
+  emptyDashed: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 8, borderWidth: 1.5, borderStyle: 'dashed', borderColor: C.border, borderRadius: 22, padding: 16, backgroundColor: C.surface },
+  emptyDashedIcon: { width: 40, height: 40, borderRadius: 12, backgroundColor: C.accentDim, alignItems: 'center', justifyContent: 'center' },
+  emptyDashedTitle: { fontSize: 14.5, fontWeight: '700', color: C.text, letterSpacing: -0.3 },
+  emptyDashedSub: { fontSize: 12, color: C.sub, marginTop: 2 },
+  // 둘러보기 minis
+  mini:      { flex: 1, backgroundColor: C.surface, borderRadius: 18, overflow: 'hidden' },
+  miniCover: { height: 92, backgroundColor: C.surfaceAlt },
+  miniBody:  { paddingTop: 10, paddingHorizontal: 12, paddingBottom: 12 },
+  miniName:  { fontSize: 14, fontWeight: '900', color: C.text, letterSpacing: -0.2 },
+  miniMeta:  { fontSize: 10.5, color: C.sub, marginTop: 2 },
+  miniBtn:   { height: 32, marginTop: 10, borderRadius: 16, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center', backgroundColor: C.surface },
+  miniBtnTxt:{ fontSize: 12, fontWeight: '800' },
+  inlineRetry: { paddingVertical: 20 },
+  // 배틀 B1 (read-only)
+  battleCard:{ borderRadius: 22, paddingTop: 20, paddingHorizontal: 18, paddingBottom: 18, marginTop: 8 },
+  battleSub: { textAlign: 'center', fontSize: 11.5, fontWeight: '700', color: C.sub },
+  vsRow:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16 },
+  vsSide:    { width: 104, alignItems: 'center' },
+  vsName:    { fontSize: 12.5, fontWeight: '700', color: C.text, marginTop: 12 },
+  vsScore:   { fontSize: 30, fontWeight: '800', letterSpacing: -0.6, marginTop: 2, fontVariant: ['tabular-nums'] },
+  vsUnit:    { fontSize: 10.5, color: C.sub },
+  vs:        { fontSize: 17, fontWeight: '800', color: C.faint },
+  bar:       { flexDirection: 'row', height: 10, gap: 3, marginTop: 16 },
+  barFill:   { borderRadius: 5 },
+  standing:  { textAlign: 'center', fontSize: 13, fontWeight: '900', color: C.text, marginTop: 12 },
+  // states
+  centered:  { alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 48, paddingHorizontal: S.gutter },
+  stateTitle:{ fontSize: 14, fontWeight: '600', color: C.faint, textAlign: 'center' },
+  stateSub:  { fontSize: 12.5, color: C.faint, textAlign: 'center' },
+  retryBtn:  { marginTop: 4, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 12, backgroundColor: C.surfaceAlt, borderWidth: 1, borderColor: C.border },
+  retryTxt:  { fontSize: 14, fontWeight: '700', color: C.text },
 });

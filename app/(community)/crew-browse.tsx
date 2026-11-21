@@ -1,0 +1,657 @@
+/**
+ * 크루 둘러보기 — redesign item 8a (2026-11-21): today's community 둘러보기
+ * sub-tab, moved VERBATIM behind the 그룹 tab's "전체 보기 ›" (canvas CommV1:
+ * the 크루 view shows two browse cards; the full list, search, 검색 위치
+ * filter and 정원 toggle live here). NOT REDESIGNED (listed in the ledger).
+ * Also hosts the 초대 코드로 가입 entry (owner ruling 2026-11-21).
+ */
+import { useFocusEffect } from '@react-navigation/native';
+import { errorMessage } from '@/lib/error-copy';
+import { regionName } from '@/lib/korea-regions';
+import { router } from 'expo-router';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { useTabBarInset } from '@/components/fresh-tab-bar';
+import { CrewGlyph } from '@/components/crew-glyph';
+import { SafeImage } from '@/components/safe-image';
+import { Icon } from '@/components/ui';
+import {
+  joinCrew,
+  joinCrewByCode,
+  previewCrewByCode,
+  useBrowseCrews,
+  useMyCrews,
+  type Crew,
+} from '@/hooks/use-crews';
+import { useCurrentLocation } from '@/hooks/use-current-location';
+import { levelLabel, getMyJoinRequests, searchCrews } from '@/lib/crews-api';
+import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
+import { useStyles, useTokens } from '@/hooks/use-tokens';
+import { getCrewFilter, type CrewLocationFilter } from '@/store/crew-filter';
+import { useJoinRequests } from '@/store/join-requests';
+import { t, tfIn, useLang, useT } from '@/lib/i18n';
+import { DAY_LABEL_KEY } from '@/lib/run-format';
+
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function isFull(crew: Crew): boolean {
+  // null max_members = unlimited — never treat as full
+  return crew.max_members !== null && crew.member_count >= crew.max_members;
+}
+
+// ─── 검색 위치 card (당근식 둘러보기 — level chips removed per canvas) ────────
+
+function LocationCard({ filter, placeName, onPress }: {
+  filter: CrewLocationFilter;
+  placeName: string | null;
+  onPress: () => void;
+}) {
+  const C = useTokens();
+  const st = useStyles(makeSt);
+  const T = useT();
+  const lang = useLang(); // compiler-visible locale for render-path tfIn
+  const label = filter.mode === 'current'
+    ? tfIn(lang, 'com.currentLoc', { name: placeName ?? T('com.locating') })
+    : `${regionName(filter.sido)}${filter.sigungu ? ` · ${regionName(filter.sigungu)}` : ''}`;
+  return (
+    <Pressable onPress={onPress} style={({ pressed }) => [st.locCard, shadows.sm, pressed && { opacity: 0.8 }]}>
+      <View style={st.locIcon}>
+        <Icon name={filter.mode === 'current' ? 'locate' : 'location'} size={16} color={C.accentGrn} />
+      </View>
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text style={st.locLabel}>{T('com.searchLoc')}</Text>
+        <Text style={st.locValue} numberOfLines={1}>{label}</Text>
+      </View>
+      <Icon name="chevron-forward" size={16} color={C.faint} />
+    </Pressable>
+  );
+}
+
+// ─── Shared states ────────────────────────────────────────────────────────────
+
+function LoadingState() {
+  const C = useTokens();
+  const st = useStyles(makeSt);
+  return (
+    <View style={st.centered}>
+      <ActivityIndicator size="large" color={C.accent} />
+    </View>
+  );
+}
+
+function ErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
+  const T = useT();
+  const C = useTokens();
+  const st = useStyles(makeSt);
+  return (
+    <View style={st.centered}>
+      <Icon name="warning-outline" size={36} color={C.faint} />
+      <Text style={st.stateTitle}>{T('com.loadFail')}</Text>
+      <Text style={[st.stateSub, { marginTop: 2 }]}>{message}</Text>
+      <Pressable onPress={onRetry} style={st.retryBtn}>
+        <Text style={st.retryTxt}>{T('common.retry')}</Text>
+      </Pressable>
+    </View>
+  );
+}
+
+function EmptyState({ text }: { text: string }) {
+  const C = useTokens();
+  const st = useStyles(makeSt);
+  return (
+    <View style={st.centered}>
+      <Icon name="people-outline" size={42} color={C.faint} />
+      <Text style={st.stateTitle}>{text}</Text>
+    </View>
+  );
+}
+
+// ─── Browse crew card ─────────────────────────────────────────────────────────
+
+function BrowseCrewCard({
+  crew, pending, isMember, onPress, onJoin,
+}: {
+  crew: Crew;
+  pending: boolean;
+  isMember: boolean;
+  onPress: () => void;
+  onJoin: () => void;
+}) {
+  const C = useTokens();
+  const st = useStyles(makeSt);
+  const full = isFull(crew);
+  const tags = crew.active_days?.slice(0, 4) ?? [];
+  // Badge state priority: member > pending (shared store) > full > policy label
+  const T = useT();
+  const lang = useLang();
+  const badgeLabel = isMember ? T('com.joined')
+    : pending ? T('com.pending')
+    : full ? T('com.closed')
+    : crew.join_policy === 'approval' ? T('com.apply') : T('com.join');
+  const badgeDisabled = isMember || pending || full;
+
+  return (
+    <Pressable onPress={full ? undefined : onPress} style={[st.card, { opacity: full ? 0.62 : 1 }]}>
+      <View style={st.thumbWrap}>
+        <SafeImage uri={crew.icon_url} style={{ width: '100%', height: 54 }}
+          fallback={<CrewGlyph height={54} />} />
+      </View>
+
+      <View style={st.cardBody}>
+        <Text style={st.cardName} numberOfLines={1}>{crew.name}</Text>
+        <View style={st.cardMeta}>
+          <Icon name="people-outline" size={12} color={C.faint} />
+          <Text style={st.cardMetaTxt} numberOfLines={1}>
+            {tfIn(lang, 'com.nOfMax', { n: `${crew.member_count}${crew.max_members !== null ? `/${crew.max_members}` : ''}` })} · {crew.area ?? ''}
+          </Text>
+        </View>
+        {/* 당근식 location line — distance only in lat/lng mode; location-
+            less crews fall back to region/area text alone */}
+        {(crew.sigungu || crew.distance_km != null) && (
+          <View style={st.cardMeta}>
+            <Icon name="location-outline" size={12} color={C.accentGrn} />
+            <Text style={st.cardLocTxt} numberOfLines={1}>
+              {crew.sigungu ? regionName(crew.sigungu) : crew.area ?? ''}
+              {crew.distance_km != null ? ` · ${crew.distance_km.toFixed(1)}km` : ''}
+            </Text>
+          </View>
+        )}
+        {(tags.length > 0 || crew.level !== '무관') && (
+          <View style={st.tagsRow}>
+            {crew.level !== '무관' && <View style={st.tag}><Text style={st.tagTxt}>{levelLabel(crew.level)}</Text></View>}
+            {tags.map(d => <View key={d} style={st.tag}><Text style={st.tagTxt}>{T(DAY_LABEL_KEY[d] ?? 'dayS.mon')}</Text></View>)}
+          </View>
+        )}
+      </View>
+
+      {/* Join badge — pressable only when actionable */}
+      <Pressable
+        onPress={badgeDisabled ? undefined : onJoin}
+        disabled={badgeDisabled}
+        style={[
+          st.joinBadge,
+          isMember ? st.joinMember : pending ? st.joinPending : full ? st.joinFull : st.joinOpen,
+        ]}
+        hitSlop={6}
+      >
+        <Text style={[st.joinTxt, {
+          color: isMember ? C.sub : pending ? C.accentGrn : full ? C.faint : C.accentText,
+        }]}>
+          {badgeLabel}
+        </Text>
+      </Pressable>
+    </Pressable>
+  );
+}
+
+// ─── Discover tab ─────────────────────────────────────────────────────────────
+
+function DiscoverTab({ listRef }: { listRef: React.RefObject<FlatList<Crew> | null> }) {
+  const C = useTokens();
+  const st = useStyles(makeSt);
+  const T = useT();
+  const lang = useLang();
+  const tabBarInset = useTabBarInset();
+  const [showFull, setShowFull] = useState(false);
+  // Location filter — set by the region picker (module store), read on focus
+  const [locFilter, setLocFilter] = useState<CrewLocationFilter>(getCrewFilter());
+  const { coordinate, placeName, status: locStatus } = useCurrentLocation();
+
+  // 당근식 params: current mode sends lat/lng once resolved (parameterless
+  // until then). Seoul-fallback class fix: the old `coordinate?.lat` was a
+  // truthiness gate on a never-null value — it sent 시청 coords during the
+  // fetch window; the comment's "once resolved" intent now matches the code.
+  const { crews, loading, error, refetch } = useBrowseCrews(
+    locFilter.mode === 'current'
+      ? {
+          lat: locStatus === 'granted' ? coordinate.lat : undefined,
+          lng: locStatus === 'granted' ? coordinate.lng : undefined,
+          includeFull: showFull,
+        }
+      : { sido: locFilter.sido, sigungu: locFilter.sigungu, includeFull: showFull },
+  );
+  // 신청됨 state lives in the shared store (written here on 202/409, corrected
+  // authoritatively by crew-detail visits) — fixes the stale-badge bug.
+  const pendingMap = useJoinRequests(s => s.pendingByCrewId);
+  const setPending = useJoinRequests(s => s.setPending);
+  const { crews: myCrewList } = useMyCrews();
+  const memberIds = new Set(myCrewList.map(c => c.id));
+
+  // Stage B (S-cluster batch 2): GET /me/join-requests shipped — hydrate the
+  // shared store once per browse mount so 신청중 badges survive relaunch
+  // (pending only; approved/rejected rows are not requests anymore).
+  useEffect(() => {
+    getMyJoinRequests()
+      .then(rows => useJoinRequests.getState().hydrate(
+        rows.filter(r => r.status === 'pending').map(r => r.crew_id)))
+      .catch(() => { /* offline — in-session optimistic state stands */ });
+  }, []);
+
+  // Refetch on focus (back from crew-detail or the region picker) — also
+  // pick up the picker's selection from the module store
+  useFocusEffect(useCallback(() => {
+    setLocFilter(getCrewFilter());
+    refetch();
+  }, [refetch]));
+
+  // 크루 검색 (S-batch2 #7): text search via GET /crews/search — the
+  // start-picker pattern (300ms debounce + seq stale-guard). COMPOSITION:
+  // search OVERRIDES the region filter (the endpoint has no region params —
+  // global name/area/description 부분일치); clearing the query returns to
+  // the filtered browse. Joined-crew exclusion applies to results too.
+  const [query, setQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<Crew[] | null>(null);
+  const searchSeq = useRef(0);
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    const q = query.trim();
+    if (!q) { searchSeq.current++; setSearchResults(null); return; }
+    const seq = ++searchSeq.current;
+    debounceTimer.current = setTimeout(() => {
+      searchCrews(q)
+        .then(rows => { if (searchSeq.current === seq) setSearchResults(rows); })
+        .catch(() => { if (searchSeq.current === seq) setSearchResults([]); });
+    }, 300);
+    return () => { if (debounceTimer.current) clearTimeout(debounceTimer.current); };
+  }, [query]);
+  const searching = query.trim().length > 0;
+  // 초대 코드로 가입 — owner ruling 2026-11-21 (8a): the entry lives at the top of
+  // the browse screen (the 그룹 tab's 크루 view has no room for it).
+  const [codeSheetOpen, setCodeSheetOpen] = useState(false);
+
+  if (loading) return <LoadingState />;
+  if (error)   return <ErrorState message={error} onRetry={refetch} />;
+
+  // Full-crew exclusion is server-side (include_full param); joined-crew
+  // exclusion is CLIENT-side (owner ruling ⑥, batch 2) — the browse payload
+  // carries no joined field (probed 2026-07-14), so the useMyCrews set we
+  // already fetch is the source. The at-scale server param stays a docketed
+  // ask. List = server order (distance-ascending when lat/lng were sent).
+  const visible = (searching ? (searchResults ?? []) : crews).filter(c => !memberIds.has(c.id));
+
+  async function handleJoin(crew: Crew) {
+    try {
+      const result = await joinCrew(crew.id);
+      if (result === 'joined') {
+        refetch();
+        router.push({ pathname: '/(community)/crew-detail' as any, params: { crewId: crew.id } });
+      } else if (result === 'pending') {
+        setPending(crew.id, true);
+        Alert.alert(t('crw.appliedDone'), t('crw.appliedDoneSub'));
+      } else {
+        Alert.alert(t('com.joinFail'), t('crw.alreadyJoined'));
+      }
+    } catch (e: unknown) {
+      Alert.alert(t('com.joinFail'), errorMessage(e));
+    }
+  }
+
+  return (
+    <View style={{ flex: 1 }}>
+    <FlatList
+      ref={listRef}
+      data={visible}
+      keyExtractor={c => c.id}
+      renderItem={({ item }) => (
+        <BrowseCrewCard
+          crew={item}
+          pending={!!pendingMap[item.id]}
+          isMember={memberIds.has(item.id)}
+          onPress={() => router.push({ pathname: '/(community)/crew-detail' as any, params: { crewId: item.id } })}
+          onJoin={() => handleJoin(item)}
+        />
+      )}
+      keyboardShouldPersistTaps="handled"
+      ListHeaderComponent={
+        <View>
+          {/* 초대 코드로 가입 (moved here from the 크루 view, 8a) */}
+          <Pressable
+            onPress={() => setCodeSheetOpen(true)}
+            style={({ pressed }) => [st.codeRow, { marginTop: 14, opacity: pressed ? 0.8 : 1 }]}
+          >
+            <View style={st.codeIcon}>
+              <Icon name="ticket-outline" size={18} color={C.accentGrn} />
+            </View>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={st.codeTitle}>{T('com.codeTitle')}</Text>
+              <Text style={st.codeSub}>{T('com.codeSub')}</Text>
+            </View>
+            <Icon name="chevron-forward" size={16} color={C.faint} />
+          </Pressable>
+          {/* 크루 검색 (#7) — search overrides the region filter (global) */}
+          <View style={st.searchBar}>
+            <Icon name="search" size={16} color={C.faint} />
+            <TextInput
+              value={query}
+              onChangeText={setQuery}
+              placeholder={T('com.searchPh')}
+              placeholderTextColor={C.faint}
+              autoCorrect={false}
+              returnKeyType="search"
+              style={st.searchInput}
+            />
+            {query.length > 0 && (
+              <Pressable onPress={() => setQuery('')} hitSlop={8}>
+                <Icon name="close-circle" size={16} color={C.faint} />
+              </Pressable>
+            )}
+          </View>
+          {searching ? (
+            <View style={st.toggleRow}>
+              <Text style={st.toggleCount}>
+                {searchResults === null ? T('com.searching') : tfIn(lang, 'com.nResults', { n: visible.length })}
+              </Text>
+            </View>
+          ) : (
+            <>
+              <LocationCard
+                filter={locFilter}
+                placeName={placeName}
+                onPress={() => router.push('/region-picker' as never)}
+              />
+              <View style={st.toggleRow}>
+                <Text style={st.toggleCount}>{tfIn(lang, 'com.nCrews', { n: visible.length })}</Text>
+                <Pressable onPress={() => setShowFull(v => !v)} style={st.toggleBtn}>
+                  <Text style={[st.toggleLabel, { color: showFull ? C.accentGrn : C.sub }]}>
+                    {showFull ? T('com.onlyOpen') : T('com.showFull')}
+                  </Text>
+                  <View style={[st.switch, { backgroundColor: showFull ? C.accent : C.border }]}>
+                    <View style={[st.switchThumb, { left: showFull ? 18 : 2 }]} />
+                  </View>
+                </Pressable>
+              </View>
+            </>
+          )}
+        </View>
+      }
+      ListEmptyComponent={
+        searching && searchResults === null
+          ? <ActivityIndicator size="small" color={C.faint} style={{ paddingTop: 40 }} />
+          : <EmptyState text={searching ? T('region.noResults') : T('com.noMatch')} />
+      }
+      contentContainerStyle={{ paddingHorizontal: S.gutter, paddingBottom: tabBarInset }}
+      ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
+      showsVerticalScrollIndicator={false}
+    />
+    <InviteCodeSheet
+      visible={codeSheetOpen}
+      onClose={() => setCodeSheetOpen(false)}
+      onJoined={(crewId) => {
+        refetch();
+        router.push({ pathname: '/(community)/crew-detail' as any, params: { crewId } });
+      }}
+    />
+    </View>
+  );
+}
+
+// ─── Invite code sheet ────────────────────────────────────────────────────────
+// Invented UI (no bundle design yet — canvas design to follow, per approval):
+// code input → preview-by-code → confirm join. Codes are 8 chars, A-Z/2-9.
+
+function InviteCodeSheet({
+  visible, onClose, onJoined,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  onJoined: (crewId: string) => void;
+}) {
+  const C = useTokens();
+  const ics = useStyles(makeIcs);
+  const T = useT();
+  const lang = useLang();
+  const st = useStyles(makeSt);
+  const insets = useSafeAreaInsets();
+  const [code, setCode]       = useState('');
+  const [preview, setPreview] = useState<Crew | null>(null);
+  const [busy, setBusy]       = useState(false);
+  const [error, setError]     = useState<string | null>(null);
+
+  const reset = () => { setCode(''); setPreview(null); setBusy(false); setError(null); };
+  const close = () => { reset(); onClose(); };
+
+  async function handlePreview() {
+    if (code.trim().length < 4 || busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const row = await previewCrewByCode(code);
+      setPreview({ ...row, join_policy: (row.join_policy as 'open' | 'approval') ?? 'open' } as unknown as Crew);
+    } catch (e: unknown) {
+      const msg = errorMessage(e);
+      setError(msg.includes('(404)') || msg.includes('찾을 수') ? t('com.codeCheck') : msg || t('com.codeCheck'));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleJoin() {
+    if (!preview || busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const joined = await joinCrewByCode(code);
+      close();
+      onJoined(joined.id);
+    } catch (e: unknown) {
+      setError(errorMessage(e));
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={close}>
+      {/* ④ keyboard sweep: the code input lives in a BOTTOM sheet — without
+          KAV the keyboard rises straight over it (the named offender) */}
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <Pressable style={ics.overlay} onPress={close}>
+        <Pressable style={[ics.sheet, { paddingBottom: Math.max(insets.bottom, 12) + 12 }]} onPress={() => {}}>
+          <View style={ics.handleRow}><View style={ics.handle} /></View>
+          <Text style={ics.title}>{T('com.codeTitle')}</Text>
+          <Text style={ics.sub}>{T('com.codeSub8')}</Text>
+
+          {!preview ? (
+            <>
+              <TextInput
+                value={code}
+                onChangeText={t => { setCode(t.toUpperCase()); setError(null); }}
+                placeholder={T('com.codePh')}
+                placeholderTextColor={C.faint}
+                autoCapitalize="characters"
+                autoCorrect={false}
+                maxLength={8}
+                style={ics.input}
+              />
+              {error && <Text style={ics.errTxt}>{error}</Text>}
+              <Pressable
+                onPress={handlePreview}
+                disabled={code.trim().length < 4 || busy}
+                style={[ics.primaryBtn, { opacity: code.trim().length < 4 || busy ? 0.4 : 1 }]}
+              >
+                {busy
+                  ? <ActivityIndicator size="small" color={C.accentText} />
+                  : <Text style={ics.primaryTxt}>{T('com.confirm')}</Text>}
+              </Pressable>
+            </>
+          ) : (
+            <>
+              {/* Crew preview card */}
+              <View style={[ics.previewCard, shadows.sm]}>
+                <View style={ics.previewThumb}>
+                  <SafeImage uri={preview.icon_url} style={{ width: '100%', height: 54 }}
+                    fallback={<CrewGlyph height={54} />} />
+                </View>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={st.cardName} numberOfLines={1}>{preview.name}</Text>
+                  <View style={st.cardMeta}>
+                    <Icon name="people-outline" size={12} color={C.faint} />
+                    <Text style={st.cardMetaTxt} numberOfLines={1}>
+                      {tfIn(lang, 'crw.nMembers', { n: preview.member_count })} · {preview.area ?? ''}{preview.is_public ? '' : T('com.privateSuffix')}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+              {error && <Text style={ics.errTxt}>{error}</Text>}
+              <Pressable onPress={handleJoin} disabled={busy} style={[ics.primaryBtn, { opacity: busy ? 0.6 : 1 }]}>
+                {busy
+                  ? <ActivityIndicator size="small" color={C.accentText} />
+                  : <Text style={ics.primaryTxt}>{T('com.joinThis')}</Text>}
+              </Pressable>
+              <Pressable onPress={() => { setPreview(null); setError(null); }} style={ics.secondaryBtn}>
+                <Text style={ics.secondaryTxt}>{T('com.otherCode')}</Text>
+              </Pressable>
+            </>
+          )}
+        </Pressable>
+      </Pressable>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+}
+
+const makeIcs = (C: Tokens) => StyleSheet.create({
+  overlay:   { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.42)' },
+  sheet:     { backgroundColor: C.bg, borderTopLeftRadius: 26, borderTopRightRadius: 26, paddingHorizontal: S.gutter },
+  handleRow: { alignItems: 'center', paddingTop: 10, paddingBottom: 2 },
+  handle:    { width: 38, height: 5, borderRadius: 99, backgroundColor: C.border },
+  title:     { fontSize: 18, fontWeight: '700', color: C.text, letterSpacing: -0.5, marginTop: 12 },
+  sub:       { fontSize: 13, color: C.sub, letterSpacing: -0.2, marginTop: 4, marginBottom: 16 },
+  input:     { height: 54, borderRadius: R.lg, borderWidth: 1.5, borderColor: C.border, backgroundColor: C.surface, paddingHorizontal: 16, fontSize: 18, fontWeight: '700', letterSpacing: 2, color: C.text },
+  errTxt:    { fontSize: 12.5, color: C.danger, letterSpacing: -0.2, marginTop: 8 },
+  primaryBtn:   { height: 52, borderRadius: R.lg, backgroundColor: C.accent, alignItems: 'center', justifyContent: 'center', marginTop: 14 },
+  primaryTxt:   { fontSize: 15.5, fontWeight: '700', color: C.accentText, letterSpacing: -0.3 },
+  secondaryBtn: { height: 44, alignItems: 'center', justifyContent: 'center', marginTop: 4 },
+  secondaryTxt: { fontSize: 14, fontWeight: '600', color: C.sub, letterSpacing: -0.2 },
+  previewCard:  { flexDirection: 'row', alignItems: 'center', gap: 13, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 18, padding: 13 },
+  previewThumb: { width: 54, height: 54, borderRadius: 15, overflow: 'hidden', flexShrink: 0 },
+});
+
+
+// ─── Screen ───────────────────────────────────────────────────────────────────
+
+export default function CrewBrowseScreen() {
+  const C = useTokens();
+  const st = useStyles(makeSt);
+  const T = useT();
+  const insets = useSafeAreaInsets();
+  const listRef = useRef<FlatList<Crew>>(null);
+  return (
+    <View style={[st.root, { paddingTop: insets.top }]}>
+      <View style={st.appBar}>
+        <Pressable onPress={() => router.back()} hitSlop={12} style={st.appBarBtn} accessibilityRole="button" accessibilityLabel={T('common.back')}>
+          <Icon name="chevron-back" size={22} color={C.text} />
+        </Pressable>
+        <Text style={st.appBarTitle}>{T('com.browseSection')}</Text>
+        <View style={{ width: 36 }} />
+      </View>
+      <DiscoverTab listRef={listRef} />
+    </View>
+  );
+}
+
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
+const makeSt = (C: Tokens) => StyleSheet.create({
+  root:     { flex: 1, backgroundColor: C.bg },
+  appBar:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: S.gutter - 6, paddingTop: 6, paddingBottom: 8 },
+  appBarBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
+  appBarTitle: { fontSize: 17, fontWeight: '800', color: C.text, letterSpacing: -0.3 },
+
+  header:   { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: S.gutter, paddingTop: 12, paddingBottom: 4 },
+  searchIconBtn: { width: 42, height: 42, borderRadius: 999, borderWidth: 1, borderColor: C.border, backgroundColor: C.surface, alignItems: 'center', justifyContent: 'center', flexShrink: 0, ...shadows.sm },
+  title:    { fontSize: 26, fontWeight: '700', letterSpacing: -0.7, color: C.text },
+  subtitle: { fontSize: 13.5, color: C.sub, letterSpacing: -0.3, marginTop: 5 },
+
+  // Tabs
+  tabRow:       { flexDirection: 'row', gap: 22, paddingHorizontal: S.gutter, borderBottomWidth: 1, borderBottomColor: C.border },
+  tabBtn:       { position: 'relative', paddingTop: 16, paddingBottom: 12 },
+  tabTxt:       { fontSize: 15, fontWeight: '700', letterSpacing: -0.3 },
+  tabUnderline: { position: 'absolute', bottom: -1, left: 0, right: 0, height: 2.5, borderRadius: 99, backgroundColor: C.accent },
+
+  // 검색 위치 card (replaced the level chips, per canvas)
+  locCard:  { flexDirection: 'row', alignItems: 'center', gap: 11, marginTop: 14, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 16, padding: 12 },
+  searchBar:   { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 14, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 14, paddingHorizontal: 12, height: 44 },
+  searchInput: { flex: 1, fontSize: 14.5, fontWeight: '600', color: C.text, letterSpacing: -0.3, paddingVertical: 0 },
+  locIcon:  { width: 34, height: 34, borderRadius: 10, backgroundColor: C.accentDim, alignItems: 'center', justifyContent: 'center' },
+  locLabel: { fontSize: 10.5, fontWeight: '600', color: C.faint, letterSpacing: -0.1 },
+  locValue: { fontSize: 14, fontWeight: '700', color: C.text, letterSpacing: -0.3, marginTop: 2 },
+  cardLocTxt: { fontSize: 12, fontWeight: '600', color: C.accentGrn, letterSpacing: -0.2 },
+
+  // Full toggle row
+  toggleRow:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 2, paddingTop: 14, paddingBottom: 4 },
+  toggleCount: { fontSize: 12.5, color: C.faint, fontWeight: '600' },
+  toggleBtn:   { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  toggleLabel: { fontSize: 13, fontWeight: '700', letterSpacing: -0.2 },
+  switch:      { width: 40, height: 24, borderRadius: R.pill },
+  switchThumb: {
+    position: 'absolute', top: 2, width: 20, height: 20, borderRadius: R.pill,
+    backgroundColor: '#fff',
+    shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 2, shadowOffset: { width: 0, height: 1 },
+    elevation: 2,
+  },
+
+  // Cards (shared shape)
+  card:     { flexDirection: 'row', alignItems: 'center', gap: 13, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 18, padding: 13, ...shadows.sm },
+  thumbWrap:{ width: 54, height: 54, borderRadius: 15, overflow: 'hidden', flexShrink: 0, position: 'relative' },
+  colorDot: { position: 'absolute', bottom: 4, right: 4, width: 10, height: 10, borderRadius: 5, borderWidth: 1.5, borderColor: '#0C0F14' },
+  cardBody: { flex: 1, minWidth: 0, gap: 4 },
+  cardName: { fontSize: 15.5, fontWeight: '700', letterSpacing: -0.4, color: C.text },
+  cardMeta: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  cardMetaTxt: { fontSize: 12, color: C.faint, letterSpacing: -0.2 },
+  tagsRow:  { flexDirection: 'row', gap: 5, marginTop: 4, flexWrap: 'wrap' },
+  tag:      { backgroundColor: C.surfaceAlt, borderWidth: 1, borderColor: C.border, borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2 },
+  tagTxt:   { fontSize: 10.5, fontWeight: '700', color: C.sub },
+
+  // Join badge
+  joinBadge:  { flexShrink: 0, height: 32, paddingHorizontal: 14, borderRadius: R.pill, alignItems: 'center', justifyContent: 'center' },
+  joinOpen:   { backgroundColor: C.accent },
+  joinFull:   { backgroundColor: C.surfaceAlt, borderWidth: 1, borderColor: C.border },
+  joinPending:{ backgroundColor: C.accentDim, borderWidth: 1, borderColor: C.accent + '66' },
+  joinMember: { backgroundColor: C.surfaceAlt, borderWidth: 1, borderColor: C.border },
+  joinTxt:    { fontSize: 12.5, fontWeight: '700', letterSpacing: -0.2 },
+
+  // Invite code entry row
+  codeRow:   { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: C.surface, borderWidth: 1.5, borderColor: C.border, borderRadius: 18, padding: 14 },
+  codeIcon:  { width: 40, height: 40, borderRadius: 12, backgroundColor: C.accentDim, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  codeTitle: { fontSize: 14.5, fontWeight: '700', letterSpacing: -0.3, color: C.text },
+  codeSub:   { fontSize: 12.5, color: C.faint, letterSpacing: -0.2, marginTop: 2 },
+
+  // Owner badge
+  ownerBadge:{ backgroundColor: C.crown, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
+  ownerTxt:  { fontSize: 10, fontWeight: '800', color: C.accentText, letterSpacing: 0.2 },
+
+  // Section head + create CTA
+  sectionHead:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 13 },
+  sectionTitle: { fontSize: 17, fontWeight: '700', letterSpacing: -0.4, color: C.text },
+  createBtn:    { flexDirection: 'row', alignItems: 'center', gap: 4, height: 32, paddingHorizontal: 12, borderRadius: R.pill, borderWidth: 1.5, borderColor: C.accent, backgroundColor: C.accentDim },
+  createTxt:    { fontSize: 13, fontWeight: '700', color: C.accentGrn, letterSpacing: -0.2 },
+
+  // Empty dashed placeholder card
+  emptyDashed:     { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: C.surface, borderWidth: 1.5, borderColor: C.border, borderRadius: 18, padding: 16 },
+  emptyDashedIcon: { width: 40, height: 40, borderRadius: 12, backgroundColor: C.accentDim, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  emptyDashedTitle:{ fontSize: 14.5, fontWeight: '700', letterSpacing: -0.3, color: C.text },
+  emptyDashedSub:  { fontSize: 12.5, color: C.faint, letterSpacing: -0.2, marginTop: 2 },
+
+  // Loading / error / empty states
+  centered:   { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, paddingVertical: 60 },
+  stateTitle: { fontSize: 14, color: C.faint, letterSpacing: -0.2, fontWeight: '600' },
+  stateSub:   { fontSize: 12, color: C.faint, letterSpacing: -0.2, textAlign: 'center' },
+  retryBtn:   { marginTop: 4, paddingHorizontal: 20, paddingVertical: 10, borderRadius: R.md, backgroundColor: C.surfaceAlt, borderWidth: 1, borderColor: C.border },
+  retryTxt:   { fontSize: 14, fontWeight: '700', color: C.text },
+});
