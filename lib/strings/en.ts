@@ -178,11 +178,6 @@ export const en: Record<keyof typeof ko, string> = {
   'onb.later': 'Maybe later',
   'onb.start': 'Start FreshRun',
 
-  'home.greeting': 'Hello, {name}',
-  'home.greetMorning': 'Good morning, {name}',
-  'home.greetAfternoon': 'Good afternoon, {name}',
-  'home.greetEvening': 'Good evening, {name}',
-  'home.recommend': 'Pick: {course} {km}',
   'home.bellA11y': 'Notifications',
   'home.runner': 'Runner',
   'home.aiBadge': 'AI Course',

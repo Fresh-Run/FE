@@ -10,7 +10,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { KudosSheet } from '@/components/kudos-sheet';
 import { SuggestedRunnersRow, useSuggestedRunners } from '@/components/suggested-runners';
 import { tfIn, useLang, useT } from '@/lib/i18n';
-import { DAY_KEYS_FULL, distUnit, fmtDist, foldMinutes } from '@/lib/run-format';
+import { DAY_KEYS_FULL, foldMinutes } from '@/lib/run-format';
 import { useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useNavigation } from 'expo-router';
@@ -27,7 +27,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { RUN_ROUTE, useTabBarInset } from '@/components/fresh-tab-bar';
+import { useTabBarInset } from '@/components/fresh-tab-bar';
 import { PendingRunRecovery } from '@/components/pending-run-recovery';
 import { Icon } from '@/components/ui';
 import * as Location from 'expo-location';
@@ -44,8 +44,6 @@ import { spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { useQuota } from '@/store/use-quota';
 import { getMyRecentRuns } from '@/lib/runs-api';
-import { getMyRoutes } from '@/lib/routes-api';
-import { getBookmarkedRoutes } from '@/lib/bookmarks-api';
 import { prewarmTracks } from '@/lib/track-cache';
 import { useSettings } from '@/store/use-settings';
 import { useStore } from '@/store/use-store';
@@ -65,72 +63,32 @@ const SUGGEST_AFTER_N = 3;
 // the flagship CTA is never absent (see the footer's invariant note).
 const BANNER_EVERY_N = 10;
 
-// ─── Header (redesign item 7a, 2026-11-21 — canvas "피드 퍼스트 홈", Main.dc.html) ──
-// Greeting by hour · one sub-line (weather temp + verdict · 추천 course) ·
-// bell (owner ruling: small bell left of 뛰러가기, unread dot kept) · neon
-// 뛰러가기 → the run screen (same route as the nav bar's run button). The
-// old date line, avatar door and weather strip are gone — the sub-line is
-// the weather-detail door; the profile door lives on the MY tab.
-//
-// 추천 source: the server has no recommendation endpoint (probed
-// 2026-11-21) — newest own course (GET /routes), else newest bookmarked
-// course (GET /routes/bookmarked), else the clause is omitted.
-function greetKey(hour: number): 'home.greetMorning' | 'home.greetAfternoon' | 'home.greetEvening' {
-  if (hour >= 5 && hour < 11) return 'home.greetMorning';
-  if (hour >= 11 && hour < 18) return 'home.greetAfternoon';
-  return 'home.greetEvening';
-}
-
-function Header({ name, showBellDot, onBell }: { name: string; showBellDot: boolean; onBell: () => void }) {
+// ─── Header (redesign item 7a-fix, 2026-11-21 — canvas FeedHead.dc.html F2) ──
+// 피드 title · weather chip (temp · verdict, tap → weather detail) · bell
+// (unread dot) · 친구 / 전체 chips. OWNER RULINGS: no greetings anywhere in
+// the app; no 추천 sub-line; no 뛰러가기 here (the nav bar's run button is
+// the door). The old date line, avatar door and weather strip stay retired.
+function FeedHead({ tab, setTab, showBellDot, onBell }: { tab: string; setTab: (v: string) => void; showBellDot: boolean; onBell: () => void }) {
   const C = useTokens();
   const hst = useStyles(makeHst);
   const T = useT();
-  const lang = useLang();
-  const units = useSettings(s => s.settings.units);
   const { weather: w } = useWeather(); // shared cache/TTL, Seoul fallback — the strip's source, unchanged
-  const [course, setCourse] = useState<{ name: string; km: number } | null>(null);
-  useEffect(() => {
-    let alive = true;
-    getMyRoutes()
-      .then(rs => rs[0]
-        ? { name: rs[0].summary, km: rs[0].total_distance_km }
-        : getBookmarkedRoutes().then(bs => (bs[0] ? { name: bs[0].summary, km: bs[0].total_distance_km } : null)))
-      .then(c => { if (alive) setCourse(c); })
-      .catch(() => { /* clause omitted — never invented */ });
-    return () => { alive = false; };
-  }, []);
-  const wx = w ? `${Math.round(w.temp_c)}° ${w.running_index.label}` : null;
-  const rec = course ? tfIn(lang, 'home.recommend', { course: course.name, km: `${fmtDist(course.km, units, 1)} ${distUnit(units)}` }) : null;
-  const sub = [wx, rec].filter(Boolean).join(' · ');
   return (
-    <View style={hst.row}>
-      <View style={{ flex: 1, minWidth: 0 }}>
-        <RNText style={hst.greet} numberOfLines={1}>{tfIn(lang, greetKey(new Date().getHours()), { name })}</RNText>
-        <Pressable onPress={() => router.push('/weather-detail')} hitSlop={6} accessibilityRole="link">
-          <RNText style={hst.sub} numberOfLines={1}>{sub || T('wx.locating')}</RNText>
-        </Pressable>
+    <View>
+      <View style={hst.titleRow}>
+        <RNText style={hst.title}>{T('tab.feed')}</RNText>
+        <View style={hst.right}>
+          <Pressable onPress={() => router.push('/weather-detail')} style={({ pressed }) => [hst.wxChip, pressed && { opacity: 0.7 }]} accessibilityRole="button">
+            <RNText style={hst.wxTxt} numberOfLines={1}>{w ? `${Math.round(w.temp_c)}° · ${w.running_index.label}` : T('wx.locating')}</RNText>
+          </Pressable>
+          <Pressable onPress={onBell} hitSlop={10} style={({ pressed }) => [hst.bell, pressed && { opacity: 0.7 }]} accessibilityRole="button" accessibilityLabel={T('home.bellA11y')}>
+            <Icon name="notifications-outline" size={22} color={C.text} />
+            {showBellDot && <View style={hst.dot} />}
+          </Pressable>
+        </View>
       </View>
-      <Pressable onPress={onBell} hitSlop={8} style={({ pressed }) => [hst.bell, pressed && { opacity: 0.7 }]} accessibilityRole="button" accessibilityLabel={T('home.bellA11y')}>
-        <Icon name="notifications-outline" size={20} color={C.text} />
-        {showBellDot && <View style={hst.dot} />}
-      </Pressable>
-      <Pressable onPress={() => router.push(RUN_ROUTE as never)} style={({ pressed }) => [hst.go, pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] }]} accessibilityRole="button">
-        <RNText style={hst.goTxt}>{T('rt.go')}</RNText>
-      </Pressable>
-    </View>
-  );
-}
-
-// 피드 title + 친구 / 전체 chips (board: 26/900 title; chips 12px, radius 12,
-// active = surface, inactive = neutral). ids stay the SENTINEL VALUES
-// ('친구' / '전체' — ~12 comparison sites key on them); labels via keys.
-function FeedTitle({ tab, setTab }: { tab: string; setTab: (v: string) => void }) {
-  const C = useTokens();
-  const hst = useStyles(makeHst);
-  const T = useT();
-  return (
-    <View style={hst.titleRow}>
-      <RNText style={hst.title}>{T('tab.feed')}</RNText>
+      {/* ids stay the SENTINEL VALUES ('친구' / '전체' — ~12 comparison sites
+          key on them); labels resolve through keys */}
       <View style={hst.chips}>
         {([['친구', 'home.tabFriends'], ['전체', 'home.tabAll']] as const).map(([id, labelKey]) => {
           const on = tab === id;
@@ -146,17 +104,15 @@ function FeedTitle({ tab, setTab }: { tab: string; setTab: (v: string) => void }
 }
 
 const makeHst = (C: Tokens) => StyleSheet.create({
-  row:      { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  greet:    { fontSize: 15, fontWeight: '700', color: C.text, letterSpacing: -0.3 },
-  sub:      { fontSize: 11, color: C.sub, marginTop: 2, letterSpacing: -0.1 },
-  bell:     { width: 40, height: 40, borderRadius: 20, backgroundColor: C.surface, alignItems: 'center', justifyContent: 'center' },
-  dot:      { position: 'absolute', top: 9, right: 10, width: 7, height: 7, borderRadius: 4, backgroundColor: C.danger, borderWidth: 1.5, borderColor: C.surface },
-  go:       { backgroundColor: C.neon, borderRadius: 14, paddingHorizontal: 18, paddingVertical: 11 },
-  goTxt:    { fontSize: 13.5, fontWeight: '900', color: '#121712', letterSpacing: -0.2 },
-  titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   title:    { fontSize: 26, fontWeight: '900', color: C.text, letterSpacing: -0.4 },
-  chips:    { flexDirection: 'row', gap: 8 },
-  chip:     { borderRadius: 12, paddingHorizontal: 14, paddingVertical: 7 },
+  right:    { flexDirection: 'row', alignItems: 'center', gap: 12, flexShrink: 1, minWidth: 0 },
+  wxChip:   { backgroundColor: C.surface, borderRadius: 12, paddingHorizontal: 11, paddingVertical: 6, flexShrink: 1, minWidth: 0 },
+  wxTxt:    { fontSize: 11.5, fontWeight: '700', color: C.text, letterSpacing: -0.2 },
+  bell:     { width: 26, height: 26, alignItems: 'center', justifyContent: 'center' },
+  dot:      { position: 'absolute', top: 1, right: 1, width: 7, height: 7, borderRadius: 4, backgroundColor: C.danger, borderWidth: 1.5, borderColor: C.bg },
+  chips:    { flexDirection: 'row', gap: 8, paddingTop: 14 },
+  chip:     { borderRadius: 12, paddingHorizontal: 13, paddingVertical: 6 },
   chipTxt:  { fontSize: 12, letterSpacing: -0.2 },
 });
 
@@ -350,7 +306,6 @@ export default function HomeScreen() {
   const T = useT();
   const insets      = useSafeAreaInsets();
   const tabBarInset = useTabBarInset(); // 홈 was the last clipper — floating pill overlap
-  const displayName = useStore((s) => s.displayName);
   const signOut     = useStore((s) => s.signOut);
   useEffect(() => { useQuota.getState().hydrate(); }, []); // banner quota truth
 
@@ -440,7 +395,6 @@ export default function HomeScreen() {
     },
   ).current;
 
-  const name = displayName ?? T('home.runner');
   const list: FeedRun[] = tab === '전체' ? nearby.items : feed.items;
 
   // ── 추천 러너 (friends v1.1) — 친구 tab only, conditional placement.
@@ -496,15 +450,10 @@ export default function HomeScreen() {
   const error = tab === '전체' ? nearby.error : feed.error;
 
   const header = useMemo(() => (
-    <View>
-      <View style={{ paddingTop: insets.top + 12, paddingHorizontal: S.gutter }}>
-        <Header name={name} showBellDot={unread > 0} onBell={() => router.push('/notifications' as any)} />
-      </View>
-      <View style={{ paddingTop: 22, paddingBottom: 6, paddingHorizontal: S.gutter }}>
-        <FeedTitle tab={tab} setTab={setTab} />
-      </View>
+    <View style={{ paddingTop: insets.top + 14, paddingBottom: 6, paddingHorizontal: S.gutter }}>
+      <FeedHead tab={tab} setTab={setTab} showBellDot={unread > 0} onBell={() => router.push('/notifications' as any)} />
     </View>
-  ), [insets.top, name, unread, tab]);
+  ), [insets.top, unread, tab]);
 
   return (
     <View style={{ flex: 1, backgroundColor: C.bg }}>
