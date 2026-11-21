@@ -112,6 +112,7 @@ export const en: Record<keyof typeof ko, string> = {
   'rl.pace': 'Pace',
   'rl.pause': 'Pause',
   'rl.resume': 'Resume',
+  'rl.stop': 'Stop',
   'rl.stopA11y': 'Stop (hold)',
   'rl.hintDown': 'Swipe down for the map',
   'rl.hintUp': 'Swipe up for details',

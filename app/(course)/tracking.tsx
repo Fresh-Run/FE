@@ -129,15 +129,17 @@ const BACKWARD_COOLDOWN_MS = 60_000;
 // temp-probe doctrine without needing its session.
 const SHEET_TOP = MAP_H - 22;         // sheet's expanded top edge (canvas -22 overlap)
 // 4b (RunLive/RunMap boards, 2026-11-19): compact banner above the sheet.
-// RunDock board Q1 (owner-ruled 2026-11-21, replaces RunCtrl P1): the
-// controls own a reserved strip at the very bottom — sheet surface, hairline
-// divider on top, 84 px above the home indicator. Running: one neon pause
-// 58; paused: neutral 종료 hold 50 + neon 재개 58, gap 10. Nothing overlaps
-// it: the sheet is bottom-anchored, so its content pads by the strip.
+// RunDock board Q2 (owner-ruled 2026-11-21, replaces Q1's round buttons —
+// too small against the full-screen stats): the controls own a reserved
+// strip at the very bottom — sheet surface, hairline divider on top, 84 px
+// above the home indicator — holding labeled pills (56): running = one
+// full-width 일시정지 (text-token fill); paused = 종료 hold (≈⅓, neutral,
+// progress fills left→right) + neon 재개 (rest). Nothing overlaps it: the
+// sheet is bottom-anchored, so its content pads by the strip.
 const DOCK_H = 84;
-const CTRL_LG = 58;                   // pause / 재개
-const CTRL_SM = 50;                   // 종료 (hold)
+const PILL_H = 56;
 const CTRL_GAP = 10;
+const DOCK_PAD = 16;
 const BANNER_H = 96;
 const HANDLE_H = 25;                  // gorhom default handle: padding 10 + our 5px indicator + 10
 
@@ -268,13 +270,11 @@ const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 // `waitFor` — HOLDING with ≤34px drift keeps the sheet pan blocked and ends
 // the run; DELIBERATE travel beyond 34px FAILS the hold, freeing the pan
 // mid-gesture → sheet drags. No dead-zones.
-function HoldStop({ onComplete, size = 72, showLabel = true, gestureRef, variant = 'ring', fill, glyph }: {
+function HoldStop({ onComplete, size = 72, showLabel = true, gestureRef, variant = 'ring' }: {
   onComplete: () => void; size?: number; showLabel?: boolean;
-  /** RunCtrl P1: 'round' = the floating 종료 circle (neon progress arc around
-      it); gesture identical to the ring. */
-  variant?: 'ring' | 'round';
-  /** round only — circle fill / glyph colors (scheme-keyed by the caller). */
-  fill?: string; glyph?: string;
+  /** RunDock Q2: 'pill' = the dock's 종료 pill (progress fills left→right);
+      gesture identical to the ring. */
+  variant?: 'ring' | 'pill';
   /** Exposes this hold to the sheet's waitFor (Gesture.withRef). */
   gestureRef?: React.MutableRefObject<GestureType | undefined>;
 }) {
@@ -365,31 +365,19 @@ function HoldStop({ onComplete, size = 72, showLabel = true, gestureRef, variant
 
   const dashOffset = progress.interpolate({ inputRange: [0, 1], outputRange: [HOLD_CIRC, 0] });
 
-  if (variant === 'round') {
-    // Q1 종료: a `size` circle (neutral surface token, text-token square);
-    // the hold's progress is a 3px neon arc just outside it (the board shows
-    // a static circle — the arc is the owner-accepted deviation: a hold with
-    // no cue regresses both the ring and the bar).
-    const RING_SZ = size + 8, RING_R = RING_SZ / 2 - 2, RING_CIRC = 2 * Math.PI * RING_R;
-    const ringOffset = progress.interpolate({ inputRange: [0, 1], outputRange: [RING_CIRC, 0] });
+  if (variant === 'pill') {
+    // Q2 종료 pill: neutral fill, the hold's progress is a translucent ink
+    // fill sweeping left→right under the square + label (board Q2 shows a
+    // static pill — the sweep is the owner-accepted hold cue).
+    const fillWidth = progress.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] });
     return (
-      <View style={{ width: RING_SZ, height: RING_SZ, alignItems: 'center', justifyContent: 'center' }}>
-        <Svg width={RING_SZ} height={RING_SZ} viewBox={`0 0 ${RING_SZ} ${RING_SZ}`} style={{ position: 'absolute', transform: [{ rotate: '-90deg' }] }}>
-          <AnimatedCircle
-            cx={RING_SZ / 2} cy={RING_SZ / 2} r={RING_R} fill="none"
-            stroke={C.neon} strokeWidth={3} strokeLinecap="round"
-            strokeDasharray={`${RING_CIRC}`} strokeDashoffset={ringOffset}
-          />
-        </Svg>
-        <GestureDetector gesture={hold}>
-          <View
-            style={[st.ctrlSm, { width: size, height: size, borderRadius: size / 2, backgroundColor: fill ?? C.surfaceAlt, transform: [{ scale: holding ? 0.92 : 1 }] }]}
-            accessibilityRole="button" accessibilityLabel={t('rl.stopA11y')}
-          >
-            <View style={[st.ctrlSquare, { backgroundColor: glyph ?? C.text }]} />
-          </View>
-        </GestureDetector>
-      </View>
+      <GestureDetector gesture={hold}>
+        <View style={[st.pill, st.stopPill, { transform: [{ scale: holding ? 0.97 : 1 }] }]} accessibilityRole="button" accessibilityLabel={t('rl.stopA11y')}>
+          <Animated.View style={[st.stopPillFill, { width: fillWidth }]} />
+          <View style={st.stopSquareSm} />
+          <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.pillTxt} numberOfLines={1}>{holding ? t('trk.holdKeep') : t('rl.stop')}</Text>
+        </View>
+      </GestureDetector>
     );
   }
 
@@ -1855,19 +1843,21 @@ export default function TrackingScreen() {
           {running ? (
             <Pressable
               onPress={togglePause}
-              style={({ pressed }) => [st.ctrlLg, { backgroundColor: C.neon }, pressed && { transform: [{ scale: 0.93 }] }]}
+              style={({ pressed }) => [st.pill, { flex: 1, backgroundColor: C.text }, pressed && { opacity: 0.85 }]}
               accessibilityRole="button" accessibilityLabel={t('rl.pause')}
             >
-              <Icon name="pause" size={22} color="#121712" />
+              <Icon name="pause" size={16} color={C.surface} />
+              <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={[st.pillTxt, { color: C.surface }]}>{t('rl.pause')}</Text>
             </Pressable>
           ) : (<>
-            <HoldStop onComplete={endRun} gestureRef={holdRefBar} variant="round" size={CTRL_SM} />
+            <HoldStop onComplete={endRun} gestureRef={holdRefBar} variant="pill" />
             <Pressable
               onPress={togglePause}
-              style={({ pressed }) => [st.ctrlLg, { backgroundColor: C.neon }, pressed && { transform: [{ scale: 0.93 }] }]}
+              style={({ pressed }) => [st.pill, { flex: 2, backgroundColor: C.neon }, pressed && { opacity: 0.85 }]}
               accessibilityRole="button" accessibilityLabel={t('rl.resume')}
             >
-              <Icon name="play" size={24} color="#121712" />
+              <Icon name="play" size={16} color="#121712" />
+              <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={[st.pillTxt, { color: '#121712' }]}>{t('rl.resume')}</Text>
             </Pressable>
           </>)}
         </View>
@@ -1978,11 +1968,13 @@ const makeSt = (C: Tokens) => StyleSheet.create({
   liveHintWrap: { alignItems: 'center' },
   runChip:      { position: 'absolute', left: 22, backgroundColor: C.surface, borderRadius: 12, paddingHorizontal: 13, paddingVertical: 7 },
   runChipTxt:   { fontSize: 11.5, fontWeight: '700', color: C.text, fontVariant: ['tabular-nums'] },
-  // RunDock Q1 — reserved control strip (board: 84 tall, divider, 58 / 50, gap 10, flat)
-  dock:         { position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: C.surface, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: C.border, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: CTRL_GAP, paddingHorizontal: 12, zIndex: 20 },
-  ctrlLg:       { width: CTRL_LG, height: CTRL_LG, borderRadius: CTRL_LG / 2, alignItems: 'center', justifyContent: 'center' },
-  ctrlSm:       { alignItems: 'center', justifyContent: 'center' },
-  ctrlSquare:   { width: 14, height: 14, borderRadius: 3.5 },
+  // RunDock Q2 — reserved control strip (84 tall, divider) with labeled pills (56; 종료 ≈ ⅓ / 재개 rest)
+  dock:         { position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: C.surface, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: C.border, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: CTRL_GAP, paddingHorizontal: DOCK_PAD, zIndex: 20 },
+  pill:         { height: PILL_H, borderRadius: PILL_H / 2, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, paddingHorizontal: 14, overflow: 'hidden' },
+  pillTxt:      { fontSize: 14, fontWeight: '800', color: C.text },
+  stopPill:     { flex: 1, backgroundColor: C.surfaceAlt },
+  stopPillFill: { position: 'absolute', left: 0, top: 0, bottom: 0, backgroundColor: C.text, opacity: 0.16 },
+  stopSquareSm: { width: 12, height: 12, borderRadius: 3, backgroundColor: C.text },
   handleIndicator: { width: 38, height: 5, borderRadius: 99, backgroundColor: C.border },
   expandedWrap: { paddingHorizontal: S.gutter },
   // Absolute within the sheet content (which starts below the lib handle)
