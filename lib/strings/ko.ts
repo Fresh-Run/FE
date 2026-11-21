@@ -121,7 +121,6 @@ export const ko = {
   'rl.pace': '페이스',
   'rl.pause': '일시정지',
   'rl.resume': '재개',
-  'rl.stop': '종료',
   'rl.stopA11y': '종료 (길게 누르기)',
   'rl.hintDown': '내려서 지도 보기',
   'rl.hintUp': '올려서 크게 보기',
