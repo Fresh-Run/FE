@@ -179,6 +179,7 @@ export const en: Record<keyof typeof ko, string> = {
   'onb.start': 'Start FreshRun',
 
   'home.bellA11y': 'Notifications',
+  'fc.comments': 'Comments {n}',
   'home.runner': 'Runner',
   'home.aiBadge': 'AI Course',
   'home.aiQuotaOut': 'Weekly free generations\nall used up',

@@ -32,7 +32,7 @@ import { PendingRunRecovery } from '@/components/pending-run-recovery';
 import { Icon } from '@/components/ui';
 import * as Location from 'expo-location';
 
-import { RunCard } from '@/components/run-card';
+import { FeedCard } from '@/components/feed-card';
 import { useCurrentLocation } from '@/hooks/use-current-location';
 import { useFeed, useNearbyFeed } from '@/hooks/use-feed';
 import { LOOP_MIN_TARGET_KM } from '@/hooks/use-generate-route';
@@ -487,7 +487,7 @@ export default function HomeScreen() {
         onEndReached={tab === '친구' ? feed.loadMore : nearby.loadMore}
         onEndReachedThreshold={0.4}
         contentContainerStyle={{ paddingBottom: tabBarInset }}
-        ItemSeparatorComponent={() => <View style={{ height: 16 }} />}
+        ItemSeparatorComponent={() => <View style={{ height: 4 }} />}
         renderItem={({ item }) => {
           if ('__suggest' in item) return <SuggestedRunnersRow sr={sr} />; // single suggest slot
           if ('__banner' in item) return bannerSlot; // 8/28: interleaved AI banner (every 10th card)
@@ -495,8 +495,8 @@ export default function HomeScreen() {
           const ov = kudosOv[item.run_id];
           const shown = ov ? { ...item, my_kudos: ov.on, kudos_count: item.kudos_count + ov.delta } : item;
           return (
-            <View style={{ paddingHorizontal: S.gutter }}>
-              <RunCard
+            <View>
+              <FeedCard
                 run={shown}
                 units={units}
                 mapLive={liveIds.has(item.run_id)}

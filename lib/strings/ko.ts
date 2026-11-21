@@ -191,6 +191,7 @@ export const ko = {
 
   // ── home greeting + AI banner (core subset — the rest of home stays ko) ─
   'home.bellA11y': '알림',
+  'fc.comments': '댓글 {n}',
   'home.runner': '러너',
   'home.aiBadge': 'AI 추천 코스',
   'home.aiQuotaOut': '이번 주 무료 생성을\n다 썼어요',
