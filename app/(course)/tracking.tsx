@@ -32,6 +32,8 @@ import BottomSheet, { BottomSheetView } from '@gorhom/bottom-sheet';
 import { Gesture, GestureDetector, GestureHandlerRootView, type GestureType } from 'react-native-gesture-handler';
 import MapView, { Marker, Polyline } from 'react-native-maps';
 import Reanimated, {
+  Extrapolation,
+  interpolate,
   useAnimatedStyle,
   useSharedValue,
 } from 'react-native-reanimated';
@@ -136,6 +138,7 @@ const CTRL_SM = 54;                   // 종료 (hold)
 const CTRL_GAP = 10;
 const CTRL_BOTTOM = 12;               // above the safe area
 const BANNER_H = 96;
+const HANDLE_H = 25;                  // gorhom default handle: padding 10 + our 5px indicator + 10
 
 // ─── nav v5: THE ONE CAMERA MATH (8/3 recenter fly-away conviction) ──────────
 // Recenter and follow had drifted apart — divergence between them was this
@@ -1212,13 +1215,22 @@ export default function TrackingScreen() {
   const sheetH = winH - SHEET_TOP;
   // BISECT A2: the sheet content pads by the floating controls' footprint
   const controlSpace = insets.bottom + CTRL_BOTTOM + CTRL_LG + 12;
-  // BISECT C: compact detent = banner + that footprint (was COMPACT_VISIBLE 100)
-  // BISECT D: expanded = the full window for free runs (RunLive board — the
-  // map is gone behind the stats); course runs keep the map strip (sheetH).
-  const runSnaps = useMemo(
-    () => [BANNER_H + controlSpace, course ? sheetH : winH],
-    [sheetH, controlSpace, course, winH],
-  );
+  // Compact detent = banner + that footprint. Expanded (free runs) = the
+  // full-screen RunLive look, but NEVER a detent at position 0: @gorhom/
+  // bottom-sheet 5.2.14 normalizes a snap point to `containerHeight - snap`
+  // and `setToPosition()` opens with `if (!targetPosition) return;` — a
+  // snap equal to the container height (position 0) is silently skipped on
+  // a non-animated mount, leaving the sheet translated a full window down
+  // (= the "missing sheet", bisect D 2026-11-21; also 4b's topInset
+  // variant, same arithmetic). So the expanded top edge sits at the top
+  // inset (floored at 1 px) and the status-bar cap below paints the rest.
+  // Course runs keep the map strip (sheetH).
+  const expTop = Math.max(insets.top, 1);
+  const expandedH = course ? sheetH : winH - expTop;
+  const runSnaps = useMemo(() => [BANNER_H + controlSpace, expandedH], [expandedH, controlSpace]);
+  // RunLive stack height: the expanded sheet minus handle and the floating
+  // controls' footprint — the metrics spread evenly down the whole height.
+  const stackH = expandedH - HANDLE_H - controlSpace;
   const [detent, setDetent] = useState<'expanded' | 'compact'>('expanded');
   // Slidable only mid-run; idle needs the start button, countdown is locked
   const canSlide = state === 'running' || state === 'paused';
@@ -1258,6 +1270,12 @@ export default function TrackingScreen() {
   const recenterRide = useAnimatedStyle(() => ({
     top: sheetPos.value - 52,
   }));
+  // Status-bar cap: sheet-colored strip behind the status bar, outside the
+  // sheet; visible only while the sheet's top edge is within 40 px of the
+  // top inset, so compact shows nothing and a drag down fades it first.
+  const capFade = useAnimatedStyle(() => ({
+    opacity: interpolate(sheetPos.value, [expTop, expTop + 40], [1, 0], Extrapolation.CLAMP),
+  }), [expTop]);
 
   // Once countdown starts there is no exit except hold-stop: kill the back
   // gesture and swallow any remove attempt (incl. Android hardware back).
@@ -1681,18 +1699,23 @@ export default function TrackingScreen() {
           pointerEvents={detent === 'expanded' ? 'auto' : 'none'}
           style={[st.expandedWrap, !idle ? expandedFade : null]}
         >
-          {/* BISECT A1: RunLive stack. BISECT B: tap toggles the detent.
-              BISECT D: free runs pad by the top inset (the sheet covers the
-              status bar at full height). */}
+          {/* RunLive stack (board RunLive): caption · 시간 · 페이스 · 거리 ·
+              hint, spread evenly over the stack height (space-between);
+              tap toggles the detent. */}
           {!idle && (
-            <Pressable onPress={toggleDetent} style={[st.live, !course && { paddingTop: insets.top }]} accessibilityRole="button" accessibilityLabel={t('rl.hintDown')}>
+            <Pressable onPress={toggleDetent} style={[st.live, { minHeight: stackH }]} accessibilityRole="button" accessibilityLabel={t('rl.hintDown')}>
               <Text style={st.liveCaption}>{course ? course.title : tfIn(lang, 'rl.caption', { date: fmtDateAbs(new Date().toISOString(), lang) })}</Text>
-              <Text style={st.liveLbl}>{t('rl.time')}</Text>
-              <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.liveTime}>{fmtElapsed(elapsedSec)}</Text>
+              <View style={st.liveBlock}>
+                <Text style={st.liveLbl}>{t('rl.time')}</Text>
+                <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.liveTime}>{fmtElapsed(elapsedSec)}</Text>
+              </View>
               <View style={st.liveRule} />
-              <Text style={st.liveLbl}>{t('rl.pace')}</Text>
-              <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.liveBig}>{paceDisplay}</Text>
+              <View style={st.liveBlock}>
+                <Text style={st.liveLbl}>{t('rl.pace')}</Text>
+                <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.liveBig}>{paceDisplay}</Text>
+              </View>
               <View style={st.liveRule} />
+              <View style={st.liveBlock}>
               <Text style={st.liveLbl}>{t('trk.dist')}</Text>
               <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.liveBig}>{fmtDist(distanceKm, units, 2)}<Text style={st.liveUnit}> {distUnit(units)}</Text></Text>
               {(() => {
@@ -1713,6 +1736,7 @@ export default function TrackingScreen() {
                   </Text>
                 );
               })()}
+              </View>
               <View style={st.liveHintWrap}>
                 <Text style={st.bannerHint}>{t('rl.hintDown')}</Text>
               </View>
@@ -1814,6 +1838,12 @@ export default function TrackingScreen() {
         </Reanimated.View>
         </BottomSheetView>
       </BottomSheet>
+      )}
+      {/* Status-bar cap (free runs): completes the full-screen sheet look
+          above the top inset — see the detent comment for why the sheet
+          itself cannot reach position 0. */}
+      {!idle && !course && (
+        <Reanimated.View pointerEvents="none" style={[st.statusCap, { height: insets.top, backgroundColor: C.surface }, capFade]} />
       )}
 
       {/* RunCtrl P1 floating controls — no bar. Running: one pause, centered.
@@ -1936,15 +1966,17 @@ const makeSt = (C: Tokens) => StyleSheet.create({
   bannerSep:    { color: C.faint, fontWeight: '700', fontSize: 20 },
   bannerUnit:   { fontSize: 13, fontWeight: '700', color: C.text },
   bannerHint:   { fontSize: 10.5, color: C.sub, marginTop: 6 },
-  live:         { alignItems: 'center', paddingTop: 2 },
-  liveCaption:  { fontSize: 11, color: C.sub, marginBottom: 26 },
+  live:         { alignItems: 'center', justifyContent: 'space-between', paddingTop: 2 },
+  liveBlock:    { alignItems: 'center' },
+  liveCaption:  { fontSize: 11, color: C.sub },
+  statusCap:    { position: 'absolute', top: 0, left: 0, right: 0 },
   liveLbl:      { fontSize: 13, fontWeight: '500', color: C.sub },
   liveTime:     { fontSize: 88, fontWeight: '800', letterSpacing: -1.8, color: C.text, lineHeight: 96, fontVariant: ['tabular-nums'] },
   liveBig:      { fontSize: 62, fontWeight: '800', letterSpacing: -1, color: C.text, lineHeight: 70, fontVariant: ['tabular-nums'] },
   liveUnit:     { fontSize: 19, fontWeight: '700', letterSpacing: 0 },
-  liveRule:     { alignSelf: 'stretch', height: 1, backgroundColor: C.border, marginVertical: 18, marginHorizontal: 30 },
-  liveSub:      { fontSize: 12, color: C.sub, marginTop: 10, fontVariant: ['tabular-nums'] },
-  liveHintWrap: { alignItems: 'center', marginTop: 22 },
+  liveRule:     { alignSelf: 'stretch', height: 1, backgroundColor: C.border, marginHorizontal: 30 },
+  liveSub:      { fontSize: 12, color: C.sub, marginTop: 8, fontVariant: ['tabular-nums'] },
+  liveHintWrap: { alignItems: 'center' },
   runChip:      { position: 'absolute', left: 22, backgroundColor: C.surface, borderRadius: 12, paddingHorizontal: 13, paddingVertical: 7 },
   runChipTxt:   { fontSize: 11.5, fontWeight: '700', color: C.text, fontVariant: ['tabular-nums'] },
   // RunCtrl P1 — floating round controls (board: 64 / 54, gap 10, shadow 0 4 14 @18% ink)
