@@ -131,7 +131,6 @@ const SHEET_TOP = MAP_H - 22;         // sheet's expanded top edge (canvas -22 o
 // floating round buttons (running: one pause, centered; paused: 종료 hold
 // 54 + 재개 64) sit over sheet and map. The sheet is bottom-anchored, so its
 // content pads by the buttons' footprint.
-const COMPACT_VISIBLE = 100;          // compact detent: handle + strip (4a)
 const CTRL_LG = 64;                   // pause / 재개
 const CTRL_SM = 54;                   // 종료 (hold)
 const CTRL_GAP = 10;
@@ -1211,9 +1210,10 @@ export default function TrackingScreen() {
   // hand-validate). Built on the SAME RNGH+Reanimated already in the tree;
   // pure JS, Expo Go-safe. ──
   const sheetH = winH - SHEET_TOP;
-  const runSnaps = useMemo(() => [COMPACT_VISIBLE, sheetH], [sheetH]); // BISECT baseline = 4a
-  // BISECT A2: the sheet content pads by the fixed control bar's footprint
+  // BISECT A2: the sheet content pads by the floating controls' footprint
   const controlSpace = insets.bottom + CTRL_BOTTOM + CTRL_LG + 12;
+  // BISECT C: compact detent = banner + that footprint (was COMPACT_VISIBLE 100)
+  const runSnaps = useMemo(() => [BANNER_H + controlSpace, sheetH], [sheetH, controlSpace]);
   const [detent, setDetent] = useState<'expanded' | 'compact'>('expanded');
   // Slidable only mid-run; idle needs the start button, countdown is locked
   const canSlide = state === 'running' || state === 'paused';
