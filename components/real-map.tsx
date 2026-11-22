@@ -21,7 +21,8 @@ import { Icon } from '@/components/ui';
 import { androidMapProps } from '@/lib/map-android';
 import { KM_PER_MI } from '@/lib/run-format';
 import { distanceCrossings } from '@/lib/run-metrics';
-import { routeStroke } from '@/lib/theme';
+import { ROUTE_INK, ROUTE_NEON, routeSizeFor, routeWidths } from '@/lib/route-style';
+import { roundCorners } from '@/lib/route-smooth';
 import { useScheme } from '@/store/use-scheme';
 import type { Coordinate } from '@/types';
 
@@ -132,7 +133,9 @@ export function RealMap({ height, borderRadius = 0, polyline, center, marker = f
   // hybrid addendum (8/1): the satellite base is scheme-independent (dark
   // imagery under any app theme), so the stroke keys to the IMAGERY, not
   // the theme — hybrid always gets the dark-scheme lime.
-  const stroke = mapType === 'hybrid' ? routeStroke('dark') : routeStroke(resolved);
+  // item ⑫: ONE route style — neon over ink casing, both schemes, widths by surface size
+  const stroke = ROUTE_NEON;
+  const rw = routeWidths(routeSizeFor(height));
   // 8/3 CRASH CLASS (her triage: AIRMap insertReactSubview nil via the
   // new-arch legacy interop — a MapView child resolving nil at mount; her
   // payload sweep showed ZERO nils, so the nil is manufactured client-side):
@@ -148,6 +151,8 @@ export function RealMap({ height, borderRadius = 0, polyline, center, marker = f
     const clean = polyline.filter(c => c != null && Number.isFinite(c.lat) && Number.isFinite(c.lng));
     return clean.length >= 2 ? clean : null;
   }, [polyline]);
+  // display-only geometry: straight legs, corners rounded ≤ 4 m (never written back)
+  const drawn = useMemo(() => (line ? roundCorners(line) : null), [line]);
   // P1 나일-가드 (9/8, ASC 빌드-11 크래시): 8/3 ①룰의 웨이포인트 누락분 —
   // 라인은 finite-필터를 받는데 마커 좌표는 raw로 네이티브에 갔다. null/NaN
   // 멤버 좌표의 Marker = nil 네이티브 뷰 제조 (AIRMap insertReactSubview:
@@ -240,27 +245,24 @@ export function RealMap({ height, borderRadius = 0, polyline, center, marker = f
         {marker && center && !line ? (
           <Marker coordinate={{ latitude: center.lat, longitude: center.lng }} />
         ) : null}
-        {line && !lineHidden ? (
-          <Polyline
-            coordinates={line.map(toLatLng)}
-            strokeColor={stroke}
-            strokeWidth={4}
-            lineCap="round"
-            lineJoin="round"
-          />
+        {drawn && !lineHidden ? (
+          <Polyline coordinates={drawn.map(toLatLng)} strokeColor={ROUTE_INK} strokeWidth={rw.casing} lineCap="round" lineJoin="round" />
+        ) : null}
+        {drawn && !lineHidden ? (
+          <Polyline coordinates={drawn.map(toLatLng)} strokeColor={stroke} strokeWidth={rw.line} lineCap="round" lineJoin="round" />
         ) : null}
         {line && !lineHidden ? (
           startPin ? (
             <Marker coordinate={toLatLng(line[0])} />
           ) : (
             <Marker coordinate={toLatLng(line[0])} anchor={{ x: 0.5, y: 0.5 }}>
-              <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: '#fff', borderWidth: 4, borderColor: stroke }} />
+              <View style={{ width: rw.dot * 2 - 2, height: rw.dot * 2 - 2, borderRadius: rw.dot, backgroundColor: ROUTE_NEON, borderWidth: rw.ring, borderColor: ROUTE_INK }} />
             </Marker>
           )
         ) : null}
         {line && !lineHidden ? (
           <Marker coordinate={toLatLng(line[line.length - 1])} anchor={{ x: 0.5, y: 0.5 }}>
-            <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: stroke, borderWidth: 3, borderColor: '#fff' }} />
+            <View style={{ width: rw.dot * 2, height: rw.dot * 2, borderRadius: rw.dot, backgroundColor: ROUTE_NEON, borderWidth: rw.ring, borderColor: ROUTE_INK }} />
           </Marker>
         ) : null}
         {/* km markers — default tracksViewChanges (the dots' proven config):

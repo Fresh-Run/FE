@@ -1,4 +1,5 @@
-import { routeStroke } from '@/lib/theme';
+import { ROUTE_INK, ROUTE_NEON } from '@/lib/route-style';
+import { roundCorners } from '@/lib/route-smooth';
 import React, { useMemo } from 'react';
 import { View } from 'react-native';
 import Svg, { Circle, Line, Path, Rect } from 'react-native-svg';
@@ -53,16 +54,17 @@ export function MiniMap({ seed, height = 172, borderRadius = 0, polyline }: Mini
     // Real geometry overrides the seeded fake path (background stays seeded).
     // Straight segments, not curves — this is actual GPS shape, don't smooth it.
     if (polyline && polyline.length >= 2) {
-      const lats = polyline.map(c => c.lat);
-      const lngs = polyline.map(c => c.lng);
+      const shaped = roundCorners(polyline); // item ⑫: display-only corner rounding
+      const lats = shaped.map(c => c.lat);
+      const lngs = shaped.map(c => c.lng);
       const minLat = Math.min(...lats), latR = (Math.max(...lats) - minLat) || 0.001;
       const minLng = Math.min(...lngs), lngR = (Math.max(...lngs) - minLng) || 0.001;
       const px = (c: Coordinate) => pad + ((c.lng - minLng) / lngR) * (W - 2 * pad);
       const py = (c: Coordinate) => H - pad - ((c.lat - minLat) / latR) * (H - 2 * pad);
-      const realD = polyline
+      const realD = shaped
         .map((c, i) => `${i === 0 ? 'M' : 'L'} ${px(c).toFixed(1)} ${py(c).toFixed(1)}`)
         .join(' ');
-      const first = polyline[0], last = polyline[polyline.length - 1];
+      const first = shaped[0], last = shaped[shaped.length - 1];
       return { W, H, d: realD, start: [px(first), py(first)] as [number, number], end: [px(last), py(last)] as [number, number], roads, river };
     }
 
@@ -70,9 +72,8 @@ export function MiniMap({ seed, height = 172, borderRadius = 0, polyline }: Mini
   }, [seed, polyline]);
 
   const { W, H, d, start, end, roads, river } = data;
-  // 지연 palette ruling: the neon dies. This panel is dark-fixed (night
-  // canvas), so it takes the DARK tone unconditionally — the LA precedent.
-  const accent = routeStroke('dark');
+  // item ⑫: the shared route style — neon over ink casing (viewBox units)
+  const accent = ROUTE_NEON;
 
   return (
     <View style={{ width: '100%', height, backgroundColor: '#15171C', overflow: 'hidden', borderRadius }}>
@@ -87,10 +88,10 @@ export function MiniMap({ seed, height = 172, borderRadius = 0, polyline }: Mini
         {roads.map((r, i) => (
           <Line key={i} x1={r[0]} y1={r[1]} x2={r[2]} y2={r[3]} stroke="#1C2230" strokeWidth={r[4] ? 8 : 5} />
         ))}
-        <Path d={d} stroke={accent} strokeOpacity={0.22} strokeWidth={13} strokeLinecap="round" strokeLinejoin="round" fill="none" />
-        <Path d={d} stroke={accent} strokeWidth={5} strokeLinecap="round" strokeLinejoin="round" fill="none" />
-        <Circle cx={start[0]} cy={start[1]} r={7} fill="#15171C" stroke={accent} strokeWidth={4} />
-        <Circle cx={end[0]} cy={end[1]} r={8} fill={accent} />
+        <Path d={d} stroke={ROUTE_INK} strokeWidth={11} strokeLinecap="round" strokeLinejoin="round" fill="none" />
+        <Path d={d} stroke={accent} strokeWidth={6.5} strokeLinecap="round" strokeLinejoin="round" fill="none" />
+        <Circle cx={start[0]} cy={start[1]} r={7} fill={accent} stroke={ROUTE_INK} strokeWidth={3} />
+        <Circle cx={end[0]} cy={end[1]} r={8.5} fill={accent} stroke={ROUTE_INK} strokeWidth={3} />
       </Svg>
     </View>
   );

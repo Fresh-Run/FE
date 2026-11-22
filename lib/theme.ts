@@ -54,8 +54,10 @@ export const palette = {
     mechanism (settings.theme is persist-only — ledgered board item). Dark-
     fixed panels (MiniMap's night canvas, the LA widget) use the dark tone
     unconditionally — panel-keyed, not scheme-keyed (the LA precedent). */
-export const routeStroke = (scheme: 'light' | 'dark' | null | undefined): string =>
-  scheme === 'dark' ? '#39FF14' : '#2E7D32'; // dark tone rebranded 8/20 (identity: == accent == LA lime)
+// item ⑫ (2026-11-21): ONE route style — neon in both schemes (lib/route-style).
+// The light deep green and the dark lime are retired; kept as a function for
+// the remaining import sites. Scheme is ignored.
+export const routeStroke = (_scheme: 'light' | 'dark' | null | undefined): string => '#C3FF3C';
 
 /** Course under-layer on the live tracking map — the "where to go" line,
     visually DISTINCT from the accent "where I've been" path (deep green vs
@@ -63,8 +65,7 @@ export const routeStroke = (scheme: 'light' | 'dark' | null | undefined): string
     BOTH schemes (leg-1 stroke conviction 2026-07-21 — the old translucent
     gray read 2.0–2.7:1, sub-perceptual at course scale, and was the app's
     only route stroke the ⑥ unification missed). */
-export const courseStroke = (scheme: 'light' | 'dark' | null | undefined): string =>
-  scheme === 'dark' ? '#549C2D' : '#2E7D32';
+export const courseStroke = (_scheme: 'light' | 'dark' | null | undefined): string => '#C3FF3C8C'; // item ⑫: dimmed neon (course-to-follow)
 
 export const colors = {
   // Surfaces

@@ -42,6 +42,12 @@ export async function hydrateDataCache(userId: string): Promise<void> {
       try { mem.set(k.slice(prefix.length), JSON.parse(raw) as { v: unknown; at: number }); } catch { /* skip a corrupt entry */ }
     }
   } catch { /* storage unavailable — the app runs uncached */ }
+  // item ⑫: purge v1 map snapshots (old line style) once per hydrate
+  const stale = [...mem.keys()].filter(k => k.startsWith('snap:'));
+  if (stale.length) {
+    for (const k of stale) mem.delete(k);
+    AsyncStorage.multiRemove(stale.map(k => `${PREFIX}${userId}:${k}`)).catch(() => {});
+  }
   ready = true;
 }
 

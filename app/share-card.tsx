@@ -51,7 +51,9 @@ import { track } from '@/lib/analytics';
 import { useRunDetail } from '@/hooks/use-runs';
 import { useRunTrack } from '@/lib/track-cache';
 import { distUnit, fmtDist, fmtDuration, fmtPaceIn, paceUnit, timeTitle } from '@/lib/run-format';
-import { routeStroke, DENSE_MAX_FONT_SCALE} from '@/lib/theme';
+import { DENSE_MAX_FONT_SCALE } from '@/lib/theme';
+import { ROUTE_INK, ROUTE_NEON } from '@/lib/route-style';
+import { roundCorners } from '@/lib/route-smooth';
 import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { useSettings } from '@/store/use-settings';
@@ -103,7 +105,7 @@ const METRIC_LABELS = {
 const BG_ADJUST_CAP = 20;
 // v2.1 stroke presets — the house lime leads; fixture companions chosen for
 // dark-canvas/photo legibility (the composer's canvas family)
-const STROKE_COLORS = ['#39FF14', '#FFFFFF', '#FFC24B', '#5AC8FA', '#FF6B81'];
+const STROKE_COLORS = [ROUTE_NEON, '#FFFFFF', '#FFC24B', '#5AC8FA', '#FF6B81']; // item ⑫: house neon first
 const STROKE_WEIGHTS = [[3, 'shr.thin'], [4.5, 'shr.normal'], [6, 'shr.thick']] as const; // keys — render-time
 // default stack ≈ the old bottom-left block (canvas fractions)
 const DEFAULT_PLACEMENT: Record<ShareLayerKey, MetricPlacement> = {
@@ -507,10 +509,10 @@ export default function ShareCardScreen() {
   // ── the draggable route layer ───────────────────────────────────────────────
   const layerSize = Math.round(canvasW * 0.72);
   const route = useMemo(
-    () => (routeLine ? routePath(routeLine, layerSize, 10) : null),
+    () => (routeLine ? routePath(roundCorners(routeLine), layerSize, 10) : null), // item ⑫: corners rounded for display
     [routeLine, layerSize],
   );
-  const stroke = prefs.strokeColor ?? routeStroke('dark'); // preset-able (v2.1); lime default
+  const stroke = prefs.strokeColor ?? ROUTE_NEON; // item ⑫: house style default; swatches kept (owner)
   const strokeW = prefs.strokeWeight ?? 4.5;
   // 배경 조정 MODE (v2.1 arbitration): RNGH makes every detector whose view
   // contains the touch a CANDIDATE regardless of z-order — cross-wiring
@@ -557,6 +559,7 @@ export default function ShareCardScreen() {
   // counter-scale: the layer transform scales everything incl. the stroke;
   // dividing by sc keeps the chosen preset (3/4.5/6) visually constant
   const strokeProps = useAnimatedProps(() => ({ strokeWidth: strokeW / sc.value }));
+  const casingProps = useAnimatedProps(() => ({ strokeWidth: (strokeW * 1.64) / sc.value })); // item ⑫: ink casing (9/5.5)
   // addendum: the start/end dots counter-scale the same way (same class)
   const startDotProps = useAnimatedProps(() => ({ r: 5 / sc.value, strokeWidth: 3 / sc.value }));
   const endDotProps = useAnimatedProps(() => ({ r: 5.5 / sc.value, strokeWidth: 2 / sc.value }));
@@ -945,9 +948,10 @@ export default function ShareCardScreen() {
               <GestureDetector gesture={gesture}>
                 <Reanimated.View style={[st.routeLayer, { width: layerSize, height: layerSize, left: (canvasW - layerSize) / 2, top: (canvasH - layerSize) / 2 }, layerStyle]}>
                   <Svg viewBox={`0 0 ${layerSize} ${layerSize}`} width="100%" height="100%">
-                    <AnimatedPath d={route.d} stroke={stroke} animatedProps={strokeProps} strokeLinecap="round" strokeLinejoin="round" fill="none" opacity={0.95} />
-                    <AnimatedCircle cx={route.start[0]} cy={route.start[1]} animatedProps={startDotProps} fill="#fff" stroke={stroke} />
-                    <AnimatedCircle cx={route.end[0]} cy={route.end[1]} animatedProps={endDotProps} fill={stroke} stroke="#fff" />
+                    <AnimatedPath d={route.d} stroke={ROUTE_INK} animatedProps={casingProps} strokeLinecap="round" strokeLinejoin="round" fill="none" opacity={0.9} />
+                    <AnimatedPath d={route.d} stroke={stroke} animatedProps={strokeProps} strokeLinecap="round" strokeLinejoin="round" fill="none" />
+                    <AnimatedCircle cx={route.start[0]} cy={route.start[1]} animatedProps={startDotProps} fill={stroke} stroke={ROUTE_INK} />
+                    <AnimatedCircle cx={route.end[0]} cy={route.end[1]} animatedProps={endDotProps} fill={stroke} stroke={ROUTE_INK} />
                   </Svg>
                   {selected === 'track' && <View pointerEvents="none" style={st.selBorder}><View style={st.selHandle} /></View>}
                 </Reanimated.View>

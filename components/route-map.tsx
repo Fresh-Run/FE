@@ -56,8 +56,10 @@ export function RouteMap({ id, polyline, line, pending = false, height, width, b
   const scheme = useScheme(s => s.resolved);
   const [w, setW] = useState(width ?? 0);
   const geom = line && line.length >= 2 ? line : polyline && polyline.length >= 2 ? polyline : null;
-  const keyCard = `snap:${id}:c${w}x${height}:${scheme}`;
-  const keySq = `snap:${id}:sq:${scheme}`;
+  // item ⑫: v2 keys — every snapshot taken with the old line style is ignored
+  // (and purged at hydrate) so no old green/lime line lingers.
+  const keyCard = `snap2:${id}:c${w}x${height}:${scheme}`;
+  const keySq = `snap2:${id}:sq:${scheme}`;
   const key = square ? keySq : keyCard;
   const [snap, setSnap] = useState<string | null>(() => dcGet<string>(key) ?? null);
   useEffect(() => {

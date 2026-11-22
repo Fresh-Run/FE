@@ -58,7 +58,9 @@ import { getPendingRun, refreshPendingRun, setPendingRun } from '@/store/pending
 import { useLocalProfile } from '@/store/use-local-profile';
 import { useSettings } from '@/store/use-settings';
 import { distUnit, fmtDateAbs, fmtDist, fmtPaceIn, paceUnit } from '@/lib/run-format';
-import { accentShadow, radius as R, routeStroke, shadows, spacing as S, type Tokens, DENSE_MAX_FONT_SCALE} from '@/lib/theme';
+import { accentShadow, radius as R, shadows, spacing as S, type Tokens, DENSE_MAX_FONT_SCALE} from '@/lib/theme';
+import { ROUTE_INK, ROUTE_NEON, ROUTE_NEON_BEHIND, ROUTE_NEON_DIM } from '@/lib/route-style';
+import { smoothLive } from '@/lib/route-smooth';
 import { useScheme } from '@/store/use-scheme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 
@@ -628,8 +630,9 @@ export default function TrackingScreen() {
 
   // Re-draw the live polyline only when a fix was actually ACCEPTED
   // (length change) — the 500ms metrics tick alone never re-creates it.
+  // item ⑫: light GPS-jitter smoothing for DISPLAY only (the saved track is livePath itself)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const drawnPath = useMemo(() => livePath.map(p => ({ latitude: p.lat, longitude: p.lng })), [livePath.length]);
+  const drawnPath = useMemo(() => smoothLive(livePath).map(p => ({ latitude: p.lat, longitude: p.lng })), [livePath.length]);
 
   const courseCoords = useMemo(
     // P1 동반 하드닝 (9/8): 코스 지오메트리도 finite-여과 — courseCoords[0]가
@@ -1422,17 +1425,17 @@ export default function TrackingScreen() {
               render order = z-order). Behind stays a single dimmed lime
               (receded on purpose — no casing); alpha channel per T1's lesson. */}
           {courseBehind.length > 1 ? (
-            <Polyline coordinates={courseBehind} strokeColor={routeStroke('dark') + '59'} strokeWidth={10} lineCap="round" lineJoin="round" />
+            <Polyline coordinates={courseBehind} strokeColor={ROUTE_NEON_BEHIND} strokeWidth={10} lineCap="round" lineJoin="round" />
           ) : null}
           {/* 8/3 thin pre-run preview: idle = HALVED (14/10 → 7/5). 8/3
               crash-class sweep: the Fragment wrapper inside MapView is
               DECOMPOSED to sibling ternaries (interop nil-insert candidate;
               see real-map.tsx's conviction note). */}
           {courseAhead.length > 1 ? (
-            <Polyline coordinates={courseAhead} strokeColor="rgba(12,18,6,0.85)" strokeWidth={state === 'idle' ? 7 : 14} lineCap="round" lineJoin="round" />
+            <Polyline coordinates={courseAhead} strokeColor="rgba(18,23,18,0.85)" strokeWidth={state === 'idle' ? 7 : 14} lineCap="round" lineJoin="round" />
           ) : null}
           {courseAhead.length > 1 ? (
-            <Polyline coordinates={courseAhead} strokeColor={routeStroke('dark')} strokeWidth={state === 'idle' ? 5 : 10} lineCap="round" lineJoin="round" />
+            <Polyline coordinates={courseAhead} strokeColor={ROUTE_NEON_DIM} strokeWidth={state === 'idle' ? 5 : 10} lineCap="round" lineJoin="round" />
           ) : null}
           {/* next-stretch white band — RESTORED 8/3 (owner + 지연 ruling:
               the original band design STANDS; the arrows were considered
@@ -1444,7 +1447,7 @@ export default function TrackingScreen() {
               course line at every luminance, both themes. NEXT_BAND_M
               shared with the turn overlay's approach window as before. */}
           {courseNext.length > 1 ? (
-            <Polyline coordinates={courseNext} strokeColor="rgba(12,18,6,0.9)" strokeWidth={8} lineCap="round" lineJoin="round" />
+            <Polyline coordinates={courseNext} strokeColor="rgba(18,23,18,0.9)" strokeWidth={8} lineCap="round" lineJoin="round" />
           ) : null}
           {courseNext.length > 1 ? (
             <Polyline coordinates={courseNext} strokeColor="#FFFFFF" strokeWidth={5} lineCap="round" lineJoin="round" />
@@ -1455,7 +1458,7 @@ export default function TrackingScreen() {
             <Marker key={`wp-${w.label}`} coordinate={{ latitude: w.lat, longitude: w.lng }} anchor={{ x: 0.5, y: 0.5 }} zIndex={7} title={w.title}>
               <View style={st.wpMarker}>
                 {w.isPitstop
-                  ? <Icon name="cafe" size={12} color="#0C1206" />
+                  ? <Icon name="cafe" size={12} color={ROUTE_INK} />
                   : <Text style={st.wpMarkerTxt}>{w.label}</Text>}
               </View>
             </Marker>
@@ -1466,7 +1469,7 @@ export default function TrackingScreen() {
           {courseCoords.length > 1 && navPhase === 'pre' ? (
             <Marker coordinate={courseCoords[0]} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={false}>
               <View style={st.startFlag}>
-                <Icon name="flag" size={16} color="#0C1206" />
+                <Icon name="flag" size={16} color={ROUTE_INK} />
               </View>
             </Marker>
           ) : null}
@@ -1492,7 +1495,10 @@ export default function TrackingScreen() {
           {/* No live-track line while idle (polish belt 2026-11-19): closes the
               stale-path class whether or not it was the reported stray lines */}
           {!idle && drawnPath.length > 1 ? (
-            <Polyline coordinates={drawnPath} strokeColor={C.accent} strokeWidth={5} />
+            <Polyline coordinates={drawnPath} strokeColor={ROUTE_INK} strokeWidth={9} lineCap="round" lineJoin="round" />
+          ) : null}
+          {!idle && drawnPath.length > 1 ? (
+            <Polyline coordinates={drawnPath} strokeColor={ROUTE_NEON} strokeWidth={5.5} lineCap="round" lineJoin="round" />
           ) : null}
           {/* nav v4: the custom runner dot — the Apple look, fixed pixel
               size at every zoom (markers are screen-space), NO halo ever.
@@ -1895,11 +1901,11 @@ const makeSt = (C: Tokens) => StyleSheet.create({
   // nav v4 custom dot — the Apple look exactly: 18px system-blue disc +
   // 3px white ring (24px total), soft shadow; fixed pixel size by nature
   // 8/21 waypoint marker — the RealMap twin (route-stroke fill, white ring)
-  wpMarker: { minWidth: 22, height: 22, borderRadius: 11, paddingHorizontal: 4, backgroundColor: '#39FF14', borderWidth: 2, borderColor: '#fff', alignItems: 'center', justifyContent: 'center' },
-  wpMarkerTxt: { fontSize: 11, fontWeight: '800', color: '#0D1A06' },
+  wpMarker: { minWidth: 22, height: 22, borderRadius: 11, paddingHorizontal: 4, backgroundColor: ROUTE_NEON, borderWidth: 2, borderColor: ROUTE_INK, alignItems: 'center', justifyContent: 'center' },
+  wpMarkerTxt: { fontSize: 11, fontWeight: '800', color: ROUTE_INK },
   userDot: {
-    width: 24, height: 24, borderRadius: 12,
-    backgroundColor: '#007AFF', borderWidth: 3, borderColor: '#FFFFFF',
+    width: 22, height: 22, borderRadius: 11,
+    backgroundColor: ROUTE_NEON, borderWidth: 3, borderColor: ROUTE_INK, // item ⑫: neon dot, ink ring
     shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 3, shadowOffset: { width: 0, height: 1 },
   },
   // nav v6.1: the heading wedge — SOLID, unmistakable (owner ruling: the
@@ -1935,7 +1941,7 @@ const makeSt = (C: Tokens) => StyleSheet.create({
   coursePillTxt:  { fontSize: 12, fontWeight: '700', color: '#fff', letterSpacing: -0.2 },
   // v2 go-to-start chapter: flag-class start marker (bigger than the turn
   // chips — unmissable) + the to-start distance chip (pill family)
-  startFlag:   { width: 34, height: 34, borderRadius: 17, backgroundColor: '#7CF03D', borderWidth: 2.5, borderColor: '#fff', alignItems: 'center', justifyContent: 'center', ...shadows.sm },
+  startFlag:   { width: 34, height: 34, borderRadius: 17, backgroundColor: ROUTE_NEON, borderWidth: 2.5, borderColor: ROUTE_INK, alignItems: 'center', justifyContent: 'center', ...shadows.sm },
   toStartChip: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: R.pill, paddingHorizontal: 12, paddingVertical: 6 },
   toStartTxt:  { fontSize: 12, fontWeight: '700', color: '#fff', letterSpacing: -0.2, fontVariant: ['tabular-nums'] },
 
