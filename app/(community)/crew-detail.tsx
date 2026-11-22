@@ -1,97 +1,82 @@
 /**
- * 크루 상세 — Crew detail screen.
- * Pushed from the community tab.
+ * 크루 상세 — redesign item 9 (2026-11-21), canvas CrewR1.dc.html (section ⑬
+ * "크루 내부 R1"): cover hero (name · 멤버 N · area · 주 N회 · 이번 주 함께 km) ·
+ * chat (unread dot) + ⋯ menu · 홈 / 랭킹 / 피드 / 멤버 text tabs. 홈 = 다음 크루
+ * 러닝 (참여 = RSVP) · 공지 row · 이번 주 랭킹 top-3 · (+ today's challenge and
+ * 집결 cards when they have data) · 크루 러닝 시작 (stated deviation — the one
+ * function the board does not draw that cannot live in a menu).
+ *
+ * EVERY existing function is kept: the ⋯ menu holds 크루 관리 (staff, with the
+ * pending-requests dot on the button), 공지 작성 / 챌린지 만들기 (permission-
+ * gated), 커버·아이콘 변경 (edit_crew, crop stage unchanged), 나가기 (plain
+ * members). Non-members: the sticky 가입 CTA footer, and only what the server
+ * serves them (probed 2026-11-21 as test4: crew/members/ranking/challenge 200;
+ * announcements/runs 403 → 피드 tab hidden, not faked).
+ *
+ * NOT REDESIGNED behind the doors: crew-chat, announcements (+detail/compose),
+ * challenge-create, crew-admin, crew-edit, crew-members (manage), crew-requests,
+ * crew-invite, crew-runs (full feed), meet-map, tracking hand-off.
  */
+import { useFocusEffect } from '@react-navigation/native';
+import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useFocusEffect } from '@react-navigation/native';
 import React, { useCallback, useRef, useState } from 'react';
-import { errorMessage } from '@/lib/error-copy';
-import { t, useLang, type StringKey, useT, tfIn } from '@/lib/i18n';
-import {
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import * as ImagePicker from 'expo-image-picker';
-
+import { Avatar } from '@/components/avatar';
 import { AvatarCrop, type CropSource } from '@/components/avatar-crop';
 import { CrewGlyph } from '@/components/crew-glyph';
 import { MiniMap } from '@/components/mini-map';
 import { RealMap } from '@/components/real-map';
 import { SafeImage } from '@/components/safe-image';
 import { Icon } from '@/components/ui';
-import {
-  cancelJoinRequest,
-  joinCrew,
-  leaveCrew,
-  useCrewDetail,
-  type Crew,
-} from '@/hooks/use-crews';
-import { Avatar } from '@/components/avatar';
-import { listAnnouncements, type Announcement } from '@/lib/announcements-api';
+import { useCrewWeeklyKm } from '@/hooks/use-crew-weekly-km';
+import { cancelJoinRequest, joinCrew, leaveCrew, useCrewDetail, type Crew } from '@/hooks/use-crews';
+import { useStyles, useTokens } from '@/hooks/use-tokens';
+import { listAnnouncements, rsvpAnnouncement, type Announcement } from '@/lib/announcements-api';
 import { getCurrentChallenge, type Challenge } from '@/lib/challenges-api';
 import { getUnread } from '@/lib/chat-api';
 import { getCrewRanking, getCrewRuns, groupCrewSessions, listJoinRequests, uploadCrewImage, type CrewRankingEntry, type CrewRunItem } from '@/lib/crews-api';
-import { DAY_LABEL_KEY, distUnit, fmtAgo, fmtDist, fmtDuration, fmtPaceIn, paceUnit } from '@/lib/run-format';
-import { accentShadow, radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
+import { errorMessage } from '@/lib/error-copy';
+import { t, tfIn, tIn, useLang, useT, type StringKey } from '@/lib/i18n';
+import { openProfile } from '@/lib/profile-nav';
+import { DAY_KEYS_SHORT, DAY_LABEL_KEY, distUnit, fmtAgo, fmtDist, fmtDuration, fmtPaceIn, paceUnit } from '@/lib/run-format';
+import { radius as R, spacing as S, type Tokens, DENSE_MAX_FONT_SCALE } from '@/lib/theme';
 import { isPlausibleTrack } from '@/lib/track-plausibility';
-import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { setActiveCourse } from '@/store/active-course';
 import { useSettings } from '@/store/use-settings';
 
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+type Tab = 'home' | 'rank' | 'feed' | 'members';
+const HERO_H = 270;
+const FEED_PAGE = 20;
 
 function isFull(crew: Crew): boolean {
   return crew.max_members !== null && crew.member_count >= crew.max_members;
 }
-
-// 랭킹 메달 — canvas FrRankMedal colors (gold = the 크루장 crown token)
 const rankMedal = (C: Tokens): Record<number, string> => ({ 1: C.medalGold, 2: C.medalSilver, 3: C.medalBronze });
+const fmtKm1 = (km: number) => (Math.round(km * 10) / 10).toFixed(1);
+const hhmm = (iso: string) => { const d = new Date(iso); return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
 
-// ─── CTA footer ───────────────────────────────────────────────────────────────
+// ─── CTA footer (non-members; verbatim from the pre-redesign screen) ──────────
 
-// Non-member CTA only. Members have no bottom CTA — leaving moved to the
-// hero-corner icon (plain members) / the manage hub (staff), per the canvas
-// redesign (a joined member's primary action is never "leave").
-function CtaButton({
-  crew, requestPending, busy,
-  onJoin, onCancelRequest,
-}: {
-  crew: Crew; requestPending: boolean; busy: boolean;
-  onJoin: () => void; onCancelRequest: () => void;
+function CtaButton({ crew, requestPending, busy, onJoin, onCancelRequest }: {
+  crew: Crew; requestPending: boolean; busy: boolean; onJoin: () => void; onCancelRequest: () => void;
 }) {
   const C = useTokens();
   const st = useStyles(makeSt);
-  const T = useT(); // 8/6 reactivity conversion (the ledgered bare-t flag)
-  // Pending join request (approval crew) — cancellable
+  const T = useT();
   if (requestPending) {
     return (
-      <Pressable
-        onPress={onCancelRequest}
-        disabled={busy}
-        style={({ pressed }) => [st.ctaBtn, st.ctaPending, pressed && { opacity: 0.75 }]}
-      >
-        {busy
-          ? <ActivityIndicator size="small" color={C.accentGrn} />
-          : (
-            <>
-              <Icon name="hourglass-outline" size={18} color={C.accentGrn} />
-              <Text style={[st.ctaTxt, { color: C.accentGrn }]}>{T('crw.applied')}</Text>
-            </>
-          )
-        }
+      <Pressable onPress={onCancelRequest} disabled={busy} style={({ pressed }) => [st.ctaBtn, st.ctaPending, pressed && { opacity: 0.75 }]}>
+        {busy ? <ActivityIndicator size="small" color={C.accentGrn} /> : (<>
+          <Icon name="hourglass-outline" size={18} color={C.accentGrn} />
+          <Text style={[st.ctaTxt, { color: C.accentGrn }]}>{T('crw.applied')}</Text>
+        </>)}
       </Pressable>
     );
   }
-
   if (isFull(crew)) {
     return (
       <View style={[st.ctaBtn, st.ctaDisabled]} pointerEvents="none">
@@ -100,293 +85,212 @@ function CtaButton({
       </View>
     );
   }
-
-  // rejected (or no request) → apply-able again; label pre-set by join_policy
   return (
-    <Pressable
-      onPress={onJoin}
-      disabled={busy}
-      style={({ pressed }) => [st.ctaBtn, pressed && { opacity: 0.82 }]}
-    >
-      {busy
-        ? <ActivityIndicator size="small" color={C.accentText} />
-        : (
-          <>
-            <Icon name="people-outline" size={18} color={C.accentText} />
-            <Text style={st.ctaTxt}>{crew.join_policy === 'approval' ? T('crw.joinApply') : T('crw.join')}</Text>
-          </>
-        )
-      }
+    <Pressable onPress={onJoin} disabled={busy} style={({ pressed }) => [st.ctaBtn, pressed && { opacity: 0.82 }]}>
+      {busy ? <ActivityIndicator size="small" color={C.accentText} /> : (<>
+        <Icon name="people-outline" size={18} color={C.accentText} />
+        <Text style={st.ctaTxt}>{crew.join_policy === 'approval' ? T('crw.joinApply') : T('crw.join')}</Text>
+      </>)}
     </Pressable>
   );
 }
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
-const HERO_H = 220;
-
 export default function CrewDetailScreen() {
-  const T = useT(); // 8/6 reactivity conversion (the ledgered bare-t 30-site flag)
+  const T = useT();
   const C = useTokens();
-  const lang = useLang(); // compiler-visible locale for fmtAgo (2026-08-03 formatter-cache fix)
-  const Tf = (k: StringKey, v: Record<string, string | number>) => tfIn(lang, k, v); // reactive tf — lang is a visible dep
+  const lang = useLang();
+  const Tf = (k: StringKey, v: Record<string, string | number>) => tfIn(lang, k, v);
   const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
+  const units = useSettings(s => s.settings.units);
   const { crewId } = useLocalSearchParams<{ crewId: string }>();
   const { crew, members, myPerms, myRequestStatus, loading, error, refetch } = useCrewDetail(crewId ?? null);
+  const weeklyKm = useCrewWeeklyKm(crewId ?? null);
 
-  const [busy, setBusy]       = useState(false);
-  const [mutErr, setMutErr]   = useState<string | null>(null);
+  const [tab, setTab] = useState<Tab>('home');
+  const [busy, setBusy] = useState(false);
+  const [mutErr, setMutErr] = useState<string | null>(null);
 
-  // ── 공지 preview (M1) — members only (server 403s outside) ──────────────────
   const isMember = crew?.myRole != null;
-  // 관리 hub door stays ROLE-based (any 운영진 enters; rows self-gate inside);
-  // ACTION gates read the v2 permission set (owner = all-true synthesized).
   const canManage = crew?.myRole === 'owner' || crew?.myRole === 'admin';
   const can = (k: keyof NonNullable<typeof myPerms>) => !!myPerms?.[k];
-  // One fetch powers the 공지 preview (first 2) + the 크루 러닝 시작 meetup
-  // window scan. (The 공지-derived 집결 카드 died — owner ruling B 2026-07-14.)
+  const canEditCrew = !!myPerms?.edit_crew;
+
+  // ── 공지 (members only; the next-run card + notice row + the 크루 러닝 시작 window scan) ──
   const [anns, setAnns] = useState<Announcement[] | null>(null);
-  useFocusEffect(useCallback(() => {
+  const loadAnns = useCallback(() => {
     if (!crewId || !isMember) { setAnns(null); return; }
     let cancelled = false;
-    listAnnouncements(crewId, 20) // preview slices 2; the 크루 러닝 시작 window scan reads the rest
-      .then(rows => { if (!cancelled) setAnns(rows); })
-      .catch(() => { if (!cancelled) setAnns([]); });
+    listAnnouncements(crewId, 20).then(rows => { if (!cancelled) setAnns(rows); }).catch(() => { if (!cancelled) setAnns([]); });
     return () => { cancelled = true; };
-  }, [crewId, isMember]));
-  const annPreview = anns === null ? null : anns.slice(0, 2);
+  }, [crewId, isMember]);
+  useFocusEffect(loadAnns);
+  const nextRun = (anns ?? []).filter(a => a.run_at && Date.parse(a.run_at) > Date.now()).sort((a, b) => Date.parse(a.run_at!) - Date.parse(b.run_at!))[0] ?? null;
+  const latestNotice = anns?.[0] ?? null;
+  const [rsvpBusy, setRsvpBusy] = useState(false);
+  async function rsvpGoing(a: Announcement) {
+    if (!crew || rsvpBusy) return;
+    setRsvpBusy(true);
+    try { await rsvpAnnouncement(crew.id, a.id, 'going'); loadAnns(); }
+    catch (e: unknown) { setMutErr(errorMessage(e)); }
+    finally { setRsvpBusy(false); }
+  }
 
-  // ── 가입 요청 count (M-tier 신청 관리, owner-only) — badge on the entry ──────
+  // ── 가입 요청 count (owner) → dot on the ⋯ button ────────────────────────────
   const [pendingReqCount, setPendingReqCount] = useState(0);
   useFocusEffect(useCallback(() => {
     if (!crewId || crew?.myRole !== 'owner') { setPendingReqCount(0); return; }
     let cancelled = false;
-    listJoinRequests(crewId)
-      .then(rows => { if (!cancelled) setPendingReqCount(rows.length); })
-      .catch(() => { /* quiet — the screen itself surfaces errors */ });
+    listJoinRequests(crewId).then(rows => { if (!cancelled) setPendingReqCount(rows.length); }).catch(() => {});
     return () => { cancelled = true; };
   }, [crewId, crew?.myRole]));
 
-  // ── 채팅 unread badge (chat v1) — focus-refetch clears it after a visit ────
+  // ── 채팅 unread (members) → dot on the chat button ────────────────────────────
   const [chatUnread, setChatUnread] = useState(0);
   useFocusEffect(useCallback(() => {
     if (!crewId || !isMember) { setChatUnread(0); return; }
     let cancelled = false;
-    getUnread(crewId)
-      .then(u => { if (!cancelled) setChatUnread(u.unread_count); })
-      .catch(() => { /* quiet — the badge is garnish */ });
+    getUnread(crewId).then(u => { if (!cancelled) setChatUnread(u.unread_count); }).catch(() => {});
     return () => { cancelled = true; };
   }, [crewId, isMember]));
 
-  // ── 크루 이미지 (⑤⑥) — edit_crew-gated since v2 (BE 28a5c25 moved 크루
-  // 수정·이미지 from owner-only to the edit_crew key; the old admin
-  // attach-PATCH 403 gap resolved by design). BOTH channels now route through
-  // the avatar-crop framing stage: icon → 1:1 circle, cover → 16:9 rounded-rect
-  // (matching the hero band). Crop output is re-encoded JPEG (EXIF-free) — the
-  // PUBLIC-bucket rule holds without a separate reencodeForUpload pass.
-  const canEditCrew = !!myPerms?.edit_crew;
+  // ── 크루 이미지 (edit_crew) — picker + crop stage unchanged, now reached from the ⋯ menu ──
   const [imgBusy, setImgBusy] = useState<'cover' | 'icon' | null>(null);
   const [cropSrc, setCropSrc] = useState<{ src: CropSource; kind: 'cover' | 'icon' } | null>(null);
-  const lastCropKind = useRef<'cover' | 'icon'>('icon'); // survives onClose for retake
-
+  const lastCropKind = useRef<'cover' | 'icon'>('icon');
   async function pickCrewImage(kind: 'cover' | 'icon') {
     let res: ImagePicker.ImagePickerResult;
-    try {
-      res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: 'images', quality: 1 });
-    } catch {
-      Alert.alert(T('onb.photoFailTitle'), T('onb.photoFailBody'));
-      return;
-    }
+    try { res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: 'images', quality: 1 }); }
+    catch { Alert.alert(T('onb.photoFailTitle'), T('onb.photoFailBody')); return; }
     if (res.canceled || !res.assets[0]) return;
     const a = res.assets[0];
     lastCropKind.current = kind;
-    setCropSrc({ src: { uri: a.uri, width: a.width ?? 1, height: a.height ?? 1 }, kind }); // upload continues in onCropped
+    setCropSrc({ src: { uri: a.uri, width: a.width ?? 1, height: a.height ?? 1 }, kind });
   }
-
   async function onCropped(croppedUri: string) {
     const kind = cropSrc?.kind ?? lastCropKind.current;
     setCropSrc(null);
     setImgBusy(kind);
-    try {
-      await uploadCrewImage(crew!.id, kind, croppedUri); // crop output = re-encoded, EXIF-free
-      refetch();
-    } catch (e: unknown) {
-      Alert.alert(kind === 'cover' ? T('crw.coverFail') : T('crw.iconFail'), errorMessage(e));
-    } finally {
-      setImgBusy(null);
-    }
+    try { await uploadCrewImage(crew!.id, kind, croppedUri); refetch(); }
+    catch (e: unknown) { Alert.alert(kind === 'cover' ? T('crw.coverFail') : T('crw.iconFail'), errorMessage(e)); }
+    finally { setImgBusy(null); }
   }
 
-  // ── 챌린지 + 랭킹 + 러닝 피드 (M2/M2b) — members only ─────────────────────────
-  const units = useSettings(s => s.settings.units);
-  const [challenge, setChallenge] = useState<Challenge | null | undefined>(undefined); // undefined = loading
-  const [ranking, setRanking]     = useState<CrewRankingEntry[] | null>(null);
-  const [feedPreview, setFeedPreview] = useState<CrewRunItem[] | null>(null);
+  // ── 챌린지 + 랭킹 (readable by all, probed) · 피드 (members, paged) ─────────────
+  const [challenge, setChallenge] = useState<Challenge | null | undefined>(undefined);
+  const [ranking, setRanking] = useState<CrewRankingEntry[] | null>(null);
   useFocusEffect(useCallback(() => {
-    if (!crewId || !isMember) { setChallenge(undefined); setRanking(null); setFeedPreview(null); return; }
+    if (!crewId) return;
     let cancelled = false;
-    getCurrentChallenge(crewId)
-      .then(ch => { if (!cancelled) setChallenge(ch); })
-      .catch(() => { if (!cancelled) setChallenge(null); });
-    getCrewRanking(crewId)
-      .then(rows => { if (!cancelled) setRanking(rows); })
-      .catch(() => { if (!cancelled) setRanking([]); });
-    getCrewRuns(crewId, 0, 3) // section preview — 전체 보기 opens the full feed
-      .then(rows => { if (!cancelled) setFeedPreview(rows); })
-      .catch(() => { if (!cancelled) setFeedPreview([]); });
+    getCurrentChallenge(crewId).then(ch => { if (!cancelled) setChallenge(ch); }).catch(() => { if (!cancelled) setChallenge(null); });
+    getCrewRanking(crewId).then(rows => { if (!cancelled) setRanking(rows); }).catch(() => { if (!cancelled) setRanking([]); });
+    return () => { cancelled = true; };
+  }, [crewId]));
+  const [feed, setFeed] = useState<CrewRunItem[] | null>(null);
+  const [feedMore, setFeedMore] = useState(true);
+  const [feedBusy, setFeedBusy] = useState(false);
+  useFocusEffect(useCallback(() => {
+    if (!crewId || !isMember) { setFeed(null); return; }
+    let cancelled = false;
+    getCrewRuns(crewId, 0, FEED_PAGE).then(rows => { if (!cancelled) { setFeed(rows); setFeedMore(rows.length >= FEED_PAGE); } }).catch(() => { if (!cancelled) setFeed([]); });
     return () => { cancelled = true; };
   }, [crewId, isMember]));
-
-  // ── 크루 러닝 시작 (L1) — ANY member (canvas gates can('crewRun'), but
-  // crewRun is not a real server key [박제 금지]; contract = "크루원이면
-  // 누구나"). Auto-suggest linking a 집결 공지 whose meetup is near now
-  // (−6h early / +3h after — owner window): the sheet is the safety net,
-  // a wrong guess costs one tap on 그냥 크루런. Non-member 400 is
-  // unreachable — the button only renders for members. ─────────────────
-  function beginCrewRun(announcementId: string | null, announcementTitle: string | null) {
-    if (!crew) return;
-    setActiveCourse({
-      id: null, title: Tf('crw.crewRunOf', { name: crew.name }), distanceKm: 0, polyline: null,
-      crewSession: { crewId: crew.id, crewName: crew.name, announcementId, announcementTitle },
-    });
-    router.push('/(course)/tracking' as never);
+  function loadMoreFeed() {
+    if (!crewId || !feed || !feedMore || feedBusy) return;
+    setFeedBusy(true);
+    getCrewRuns(crewId, feed.length, FEED_PAGE)
+      .then(rows => { setFeed(f => [...(f ?? []), ...rows]); setFeedMore(rows.length >= FEED_PAGE); })
+      .catch(() => {})
+      .finally(() => setFeedBusy(false));
   }
 
+  // ── 크루 러닝 시작 (L1, any member) — meetup window suggestion unchanged ────────
+  function beginCrewRun(announcementId: string | null, announcementTitle: string | null) {
+    if (!crew) return;
+    setActiveCourse({ id: null, title: Tf('crw.crewRunOf', { name: crew.name }), distanceKm: 0, polyline: null, crewSession: { crewId: crew.id, crewName: crew.name, announcementId, announcementTitle } });
+    router.push('/(course)/tracking' as never);
+  }
   function startCrewRun() {
     if (!crew) return;
     const H = 3600_000;
-    const near = (anns ?? []) // full fetch — the window scan shouldn't miss a 공지 outside the top-2 preview
-      .filter(a => {
-        if (!a.run_at) return false;
-        const ahead = new Date(a.run_at).getTime() - Date.now();
-        return ahead >= -3 * H && ahead <= 6 * H; // ≤6h early, ≤3h after
-      })
-      .sort((a, b) =>
-        Math.abs(new Date(a.run_at!).getTime() - Date.now()) - Math.abs(new Date(b.run_at!).getTime() - Date.now()))[0];
+    const near = (anns ?? [])
+      .filter(a => { if (!a.run_at) return false; const ahead = new Date(a.run_at).getTime() - Date.now(); return ahead >= -3 * H && ahead <= 6 * H; })
+      .sort((a, b) => Math.abs(new Date(a.run_at!).getTime() - Date.now()) - Math.abs(new Date(b.run_at!).getTime() - Date.now()))[0];
     if (near) {
-      Alert.alert(
-        T('crw.startTitle'),
-        Tf('crw.startAsk', { title: near.title }),
-        [
-          { text: T('common.cancel'), style: 'cancel' },
-          { text: T('crw.plainRun'), onPress: () => beginCrewRun(null, null) },
-          { text: T('crw.withMeet'), onPress: () => beginCrewRun(near.id, near.title) },
-        ],
-      );
-    } else {
-      beginCrewRun(null, null);
-    }
+      Alert.alert(T('crw.startTitle'), Tf('crw.startAsk', { title: near.title }), [
+        { text: T('common.cancel'), style: 'cancel' },
+        { text: T('crw.plainRun'), onPress: () => beginCrewRun(null, null) },
+        { text: T('crw.withMeet'), onPress: () => beginCrewRun(near.id, near.title) },
+      ]);
+    } else beginCrewRun(null, null);
   }
-
   function openCrewRun(run: CrewRunItem) {
-    // Edge ⓑ: no lock pre-check — surfaced card's detail serves (probed 200
-    // for a locked-profile member). Seed nickname/avatar + allow_* (hide-first).
-    router.push({
-      pathname: '/run-post' as never,
-      params: {
-        runId: run.run_id,
-        nickname: run.nickname ?? T('home.runner'),
-        avatarUrl: run.avatar_url ?? '',
-        allowLikes: run.allow_likes === true ? '1' : '0',
-        allowComments: run.allow_comments === true ? '1' : '0',
-      },
-    });
+    router.push({ pathname: '/run-post' as never, params: { runId: run.run_id, nickname: run.nickname ?? T('home.runner'), avatarUrl: run.avatar_url ?? '', allowLikes: run.allow_likes === true ? '1' : '0', allowComments: run.allow_comments === true ? '1' : '0' } });
   }
 
+  // ── join / cancel request / leave (verbatim) ──────────────────────────────────
   async function handleJoin() {
     if (!crew) return;
-    setBusy(true);
-    setMutErr(null);
+    setBusy(true); setMutErr(null);
     try {
       const result = await joinCrew(crew.id);
-      if (result === 'pending') {
-        Alert.alert(T('crw.appliedDone'), T('crw.appliedDoneSub'));
-      } else if (result === 'already_member') {
-        setMutErr(T('crw.alreadyJoined'));
-      }
+      if (result === 'pending') Alert.alert(T('crw.appliedDone'), T('crw.appliedDoneSub'));
+      else if (result === 'already_member') setMutErr(T('crw.alreadyJoined'));
       refetch();
-    } catch (e: unknown) {
-      setMutErr(errorMessage(e));
-    } finally {
-      setBusy(false);
-    }
+    } catch (e: unknown) { setMutErr(errorMessage(e)); }
+    finally { setBusy(false); }
   }
-
   function handleCancelRequest() {
     if (!crew) return;
     Alert.alert(T('crw.cancelApplyTitle'), T('crw.cancelApplyAsk'), [
       { text: T('crw.no'), style: 'cancel' },
-      {
-        text: T('crw.cancelApply'),
-        style: 'destructive',
-        onPress: async () => {
-          setBusy(true);
-          setMutErr(null);
-          try {
-            await cancelJoinRequest(crew.id);
-            refetch();
-          } catch (e: unknown) {
-            setMutErr(errorMessage(e));
-          } finally {
-            setBusy(false);
-          }
-        },
-      },
+      { text: T('crw.cancelApply'), style: 'destructive', onPress: async () => {
+        setBusy(true); setMutErr(null);
+        try { await cancelJoinRequest(crew.id); refetch(); } catch (e: unknown) { setMutErr(errorMessage(e)); } finally { setBusy(false); }
+      } },
+    ]);
+  }
+  function handleLeave() {
+    if (!crew) return;
+    Alert.alert(T('crw.leaveTitle'), Tf('crw.leaveAsk', { name: crew.name }), [
+      { text: T('common.cancel'), style: 'cancel' },
+      { text: T('crw.leave'), style: 'destructive', onPress: async () => {
+        setBusy(true); setMutErr(null);
+        try { await leaveCrew(crew.id); router.back(); } catch (e: unknown) { setMutErr(errorMessage(e)); setBusy(false); }
+      } },
     ]);
   }
 
-  // Plain-member leave (hero-corner icon). Owner/admin leave lives in the
-  // manage hub (crew-admin) with role-aware copy; a plain member is never an
-  // owner, so no 양도 path is needed here. Pop out on success (canvas: nav.pop).
-  function handleLeave() {
+  // ── ⋯ menu — every door the board does not draw, each row permission-gated ──
+  function openMenu() {
     if (!crew) return;
-    Alert.alert(
-      T('crw.leaveTitle'),
-      Tf('crw.leaveAsk', { name: crew.name }),
-      [
-        { text: T('common.cancel'), style: 'cancel' },
-        {
-          text: T('crw.leave'),
-          style: 'destructive',
-          onPress: async () => {
-            setBusy(true);
-            setMutErr(null);
-            try {
-              await leaveCrew(crew.id);
-              router.back();
-            } catch (e: unknown) {
-              setMutErr(errorMessage(e));
-              setBusy(false);
-            }
-          },
-        },
-      ],
-    );
+    const rows: { text: string; style?: 'destructive' | 'cancel'; onPress?: () => void }[] = [];
+    if (canManage) rows.push({ text: T('crw.manage') + (crew.myRole === 'owner' && pendingReqCount > 0 ? ` (${pendingReqCount})` : ''), onPress: () => router.push({ pathname: '/(community)/crew-admin' as never, params: { crewId: crew.id, role: crew.myRole! } }) });
+    if (can('announcements')) rows.push({ text: T('crw.qAnnounce'), onPress: () => router.push({ pathname: '/(community)/announcement-compose' as never, params: { crewId: crew.id } }) });
+    if (can('challenges')) rows.push({ text: T('crw.qChallenge'), onPress: () => router.push({ pathname: '/(community)/challenge-create' as never, params: { crewId: crew.id } }) });
+    if (canEditCrew) {
+      rows.push({ text: T('crw.coverChange'), onPress: () => pickCrewImage('cover') });
+      rows.push({ text: T('crw.iconChange'), onPress: () => pickCrewImage('icon') });
+    }
+    if (isMember && !canManage) rows.push({ text: T('crw.leave'), style: 'destructive', onPress: handleLeave });
+    rows.push({ text: T('common.cancel'), style: 'cancel' });
+    Alert.alert(crew.name, undefined, rows);
   }
 
-  // ── Loading ────────────────────────────────────────────────────────────────
+  // ── Loading / error ───────────────────────────────────────────────────────────
   if (loading) {
-    return (
-      <View style={[st.root, { paddingTop: insets.top, alignItems: 'center', justifyContent: 'center' }]}>
-        <ActivityIndicator size="large" color={C.accent} />
-      </View>
-    );
+    return <View style={[st.root, { paddingTop: insets.top, alignItems: 'center', justifyContent: 'center' }]}><ActivityIndicator size="large" color={C.accent} /></View>;
   }
-
-  // ── Error / not found ──────────────────────────────────────────────────────
   if (error || !crew) {
     return (
       <View style={[st.root, { paddingTop: insets.top }]}>
-        <Pressable onPress={() => router.back()} hitSlop={12} style={[st.backBtnLight, { margin: S.lg }]}>
-          <Icon name="arrow-back" size={20} color={C.text} />
-        </Pressable>
+        <Pressable onPress={() => router.back()} hitSlop={12} style={[st.circleLight, { margin: S.lg }]}><Icon name="chevron-back" size={22} color={C.text} /></Pressable>
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 }}>
           <Icon name="warning-outline" size={36} color={C.faint} />
           <Text style={st.errTxt}>{error ?? T('crw.notFound')}</Text>
-          <Pressable onPress={refetch} style={st.retryBtn}>
-            <Text style={st.retryTxt}>{T('common.retry')}</Text>
-          </Pressable>
+          <Pressable onPress={refetch} style={st.retryBtn}><Text style={st.retryTxt}>{T('common.retry')}</Text></Pressable>
         </View>
       </View>
     );
@@ -394,571 +298,319 @@ export default function CrewDetailScreen() {
 
   const activeDays = crew.active_days ?? [];
   const hasSchedule = activeDays.length > 0 || !!crew.active_time;
+  const meta = [Tf('com.memberBadge', { n: crew.member_count }), crew.sigungu ?? crew.area ?? '', activeDays.length > 0 ? Tf('crw.weeklyTimes', { n: activeDays.length }) : ''].filter(Boolean).join(' · ');
+  const tabs: [Tab, StringKey][] = [['home', 'crw.tabHome'], ['rank', 'crw.tabRank'], ...(isMember ? [['feed', 'crw.tabFeed'] as [Tab, StringKey]] : []), ['members', 'crw.tabMembers']];
+  const menuDot = crew.myRole === 'owner' && pendingReqCount > 0;
 
+  // ── Section pieces ───────────────────────────────────────────────────────────
+  const rankRows = (rows: CrewRankingEntry[]) => rows.map((r, i) => {
+    const role = members.find(m => m.user_id === r.user_id)?.role;
+    return (
+      <React.Fragment key={r.user_id}>
+        {i > 0 && <View style={st.divider} />}
+        <Pressable onPress={() => openProfile(r.user_id, r.nickname)} style={({ pressed }) => [st.rankRow, pressed && { opacity: 0.7 }]}>
+          <Text style={[st.rankNum, i < 3 && { color: rankMedal(C)[r.rank] ?? C.text }]}>{r.rank}</Text>
+          <Avatar name={r.nickname} size={34} photoUrl={r.avatar_url} letterSpacing={-0.3} />
+          <View style={{ flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Text style={[st.rankName, r.me && { fontWeight: '900' }]} numberOfLines={1}>{r.nickname ?? T('home.runner')}</Text>
+            {r.me && <View style={st.meBadge}><Text style={st.meBadgeTxt}>{T('crw.me')}</Text></View>}
+            {role === 'owner' && <View style={st.ownerBadge}><Text style={st.ownerTxt}>{T('crw.roleOwner')}</Text></View>}
+            {role === 'admin' && <View style={st.adminBadge}><Text style={st.adminTxt}>{T('crw.roleAdmin')}</Text></View>}
+          </View>
+          <Text style={st.rankKm}>{fmtKm1(r.distance_km)}<Text style={st.rankKmUnit}> km</Text></Text>
+        </Pressable>
+      </React.Fragment>
+    );
+  });
+  const rankEmpty = (
+    <View style={st.card}>
+      <View style={st.rankEmptyInner}>
+        <Icon name="trophy-outline" size={22} color={C.faint} />
+        <Text style={st.emptyTitle}>{T('crw.rankEmpty')}</Text>
+        <Text style={st.emptySub}>{T('crw.rankEmptySub')}</Text>
+      </View>
+    </View>
+  );
 
   return (
     <View style={st.root}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: isMember ? 40 : 110 }}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: isMember ? 40 : 110 }}
+        onScroll={tab === 'feed' ? ({ nativeEvent: e }) => { if (e.contentOffset.y + e.layoutMeasurement.height > e.contentSize.height - 500) loadMoreFeed(); } : undefined}
+        scrollEventThrottle={120}>
 
-        {/* ── Dark hero header — cover photo (staff-set) or the canvas
-            default-cover gradient wash (owner ruling 2026-07-14: crew
-            identity ≠ map). SafeImage: a broken cover falls back to the
-            wash, never a blank band. ── */}
-        <View style={[st.hero, { height: HERO_H + insets.top }]}>
-          <SafeImage
-            uri={crew.cover_url}
-            style={[StyleSheet.absoluteFillObject, { width: undefined, height: undefined }]}
-            resizeMode="cover"
-            fallback={<CrewGlyph height={HERO_H + insets.top} glyph={false} />}
-          />
-          <LinearGradient
-            colors={['rgba(8,12,4,0.55)', 'rgba(8,12,4,0.92)']}
-            style={StyleSheet.absoluteFillObject}
-          />
-          <View style={[StyleSheet.absoluteFillObject, { paddingTop: insets.top + S.md, paddingHorizontal: S.lg, paddingBottom: S.lg }]}>
-            {/* Top controls — 크루 관리 pill is THE management door (canvas
-                FrCrewDetail redesign): owner + admin see it (hub role-gates
-                its rows, incl. 크루 나가기). A PLAIN member gets the quiet
-                leave icon here (canvas hero-corner) — their only leave path
-                now that the prominent bottom 탈퇴 CTA is retired. Non-members
-                see the color dot. */}
-            <View style={st.heroControls}>
-              <Pressable onPress={() => router.back()} hitSlop={12} style={st.backBtn}>
-                <Icon name="arrow-back" size={20} color="#fff" />
-              </Pressable>
-              {canManage ? (
-                <Pressable
-                  onPress={() => router.push({
-                    pathname: '/(community)/crew-admin' as never,
-                    params: { crewId: crew.id, role: crew.myRole! },
-                  })}
-                  hitSlop={8}
-                  style={st.managePill}
-                >
-                  <Icon name="settings-outline" size={14} color="#fff" />
-                  <Text style={st.managePillTxt}>{T('crw.manage')}</Text>
-                  {crew.myRole === 'owner' && pendingReqCount > 0 && <View style={st.managePillDot} />}
+        {/* ── Hero (board: cover 270, two-way gradient, circles, name · meta · weekly km) ── */}
+        <View style={[st.hero, { height: HERO_H }]}>
+          <SafeImage uri={crew.cover_url ?? crew.icon_url} style={[StyleSheet.absoluteFillObject, { width: undefined, height: undefined }]} resizeMode="cover"
+            fallback={<View style={[StyleSheet.absoluteFillObject, { backgroundColor: crew.color ?? C.surfaceAlt }]}><CrewGlyph height={HERO_H} /></View>} />
+          <LinearGradient colors={['rgba(18,23,18,0.25)', 'rgba(18,23,18,0)', 'rgba(18,23,18,0.78)']} locations={[0, 0.35, 1]} style={StyleSheet.absoluteFillObject} />
+          <View style={[st.heroControls, { top: insets.top + 10 }]}>
+            <Pressable onPress={() => router.back()} hitSlop={8} style={st.circle} accessibilityRole="button" accessibilityLabel={T('common.back')}>
+              <Icon name="chevron-back" size={22} color="#121712" />
+            </Pressable>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              {isMember && (
+                <Pressable onPress={() => router.push({ pathname: '/(community)/crew-chat' as never, params: { crewId: crew.id, crewName: crew.name, memberCount: String(crew.member_count), role: crew.myRole ?? '' } })} hitSlop={8} style={st.circle} accessibilityRole="button" accessibilityLabel={T('crw.chatTitle')}>
+                  <Icon name="chatbubble-outline" size={20} color="#121712" />
+                  {chatUnread > 0 && <View style={st.circleDot} />}
                 </Pressable>
-              ) : isMember ? (
-                <Pressable onPress={handleLeave} hitSlop={12} style={st.leaveIconBtn} disabled={busy}>
-                  <Icon name="exit-outline" size={19} color="#fff" />
+              )}
+              {(isMember || canManage) && (
+                <Pressable onPress={openMenu} hitSlop={8} style={st.circle} accessibilityRole="button" accessibilityLabel={T('bd.menu')}>
+                  <Icon name="ellipsis-horizontal" size={20} color="#121712" />
+                  {menuDot && <View style={st.circleDot} />}
                 </Pressable>
-              ) : (
-                crew.color ? <View style={[st.colorDot, { backgroundColor: crew.color }]} /> : null
               )}
             </View>
-
-            {/* Crew info pinned to bottom */}
-            <View style={{ flex: 1, justifyContent: 'flex-end' }}>
-              {/* Ringed identity icon (canvas) — owner taps to change */}
-              <View style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' }}>
-                <Pressable
-                  onPress={canEditCrew && !imgBusy ? () => pickCrewImage('icon') : undefined}
-                  disabled={!canEditCrew || !!imgBusy}
-                  style={st.heroIconWrap}
-                >
-                  {/* SafeImage: broken icon → color tile, not a blank square */}
-                  <SafeImage uri={crew.icon_url} style={st.heroIconImg} fallback={
-                    <View style={[st.heroIconImg, { backgroundColor: crew.color ?? C.accent, alignItems: 'center', justifyContent: 'center' }]}>
-                      <Icon name="people" size={26} color={C.accentText} />
-                    </View>
-                  } />
-                  {canEditCrew && (
-                    <View style={st.heroIconEdit}>
-                      {imgBusy === 'icon'
-                        ? <ActivityIndicator size="small" color={C.accentText} />
-                        : <Icon name="camera-outline" size={11} color={C.accentText} />}
-                    </View>
-                  )}
-                </Pressable>
-                {/* 커버 변경 chip — edit_crew (v2; the v1 attach-PATCH 403
-                    gap resolved: 크루 수정·이미지 moved onto the key) */}
-                {canEditCrew && (
-                  <Pressable
-                    onPress={!imgBusy ? () => pickCrewImage('cover') : undefined}
-                    disabled={!!imgBusy}
-                    style={({ pressed }) => [st.coverChip, pressed && { opacity: 0.75 }]}
-                  >
-                    {imgBusy === 'cover'
-                      ? <ActivityIndicator size="small" color="#fff" />
-                      : <Icon name="camera-outline" size={13} color="#fff" />}
-                    <Text style={st.coverChipTxt}>{T('crw.coverChange')}</Text>
-                  </Pressable>
-                )}
-              </View>
-              <Text style={st.heroName}>{crew.name}</Text>
-              <View style={st.heroMeta}>
-                {/* Role badge (canvas: 크루장 amber / 운영진 accent) */}
-                {crew.myRole === 'owner' && (
-                  <View style={[st.roleBadge, { backgroundColor: C.crown }]}>
-                    <Text style={st.roleBadgeTxt}>{T('crw.roleOwner')}</Text>
-                  </View>
-                )}
-                {crew.myRole === 'admin' && (
-                  <View style={[st.roleBadge, { backgroundColor: C.accent }]}>
-                    <Text style={st.roleBadgeTxt}>{T('crw.roleAdmin')}</Text>
-                  </View>
-                )}
-                <View style={st.levelBadge}>
-                  <Text style={st.levelTxt}>{crew.level}</Text>
-                </View>
-                <Icon name="people-outline" size={13} color="rgba(255,255,255,0.72)" />
-                <Text style={st.heroMetaTxt}>
-                  {Tf('crw.nMembers', { n: crew.member_count })}{crew.max_members !== null ? Tf('crw.maxN', { n: crew.max_members }) : ''}
-                </Text>
-                {crew.area ? <Text style={st.heroMetaTxt}>· {crew.area}</Text> : null}
-              </View>
-              {crew.description ? <Text style={st.heroDesc} numberOfLines={2}>{crew.description}</Text> : null}
+          </View>
+          <View style={st.heroBottom}>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.heroName} numberOfLines={1}>{crew.name}</Text>
+              <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.heroMeta} numberOfLines={1}>{meta}</Text>
+            </View>
+            <View style={{ alignItems: 'flex-end' }}>
+              <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.heroKm}>{weeklyKm == null ? '–' : fmtKm1(weeklyKm)}<Text style={st.heroKmUnit}> km</Text></Text>
+              <Text style={st.heroKmSub}>{T('crw.weekTogether')}</Text>
             </View>
           </View>
+          {imgBusy && <View style={st.imgBusy}><ActivityIndicator size="small" color="#fff" /></View>}
         </View>
 
-        {/* ── Quick actions (canvas redesign ②) — shortcuts INTO existing
-               flows, permission-keyed per v2 (guide §207): 공지 = announcements,
-               운영진 관리 = manage_admins, 챌린지 = challenges. Un-permitted
-               tiles HIDE here (shortcut row, not the capability map — the
-               권한 설정 screen is where powers stay visible-but-locked). ── */}
-        {(can('announcements') || can('manage_admins') || can('challenges')) && (
-          <View style={st.quickRow}>
-            {can('announcements') && (
-              <Pressable
-                onPress={() => router.push({
-                  pathname: '/(community)/announcement-compose' as never,
-                  params: { crewId: crew.id },
-                })}
-                style={({ pressed }) => [st.quickTile, shadows.sm, pressed && { opacity: 0.8 }]}
-              >
-                <Icon name="megaphone-outline" size={19} color={C.accentGrn} />
-                <Text style={st.quickTxt}>{T('crw.qAnnounce')}</Text>
+        {/* ── Tabs ── */}
+        <View style={st.tabRow}>
+          {tabs.map(([id, key]) => {
+            const on = tab === id;
+            return (
+              <Pressable key={id} onPress={() => setTab(id)} style={st.tabBtn} accessibilityRole="tab" accessibilityState={{ selected: on }}>
+                <Text style={[st.tabTxt, on ? { color: C.text, fontWeight: '800' } : { color: C.sub, fontWeight: '500' }]}>{T(key)}</Text>
+                {on && <View style={[st.tabUnderline, { backgroundColor: C.text }]} />}
               </Pressable>
-            )}
-            {can('manage_admins') && (
-              <Pressable
-                onPress={() => router.push({
-                  pathname: '/(community)/crew-members' as never,
-                  params: { crewId: crew.id },
-                })}
-                style={({ pressed }) => [st.quickTile, shadows.sm, pressed && { opacity: 0.8 }]}
-              >
-                <Icon name="shield-outline" size={19} color={C.accentGrn} />
-                <Text style={st.quickTxt}>{T('crw.qAdmins')}</Text>
-              </Pressable>
-            )}
-            {can('challenges') && (
-              <Pressable
-                onPress={() => router.push({
-                  pathname: '/(community)/challenge-create' as never,
-                  params: { crewId: crew.id },
-                })}
-                style={({ pressed }) => [st.quickTile, shadows.sm, pressed && { opacity: 0.8 }]}
-              >
-                <Icon name="trophy-outline" size={19} color={C.accentGrn} />
-                <Text style={st.quickTxt}>{T('crw.qChallenge')}</Text>
-              </Pressable>
-            )}
-          </View>
-        )}
+            );
+          })}
+        </View>
 
-        {/* ── 공지 (M1) — members only. TOP of the section stack (owner ruling
-               + canvas FrCrewDetail order): 공지 is the crew's most time-
-               sensitive content; 챌린지/랭킹/피드 are browse-y and follow. ── */}
-        {isMember && (
-          <View style={{ paddingHorizontal: S.gutter, paddingTop: S.xl }}>
-            <View style={st.sectionHead}>
-              <Text style={st.sectionTitle}>{T('crw.sAnn')}</Text>
-              <Pressable
-                onPress={() => router.push({
-                  pathname: '/(community)/announcements' as never,
-                  params: { crewId: crew.id, canManage: can('announcements') ? '1' : '0' },
-                })}
-                hitSlop={8}
-              >
-                <Text style={st.annMoreTxt}>{T('crw.viewAll')}</Text>
-              </Pressable>
-            </View>
-
-            {annPreview === null ? (
-              <View style={st.emptyBox}><ActivityIndicator size="small" color={C.faint} /></View>
-            ) : annPreview.length === 0 ? (
-              <Pressable
-                onPress={can('announcements') ? () => router.push({
-                  pathname: '/(community)/announcement-compose' as never,
-                  params: { crewId: crew.id },
-                }) : undefined}
-                style={st.emptyBox}
-              >
-                <Text style={st.emptyTxt}>
-                  {can('announcements') ? T('crw.annEmptyCan') : T('crw.annEmpty')}
-                </Text>
-              </Pressable>
-            ) : (
-              <View style={[st.annList, shadows.sm]}>
-                {annPreview.map((a, i) => (
-                  <React.Fragment key={a.id}>
-                    {i > 0 && <View style={st.divider} />}
-                    <Pressable
-                      onPress={() => router.push({
-                        pathname: '/(community)/announcement-detail' as never,
-                        params: { crewId: crew.id, announcementId: a.id },
-                      })}
-                      style={({ pressed }) => [st.annRow, pressed && { opacity: 0.7 }]}
-                    >
-                      <Icon name="megaphone-outline" size={16} color={C.accentGrn} />
-                      <View style={{ flex: 1, minWidth: 0 }}>
-                        <Text style={st.annTitle} numberOfLines={1}>{a.title}</Text>
-                        {a.run_at ? <Text style={st.annSub}>{Tf('crw.annSub', { n: a.rsvp.going })}</Text> : null}
-                      </View>
-                      <Icon name="chevron-forward" size={15} color={C.faint} />
-                    </Pressable>
-                  </React.Fragment>
-                ))}
-              </View>
-            )}
-          </View>
-        )}
-
-        {/* ── 집결 장소 — crew-native (지연 meet_* LIVE, probed 2026-07-14;
-            position beneath 공지 = owner-vs-canvas override). Canvas
-            composition: place name / region · schedule — each line only when
-            its data exists. Place half absent when meet_* null; schedule
-            also absent → whole section hides. 지도 앱에서 보기 → OS maps at
-            meet_lat/lng. ── */}
-        {isMember && (crew.meet_place_name != null || hasSchedule) && (
-          <View style={{ paddingHorizontal: S.gutter, paddingTop: S.xl }}>
-            <View style={st.sectionHead}>
-              <Text style={st.sectionTitle}>{T('crw.sMeet')}</Text>
-            </View>
-            <View style={[st.meetCard, shadows.sm]}>
-              {crew.meet_lat != null && crew.meet_lng != null && (
-                <RealMap height={150} center={{ lat: crew.meet_lat, lng: crew.meet_lng }} marker borderRadius={0} />
-              )}
-              <Pressable
-                onPress={crew.meet_lat != null && crew.meet_lng != null ? () => router.push({
-                  pathname: '/(community)/meet-map' as never,
-                  // crewId + canEdit ride for the in-place 위치 수정 (the 커버
-                  // 변경 chip's exact gate); server enforces the PATCH deep
-                  params: {
-                    name: crew.meet_place_name ?? '', lat: String(crew.meet_lat), lng: String(crew.meet_lng),
-                    crewId: crew.id, canEdit: canEditCrew ? '1' : '0',
-                  },
-                }) : undefined}
-                disabled={crew.meet_lat == null}
-                style={({ pressed }) => [st.meetRow, pressed && crew.meet_lat != null && { opacity: 0.7 }]}
-              >
-                <View style={crew.meet_place_name != null ? st.meetPin : st.meetCal}>
-                  <Icon
-                    name={crew.meet_place_name != null ? 'location' : 'calendar-outline'}
-                    size={17}
-                    color={crew.meet_place_name != null ? C.danger : C.accentGrn}
-                  />
-                </View>
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  {crew.meet_place_name != null && (
-                    <Text style={st.meetName} numberOfLines={1}>{crew.meet_place_name}</Text>
-                  )}
-                  {(crew.sigungu || hasSchedule) && (
-                    <Text style={[st.meetSchedule, crew.meet_place_name == null && { marginTop: 0 }]} numberOfLines={1}>
-                      {crew.sigungu ? `${crew.sigungu}` : ''}
-                      {crew.sigungu && hasSchedule ? ' · ' : ''}
-                      {activeDays.length > 0 ? Tf('crw.weekly', { days: activeDays.map(d => t(DAY_LABEL_KEY[d] ?? 'dayS.mon')).join('·') }) : ''}
-                      {activeDays.length > 0 && crew.active_time ? ' ' : ''}
-                      {crew.active_time ?? ''}
-                    </Text>
-                  )}
-                </View>
-                {/* convention (공지 상세/course detail): tap → big in-app map;
-                    지도 앱에서 보기 lives INSIDE that view now */}
-                {crew.meet_lat != null && crew.meet_lng != null && (
-                  <Icon name="chevron-forward" size={16} color={C.faint} />
-                )}
-              </Pressable>
-            </View>
-          </View>
-        )}
-
-        {/* ── 챌린지 (M2) — members only; FrActiveChallengeRow ─────────── */}
-        {isMember && challenge !== undefined && (
-          <View style={{ paddingHorizontal: S.gutter, paddingTop: S.xl }}>
-            <View style={st.sectionHead}>
-              <Text style={st.sectionTitle}>{T('crw.sChallenge')}</Text>
-            </View>
-            {challenge === null ? (
-              can('challenges') ? (
-                <Pressable
-                  onPress={() => router.push({
-                    pathname: '/(community)/challenge-create' as never,
-                    params: { crewId: crew.id },
-                  })}
-                  style={({ pressed }) => [st.emptyBox, pressed && { opacity: 0.8 }]}
-                >
-                  <Text style={st.emptyTxt}>{T('crw.chEmpty')}</Text>
+        <View style={{ paddingHorizontal: S.gutter + 2 }}>
+          {/* ═══ 홈 ═══ */}
+          {tab === 'home' && (<>
+            {isMember && (<>
+              <View style={st.secHead}>
+                <Text style={st.secTitle}>{T('crw.nextRun')}</Text>
+                <Pressable onPress={() => router.push({ pathname: '/(community)/announcements' as never, params: { crewId: crew.id, canManage: can('announcements') ? '1' : '0' } })} hitSlop={8}>
+                  <Text style={st.secLink}>{T('crw.allSchedule')} ›</Text>
                 </Pressable>
-              ) : null
-            ) : (
-              <View style={[st.chCard, shadows.sm]}>
-                <View style={st.chHead}>
-                  <Text style={st.chTitle} numberOfLines={1}>{challenge.title}</Text>
-                  <View style={[st.chPct, challenge.is_completed && { backgroundColor: C.crown }]}>
-                    <Text style={st.chPctTxt}>
-                      {challenge.is_completed ? T('crw.chDone') : `${Math.round(challenge.progress_pct)}%`}
-                    </Text>
-                  </View>
-                </View>
-                <View style={st.chBarTrack}>
-                  <View style={[st.chBar, { width: `${Math.min(100, Math.max(2, challenge.progress_pct))}%` as `${number}%` }]} />
-                </View>
-                <View style={st.chMetaRow}>
-                  <Text style={st.chMeta}>
-                    {challenge.achieved_km.toFixed(1)} / {challenge.goal_km} km
-                  </Text>
-                  <Text style={st.chMeta}>
-                    {challenge.is_active
-                      ? Tf('crw.chDaysLeft', { n: Math.max(0, Math.ceil((new Date(challenge.ends_at).getTime() - Date.now()) / 86400000)) })
-                      : new Date(challenge.starts_at).getTime() > Date.now() ? T('crw.chUpcoming') : T('crw.chEnded')}
-                  </Text>
-                </View>
-                <Text style={st.chCaption}>{T('crw.chGps')}</Text>
               </View>
-            )}
-          </View>
-        )}
+              {anns === null ? (
+                <View style={st.card}><ActivityIndicator size="small" color={C.faint} style={{ paddingVertical: 14 }} /></View>
+              ) : nextRun ? (
+                <Pressable onPress={() => router.push({ pathname: '/(community)/announcement-detail' as never, params: { crewId: crew.id, announcementId: nextRun.id } })} style={({ pressed }) => [st.card, st.nextCard, pressed && { opacity: 0.9 }]}>
+                  <View style={st.dateTile}>
+                    <Text style={st.dateDow}>{tIn(lang, DAY_KEYS_SHORT[new Date(nextRun.run_at!).getDay()])}</Text>
+                    <Text style={st.dateNum}>{new Date(nextRun.run_at!).getDate()}</Text>
+                  </View>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text style={st.nextTitle} numberOfLines={1}>{nextRun.title}</Text>
+                    <Text style={st.nextMeta} numberOfLines={1}>{[hhmm(nextRun.run_at!), nextRun.place_name ?? '', Tf('crw.nJoined', { n: nextRun.rsvp.going })].filter(Boolean).join(' · ')}</Text>
+                  </View>
+                  {nextRun.my_rsvp === 'going' ? (
+                    <View style={[st.goBtn, { backgroundColor: C.surfaceAlt }]}><Text style={[st.goTxt, { color: C.sub }]}>{T('crw.rsvpGoing')}</Text></View>
+                  ) : (
+                    <Pressable onPress={() => rsvpGoing(nextRun)} disabled={rsvpBusy || !nextRun.rsvp_open} hitSlop={6} style={({ pressed }) => [st.goBtn, { backgroundColor: C.neon }, (pressed || !nextRun.rsvp_open) && { opacity: 0.6 }]} accessibilityRole="button">
+                      {rsvpBusy ? <ActivityIndicator size="small" color="#121712" /> : <Text style={st.goTxt}>{T('crw.rsvpGo')}</Text>}
+                    </Pressable>
+                  )}
+                </Pressable>
+              ) : (
+                <Pressable onPress={can('announcements') ? () => router.push({ pathname: '/(community)/announcement-compose' as never, params: { crewId: crew.id } }) : undefined} style={[st.card, { padding: 18, alignItems: 'center' }]}>
+                  <Text style={st.emptySub}>{can('announcements') ? T('crw.annEmptyCan') : T('crw.noNextRun')}</Text>
+                </Pressable>
+              )}
+              {latestNotice && (
+                <Pressable onPress={() => router.push({ pathname: '/(community)/announcement-detail' as never, params: { crewId: crew.id, announcementId: latestNotice.id } })} style={({ pressed }) => [st.noticeRow, { backgroundColor: C.surfaceAlt }, pressed && { opacity: 0.8 }]}>
+                  <View style={[st.noticeTag, { backgroundColor: C.text }]}><Text style={[st.noticeTagTxt, { color: C.bg }]}>{T('crw.noticeTag')}</Text></View>
+                  <Text style={st.noticeTxt} numberOfLines={1}>{latestNotice.title}</Text>
+                  <Icon name="chevron-forward" size={14} color={C.sub} />
+                </Pressable>
+              )}
+            </>)}
 
-        {/* ── 크루 러닝 시작 (L1, canvas FrCrewDetail) — any member; tags the
-               saved run as this crew's 정기런. ───────────────────────────── */}
-        {isMember && (
-          <View style={{ paddingHorizontal: S.gutter, paddingTop: S.xl }}>
-            <Pressable
-              onPress={startCrewRun}
-              style={({ pressed }) => [st.crewRunBtn, accentShadow(C.accent), pressed && { opacity: 0.9 }]}
-            >
-              <Icon name="walk-outline" size={20} color={C.accentText} />
-              <Text style={st.crewRunTxt}>{T('crw.startTitle')}</Text>
-            </Pressable>
-          </View>
-        )}
+            {!isMember && crew.description ? <Text style={st.desc}>{crew.description}</Text> : null}
 
-        {/* ── 크루 채팅 entry (chat v1) — canvas: right after the 챌린지
-            section; unread badge on the icon, count line when unread ──── */}
-        {isMember && (
-          <View style={{ paddingHorizontal: S.gutter, paddingTop: S.md }}>
-            <Pressable
-              onPress={() => router.push({
-                pathname: '/(community)/crew-chat' as never,
-                params: {
-                  crewId: crew.id,
-                  crewName: crew.name,
-                  memberCount: String(crew.member_count),
-                  role: crew.myRole ?? '',
-                },
-              })}
-              style={({ pressed }) => [st.chatBtn, shadows.sm, pressed && { opacity: 0.8 }]}
-            >
-              <View style={st.chatIcon}>
-                <Icon name="chatbubble-ellipses-outline" size={18} color={C.accentGrn} />
-                {chatUnread > 0 && (
-                  <View style={st.chatBadge}>
-                    <Text style={st.chatBadgeTxt}>{chatUnread > 99 ? '99+' : chatUnread}</Text>
+            {/* 이번 주 랭킹 top-3 → 전체 = the 랭킹 tab */}
+            {ranking !== null && (<>
+              <View style={[st.secHead, { marginTop: 22 }]}>
+                <Text style={st.secTitle}>{T('crw.weekRank')}</Text>
+                <Pressable onPress={() => setTab('rank')} hitSlop={8}><Text style={st.secLink}>{T('crw.all')} ›</Text></Pressable>
+              </View>
+              {ranking.length === 0 ? rankEmpty : <View style={[st.card, { paddingHorizontal: 18, paddingVertical: 4 }]}>{rankRows(ranking.slice(0, 3))}</View>}
+            </>)}
+
+            {/* 챌린지 (when one exists; staff see the create door when none) */}
+            {challenge !== undefined && (challenge !== null || can('challenges')) && (
+              <View style={{ marginTop: 22 }}>
+                <View style={st.secHead}><Text style={st.secTitle}>{T('crw.sChallenge')}</Text></View>
+                {challenge === null ? (
+                  <Pressable onPress={() => router.push({ pathname: '/(community)/challenge-create' as never, params: { crewId: crew.id } })} style={({ pressed }) => [st.card, { padding: 18, alignItems: 'center' }, pressed && { opacity: 0.8 }]}>
+                    <Text style={st.emptySub}>{T('crw.chEmpty')}</Text>
+                  </Pressable>
+                ) : (
+                  <View style={[st.card, { padding: 15 }]}>
+                    <View style={st.chHead}>
+                      <Text style={st.chTitle} numberOfLines={1}>{challenge.title}</Text>
+                      <View style={[st.chPct, { backgroundColor: challenge.is_completed ? C.crown : C.neon }]}>
+                        <Text style={st.chPctTxt}>{challenge.is_completed ? T('crw.chDone') : `${Math.round(challenge.progress_pct)}%`}</Text>
+                      </View>
+                    </View>
+                    <View style={st.chBarTrack}><View style={[st.chBar, { backgroundColor: C.neon, width: `${Math.min(100, Math.max(2, challenge.progress_pct))}%` as `${number}%` }]} /></View>
+                    <View style={st.chMetaRow}>
+                      <Text style={st.chMeta}>{challenge.achieved_km.toFixed(1)} / {challenge.goal_km} km</Text>
+                      <Text style={st.chMeta}>
+                        {challenge.is_active
+                          ? Tf('crw.chDaysLeft', { n: Math.max(0, Math.ceil((new Date(challenge.ends_at).getTime() - Date.now()) / 86400000)) })
+                          : new Date(challenge.starts_at).getTime() > Date.now() ? T('crw.chUpcoming') : T('crw.chEnded')}
+                      </Text>
+                    </View>
+                    <Text style={st.chCaption}>{T('crw.chGps')}</Text>
                   </View>
                 )}
               </View>
-              <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={st.chatTitle}>{T('crw.chatTitle')}</Text>
-                <Text style={st.chatSub} numberOfLines={1}>
-                  {chatUnread > 0 ? Tf('crw.chatNew', { n: chatUnread }) : T('crw.chatSub')}
-                </Text>
-              </View>
-              <Icon name="chevron-forward" size={16} color={C.faint} />
-            </Pressable>
-          </View>
-        )}
+            )}
 
-        {/* ── 랭킹 (design-wave A) — canvas top-3 w/ medals + role badges;
-            the full list moved to the 크루원 screen (door below). Server is
-            이번 주 KST · GPS-verified — the caption keeps that truth next to
-            the canvas's bare "크루 랭킹" title. ───────────────────────── */}
-        {isMember && (
-          <View style={{ paddingHorizontal: S.gutter, paddingTop: S.xl }}>
-            {/* Header shows once loaded (ranking !== null) so the section never
-                silently vanishes on an empty week — the empty state carries the
-                honest weekly-reset semantics (KST 월요일, verified-GPS only). */}
-            {ranking !== null && (
-              <View style={st.sectionHead}>
-                <Text style={st.sectionTitle}>{T('crw.sRank')}</Text>
-                <Text style={st.memberCount}>{T('crw.rankCaption')}</Text>
-              </View>
-            )}
-            {ranking !== null && ranking.length === 0 && (
-              <View style={[st.rankEmpty, shadows.sm]}>
-                <View style={st.rankEmptyIcon}>
-                  <Icon name="trophy-outline" size={22} color={C.faint} />
+            {/* 집결 장소 · 일정 (crew-native meet_* / active_days — today's card, restyled) */}
+            {(crew.meet_place_name != null || hasSchedule) && (
+              <View style={{ marginTop: 22 }}>
+                <View style={st.secHead}><Text style={st.secTitle}>{T('crw.sMeet')}</Text></View>
+                <View style={[st.card, { overflow: 'hidden' }]}>
+                  {crew.meet_lat != null && crew.meet_lng != null && <RealMap height={150} center={{ lat: crew.meet_lat, lng: crew.meet_lng }} marker borderRadius={0} />}
+                  <Pressable
+                    onPress={crew.meet_lat != null && crew.meet_lng != null ? () => router.push({ pathname: '/(community)/meet-map' as never, params: { name: crew.meet_place_name ?? '', lat: String(crew.meet_lat), lng: String(crew.meet_lng), crewId: crew.id, canEdit: canEditCrew ? '1' : '0' } }) : undefined}
+                    disabled={crew.meet_lat == null}
+                    style={({ pressed }) => [st.meetRow, pressed && crew.meet_lat != null && { opacity: 0.7 }]}
+                  >
+                    <Icon name={crew.meet_place_name != null ? 'location' : 'calendar-outline'} size={17} color={crew.meet_place_name != null ? C.danger : C.accentGrn} />
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      {crew.meet_place_name != null && <Text style={st.meetName} numberOfLines={1}>{crew.meet_place_name}</Text>}
+                      {(crew.sigungu || hasSchedule) && (
+                        <Text style={st.meetSchedule} numberOfLines={1}>
+                          {crew.sigungu ? `${crew.sigungu}` : ''}{crew.sigungu && hasSchedule ? ' · ' : ''}
+                          {activeDays.length > 0 ? Tf('crw.weekly', { days: activeDays.map(d => t(DAY_LABEL_KEY[d] ?? 'dayS.mon')).join('·') }) : ''}
+                          {activeDays.length > 0 && crew.active_time ? ' ' : ''}{crew.active_time ?? ''}
+                        </Text>
+                      )}
+                    </View>
+                    {crew.meet_lat != null && crew.meet_lng != null && <Icon name="chevron-forward" size={16} color={C.faint} />}
+                  </Pressable>
                 </View>
-                <Text style={st.rankEmptyTitle}>{T('crw.rankEmpty')}</Text>
-                <Text style={st.rankEmptySub}>{T('crw.rankEmptySub')}</Text>
               </View>
             )}
-            {ranking !== null && ranking.length > 0 && (
-              <>
-                <View style={[st.rankList, shadows.sm]}>
-                  {ranking.slice(0, 3).map((r, i) => {
-                    const role = members.find(m => m.user_id === r.user_id)?.role;
-                    return (
-                      <React.Fragment key={r.user_id}>
-                        {i > 0 && <View style={st.divider} />}
-                        <View style={[st.rankRow, r.me && st.rankRowMe]}>
-                          <View style={[st.rankMedal, { backgroundColor: rankMedal(C)[r.rank] ?? C.faint }]}>
-                            <Text style={st.rankMedalTxt}>{r.rank}</Text>
-                          </View>
-                          <Avatar name={r.nickname} size={30} photoUrl={r.avatar_url} letterSpacing={-0.3} />
-                          <View style={{ flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                            <Text style={[st.rankName, r.me && { fontWeight: '700' }]} numberOfLines={1}>
-                              {r.nickname ?? T('home.runner')}
-                            </Text>
-                            {r.me && <View style={st.meBadge}><Text style={st.meBadgeTxt}>{T('crw.me')}</Text></View>}
-                            {role === 'owner' && <View style={st.ownerBadge}><Text style={st.ownerTxt}>{T('crw.roleOwner')}</Text></View>}
-                            {role === 'admin' && <View style={st.adminBadge}><Text style={st.adminTxt}>{T('crw.roleAdmin')}</Text></View>}
-                          </View>
-                          <Text style={st.rankKm}>{r.distance_km.toFixed(1)} km</Text>
+
+            {/* 크루 러닝 시작 — any member (stated deviation: not on the board, cannot live in a menu) */}
+            {isMember && (
+              <Pressable onPress={startCrewRun} style={({ pressed }) => [st.runBtn, { backgroundColor: C.neon }, pressed && { opacity: 0.9 }]} accessibilityRole="button">
+                <Icon name="walk-outline" size={20} color="#121712" />
+                <Text style={st.runTxt}>{T('crw.startTitle')}</Text>
+              </Pressable>
+            )}
+          </>)}
+
+          {/* ═══ 랭킹 ═══ */}
+          {tab === 'rank' && (<>
+            <View style={st.secHead}>
+              <Text style={st.secTitle}>{T('crw.weekRank')}</Text>
+              <Text style={st.secLink}>{T('crw.rankCaption')}</Text>
+            </View>
+            {ranking === null ? <ActivityIndicator size="small" color={C.faint} style={{ paddingVertical: 20 }} />
+              : ranking.length === 0 ? rankEmpty
+              : <View style={[st.card, { paddingHorizontal: 18, paddingVertical: 4 }]}>{rankRows(ranking)}</View>}
+          </>)}
+
+          {/* ═══ 피드 (members) — 정기런, session-collapsed, paged; 전체 보기 → crew-runs ═══ */}
+          {tab === 'feed' && (<>
+            <View style={st.secHead}>
+              <Text style={st.secTitle}>{T('crw.sFeed')}</Text>
+              <Pressable onPress={() => router.push({ pathname: '/(community)/crew-runs' as never, params: { crewId: crew.id, crewName: crew.name } })} hitSlop={8}>
+                <Text style={st.secLink}>{T('crw.viewAll')} ›</Text>
+              </Pressable>
+            </View>
+            {feed === null ? <ActivityIndicator size="small" color={C.faint} style={{ paddingVertical: 20 }} />
+              : feed.length === 0 ? (
+                <View style={[st.card, { padding: 18, alignItems: 'center' }]}>
+                  <Text style={st.emptyTitle}>{T('crw.feedEmpty')}</Text>
+                  <Text style={st.emptySub}>{T('crw.feedEmptySub')}</Text>
+                </View>
+              ) : (
+                <View style={[st.card, { overflow: 'hidden' }]}>
+                  {groupCrewSessions(feed).map(g => g.anchor).map((run, i) => (
+                    <React.Fragment key={run.run_id}>
+                      {i > 0 && <View style={st.divider} />}
+                      <Pressable onPress={() => openCrewRun(run)} style={({ pressed }) => [st.feedRow, pressed && { opacity: 0.7 }]}>
+                        <View style={st.feedThumb}>
+                          <SafeImage uri={run.photo_thumb} style={st.feedThumbImg}
+                            fallback={run.polyline_thumb && run.polyline_thumb.length >= 2 && isPlausibleTrack(run.polyline_thumb, run.distance_km)
+                              ? <MiniMap seed={run.run_id} height={48} borderRadius={13} polyline={run.polyline_thumb} />
+                              : <MiniMap seed={run.run_id} height={48} borderRadius={13} />} />
                         </View>
-                      </React.Fragment>
-                    );
-                  })}
+                        <View style={{ flex: 1, minWidth: 0 }}>
+                          <View style={st.feedHeadRow}>
+                            <Avatar name={run.nickname} size={18} initialsRatio={0.5} photoUrl={run.avatar_url} />
+                            <Text style={st.feedName} numberOfLines={1}>{run.nickname ?? T('home.runner')}</Text>
+                            {run.session_participant_count != null && <View style={st.feedChip}><Text style={st.feedChipTxt}>{Tf('crw.nJoined', { n: run.session_participant_count })}</Text></View>}
+                            <Text style={st.feedWhen}>{fmtAgo(run.ran_at, lang)}</Text>
+                          </View>
+                          <View style={st.feedStatsRow}>
+                            <Text style={st.feedKm}>{fmtDist(run.distance_km, units, 1)}<Text style={st.feedKmUnit}> {distUnit(units)}</Text></Text>
+                            <Text style={st.feedStat}>{fmtDuration(run.duration_sec)}</Text>
+                            {run.avg_pace_sec_per_km != null && <Text style={st.feedStat}>{fmtPaceIn(run.avg_pace_sec_per_km, units)}{paceUnit(units)}</Text>}
+                            {run.kudos_count > 0 && <View style={st.feedKudos}><Icon name="heart" size={10} color={C.neon} /><Text style={st.feedStat}>{run.kudos_count}</Text></View>}
+                          </View>
+                        </View>
+                      </Pressable>
+                    </React.Fragment>
+                  ))}
+                  {feedBusy && <ActivityIndicator size="small" color={C.faint} style={{ paddingVertical: 12 }} />}
                 </View>
-              </>
-            )}
+              )}
+          </>)}
 
-            {/* canvas: the full-roster door sits directly under the ranking card */}
-            <Pressable
-              onPress={() => router.push({
-                pathname: '/(community)/crew-members' as never,
-                params: { crewId: crew.id },
-              })}
-              style={({ pressed }) => [st.rosterBtn, shadows.sm, pressed && { opacity: 0.8 }]}
-            >
-              <View style={st.rosterIcon}><Icon name="people-outline" size={18} color={C.accentGrn} /></View>
-              <Text style={st.rosterTxt}>{T('crw.rosterAll')}</Text>
-              <Text style={st.rosterCount}>{Tf('crw.nMembers', { n: crew.member_count })}</Text>
-              <Icon name="chevron-forward" size={16} color={C.faint} />
-            </Pressable>
-          </View>
-        )}
-
-        {/* ── 크루 러닝 피드 (canvas FrCrewDetail section) — members only.
-               Compact preview cards (48px route-shaped mini) + 전체 보기 →
-               full feed screen. Tap → run-post (edge ⓑ, no lock pre-check). ── */}
-        {isMember && feedPreview !== null && (
-          <View style={{ paddingHorizontal: S.gutter, paddingTop: S.xl }}>
-            <View style={st.sectionHead}>
-              <Text style={st.sectionTitle}>{T('crw.sFeed')}</Text>
-              {feedPreview.length > 0 && (
-                <Pressable
-                  onPress={() => router.push({ pathname: '/(community)/crew-runs' as never, params: { crewId: crew.id, crewName: crew.name } })}
-                  hitSlop={8}
-                >
-                  <Text style={st.annMoreTxt}>{T('crw.viewAll')}</Text>
+          {/* ═══ 멤버 ═══ */}
+          {tab === 'members' && (<>
+            <View style={st.secHead}>
+              <Text style={st.secTitle}>{Tf('crw.nMembers', { n: crew.member_count })}</Text>
+              {isMember && (
+                <Pressable onPress={() => router.push({ pathname: '/(community)/crew-members' as never, params: { crewId: crew.id } })} hitSlop={8}>
+                  <Text style={st.secLink}>{canManage ? T('crw.manage') : T('crw.rosterAll')} ›</Text>
                 </Pressable>
               )}
             </View>
-            {feedPreview.length === 0 ? (
-              // Session-only feed's normal early state. No CTA button here —
-              // the 크루 러닝 시작 primary button is on this same screen, above.
-              <View style={st.emptyBox}>
-                <Text style={st.emptyTxt}>{T('crw.feedEmpty')}</Text>
-                <Text style={st.emptyBoxSub}>{T('crw.feedEmptySub')}</Text>
-              </View>
-            ) : (
-              <View style={[st.feedList, shadows.sm]}>
-                {/* 세션-콜랩스: 프리뷰도 그룹 디둡 (한 세션 = 한 로우, 앵커
-                    렌더) — 48px 로우엔 배지 생략 (스페이스; 풀 카드가 배지 보유) */}
-                {groupCrewSessions(feedPreview).map(g => g.anchor).map((run, i) => (
-                  <React.Fragment key={run.run_id}>
-                    {i > 0 && <View style={st.divider} />}
-                    <Pressable onPress={() => openCrewRun(run)} style={({ pressed }) => [st.feedRow, pressed && { opacity: 0.7 }]}>
-                      <View style={st.feedThumb}>
-                        {/* 8/5 REWORK — the Korea map lived HERE. Root cause:
-                            RealMap's fixed 24px onMapReady edgePadding is
-                            DEGENERATE at 48px (24+24 ≥ the frame) → MapKit
-                            fits the coords into non-positive space → extreme
-                            zoom-out, snapshotted by cacheEnabled. Fix: the
-                            기록-card cascade — photo first (SafeImage), else
-                            the route-shaped MiniMap SVG (no MapKit at this
-                            size = the degenerate-fit class dead), else seed. */}
-                        <SafeImage uri={run.photo_thumb} style={st.feedThumbImg}
-                          fallback={run.polyline_thumb && run.polyline_thumb.length >= 2 && isPlausibleTrack(run.polyline_thumb, run.distance_km)
-                            ? <MiniMap seed={run.run_id} height={48} borderRadius={13} polyline={run.polyline_thumb} />
-                            : <MiniMap seed={run.run_id} height={48} borderRadius={13} />} />
-                      </View>
-                      <View style={{ flex: 1, minWidth: 0 }}>
-                        <View style={st.feedHeadRow}>
-                          <Avatar name={run.nickname} size={18} initialsRatio={0.5} />
-                          <Text style={st.feedName} numberOfLines={1}>{run.nickname ?? T('home.runner')}</Text>
-                          {/* Every card is a 정기런 now (session_only) — the word
-                              is redundant; the 참여 count is the informative part. */}
-                          {run.session_participant_count != null && (
-                            <View style={st.feedSessionChip}>
-                              <Text style={st.feedSessionTxt}>{Tf('crw.nJoined', { n: run.session_participant_count })}</Text>
-                            </View>
-                          )}
-                          <Text style={st.feedWhen}>{fmtAgo(run.ran_at, lang)}</Text>
-                        </View>
-                        <View style={st.feedStatsRow}>
-                          <Text style={st.feedKm}>{fmtDist(run.distance_km, units, 1)}<Text style={st.feedKmUnit}> {distUnit(units)}</Text></Text>
-                          <Text style={st.feedStat}>{fmtDuration(run.duration_sec)}</Text>
-                          {run.avg_pace_sec_per_km != null && (
-                            <Text style={st.feedStat}>{fmtPaceIn(run.avg_pace_sec_per_km, units)}{paceUnit(units)}</Text>
-                          )}
-                          {/* 8/5 crew-♥: COUNT-ONLY on the 48px preview rows —
-                              stated divergence from the full K1 grammar (a
-                              toggle doesn't fit the compact row; tap → run-post
-                              carries the interaction; crew-runs = full grammar). */}
-                          {run.kudos_count > 0 && (
-                            <View style={st.feedKudos}>
-                              <Icon name="heart" size={10} color={C.danger} />
-                              <Text style={st.feedStat}>{run.kudos_count}</Text>
-                            </View>
-                          )}
-                        </View>
-                      </View>
-                    </Pressable>
-                  </React.Fragment>
-                ))}
-              </View>
-            )}
-          </View>
-        )}
-
+            <View style={[st.card, { paddingHorizontal: 18, paddingVertical: 4 }]}>
+              {members.map((m, i) => (
+                <React.Fragment key={m.user_id}>
+                  {i > 0 && <View style={st.divider} />}
+                  <Pressable onPress={() => openProfile(m.user_id, m.nickname)} style={({ pressed }) => [st.rankRow, pressed && { opacity: 0.7 }]}>
+                    <Avatar name={m.nickname} size={34} photoUrl={m.avatar_url} letterSpacing={-0.3} />
+                    <View style={{ flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Text style={st.rankName} numberOfLines={1}>{m.nickname}</Text>
+                      {m.role === 'owner' && <View style={st.ownerBadge}><Text style={st.ownerTxt}>{T('crw.roleOwner')}</Text></View>}
+                      {m.role === 'admin' && <View style={st.adminBadge}><Text style={st.adminTxt}>{T('crw.roleAdmin')}</Text></View>}
+                    </View>
+                    {m.challenge_km != null && <Text style={st.rankKm}>{fmtKm1(m.challenge_km)}<Text style={st.rankKmUnit}> km</Text></Text>}
+                  </Pressable>
+                </React.Fragment>
+              ))}
+            </View>
+          </>)}
+        </View>
       </ScrollView>
 
-      {/* ── Error banner ──────────────────────────────────────────────── */}
       {mutErr && (
         <View style={st.errBanner}>
           <Icon name="alert-circle-outline" size={14} color={C.danger} />
           <Text style={st.errBannerTxt} numberOfLines={2}>{mutErr}</Text>
-          <Pressable onPress={() => setMutErr(null)} hitSlop={8}>
-            <Icon name="close" size={14} color={C.danger} />
-          </Pressable>
+          <Pressable onPress={() => setMutErr(null)} hitSlop={8}><Icon name="close" size={14} color={C.danger} /></Pressable>
         </View>
       )}
-
-      {/* ── 이미지 crop — 아이콘 1:1 원형 · 커버 16:9 (avatar-crop reuse) ── */}
-      <AvatarCrop
-        src={cropSrc?.src ?? null}
-        aspect={cropSrc?.kind === 'cover' ? 16 / 9 : 1}
-        onClose={() => setCropSrc(null)}
-        onConfirm={onCropped}
-        onRetake={() => { setCropSrc(null); pickCrewImage(lastCropKind.current); }}
-      />
-
-      {/* ── Sticky CTA — non-members only (join/request/full). Members leave
-             via the hero icon / manage hub, so no bottom action remains. ── */}
+      <AvatarCrop src={cropSrc?.src ?? null} aspect={cropSrc?.kind === 'cover' ? 16 / 9 : 1} onClose={() => setCropSrc(null)} onConfirm={onCropped} onRetake={() => { setCropSrc(null); pickCrewImage(lastCropKind.current); }} />
       {!isMember && (
         <View style={[st.footer, { paddingBottom: Math.max(insets.bottom, S.lg) + S.sm }]}>
-          <CtaButton
-            crew={crew}
-            requestPending={myRequestStatus === 'pending'}
-            busy={busy}
-            onJoin={handleJoin}
-            onCancelRequest={handleCancelRequest}
-          />
+          <CtaButton crew={crew} requestPending={myRequestStatus === 'pending'} busy={busy} onJoin={handleJoin} onCancelRequest={handleCancelRequest} />
         </View>
       )}
     </View>
@@ -968,149 +620,90 @@ export default function CrewDetailScreen() {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const makeSt = (C: Tokens) => StyleSheet.create({
-  root: { flex: 1, backgroundColor: C.bg },
-
-  // Hero
-  hero:         { overflow: 'hidden' },
-  heroControls: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  backBtn:      { width: 40, height: 40, borderRadius: R.pill, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center' },
-  backBtnLight: { width: 40, height: 40, borderRadius: R.pill, backgroundColor: C.surfaceAlt, borderWidth: 1, borderColor: C.border, alignItems: 'center', justifyContent: 'center' },
-  colorDot:     { width: 16, height: 16, borderRadius: 8, borderWidth: 2, borderColor: 'rgba(255,255,255,0.4)' },
-  heroName:     { fontSize: 24, fontWeight: '700', color: '#fff', letterSpacing: -0.6 },
-  heroMeta:     { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8, flexWrap: 'wrap' },
-  heroMetaTxt:  { fontSize: 13, color: 'rgba(255,255,255,0.78)', letterSpacing: -0.2 },
-  heroDesc:     { fontSize: 13.5, lineHeight: 20, color: 'rgba(255,255,255,0.88)', letterSpacing: -0.2, marginTop: 10 },
-  levelBadge:   { backgroundColor: 'rgba(255,255,255,0.22)', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
-  managePill:    { flexDirection: 'row', alignItems: 'center', gap: 6, height: 40, paddingHorizontal: 14, borderRadius: R.pill, backgroundColor: 'rgba(255,255,255,0.16)' },
-  managePillTxt: { fontSize: 13, fontWeight: '700', color: '#fff', letterSpacing: -0.2 },
-  managePillDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: C.danger },
-  leaveIconBtn:  { width: 40, height: 40, borderRadius: R.pill, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center' },
-  roleBadge:     { borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2 },
-  roleBadgeTxt:  { fontSize: 10.5, fontWeight: '800', color: C.accentText, letterSpacing: 0.2 },
-  quickRow:      { flexDirection: 'row', gap: 9, paddingHorizontal: S.gutter, paddingTop: 16 },
-  quickTile:     { flex: 1, alignItems: 'center', gap: 6, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 14, paddingVertical: 12, paddingHorizontal: 4 },
-  quickTxt:      { fontSize: 12, fontWeight: '700', color: C.text, letterSpacing: -0.2 },
-  levelTxt:     { fontSize: 11, fontWeight: '800', color: '#fff', letterSpacing: -0.1 },
-
-  // Activity meta card
-  metaCard:  { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginHorizontal: S.gutter, marginTop: 16, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: R.md, padding: 14 },
-  metaLabel: { fontSize: 13, fontWeight: '700', color: C.sub, letterSpacing: -0.2 },
-  metaDays:  { flexDirection: 'row', flexWrap: 'wrap', gap: 5, alignItems: 'center' },
-  dayChip:   { backgroundColor: C.accentDim, borderWidth: 1, borderColor: C.accent + '44', borderRadius: 6, paddingHorizontal: 7, paddingVertical: 3 },
-  dayTxt:    { fontSize: 11.5, fontWeight: '700', color: C.accentGrn },
-  metaTime:  { fontSize: 12.5, fontWeight: '600', color: C.sub, letterSpacing: -0.2 },
-
-  // Section
-  sectionHead:  { flexDirection: 'row', alignItems: 'baseline', gap: 8, marginBottom: 12 },
-  sectionTitle: { fontSize: 17, fontWeight: '700', letterSpacing: -0.4, color: C.text },
-  memberCount:  { fontSize: 13, fontWeight: '600', color: C.faint },
-
-  divider:    { height: 1, backgroundColor: C.border, marginHorizontal: 14 },
-  ownerBadge: { backgroundColor: C.crown, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
-  ownerTxt:   { fontSize: 10, fontWeight: '800', color: C.accentText, letterSpacing: 0.2 },
-  adminBadge: { backgroundColor: C.accentDim, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
-  adminTxt:   { fontSize: 10, fontWeight: '800', color: C.accentGrn, letterSpacing: 0.2 },
-  meBadge:    { backgroundColor: C.accent, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
-  meBadgeTxt: { fontSize: 10, fontWeight: '800', color: C.accentText, letterSpacing: 0.2 },
-
-  // Empty / error states
-  emptyBox: { backgroundColor: C.surfaceAlt, borderWidth: 1, borderColor: C.border, borderRadius: R.lg, padding: 20, alignItems: 'center' },
-
-  // 집결 장소 — crew-native card (meet_* live 2026-07-14)
-  meetCard:    { borderRadius: R.lg, borderWidth: 1, borderColor: C.border, overflow: 'hidden', backgroundColor: C.surface },
-  meetRow:     { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 13, paddingHorizontal: 15 },
-  meetCal:     { width: 36, height: 36, borderRadius: 11, backgroundColor: C.accentDim, alignItems: 'center', justifyContent: 'center' },
-  meetPin:     { width: 36, height: 36, borderRadius: 11, backgroundColor: C.danger + '1A', alignItems: 'center', justifyContent: 'center' },
-  meetName:    { fontSize: 14.5, fontWeight: '700', color: C.text, letterSpacing: -0.3 },
-  meetSub:     { fontSize: 12, color: C.faint, letterSpacing: -0.2, marginTop: 2 },
-  meetOpenTxt: { fontSize: 12.5, fontWeight: '700', color: C.accentGrn, letterSpacing: -0.2 },
-  meetSchedule: { fontSize: 13, fontWeight: '700', color: C.accentGrn, letterSpacing: -0.2, marginTop: 2 },
-  emptyBoxSub: { fontSize: 12, color: C.faint, letterSpacing: -0.2, fontWeight: '500', marginTop: 5, textAlign: 'center' },
-
-  // 챌린지 (M2)
-  chCard:     { backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: R.xl, padding: 15 },
-  chHead:     { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  chTitle:    { flex: 1, minWidth: 0, fontSize: 14.5, fontWeight: '700', color: C.text, letterSpacing: -0.3 },
-  chPct:      { backgroundColor: C.accent, borderRadius: 8, paddingHorizontal: 9, paddingVertical: 4 },
-  chPctTxt:   { fontSize: 11.5, fontWeight: '800', color: C.accentText, letterSpacing: -0.2 },
-  chBarTrack: { height: 8, borderRadius: 4, backgroundColor: C.surfaceAlt, marginTop: 12, overflow: 'hidden' },
-  chBar:      { height: '100%', borderRadius: 4, backgroundColor: C.accent },
-  chMetaRow:  { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 },
-  chMeta:     { fontSize: 12.5, fontWeight: '600', color: C.sub, letterSpacing: -0.2 },
-  chCaption:  { fontSize: 11, color: C.faint, letterSpacing: -0.2, marginTop: 6 },
-
-  // 랭킹 (design-wave A — canvas top-3)
-  rankList:     { backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: R.xl, overflow: 'hidden' },
-
-  // 크루 러닝 피드 preview (canvas compact card)
-  feedList:     { backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: R.xl, overflow: 'hidden' },
+  root:         { flex: 1, backgroundColor: C.bg },
+  hero:         { overflow: 'hidden', backgroundColor: C.surfaceAlt },
+  heroControls: { position: 'absolute', left: 16, right: 16, flexDirection: 'row', justifyContent: 'space-between' },
+  circle:       { width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(255,255,255,0.92)', alignItems: 'center', justifyContent: 'center' },
+  circleDot:    { position: 'absolute', right: 1, top: 1, width: 9, height: 9, borderRadius: 5, backgroundColor: C.danger, borderWidth: 2, borderColor: '#fff' },
+  circleLight:  { width: 40, height: 40, borderRadius: R.pill, backgroundColor: C.surfaceAlt, alignItems: 'center', justifyContent: 'center' },
+  heroBottom:   { position: 'absolute', left: 22, right: 22, bottom: 18, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12 },
+  heroName:     { fontSize: 24, fontWeight: '900', color: '#fff', letterSpacing: -0.4 },
+  heroMeta:     { fontSize: 11.5, color: 'rgba(255,255,255,0.85)', marginTop: 3 },
+  heroKm:       { fontSize: 30, fontWeight: '800', color: '#fff', letterSpacing: -0.5, lineHeight: 32, fontVariant: ['tabular-nums'] },
+  heroKmUnit:   { fontSize: 12, fontWeight: '700', color: '#fff' },
+  heroKmSub:    { fontSize: 10.5, color: 'rgba(255,255,255,0.85)', marginTop: 3 },
+  imgBusy:      { position: 'absolute', right: 16, bottom: 16, width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(0,0,0,0.45)', alignItems: 'center', justifyContent: 'center' },
+  tabRow:       { flexDirection: 'row', gap: 20, paddingHorizontal: S.gutter + 2, paddingTop: 16, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: C.border },
+  tabBtn:       { alignItems: 'center' },
+  tabTxt:       { fontSize: 14, letterSpacing: -0.2, paddingBottom: 9 },
+  tabUnderline: { height: 2.5, alignSelf: 'stretch' },
+  secHead:      { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginTop: 22, marginBottom: 10 },
+  secTitle:     { fontSize: 15, fontWeight: '900', color: C.text, letterSpacing: -0.2 },
+  secLink:      { fontSize: 11.5, color: C.sub },
+  card:         { backgroundColor: C.surface, borderRadius: 20 },
+  nextCard:     { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 16, paddingHorizontal: 18 },
+  dateTile:     { width: 50, height: 54, borderRadius: 14, backgroundColor: C.surfaceAlt, alignItems: 'center', justifyContent: 'center' },
+  dateDow:      { fontSize: 10, fontWeight: '700', color: C.sub },
+  dateNum:      { fontSize: 20, fontWeight: '800', color: C.text, lineHeight: 22, fontVariant: ['tabular-nums'] },
+  nextTitle:    { fontSize: 14, fontWeight: '900', color: C.text },
+  nextMeta:     { fontSize: 11, color: C.sub, marginTop: 2 },
+  goBtn:        { borderRadius: 12, paddingHorizontal: 14, paddingVertical: 9, minWidth: 54, alignItems: 'center' },
+  goTxt:        { fontSize: 12.5, fontWeight: '900', color: '#121712' },
+  noticeRow:    { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 13, paddingHorizontal: 16, borderRadius: 16, marginTop: 10 },
+  noticeTag:    { borderRadius: 7, paddingHorizontal: 7, paddingVertical: 2 },
+  noticeTagTxt: { fontSize: 10.5, fontWeight: '900' },
+  noticeTxt:    { flex: 1, minWidth: 0, fontSize: 12.5, fontWeight: '500', color: C.text },
+  desc:         { fontSize: 13.5, lineHeight: 20, color: C.sub, marginTop: 18 },
+  divider:      { height: StyleSheet.hairlineWidth, backgroundColor: C.border },
+  rankRow:      { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 11 },
+  rankNum:      { width: 18, fontSize: 14, fontWeight: '800', color: C.text, fontVariant: ['tabular-nums'] },
+  rankName:     { flexShrink: 1, fontSize: 13.5, fontWeight: '700', color: C.text, letterSpacing: -0.2 },
+  rankKm:       { fontSize: 15, fontWeight: '800', color: C.text, fontVariant: ['tabular-nums'] },
+  rankKmUnit:   { fontSize: 10.5, fontWeight: '700', color: C.sub },
+  rankEmptyInner: { alignItems: 'center', gap: 6, paddingVertical: 22, paddingHorizontal: 20 },
+  meBadge:      { backgroundColor: C.neon, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 1 },
+  meBadgeTxt:   { fontSize: 10, fontWeight: '700', color: '#121712' },
+  ownerBadge:   { backgroundColor: C.crown, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
+  ownerTxt:     { fontSize: 10, fontWeight: '800', color: C.accentText, letterSpacing: 0.2 },
+  adminBadge:   { backgroundColor: C.accentDim, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
+  adminTxt:     { fontSize: 10, fontWeight: '800', color: C.accentGrn, letterSpacing: 0.2 },
+  emptyTitle:   { fontSize: 14, fontWeight: '700', color: C.text, letterSpacing: -0.3 },
+  emptySub:     { fontSize: 12, color: C.sub, letterSpacing: -0.2, textAlign: 'center', lineHeight: 17 },
+  chHead:       { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  chTitle:      { flex: 1, minWidth: 0, fontSize: 14.5, fontWeight: '700', color: C.text, letterSpacing: -0.3 },
+  chPct:        { borderRadius: 8, paddingHorizontal: 9, paddingVertical: 4 },
+  chPctTxt:     { fontSize: 11.5, fontWeight: '800', color: '#121712', letterSpacing: -0.2 },
+  chBarTrack:   { height: 8, borderRadius: 4, backgroundColor: C.surfaceAlt, marginTop: 12, overflow: 'hidden' },
+  chBar:        { height: '100%', borderRadius: 4 },
+  chMetaRow:    { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 },
+  chMeta:       { fontSize: 12.5, fontWeight: '600', color: C.sub, letterSpacing: -0.2 },
+  chCaption:    { fontSize: 11, color: C.faint, letterSpacing: -0.2, marginTop: 6 },
+  meetRow:      { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 13, paddingHorizontal: 16 },
+  meetName:     { fontSize: 14.5, fontWeight: '700', color: C.text, letterSpacing: -0.3 },
+  meetSchedule: { fontSize: 12.5, fontWeight: '600', color: C.sub, letterSpacing: -0.2, marginTop: 2 },
+  runBtn:       { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, height: 54, borderRadius: 16, marginTop: 22 },
+  runTxt:       { fontSize: 15, fontWeight: '900', color: '#121712', letterSpacing: -0.2 },
   feedRow:      { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12 },
   feedThumb:    { width: 48, height: 48, borderRadius: 13, overflow: 'hidden', flexShrink: 0 },
-  feedThumbImg: { width: 48, height: 48, borderRadius: 13 }, // signed URL — direct, never cached (계약)
+  feedThumbImg: { width: 48, height: 48, borderRadius: 13 },
   feedHeadRow:  { flexDirection: 'row', alignItems: 'center', gap: 6 },
   feedName:     { flexShrink: 1, fontSize: 13.5, fontWeight: '700', color: C.text, letterSpacing: -0.3 },
-  feedSessionChip: { backgroundColor: C.accentDim, borderRadius: 5, paddingHorizontal: 5, paddingVertical: 1.5, flexShrink: 0 },
-  feedSessionTxt:  { fontSize: 9.5, fontWeight: '800', color: C.accentGrn, letterSpacing: -0.2 },
+  feedChip:     { backgroundColor: C.surfaceAlt, borderRadius: 5, paddingHorizontal: 5, paddingVertical: 1.5, flexShrink: 0 },
+  feedChipTxt:  { fontSize: 9.5, fontWeight: '800', color: C.sub, letterSpacing: -0.2 },
   feedWhen:     { fontSize: 11.5, color: C.faint, flexShrink: 0, marginLeft: 'auto' },
   feedStatsRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 6 },
   feedKudos:    { flexDirection: 'row', alignItems: 'center', gap: 3 },
-  feedKm:       { fontSize: 13, fontWeight: '700', color: C.accentGrn, letterSpacing: -0.2, fontVariant: ['tabular-nums'] },
-  feedKmUnit:   { fontSize: 10, color: C.faint, fontWeight: '600' },
+  feedKm:       { fontSize: 13, fontWeight: '800', color: C.text, letterSpacing: -0.2, fontVariant: ['tabular-nums'] },
+  feedKmUnit:   { fontSize: 10, color: C.sub, fontWeight: '600' },
   feedStat:     { fontSize: 12.5, fontWeight: '600', color: C.sub, letterSpacing: -0.2, fontVariant: ['tabular-nums'] },
-
-  rankEmpty:      { backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: R.xl, alignItems: 'center', paddingVertical: 22, paddingHorizontal: 20, gap: 8 },
-  rankEmptyIcon:  { width: 46, height: 46, borderRadius: 14, backgroundColor: C.surfaceAlt, borderWidth: 1, borderColor: C.border, alignItems: 'center', justifyContent: 'center', marginBottom: 2 },
-  rankEmptyTitle: { fontSize: 14, fontWeight: '700', color: C.text, letterSpacing: -0.3 },
-  rankEmptySub:   { fontSize: 12, color: C.faint, letterSpacing: -0.2, textAlign: 'center', lineHeight: 17 },
-  rankRow:      { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 11, paddingHorizontal: 14 },
-  rankRowMe:    { backgroundColor: C.accentDim },
-  rankMedal:    { width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  rankMedalTxt: { fontSize: 12.5, fontWeight: '800', color: '#fff', fontVariant: ['tabular-nums'] },
-  rankName:     { flexShrink: 1, fontSize: 14, fontWeight: '600', color: C.text, letterSpacing: -0.3 },
-  rankKm:       { fontSize: 13.5, fontWeight: '700', color: C.sub, fontVariant: ['tabular-nums'] },
-
-  // 크루 이미지 (⑤⑥)
-  heroIconWrap: { width: 64, height: 64, borderRadius: 17, borderWidth: 2, borderColor: 'rgba(255,255,255,0.35)', overflow: 'hidden', marginBottom: 10 },
-  heroIconImg:  { width: '100%', height: '100%' },
-  heroIconEdit: { position: 'absolute', bottom: 0, right: 0, width: 20, height: 20, borderTopLeftRadius: 8, backgroundColor: C.accent, alignItems: 'center', justifyContent: 'center' },
-  coverChip:    { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(0,0,0,0.45)', borderRadius: R.pill, paddingHorizontal: 12, paddingVertical: 7, marginBottom: 10 },
-  coverChipTxt: { fontSize: 11.5, fontWeight: '700', color: '#fff', letterSpacing: -0.2 },
-
-  // 크루 채팅 entry (chat v1)
-  crewRunBtn:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, height: 54, borderRadius: 16, backgroundColor: C.accent },
-  crewRunTxt:   { fontSize: 15.5, fontWeight: '700', color: C.accentText, letterSpacing: -0.3 },
-  chatBtn:      { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: R.lg, paddingVertical: 13, paddingHorizontal: 15 },
-  chatIcon:     { width: 36, height: 36, borderRadius: 11, backgroundColor: C.accentDim, alignItems: 'center', justifyContent: 'center' },
-  chatBadge:    { position: 'absolute', top: -4, right: -4, minWidth: 16, height: 16, paddingHorizontal: 4, borderRadius: 8, backgroundColor: C.danger, borderWidth: 1.5, borderColor: C.surface, alignItems: 'center', justifyContent: 'center' },
-  chatBadgeTxt: { fontSize: 9, fontWeight: '800', color: '#fff' },
-  chatTitle:    { fontSize: 14.5, fontWeight: '700', color: C.text, letterSpacing: -0.3 },
-  chatSub:      { fontSize: 12, color: C.faint, letterSpacing: -0.2, marginTop: 2 },
-
-  // 크루원 전체 보기 door (canvas)
-  rosterBtn:   { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: R.lg, paddingVertical: 13, paddingHorizontal: 15, marginTop: 10 },
-  rosterIcon:  { width: 36, height: 36, borderRadius: 11, backgroundColor: C.accentDim, alignItems: 'center', justifyContent: 'center' },
-  rosterTxt:   { flex: 1, fontSize: 14.5, fontWeight: '700', color: C.text, letterSpacing: -0.3 },
-  rosterCount: { fontSize: 13, fontWeight: '700', color: C.accentGrn },
-
-  // 공지 preview (M1)
-  annMoreTxt: { fontSize: 12.5, fontWeight: '700', color: C.accentGrn, letterSpacing: -0.2 },
-  annList:    { backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: R.xl, overflow: 'hidden' },
-  annRow:     { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 13, paddingHorizontal: 14 },
-  annTitle:   { fontSize: 14, fontWeight: '600', color: C.text, letterSpacing: -0.3 },
-  annSub:     { fontSize: 11.5, color: C.faint, letterSpacing: -0.2, marginTop: 2 },
-  emptyTxt: { fontSize: 14, color: C.faint, letterSpacing: -0.2, fontWeight: '600' },
-  errTxt:   { fontSize: 14, color: C.faint, letterSpacing: -0.2, fontWeight: '600', textAlign: 'center' },
-  retryBtn: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: R.md, backgroundColor: C.surfaceAlt, borderWidth: 1, borderColor: C.border },
-  retryTxt: { fontSize: 14, fontWeight: '700', color: C.text },
-
-  // Error banner (above footer)
+  errTxt:       { fontSize: 14, color: C.faint, letterSpacing: -0.2, fontWeight: '600', textAlign: 'center' },
+  retryBtn:     { paddingHorizontal: 20, paddingVertical: 10, borderRadius: R.md, backgroundColor: C.surfaceAlt, borderWidth: 1, borderColor: C.border },
+  retryTxt:     { fontSize: 14, fontWeight: '700', color: C.text },
   errBanner:    { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: S.gutter, paddingVertical: 10, backgroundColor: C.danger + '12', borderTopWidth: 1, borderTopColor: C.danger + '30' },
   errBannerTxt: { flex: 1, fontSize: 13, color: C.danger, letterSpacing: -0.2 },
-
-  // Footer CTA
-  footer:      { position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: S.gutter, paddingTop: S.md, backgroundColor: C.bg, borderTopWidth: 1, borderTopColor: C.border },
-  ctaBtn:      { height: 56, borderRadius: R.lg, backgroundColor: C.accent, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9 },
-  ctaTxt:      { fontSize: 16, fontWeight: '700', color: C.accentText, letterSpacing: -0.3 },
-  ctaDisabled: { backgroundColor: C.surfaceAlt, borderWidth: 1, borderColor: C.border },
-  ctaPending:  { backgroundColor: C.accentDim, borderWidth: 1.5, borderColor: C.accent + '77' },
+  footer:       { position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: S.gutter, paddingTop: S.md, backgroundColor: C.bg, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: C.border },
+  ctaBtn:       { height: 56, borderRadius: R.lg, backgroundColor: C.accent, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9 },
+  ctaTxt:       { fontSize: 16, fontWeight: '700', color: C.accentText, letterSpacing: -0.3 },
+  ctaDisabled:  { backgroundColor: C.surfaceAlt, borderWidth: 1, borderColor: C.border },
+  ctaPending:   { backgroundColor: C.accentDim, borderWidth: 1.5, borderColor: C.accent + '77' },
 });
