@@ -293,15 +293,17 @@ export type Tokens = {
 
 export const darkColors: Tokens = {
   // Surfaces (canvas FR_DARK)
-  // Redesign palette (owner-ruled 2026-11-21) — same structure as light
-  bg:         '#121712',
-  surface:    '#1E231E',
-  surfaceAlt: '#2A302A',
-  border:     '#2A302A',
+  // Dark neutrals RESTORED (owner ruling 2026-11-21, after the olive-tint
+  // slice-1 try): the FR_DARK neutrals stand; only the accent/alert lanes
+  // changed with the redesign.
+  bg:         '#0E0F12',
+  surface:    '#15171C',
+  surfaceAlt: '#1B1E24',
+  border:     '#24282F',
   // Text (canvas FR_DARK)
-  text:  '#F4F4EC',
-  sub:   '#9AA096',
-  faint: '#67706A',   // DERIVED (no owner value) — the light muted tone, one step down
+  text:  '#F2F3F0',
+  sub:   '#9A9EA5',
+  faint: '#6A6F77',
   // Accent — REBRAND (designer spec 프레쉬런_8_12, owner-confirmed 8/20):
   // #39FF14 replaces 지연's 7/21 #74E827 across all accent surfaces. The
   // identity rule survives the swap: accent == LA lime == route-line dark
@@ -310,7 +312,7 @@ export const darkColors: Tokens = {
   // green). accentDim held. Pressed system still nonexistent.
   accent:     '#C3FF3C',   // neon — the lime #39FF14 is retired (2026-11-21)
   accentText: '#121712',
-  accentDim:  '#2A302A',   // neutral fill
+  accentDim:  '#1B1E24',   // neutral fill (= surfaceAlt)
   accentGrn:  '#C3FF3C',   // neon text is allowed on dark
   neon:       '#C3FF3C',
   // Semantic — blue/sun scheme-invariant per canvas; danger from FR_DARK;

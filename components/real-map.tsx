@@ -187,7 +187,7 @@ export function RealMap({ height, borderRadius = 0, polyline, center, marker = f
   // camouflaged the circles against the line itself). Inversion: scheme
   // surface fill · route color as number ink + ring — identity via ink,
   // separation-from-line via fill, edge-vs-tiles carried by the ring.
-  const markerFill = resolved === 'dark' ? '#1E231E' : '#fff'; // surface family (redesign dark surface)
+  const markerFill = resolved === 'dark' ? '#15171C' : '#fff'; // surface family
 
   const onMapReady = () => {
     if (line) {

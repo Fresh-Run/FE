@@ -75,9 +75,9 @@ export function MiniMap({ seed, height = 172, borderRadius = 0, polyline }: Mini
   const accent = routeStroke('dark');
 
   return (
-    <View style={{ width: '100%', height, backgroundColor: '#1E231E', overflow: 'hidden', borderRadius }}>
+    <View style={{ width: '100%', height, backgroundColor: '#15171C', overflow: 'hidden', borderRadius }}>
       <Svg viewBox={`0 0 ${W} ${H}`} width="100%" height="100%" preserveAspectRatio="xMidYMid slice">
-        <Rect width={W} height={H} fill="#1E231E" />
+        <Rect width={W} height={H} fill="#15171C" />
         {river && (
           <Path
             d={`M -10 ${river.y1.toFixed(1)} C 90 ${river.cp1y.toFixed(1)}, 180 ${river.cp2y.toFixed(1)}, ${W + 10} ${river.y2.toFixed(1)}`}
@@ -85,11 +85,11 @@ export function MiniMap({ seed, height = 172, borderRadius = 0, polyline }: Mini
           />
         )}
         {roads.map((r, i) => (
-          <Line key={i} x1={r[0]} y1={r[1]} x2={r[2]} y2={r[3]} stroke="#2A302A" strokeWidth={r[4] ? 8 : 5} />
+          <Line key={i} x1={r[0]} y1={r[1]} x2={r[2]} y2={r[3]} stroke="#1C2230" strokeWidth={r[4] ? 8 : 5} />
         ))}
         <Path d={d} stroke={accent} strokeOpacity={0.22} strokeWidth={13} strokeLinecap="round" strokeLinejoin="round" fill="none" />
         <Path d={d} stroke={accent} strokeWidth={5} strokeLinecap="round" strokeLinejoin="round" fill="none" />
-        <Circle cx={start[0]} cy={start[1]} r={7} fill="#1E231E" stroke={accent} strokeWidth={4} />
+        <Circle cx={start[0]} cy={start[1]} r={7} fill="#15171C" stroke={accent} strokeWidth={4} />
         <Circle cx={end[0]} cy={end[1]} r={8} fill={accent} />
       </Svg>
     </View>
