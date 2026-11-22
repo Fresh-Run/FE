@@ -39,7 +39,7 @@ import { RealMap } from '@/components/real-map';
 import { Icon } from '@/components/ui';
 import { updateCrew } from '@/lib/crews-api';
 import { errorMessage } from '@/lib/error-copy';
-import { accentShadow, radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
+import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { t } from '@/lib/i18n';
 
@@ -164,7 +164,7 @@ export default function MeetMapScreen() {
                 ? `http://maps.apple.com/?ll=${place.coords.lat},${place.coords.lng}&q=${q}`
                 : `geo:${place.coords.lat},${place.coords.lng}?q=${place.coords.lat},${place.coords.lng}(${q})`;
               Linking.openURL(url).catch(() => { /* no maps handler — this view IS the map */ });
-            } : undefined} style={({ pressed }) => [st.openBtn, accentShadow(C.accent), pressed && { opacity: 0.88 }]}>
+            } : undefined} style={({ pressed }) => [st.openBtn, pressed && { opacity: 0.88 }]}>
               <Icon name="navigate-outline" size={17} color={C.accentText} />
               <Text style={st.openTxt}>{t('meet.openMaps')}</Text>
             </Pressable>

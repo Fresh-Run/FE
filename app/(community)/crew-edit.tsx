@@ -47,7 +47,7 @@ import {
   type Crew,
   type CrewLevel,
 } from '@/lib/crews-api';
-import { accentShadow, shadows, spacing as S, type Tokens } from '@/lib/theme';
+import { shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { takePendingCrewRegion } from '@/store/pending-crew-region';
 
@@ -428,7 +428,7 @@ export default function CrewEditScreen() {
         <Pressable
           onPress={save}
           disabled={!valid || busy}
-          style={[st.createBtn, valid ? accentShadow(C.accent) : st.createBtnOff]}
+          style={[st.createBtn, valid ? null : st.createBtnOff]}
         >
           {busy
             ? <ActivityIndicator size="small" color={C.accentText} />

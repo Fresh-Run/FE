@@ -53,7 +53,7 @@ import {
   type CrewPermissions,
 } from '@/lib/crews-api';
 import { supabase } from '@/lib/supabase';
-import { accentShadow, radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
+import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 
 export default function CrewAdminScreen() {
@@ -287,7 +287,7 @@ export default function CrewAdminScreen() {
                   <Text style={st.inviteLbl}>{t('crw.inviteCode')}</Text>
                   <Text style={st.inviteCode}>{inviteCode ?? t('crw.notIssued')}</Text>
                 </View>
-                <Pressable onPress={shareInvite} disabled={inviteBusy} style={[st.inviteShareBtn, accentShadow(C.accent), inviteBusy && { opacity: 0.5 }]}>
+                <Pressable onPress={shareInvite} disabled={inviteBusy} style={[st.inviteShareBtn, inviteBusy && { opacity: 0.5 }]}>
                   <Icon name="share-outline" size={15} color={C.accentText} />
                   <Text style={st.inviteShareTxt}>{inviteCode ? t('crw.share') : t('crw.issueShare')}</Text>
                 </Pressable>

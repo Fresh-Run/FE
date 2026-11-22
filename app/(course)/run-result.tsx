@@ -50,7 +50,7 @@ import { uploadRunPhotos } from '@/lib/run-photos';
 import { saveRun, type NewRecord, type SavedRun } from '@/lib/runs-api';
 import { getMyStats, type MyStats } from '@/lib/stats-api';
 import { maybeWriteRunToHealth, queryRunCadenceSpm } from '@/lib/health';
-import { accentShadow, radius as R, shadows, type Tokens } from '@/lib/theme';
+import { radius as R, shadows, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { clearPendingRun, getPendingDraft, getPendingRun, getSavedResult } from '@/store/pending-run';
 import { useSettings } from '@/store/use-settings';
@@ -322,7 +322,7 @@ export default function RunResultScreen() {
             </View>
             <View style={st.cardBottom} pointerEvents="none">
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                <Icon name="sparkles" size={13} color="#7CF03D" />
+                <Icon name="sparkles" size={13} color={C.neon} />
                 {/* 9/2 wordmark PNG — GREEN FIXED: the brand sits on the
                     card's own dark gradient band (0.85 black), which never
                     goes light regardless of app scheme — a scheme-swapped
@@ -448,7 +448,7 @@ export default function RunResultScreen() {
             <Text style={st.shareTxt}>{t('res.share')}</Text>
           </Pressable>
         )}
-        <Pressable onPress={finish} style={({ pressed }) => [st.doneBtn, accentShadow(C.accent), pressed && { opacity: 0.9 }]}>
+        <Pressable onPress={finish} style={({ pressed }) => [st.doneBtn, pressed && { opacity: 0.9 }]}>
           <Text style={st.doneTxt}>{t('res.done')}</Text>
         </Pressable>
       </View>
@@ -465,11 +465,11 @@ const makeSt = (C: Tokens) => StyleSheet.create({
   title: { fontSize: 25, fontWeight: '700', letterSpacing: -0.7, color: C.text },
   nth:   { fontSize: 14, color: C.sub, letterSpacing: -0.3, marginTop: 8 },
 
-  recordCard: { borderRadius: 22, overflow: 'hidden', backgroundColor: '#0C1206' },
+  recordCard: { borderRadius: 22, overflow: 'hidden', backgroundColor: '#121712' },
   cardTop:    { position: 'absolute', top: 16, left: 0, right: 0, alignItems: 'center' },
   cardDistLbl:{ fontSize: 12.5, fontWeight: '600', color: 'rgba(255,255,255,0.75)', letterSpacing: -0.2 },
   cardDist:   { fontSize: 40, fontWeight: '800', color: '#fff', letterSpacing: -1.5, marginTop: 2 },
-  cardDistUnit:{ fontSize: 16, fontWeight: '700', color: '#7CF03D' },
+  cardDistUnit:{ fontSize: 16, fontWeight: '700', color: C.neon },
   cardBottom: { position: 'absolute', left: 16, right: 16, bottom: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   cardBrandImg: { width: 60, height: 12 },
   cardUser:   { fontSize: 12, fontWeight: '600', color: 'rgba(255,255,255,0.75)' },

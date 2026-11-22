@@ -105,7 +105,7 @@ export default function BattleSettleScreen() {
 
           <View style={[st.footer, { paddingBottom: insets.bottom + 10 }]}>
             <Pressable onPress={() => router.push({ pathname: '/battle-create', params: { opponent: sides.oppId } } as never)} style={st.cta}>
-              <Icon name="refresh" size={18} color="#0D1A06" />
+              <Icon name="refresh" size={18} color={C.accentText} />
               <Text style={st.ctaTxt}>{tfIn(lang, 'bd.rematch', { name: sides.oppName })}</Text>
             </Pressable>
           </View>
@@ -134,7 +134,7 @@ const makeSt = (C: Tokens) => ({
   paceNote: { fontSize: 11, color: C.faint, lineHeight: 16, marginTop: 2 },
   footer: { position: 'absolute' as const, left: 0, right: 0, bottom: 0, paddingHorizontal: S.lg, paddingTop: 10, backgroundColor: C.bg },
   cta: { flexDirection: 'row' as const, alignItems: 'center' as const, justifyContent: 'center' as const, gap: 8, backgroundColor: C.accent, borderRadius: R.pill, paddingVertical: 16 },
-  ctaTxt: { fontSize: 15, fontWeight: '800' as const, color: '#0D1A06' },
+  ctaTxt: { fontSize: 15, fontWeight: '800' as const, color: C.accentText },
   goneWrap: { flex: 1, alignItems: 'center' as const, justifyContent: 'center' as const, gap: 8 },
   goneTxt: { fontSize: 14, color: C.sub },
 });

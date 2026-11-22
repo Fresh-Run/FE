@@ -13,8 +13,7 @@ import { Icon } from '@/components/ui';
 import { useWeather } from '@/hooks/use-weather';
 import { t, useT, type StringKey, tfIn, useLang } from '@/lib/i18n';
 import { weatherIcon, weatherTone } from '@/lib/weather-api';
-import { accentShadow,
-  radius as R,
+import { radius as R,
   shadows,
   spacing as S,
   type as T, type Tokens } from '@/lib/theme';
@@ -269,7 +268,7 @@ export default function WeatherDetailScreen() {
       {/* ── Sticky CTA — outside ScrollView, above home indicator ── */}
       <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, S.lg) + S.sm }]}>
         <Pressable
-          style={({ pressed }) => [styles.cta, accentShadow(C.accent), { opacity: pressed ? 0.88 : 1 }]}
+          style={({ pressed }) => [styles.cta, { opacity: pressed ? 0.88 : 1 }]}
           // Direct target — this used to push the (course) GROUP ROOT, which
           // resolved through the deleted index shim's Redirect to the chooser
           onPress={() => router.push('/(course)/tracking' as never)}

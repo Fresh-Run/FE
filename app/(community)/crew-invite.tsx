@@ -30,7 +30,7 @@ import { SafeImage } from '@/components/safe-image';
 import { Icon } from '@/components/ui';
 import { ApiError } from '@/lib/api';
 import { joinCrewByCode, previewCrewByCode } from '@/lib/crews-api';
-import { accentShadow, radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
+import { radius as R, shadows, spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 
 type Preview = { id: string; name: string; description: string | null; area: string | null; member_count: number; max_members: number | null; icon_url: string | null; color: string | null; owner_nickname: string | null };
@@ -129,7 +129,7 @@ export default function CrewInviteScreen() {
 
       {state === 'ready' && (
         <View style={[st.footer, { paddingBottom: Math.max(insets.bottom, 12) + 10 }]}>
-          <Pressable onPress={accept} disabled={joining} style={[st.acceptBtn, accentShadow(C.accent), joining && { opacity: 0.6 }]}>
+          <Pressable onPress={accept} disabled={joining} style={[st.acceptBtn, joining && { opacity: 0.6 }]}>
             {joining ? <ActivityIndicator size="small" color={C.accentText} /> : <Text style={st.acceptTxt}>{t('crw.invAccept')}</Text>}
           </Pressable>
           <Pressable onPress={() => router.back()} disabled={joining} hitSlop={8} style={st.laterBtn}>

@@ -39,7 +39,7 @@ import { useHealth } from '@/store/use-health';
 import { uploadAvatar } from '@/lib/avatar-api';
 import { avatarBg } from '@/lib/fr-hash';
 import { getMyProfile, updateNickname, updateProfile } from '@/lib/profile-api';
-import { accentShadow, radius as R, shadows, spacing as S, type Tokens, DENSE_MAX_FONT_SCALE} from '@/lib/theme';
+import { radius as R, shadows, spacing as S, type Tokens, DENSE_MAX_FONT_SCALE} from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { t, useT, type StringKey } from '@/lib/i18n';
 import { useLocalProfile, type Gender } from '@/store/use-local-profile';
@@ -459,7 +459,7 @@ export default function PersonalInfoScreen() {
           disabled={saving}
           style={({ pressed }) => [
             st.saveBtn,
-            savedFlash ? st.saveBtnDone : accentShadow(C.accent),
+            savedFlash ? st.saveBtnDone : null,
             { opacity: pressed || saving ? 0.85 : 1 },
           ]}
         >

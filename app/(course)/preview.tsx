@@ -32,8 +32,7 @@ import { useSettings } from '@/store/use-settings';
 import { setActiveCourse } from '@/store/active-course';
 import { clearPendingCourse, getPendingCourse } from '@/store/pending-course';
 import { setRouteMap } from '@/store/route-map';
-import { accentShadow,
-  radius as R,
+import { radius as R,
   shadows,
   spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
@@ -174,7 +173,7 @@ export default function CoursePreviewScreen() {
               <Icon name="arrow-back" size={20} color="#fff" />
             </Pressable>
             <View style={st.heroPill}>
-              <Icon name="navigate-outline" size={14} color="#7CF03D" />
+              <Icon name="navigate-outline" size={14} color={C.neon} />
               <Text style={st.heroPillTxt}>{T('pv.pill')}</Text>
             </View>
             <View style={{ width: 42 }} />
@@ -241,7 +240,7 @@ export default function CoursePreviewScreen() {
           <Pressable
             onPress={confirmRun}
             disabled={starting}
-            style={({ pressed }) => [st.runBtn, accentShadow(C.accent), { opacity: pressed || starting ? 0.9 : 1 }]}
+            style={({ pressed }) => [st.runBtn, { opacity: pressed || starting ? 0.9 : 1 }]}
           >
             {starting
               ? <ActivityIndicator size="small" color={C.accentText} />

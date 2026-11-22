@@ -453,7 +453,7 @@ const makeSt = (C: Tokens) => StyleSheet.create({
   // family (run-result record card's #0C1206 twin) — the batch mis-tokenized
   // its dark-ink bg to C.text, which INVERTS in dark mode and strands the
   // fixture white text on a white card. Fixed dark both schemes, as designed.
-  hero:       { backgroundColor: '#0C1206', borderRadius: 22, padding: 20, overflow: 'hidden' },
+  hero:       { backgroundColor: '#121712', borderRadius: 22, padding: 20, overflow: 'hidden' },
   heroCircle: { position: 'absolute', top: -40, right: -40, width: 150, height: 150, borderRadius: 75, backgroundColor: C.accent, opacity: 0.16 },
   heroPill:   { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: R.pill, paddingHorizontal: 9, paddingVertical: 3, marginBottom: 8 },
   heroPillTxt: { fontSize: 10, fontWeight: '700', letterSpacing: 0.3, color: C.accent, textTransform: 'uppercase' },

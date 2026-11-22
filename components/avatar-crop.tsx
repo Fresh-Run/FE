@@ -22,7 +22,7 @@ import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanima
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/ui';
-import { accentShadow, type Tokens } from '@/lib/theme';
+import { type Tokens } from '@/lib/theme';
 import { useT } from '@/lib/i18n';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 
@@ -183,7 +183,7 @@ export function AvatarCrop({ src, aspect = 1, onClose, onConfirm, onRetake }: {
           <Pressable onPress={handleRetake} disabled={saving} style={st.retakeBtn}>
             <Text style={st.retakeTxt}>{T('crop.retake')}</Text>
           </Pressable>
-          <Pressable onPress={confirmCrop} disabled={saving} style={[st.confirmBtn, accentShadow(C.accent)]}>
+          <Pressable onPress={confirmCrop} disabled={saving} style={[st.confirmBtn]}>
             {saving
               ? <ActivityIndicator color={C.accentText} />
               : <Text style={st.confirmTxt}>{T('crop.confirm')}</Text>}
@@ -195,7 +195,7 @@ export function AvatarCrop({ src, aspect = 1, onClose, onConfirm, onRetake }: {
 }
 
 const makeSt = (C: Tokens) => StyleSheet.create({
-  root:    { flex: 1, backgroundColor: '#0B0D09' },
+  root:    { flex: 1, backgroundColor: '#121712' },
   stage:   { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   imgWrap: { alignItems: 'center', justifyContent: 'center' },
 

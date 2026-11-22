@@ -42,7 +42,7 @@ import {
   type CrewPermissions,
 } from '@/lib/crews-api';
 import { supabase } from '@/lib/supabase';
-import { accentShadow, spacing as S, type Tokens } from '@/lib/theme';
+import { spacing as S, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 
 // Canvas FR_PERM_DEFS, scoped to the 5 server keys (labels/descs verbatim
@@ -209,7 +209,7 @@ export default function CrewPermsScreen() {
             <Pressable
               onPress={save}
               disabled={saving || flash}
-              style={[st.saveBtn, flash ? { backgroundColor: C.surfaceAlt } : accentShadow(C.accent)]}
+              style={[st.saveBtn, flash ? { backgroundColor: C.surfaceAlt } : null]}
             >
               {saving ? (
                 <ActivityIndicator size="small" color={C.accentText} />

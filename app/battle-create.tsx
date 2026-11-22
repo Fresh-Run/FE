@@ -215,7 +215,7 @@ export default function BattleCreateScreen() {
           </Pressable>
         ) : (
           <Pressable onPress={submit} disabled={busy} style={[st.cta, busy && { opacity: 0.6 }]}>
-            {busy ? <ActivityIndicator size="small" color="#0D1A06" /> : <Text style={st.ctaTxt}>{T('bc.start')}</Text>}
+            {busy ? <ActivityIndicator size="small" color={C.accentText} /> : <Text style={st.ctaTxt}>{T('bc.start')}</Text>}
           </Pressable>
         )}
       </View>
@@ -242,7 +242,7 @@ const makeSt = (C: Tokens) => ({
   chip: { backgroundColor: C.surface, borderRadius: R.pill, borderWidth: 1, borderColor: C.border, paddingHorizontal: 14, paddingVertical: 8 },
   chipSel: { backgroundColor: C.accent, borderColor: C.accent },
   chipTxt: { fontSize: 13, fontWeight: '600' as const, color: C.text },
-  chipTxtSel: { color: '#0D1A06', fontWeight: '800' as const },
+  chipTxtSel: { color: C.accentText, fontWeight: '800' as const },
   customBox: { marginTop: 10, backgroundColor: C.surface, borderRadius: R.lg, borderWidth: 1, borderColor: C.border, padding: 12 },
   customValue: { fontSize: 17, fontWeight: '800' as const, color: C.text, textAlign: 'center' as const, fontVariant: ['tabular-nums' as const] },
   slider: { marginTop: 4 },
@@ -262,5 +262,5 @@ const makeSt = (C: Tokens) => ({
   battleTitle: { fontSize: 15, fontWeight: '800' as const, color: C.text },
   footer: { position: 'absolute' as const, left: 0, right: 0, bottom: 0, paddingHorizontal: S.lg, paddingTop: 10, backgroundColor: C.bg },
   cta: { backgroundColor: C.accent, borderRadius: R.pill, alignItems: 'center' as const, paddingVertical: 14 },
-  ctaTxt: { fontSize: 15, fontWeight: '800' as const, color: '#0D1A06' },
+  ctaTxt: { fontSize: 15, fontWeight: '800' as const, color: C.accentText },
 });

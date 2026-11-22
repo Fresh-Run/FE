@@ -81,7 +81,7 @@ export default function BattleInviteScreen() {
               <Text style={st.btnDeclineTxt}>{T('bat.declineBtn')}</Text>
             </Pressable>
             <Pressable onPress={() => act('accept')} disabled={busy} style={[st.btn, st.btnAccept, busy && { opacity: 0.6 }]}>
-              {busy ? <ActivityIndicator size="small" color="#0D1A06" /> : <Text style={st.btnAcceptTxt}>{T('bat.acceptBtn')}</Text>}
+              {busy ? <ActivityIndicator size="small" color={C.accentText} /> : <Text style={st.btnAcceptTxt}>{T('bat.acceptBtn')}</Text>}
             </Pressable>
           </View>
         </>
@@ -110,7 +110,7 @@ const makeSt = (C: Tokens) => ({
   btnDecline: { backgroundColor: C.surface, borderWidth: 1, borderColor: C.border },
   btnDeclineTxt: { fontSize: 15, fontWeight: '700' as const, color: C.sub },
   btnAccept: { backgroundColor: C.accent },
-  btnAcceptTxt: { fontSize: 15, fontWeight: '800' as const, color: '#0D1A06' },
+  btnAcceptTxt: { fontSize: 15, fontWeight: '800' as const, color: C.accentText },
   goneWrap: { flex: 1, alignItems: 'center' as const, justifyContent: 'center' as const, gap: 10 },
   goneTxt: { fontSize: 14, color: C.faint },
 });

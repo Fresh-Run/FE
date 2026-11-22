@@ -39,11 +39,11 @@ import { createChallenge, dateToKstIsoDay, kstDateStr } from '@/lib/challenges-a
 import { createCrew, CREW_TAG_GROUPS, CREW_TAG_MAX, tagLabel, type Crew, type CrewLevel } from '@/lib/crews-api';
 import { regionName } from '@/lib/korea-regions';
 import { useCurrentLocation } from '@/hooks/use-current-location';
-import { accentShadow, radius as R, shadows, spacing as S, type Tokens, DENSE_MAX_FONT_SCALE} from '@/lib/theme';
+import { radius as R, shadows, spacing as S, type Tokens, DENSE_MAX_FONT_SCALE} from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import { takePendingCrewRegion } from '@/store/pending-crew-region';
 
-export const CREW_COLORS = ['#39FF14', '#2F8FE8', '#E8703D', '#A24DE8', '#E8B53D']; // slot 0 rebranded 8/20 — crews with the stored old hex keep rendering it (server value, by design)
+export const CREW_COLORS = ['#C3FF3C', '#2F8FE8', '#E8703D', '#A24DE8', '#E8B53D']; // slot 0 rebranded 8/20 — crews with the stored old hex keep rendering it (server value, by design)
 export const SPORTS = ['러닝', '라이딩', '워킹'] as const; // SERVER values — display via SPORT_KEY
 const SPORT_KEY = { '러닝': 'crw.sportRun', '라이딩': 'crw.sportRide', '워킹': 'crw.sportWalk' } as const;
 export const LEVELS: CrewLevel[] = ['입문', '중급', '고급', '무관']; // SERVER values
@@ -197,7 +197,7 @@ function CreatedModal({ crew, onInvite, onLater, onDismiss }: {
           <Text style={st.mSub}>
             {t('crw.createdSub.before')}<Text style={{ fontWeight: '700', color: C.text }}>{crew.name}</Text>{t('crw.createdSub.after')}
           </Text>
-          <Pressable onPress={onInvite} style={({ pressed }) => [st.mPrimary, accentShadow(C.accent), { opacity: pressed ? 0.9 : 1 }]}>
+          <Pressable onPress={onInvite} style={({ pressed }) => [st.mPrimary, { opacity: pressed ? 0.9 : 1 }]}>
             <Text style={st.mPrimaryTxt}>{t('crw.invite')}</Text>
           </Pressable>
           <Pressable onPress={onLater} style={({ pressed }) => [st.mSecondary, { opacity: pressed ? 0.7 : 1 }]}>
@@ -499,7 +499,7 @@ export default function CrewCreateScreen() {
         <Pressable
           onPress={submit}
           disabled={!valid || busy}
-          style={[st.createBtn, valid ? accentShadow(C.accent) : st.createBtnOff]}
+          style={[st.createBtn, valid ? null : st.createBtnOff]}
         >
           {busy
             ? <ActivityIndicator size="small" color={C.accentText} />

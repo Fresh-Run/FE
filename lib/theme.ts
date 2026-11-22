@@ -68,26 +68,28 @@ export const courseStroke = (scheme: 'light' | 'dark' | null | undefined): strin
 
 export const colors = {
   // Surfaces
-  bg:          palette.warmWhite,   // screen background
-  surface:     palette.white,       // cards, sheets
-  surfaceAlt:  palette.neutral100,  // subtle tint — metric tile bg, SVG ring track
+  bg:          '#F4F4EC',           // redesign palette (owner-ruled 2026-11-21) — screen background
+  surface:     '#FFFFFF',           // cards, sheets
+  surfaceAlt:  '#EBEBE1',           // neutral fill — chips, tiles, placeholders
 
   // Borders
-  border:      palette.neutral200,
+  border:      '#E4E6D9',           // hairline
 
   // Text
-  text:        palette.neutral950,  // headings, values
-  sub:         palette.neutral500,  // secondary labels
-  faint:       palette.neutral400,  // tertiary / placeholder
+  text:        '#121712',           // ink — headings, values, ink primaries
+  sub:         '#67706A',           // muted
+  faint:       '#9AA096',           // faint / placeholder
 
   // Accent (lime green)
-  accent:      palette.lime400,
+  // Redesign (2026-11-21): the lime accent is RETIRED — neon is the accent in
+  // both schemes, with ink text on it. Primary buttons = ink or neon.
+  accent:      '#C3FF3C',
   // J1 ruling (2026-07-21): canvas FR_LIGHT.accentText adopted — the tree used
   // #0D1A06 at 12 canvas-verbatim sites while the token held #111111; the
   // canvas value wins (near-invisible on lime). Was palette.neutral950.
-  accentText:  '#0D1A06',
-  accentDim:   palette.lime50,
-  accentGrn:   palette.green700,    // dark-green text / icons on accentDim
+  accentText:  '#121712',
+  accentDim:   '#EBEBE1',           // tinted chip → the neutral fill (no green tints)
+  accentGrn:   '#121712',           // text/icons on chips = ink (neon is never text on light)
   // Redesign (canvas FreshRun 홈 리디자인, 2026-11-19): nav-bar run button
   // neon. Same value both schemes — the canvas is light-only; the global
   // accent swap is a separate ruling, not this token.
@@ -114,7 +116,7 @@ export const colors = {
   paceFast: palette.green700,
   paceMid:  palette.amber400,
   paceSlow: palette.aqiBad,
-  danger:      palette.red500,
+  danger:      '#E8442E',           // alert red (redesign)
 
   // AQI status map (index by Korean label) — v4 traffic light (owner-ruled
   // 8/3 from the strip screenshot): the strip's dot now carries the grade
@@ -167,7 +169,9 @@ export const shadows = {
   },
 } as const;
 
-/** Colored drop-shadow used for accent CTA buttons (e.g. "러닝 시작하기"). */
+/** Colored drop-shadow. RETIRED for accent CTAs (redesign 2026-11-21: flat
+    buttons — every accentShadow(C.accent) site dropped); the in-run hold
+    ring still uses it with the danger tone (tracking.tsx, own item). */
 export function accentShadow(color: string) {
   return {
     shadowColor:   color,
@@ -289,24 +293,25 @@ export type Tokens = {
 
 export const darkColors: Tokens = {
   // Surfaces (canvas FR_DARK)
-  bg:         '#0E0F12',
-  surface:    '#15171C',
-  surfaceAlt: '#1B1E24',
-  border:     '#24282F',
+  // Redesign palette (owner-ruled 2026-11-21) — same structure as light
+  bg:         '#121712',
+  surface:    '#1E231E',
+  surfaceAlt: '#2A302A',
+  border:     '#2A302A',
   // Text (canvas FR_DARK)
-  text:  '#F2F3F0',
-  sub:   '#9A9EA5',
-  faint: '#6A6F77',
+  text:  '#F4F4EC',
+  sub:   '#9AA096',
+  faint: '#67706A',   // DERIVED (no owner value) — the light muted tone, one step down
   // Accent — REBRAND (designer spec 프레쉬런_8_12, owner-confirmed 8/20):
   // #39FF14 replaces 지연's 7/21 #74E827 across all accent surfaces. The
   // identity rule survives the swap: accent == LA lime == route-line dark
   // tone (the brand protagonist); accentGrn follows (canvas dark ternary =
   // accent). accentText #0D1A06 stays (contrast improves on the brighter
   // green). accentDim held. Pressed system still nonexistent.
-  accent:     '#39FF14',
-  accentText: '#0D1A06',
-  accentDim:  '#18260D',
-  accentGrn:  '#39FF14',
+  accent:     '#C3FF3C',   // neon — the lime #39FF14 is retired (2026-11-21)
+  accentText: '#121712',
+  accentDim:  '#2A302A',   // neutral fill
+  accentGrn:  '#C3FF3C',   // neon text is allowed on dark
   neon:       '#C3FF3C',
   // Semantic — blue/sun scheme-invariant per canvas; danger from FR_DARK;
   // crown DERIVED (no canvas source — canvas debt)
@@ -317,15 +322,15 @@ export const darkColors: Tokens = {
   medalGold:   '#F5C542',
   medalSilver: '#C4CCC0',  // green-undertone
   medalBronze: '#D89860',
-  chart:          '#39FF14',  // her chart primary (== LA/route lime — rides the 8/20 rebrand identity)
+  chart:          '#C3FF3C',  // rides the accent identity (neon since 2026-11-21)
   chartSecondary: '#4A9BE8',
   chartTertiary:  '#B08AE8',
-  paceFast: '#39FF14', // rebrand 8/20 — rides the accent identity
+  paceFast: '#C3FF3C', // rides the accent identity (neon since 2026-11-21)
   paceMid:  '#C8E85A',
   paceSlow: '#E8B84A',
   // JUDGMENT (c)+ (owner): her danger ADOPTED. Surfaces/text stay FR_DARK
   // (five owner-walked batches stand) — OUR deviation per her own terms.
-  danger: '#E85A5A',
+  danger: '#E8442E',   // redesign alert red, same both schemes
   // Status maps — aqi invariant per canvas FR_AQI_COLOR (unbranched in dark);
   // uv DERIVED (app-only ruling, no canvas source — canvas debt)
   aqi: {

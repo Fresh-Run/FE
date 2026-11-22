@@ -187,7 +187,7 @@ export function RealMap({ height, borderRadius = 0, polyline, center, marker = f
   // camouflaged the circles against the line itself). Inversion: scheme
   // surface fill · route color as number ink + ring — identity via ink,
   // separation-from-line via fill, edge-vs-tiles carried by the ring.
-  const markerFill = resolved === 'dark' ? '#15171C' : '#fff'; // surface family
+  const markerFill = resolved === 'dark' ? '#1E231E' : '#fff'; // surface family (redesign dark surface)
 
   const onMapReady = () => {
     if (line) {
@@ -273,8 +273,8 @@ export function RealMap({ height, borderRadius = 0, polyline, center, marker = f
                 (핀 서클 속 Ionicons); 번호는 논-핏스톱만 (콜아웃 name 존치) */}
             <View style={{ minWidth: 22, height: 22, borderRadius: 11, paddingHorizontal: 4, backgroundColor: stroke, borderWidth: 2, borderColor: '#fff', alignItems: 'center', justifyContent: 'center' }}>
               {w.isPitstop
-                ? <Icon name="cafe" size={12} color="#0D1A06" />
-                : <Text style={{ fontSize: 11, fontWeight: '800', color: '#0D1A06' }}>{w.label}</Text>}
+                ? <Icon name="cafe" size={12} color="#121712" />
+                : <Text style={{ fontSize: 11, fontWeight: '800', color: '#121712' }}>{w.label}</Text>}
             </View>
           </Marker>
         )) : null}

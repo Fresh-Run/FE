@@ -8,7 +8,7 @@ import {
   ViewStyle,
 } from 'react-native';
 
-import { accentShadow, DENSE_MAX_FONT_SCALE } from '@/lib/theme';
+import { DENSE_MAX_FONT_SCALE } from '@/lib/theme';
 import { useTokens } from '@/hooks/use-tokens';
 import { Icon } from './icon';
 import { Text } from './text';
@@ -69,7 +69,6 @@ export function Button({
           transform: [{ scale: pressed ? 0.97 : 1 }],
           alignSelf: fullWidth ? 'stretch' : 'flex-start',
         },
-        variant === 'primary' ? accentShadow(C.accent) : undefined,
         style,
       ]}
     >

@@ -557,7 +557,7 @@ async function startUpdates(): Promise<void> {
       foregroundService: {
         notificationTitle: t('run.fgNotifTitle'),
         notificationBody: t('run.fgNotifBody'),
-        notificationColor: '#39FF14',
+        notificationColor: '#C3FF3C',
       },
     });
   } catch {

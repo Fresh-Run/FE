@@ -28,7 +28,7 @@ import {
   paceUnit,
   type Units,
 } from '@/lib/run-format';
-import { accentShadow, radius as R, type Tokens } from '@/lib/theme';
+import { radius as R, type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 
 // Priority when one run sets several records (approved: pace > 5k > dist > dur)
@@ -147,7 +147,7 @@ export function PbCelebration({
         <Animated.View style={[st.card, { transform: [{ scale: pop }] }]}>
           {/* Medal */}
           <View style={st.medalWrap}>
-            <View style={[st.medalGlow, accentShadow(C.accent)]}>
+            <View style={[st.medalGlow]}>
               <Icon name="medal" size={46} color={C.accentText} />
             </View>
           </View>
@@ -183,7 +183,7 @@ export function PbCelebration({
           </View>
 
           {/* CTA dismisses — run-result IS the record detail here (approved) */}
-          <Pressable onPress={onClose} style={({ pressed }) => [st.primaryBtn, accentShadow(C.accent), { opacity: pressed ? 0.9 : 1 }]}>
+          <Pressable onPress={onClose} style={({ pressed }) => [st.primaryBtn, { opacity: pressed ? 0.9 : 1 }]}>
             <Text style={st.primaryTxt}>{T('pbc.detail')}</Text>
           </Pressable>
           {/* Text share via RN Share (debt batch 1) — the button was a
