@@ -5,13 +5,12 @@
  * (user-profile: you are already on the profile); present = the discovery
  * funnel (전체: avatar → openProfile → 팔로우).
  */
+import { RouteMap } from '@/components/route-map';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Avatar } from '@/components/avatar';
 import { Icon } from '@/components/ui';
-import { MiniMap } from '@/components/mini-map';
-import { RealMap } from '@/components/real-map';
 import { distUnit, fmtDist, fmtDuration, fmtPaceIn, fmtWhen, paceUnit, timeTitle } from '@/lib/run-format';
 import { shadows, type Tokens, DENSE_MAX_FONT_SCALE} from '@/lib/theme';
 import { isPlausibleTrack } from '@/lib/track-plausibility';
@@ -80,11 +79,8 @@ export function RunCard({ run, units, mapLive, onKudos, kudosOff, onOpen, onAvat
       </View>
       {/* polyline_thumb slice: viewable + thumb → real map; off-screen /
           trackless → route-shaped or seed SVG (ledger rulings) */}
-      {mapLive && plausible && ((cardLine && cardLine.length >= 2) || linePending) ? (
-        <RealMap height={200} polyline={cardLine ?? run.polyline_thumb} lineHidden={linePending} />
-      ) : (
-        <MiniMap seed={run.run_id} height={200} polyline={plausible ? cardLine ?? undefined : undefined} />
-      )}
+      {/* item ⑩-2: snapshot → SVG curtain → live map (viewable only), track-gated */}
+      <RouteMap id={run.run_id} polyline={plausible ? run.polyline_thumb : null} line={plausible ? cardLine : null} pending={linePending} height={200} live={mapLive && plausible} />
       <View style={st.cardBody}>
         <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.cardTitle}>{run.title ?? timeTitle(run.ran_at, lang)}</Text>
         <View style={st.statsRow}>

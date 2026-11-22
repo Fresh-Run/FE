@@ -9,15 +9,14 @@
 // so a month is never half-shown from page one — the ledgered failure mode.
 // Header numbers come from GET /me/stats/monthly (server truth), not from
 // the list.
+import { RouteMap } from '@/components/route-map';
 import { dcGet } from '@/lib/data-cache';
 import { useFocusEffect } from '@react-navigation/native';
 import { router } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { MiniMap } from '@/components/mini-map';
 import { MonthPicker } from '@/components/month-picker';
-import { RealMap } from '@/components/real-map';
 import { SafeImage } from '@/components/safe-image';
 import { Icon } from '@/components/ui';
 import type { Run } from '@/hooks/use-runs';
@@ -60,9 +59,7 @@ function RunCard({ run }: { run: Run }) {
     >
       <View style={st.thumb}>
         <SafeImage uri={run.photo_thumb} style={st.thumbImg}
-          fallback={hasTrack
-            ? <RealMap height={THUMB} borderRadius={R.lg} polyline={run.polyline_thumb!} />
-            : <MiniMap seed={run.id} height={THUMB} borderRadius={R.lg} />} />
+          fallback={<RouteMap id={run.id} polyline={hasTrack ? run.polyline_thumb : null} height={THUMB} width={THUMB} borderRadius={R.lg} square live={false} />} />
       </View>
       <View style={{ flex: 1, minWidth: 0, justifyContent: 'center', gap: 6 }}>
         <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.title} numberOfLines={1}>{run.title ?? timeTitle(run.ran_at, lang)}</Text>

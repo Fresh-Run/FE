@@ -15,6 +15,7 @@
  *    (own runs' comments live on the run-post own-mode);
  *  - 프로필 공유 → 준비 중 (no shareable URL yet).
  */
+import { RouteMap } from '@/components/route-map';
 import { ProfileSkeleton } from '@/components/skeleton';
 import { useFocusEffect } from '@react-navigation/native';
 import { router } from 'expo-router';
@@ -31,8 +32,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/avatar';
 import { KudosSheet } from '@/components/kudos-sheet';
-import { MiniMap } from '@/components/mini-map';
-import { RealMap } from '@/components/real-map';
 import { Icon } from '@/components/ui';
 import { useMyPublicProfile, type MyRun } from '@/hooks/use-my-public-profile';
 import { ApiError, apiFetch } from '@/lib/api';
@@ -94,11 +93,8 @@ function RunCard({ run, name, photoUrl, units, mapLive, kudosOff, onKudos, onCou
       {/* polyline_thumb slice: viewable + thumb → real map (card-mode, same
           perf pattern as the feed); off-screen/trackless → route-shaped or
           seed SVG per the ledger rulings */}
-      {mapLive && plausible && ((cardLine && cardLine.length >= 2) || linePending) ? (
-        <RealMap height={150} polyline={cardLine ?? run.polyline_thumb} lineHidden={linePending} />
-      ) : (
-        <MiniMap seed={run.id} height={150} polyline={plausible ? cardLine ?? undefined : undefined} />
-      )}
+      {/* item ⑩-2: snapshot → SVG curtain → live map (viewable only), track-gated */}
+      <RouteMap id={run.id} polyline={plausible ? run.polyline_thumb : null} line={plausible ? cardLine : null} pending={linePending} height={150} live={mapLive && plausible} />
       <View style={st.cardBody}>
         <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.cardTitle}>{run.title ?? timeTitle(run.ran_at, lang)}</Text>
         <View style={st.statsRow}>

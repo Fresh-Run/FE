@@ -20,6 +20,7 @@
  * only. Own rows run DIRECT (is_mine on the pending payload → preview skips
  * the copy).
  */
+import { RouteMap } from '@/components/route-map';
 import { RowsSkeleton } from '@/components/skeleton';
 import { dcGet } from '@/lib/data-cache';
 import { useFocusEffect } from '@react-navigation/native';
@@ -37,8 +38,6 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/avatar';
-import { MiniMap } from '@/components/mini-map';
-import { RealMap } from '@/components/real-map';
 import { Icon } from '@/components/ui';
 import { getBookmarkedRoutes } from '@/lib/bookmarks-api';
 import { errorMessage } from '@/lib/error-copy';
@@ -111,9 +110,7 @@ function CourseRow({ route, onOpen, onUnsave }: { route: PublicRoute; onOpen: ()
   return (
     <Pressable onPress={onOpen} style={({ pressed }) => [st.row, shadows.sm, pressed && { opacity: 0.8 }]}>
       <View style={{ width: 82 }}>
-        {route.polyline && route.polyline.length >= 2
-          ? <RealMap height={82} borderRadius={14} polyline={route.polyline} />
-          : <MiniMap seed={route.id} height={82} borderRadius={14} />}
+        <RouteMap id={route.id} polyline={route.polyline} height={82} width={82} borderRadius={14} square live={false} />
       </View>
       <View style={{ flex: 1, minWidth: 0, paddingRight: 26 }}>
         <Text style={st.rowTitle} numberOfLines={1}>{route.summary}</Text>
@@ -161,9 +158,7 @@ function MyCourseRow({ route, onOpen, onTogglePublic, onDelete }: {
         <Icon name="trash-outline" size={16} color={C.faint} />
       </Pressable>
       <View style={{ width: 82 }}>
-        {route.polyline && route.polyline.length >= 2
-          ? <RealMap height={82} borderRadius={14} polyline={route.polyline} />
-          : <MiniMap seed={route.id} height={82} borderRadius={14} />}
+        <RouteMap id={route.id} polyline={route.polyline} height={82} width={82} borderRadius={14} square live={false} />
       </View>
       <View style={{ flex: 1, minWidth: 0 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>

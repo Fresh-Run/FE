@@ -5,12 +5,11 @@
 //
 // "게시물" = own runs that are not private (public / followers — what a
 // viewer could see on the profile), from the parent's shared useRuns list.
+import { RouteMap } from '@/components/route-map';
 import { router } from 'expo-router';
 import React from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
-import { MiniMap } from '@/components/mini-map';
-import { RealMap } from '@/components/real-map';
 import { SafeImage } from '@/components/safe-image';
 import { Icon } from '@/components/ui';
 import type { Run } from '@/hooks/use-runs';
@@ -59,9 +58,7 @@ export function MyPostsTab({ runs, loading, loadingMore }: { runs: Run[]; loadin
                 accessibilityLabel={run.title ?? T('my.tabPosts')}
               >
                 <SafeImage uri={run.photo_thumb} style={{ width: cell, height: cell }}
-                  fallback={hasTrack
-                    ? <RealMap height={cell} polyline={run.polyline_thumb!} />
-                    : <MiniMap seed={run.id} height={cell} />} />
+                  fallback={<RouteMap id={run.id} polyline={hasTrack ? run.polyline_thumb : null} height={cell} width={cell} square live={false} />} />
               </Pressable>
             );
           })}

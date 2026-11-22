@@ -5,11 +5,11 @@
  * photos stays [] until run media lands server-side (R2, 지연-ask) — the
  * pager path ships typed but dormant.
  */
+import { RouteMap } from '@/components/route-map';
 import React, { useRef, useState } from 'react';
 import { FlatList, Pressable, Image, StyleSheet, View } from 'react-native';
 
 import { MiniMap } from '@/components/mini-map';
-import { RealMap } from '@/components/real-map';
 import { type Tokens } from '@/lib/theme';
 import { useStyles, useTokens } from '@/hooks/use-tokens';
 import type { Coordinate } from '@/types';
@@ -35,10 +35,13 @@ type Props = {
 };
 
 function MapSlide({ polyline, seed, height, onPress, distanceMarkers, units, officialDistanceKm, lineHidden }: { polyline: Coordinate[] | null; seed: string; height: number; onPress?: () => void; distanceMarkers?: boolean; units?: 'km' | 'mi'; officialDistanceKm?: number; lineHidden?: boolean }) {
+  // item ⑩-2: the hero goes through RouteMap too — SVG curtain while the
+  // track is pending, native map fades in when ready, snapshots (card +
+  // square) freeze for the next mount and for every list thumb of this run.
   const map = polyline && polyline.length >= 2
     // cache={false}: this is a single async-mounted HERO, not a list thumbnail
     // — live tiles avoid the blank-snapshot race (지연 bug 2026-07-13).
-    ? <RealMap height={height} polyline={polyline} cache={false} distanceMarkers={distanceMarkers} units={units} officialDistanceKm={officialDistanceKm} lineHidden={lineHidden} />
+    ? <RouteMap id={seed} polyline={polyline} pending={lineHidden} height={height} live cache={false} distanceMarkers={distanceMarkers} units={units} officialDistanceKm={officialDistanceKm} />
     : <MiniMap seed={seed} height={height} borderRadius={0} polyline={polyline ?? undefined} />;
   // tap-to-enlarge (B7): only the MAP slide taps — photo slides keep their
   // own semantics; horizontal swipes are untouched (Pressable vs pan).

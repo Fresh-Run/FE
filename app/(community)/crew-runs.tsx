@@ -24,6 +24,7 @@
  * the card header below. The field is NOT in CrewRunItem yet — nothing is
  * rendered until it lands (no faked badge).
  */
+import { RouteMap } from '@/components/route-map';
 import { RowsSkeleton } from '@/components/skeleton';
 import { dcGet } from '@/lib/data-cache';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -41,7 +42,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/avatar';
 import { MiniMap } from '@/components/mini-map';
-import { RealMap } from '@/components/real-map';
 import { Icon } from '@/components/ui';
 import { KudosSheet } from '@/components/kudos-sheet';
 import { ApiError, apiFetch } from '@/lib/api';
@@ -125,10 +125,9 @@ export function RunCard({ run, units, mapLive, onOpen, kudosOff, onKudos, onCoun
         const line = (cardLine && cardLine.length >= 2) ? cardLine
           : (run.polyline_thumb && run.polyline_thumb.length >= 2) ? run.polyline_thumb : null;
         // 실측성 게이트 (9/7): 지터-런은 트랙리스 취급 (스크리블 금지)
-        if (!line || !isPlausibleTrack(line, run.distance_km)) return <MiniMap seed={run.run_id} height={160} />;
-        return mapLive
-          ? <RealMap height={160} polyline={line} lineHidden={linePending && line !== cardLine} />
-          : <MiniMap seed={run.run_id} height={160} polyline={line} />;
+        if (!line || !isPlausibleTrack(line, run.distance_km)) return <RouteMap id={run.run_id} polyline={null} height={160} live={false} />;
+        // item ⑩-2: snapshot → SVG curtain → live map (viewable only), track-gated
+        return <RouteMap id={run.run_id} polyline={run.polyline_thumb} line={cardLine} pending={linePending} height={160} live={mapLive} />;
       })()}
       <View style={st.cardBody}>
         <Text style={st.cardTitle}>{run.title ?? timeTitle(run.ran_at, lang)}</Text>

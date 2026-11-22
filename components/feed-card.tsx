@@ -12,12 +12,11 @@
  * 댓글 → post; crew line (show_crew gate); real map only while viewable
  * (mapLive) and only for plausible tracks.
  */
+import { RouteMap } from '@/components/route-map';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
 import { Avatar } from '@/components/avatar';
-import { MiniMap } from '@/components/mini-map';
-import { RealMap } from '@/components/real-map';
 import { SafeImage } from '@/components/safe-image';
 import { Icon } from '@/components/ui';
 import type { UserRun } from '@/hooks/use-user-profile';
@@ -50,10 +49,13 @@ export function FeedCard({ run, units, mapLive, onKudos, kudosOff, onOpen, onAva
   const { width } = useWindowDimensions();
   const { line: cardLine, pending: linePending } = useRunTrack(mapLive ? run.run_id : null, run.polyline_thumb);
   const plausible = isPlausibleTrack(cardLine ?? run.polyline_thumb, run.distance_km);
-  const liveMap = mapLive && plausible && ((cardLine && cardLine.length >= 2) || linePending);
-  const mapAt = (h: number, r: number) => liveMap
-    ? <RealMap height={h} borderRadius={r} polyline={cardLine ?? run.polyline_thumb} lineHidden={linePending} />
-    : <MiniMap seed={run.run_id} height={h} borderRadius={r} polyline={plausible ? cardLine ?? undefined : undefined} />;
+  // item ⑩-2: RouteMap = snapshot → SVG curtain → (live only on the viewable
+  // card) native map fading in once the track is ready. The 88 overlay is
+  // snapshot-or-SVG, never MapKit.
+  const mapAt = (h: number, r: number, sq: boolean) => (
+    <RouteMap id={run.run_id} polyline={plausible ? run.polyline_thumb : null} line={plausible ? cardLine : null} pending={linePending}
+      height={h} width={sq ? h : width} borderRadius={r} live={!sq && mapLive && plausible} square={sq} />
+  );
   const meta = fmtMonthDayTime(new Date(run.ran_at), lang, { weekday: 'short', monthStyle: 'numeric' }) + (run.area ? ` · ${run.area}` : '');
 
   return (
@@ -79,11 +81,11 @@ export function FeedCard({ run, units, mapLive, onKudos, kudosOff, onOpen, onAva
           uri={run.photo_thumb}
           style={{ width, height: MEDIA_H }}
           resizeMode="cover"
-          fallback={<View style={{ width, height: MEDIA_H }}>{mapAt(MEDIA_H, 0)}</View>}
+          fallback={<View style={{ width, height: MEDIA_H }}>{mapAt(MEDIA_H, 0, false)}</View>}
         />
         {run.photo_thumb ? (
           <View pointerEvents="none" style={[st.thumb, { borderColor: C.surface }]}>
-            {mapAt(THUMB, 11)}
+            {mapAt(THUMB, 11, true)}
           </View>
         ) : null}
         <View pointerEvents="none" style={[st.pill, { backgroundColor: C.surface }]}>

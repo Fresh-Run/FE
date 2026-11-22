@@ -12,7 +12,7 @@
  *    auto-fit region + route line + start/end markers;
  *  - center: single {lat,lng} → region-only view (e.g. current location).
  */
-import React, { useMemo, useRef } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { Text, View } from 'react-native';
 import MapView, { Marker, Polyline } from 'react-native-maps';
 
@@ -105,9 +105,24 @@ type Props = {
       so callouts are structurally inert there — tap-to-enlarge is the door).
       Names stay the served neutral placeholders (real-POI-only rule). */
   waypointMarkers?: { lat: number; lng: number; label: string; title?: string; isPitstop?: boolean }[];
+  /** item ⑩-2: fires once the native map reported ready (after the fit) — the
+      caller fades the map in over its SVG curtain. */
+  onReady?: () => void;
+  /** item ⑩-2: snapshot the rendered map ~0.9 s after ready (tiles painted):
+      `card` = this view's size, `square` = a 160×160 render of the track's
+      square bounds (list thumbnails). File URIs; either may be null. */
+  onSnapshot?: (uris: { card: string | null; square: string | null }) => void;
 };
+const SNAPSHOT_DELAY_MS = 900;
+/** Square region around a track (list-thumb snapshots). */
+function squareRegion(coords: Coordinate[]) {
+  const r = fitRegion(coords);
+  const d = Math.max(r.latitudeDelta, r.longitudeDelta);
+  return { latitude: r.latitude, longitude: r.longitude, latitudeDelta: d, longitudeDelta: d };
+}
 
-export function RealMap({ height, borderRadius = 0, polyline, center, marker = false, startPin = false, showsUser = false, interactive = false, cache = true, distanceMarkers = false, units = 'km', officialDistanceKm, lineHidden = false, mapType, showsPoi = false, compassOffset, waypointMarkers }: Props) {
+export function RealMap({ height, borderRadius = 0, polyline, center, marker = false, startPin = false, showsUser = false, interactive = false, cache = true, distanceMarkers = false, units = 'km', officialDistanceKm, lineHidden = false, mapType, showsPoi = false, compassOffset, waypointMarkers, onReady, onSnapshot }: Props) {
+  const [laidW, setLaidW] = useState(0);
   // 지연 two-tone — keys on the RESOLVED scheme since Phase 5 (manual 다크
   // gets the dark stroke; 시스템 mode behaves as before via the store).
   // Map-theme binding (2026-07-22): the map obeys the APP's scheme picker,
@@ -175,17 +190,31 @@ export function RealMap({ height, borderRadius = 0, polyline, center, marker = f
   const markerFill = resolved === 'dark' ? '#15171C' : '#fff'; // surface family
 
   const onMapReady = () => {
-    if (!line) return;
-    mapRef.current?.fitToCoordinates(line.map(toLatLng), {
-      edgePadding: { top: 24, right: 24, bottom: 24, left: 24 },
-      animated: false,
-    });
+    if (line) {
+      mapRef.current?.fitToCoordinates(line.map(toLatLng), {
+        edgePadding: { top: 24, right: 24, bottom: 24, left: 24 },
+        animated: false,
+      });
+    }
+    onReady?.();
+    if (onSnapshot && line && !lineHidden) {
+      // item ⑩-2: wait for the tiles, then freeze this render for the next mount
+      setTimeout(async () => {
+        const map = mapRef.current;
+        if (!map) return;
+        let card: string | null = null, square: string | null = null;
+        try { card = await map.takeSnapshot({ width: laidW || undefined, height, format: 'png', result: 'file' }); } catch { /* no card snapshot this time */ }
+        try { square = await map.takeSnapshot({ width: 160, height: 160, region: squareRegion(line), format: 'png', result: 'file' }); } catch { /* no square snapshot this time */ }
+        onSnapshot({ card, square });
+      }, SNAPSHOT_DELAY_MS);
+    }
   };
 
   return (
     <View
       style={{ height, borderRadius, overflow: 'hidden' }}
       pointerEvents={interactive ? 'auto' : 'none'}
+      onLayout={onSnapshot ? e => setLaidW(Math.round(e.nativeEvent.layout.width)) : undefined}
     >
       <MapView
         mapType={mapType}
