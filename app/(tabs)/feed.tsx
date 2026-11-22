@@ -6,6 +6,8 @@
  * left home entirely (owner ruling — 코스 surfaces keep courses; the
  * canvas home-cards.jsx 친구 feed is run cards).
  */
+import { FeedSkeleton } from '@/components/skeleton';
+import { useScreenTiming } from '@/lib/screen-timing';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { KudosSheet } from '@/components/kudos-sheet';
 import { SuggestedRunnersRow, useSuggestedRunners } from '@/components/suggested-runners';
@@ -324,6 +326,7 @@ export default function HomeScreen() {
   const [tab, setTab]           = useState('친구');
 
   const feed = useFeed();
+  useScreenTiming('feed', !feed.loading, feed.items.length > 0 && feed.loading === false && !feed.refreshing);
   const { coordinate, status: locStatus } = useCurrentLocation();
   // ── 전체 discovery (2026-07-16 → 8/4 NATIONWIDE): GET /feed/nearby with
   // scope=all + offset pagination. The R2 radius machine (10 → one 20km
@@ -523,7 +526,7 @@ export default function HomeScreen() {
         }}
         ListEmptyComponent={
           loading
-            ? <View style={lst.wrap}><ActivityIndicator size="large" color={C.accent} /></View>
+            ? <FeedSkeleton />
             : error
               ? tab === '전체' && nearby.koreaOnly
                 // abroad (her bbox 400 + our coords outside the mirror):

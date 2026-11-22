@@ -1,3 +1,4 @@
+import { dcReset } from '@/lib/data-cache';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Session } from '@supabase/supabase-js';
 import { create } from 'zustand';
@@ -113,6 +114,7 @@ export const useStore = create<Store>((set, get) => ({
 
   signOut: async () => {
     await supabase.auth.signOut();
+    dcReset(); // item ⑩: memory copy only — disk entries stay under the user's own prefix
     // Per-user name/photo caches persist (instant paint on the next sign-in
     // of the same account); only the in-memory values clear.
     set({ session: null, displayName: null, photoUrl: null });

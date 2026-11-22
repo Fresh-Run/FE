@@ -9,6 +9,7 @@
 // NON-FATAL either way: it degrades to [] and only the profile fetch drives
 // the screen's error state.
 
+import { dcGet } from '@/lib/data-cache';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useState } from 'react';
 
@@ -72,17 +73,19 @@ export type UserRun = {
 };
 
 export function useUserProfile(uid: string | null) {
-  const [profile, setProfile] = useState<UserProfile | null>(null);
+  // item ⑩: seed from the last visit (profile + runs) — no spinner on a re-open
+  const seedP = uid ? dcGet<UserProfile>(`/api/users/${uid}/profile`) : undefined;
+  const [profile, setProfile] = useState<UserProfile | null>(seedP ?? null);
   const [identity, setIdentity] = useState<CachedIdentity | null>(null);
-  const [runs, setRuns]       = useState<UserRun[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [runs, setRuns]       = useState<UserRun[]>(() => (uid ? dcGet<UserRun[]>(`/api/users/${uid}/runs?limit=50`) : undefined) ?? []);
+  const [loading, setLoading] = useState(!seedP);
   const [error, setError]     = useState<string | null>(null);
   const [key, setKey]         = useState(0);
 
   useEffect(() => {
     if (!uid) { setLoading(false); setError(t('prof.loadFail')); return; }
     let cancelled = false;
-    setLoading(true);
+    if (!dcGet(`/api/users/${uid}/profile`)) setLoading(true); // item ⑩: silent when warm
     setError(null);
     // instant identity paint (header only — the body stays fresh-loading)
     AsyncStorage.getItem(identKey(uid))

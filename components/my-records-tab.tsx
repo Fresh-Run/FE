@@ -9,6 +9,7 @@
 // so a month is never half-shown from page one — the ledgered failure mode.
 // Header numbers come from GET /me/stats/monthly (server truth), not from
 // the list.
+import { dcGet } from '@/lib/data-cache';
 import { useFocusEffect } from '@react-navigation/native';
 import { router } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -99,7 +100,7 @@ export function MyRecordsTab({ runs, loading, loadingMore, hasMore, loadMore }: 
   // month); falls back to the current month on an empty history.
   const shown = ym ?? (runs[0] ? kstYm(runs[0].ran_at) : { year: now.getFullYear(), month: now.getMonth() + 1 });
 
-  const [stats, setStats] = useState<MonthlyStats | null>(null);
+  const [stats, setStats] = useState<MonthlyStats | null>(() => dcGet<MonthlyStats>(`/api/me/stats/monthly?year=${shown.year}&month=${shown.month}`) ?? null); // item ⑩ seed
   const cacheRef = useRef<Record<string, MonthlyStats>>({});
   useFocusEffect(useCallback(() => {
     const key = `${shown.year}-${shown.month}`;

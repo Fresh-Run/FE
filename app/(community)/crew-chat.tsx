@@ -26,6 +26,8 @@
  * while the user is IN the room — the crew-detail badge clears on return
  * (its focus-refetch).
  */
+import { RowsSkeleton } from '@/components/skeleton';
+import { dcGet } from '@/lib/data-cache';
 import { useFocusEffect } from '@react-navigation/native';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -107,7 +109,7 @@ export default function CrewChatScreen() {
   const canManage = role === 'owner' || role === 'admin';
   const units = useSettings(st_ => st_.settings.units);
 
-  const [messages, setMessages] = useState<ChatMessage[] | null>(null); // newest-first
+  const [messages, setMessages] = useState<ChatMessage[] | null>(() => (crewId ? dcGet<ChatMessage[]>(`/api/crews/${crewId}/chat/messages?limit=${CHAT_PAGE}`) : undefined) ?? null); // newest-first · item ⑩ seed
   const [pending, setPending]   = useState<PendingSend[]>([]);
   const [draft, setDraft]       = useState('');
   const [muted, setMuted]       = useState(false);
@@ -534,7 +536,7 @@ export default function CrewChatScreen() {
       {toast && <View style={st.toast}><Text style={st.toastTxt}>{toast}</Text></View>}
 
       {messages === null ? (
-        <View style={st.centered}><ActivityIndicator size="large" color={C.accent} /></View>
+        <RowsSkeleton />
       ) : (
         <View style={{ flex: 1 }}>
           <FlatList

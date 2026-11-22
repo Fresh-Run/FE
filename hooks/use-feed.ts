@@ -6,6 +6,7 @@
 // users' + own runs via /feed/activities. The course feed (GET /feed) left
 // home entirely — owner ruling; 코스 surfaces keep their own consumers.
 
+import { dcGet } from '@/lib/data-cache';
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
@@ -24,8 +25,9 @@ const PAGE = 20; // server default page size (limit≤100)
 // ─── useFeed — 친구 activity feed, paginated ─────────────────────────────────
 
 export function useFeed() {
-  const [items, setItems] = useState<ActivityRun[]>([]);
-  const [loading, setLoading]         = useState(true);
+  const seedPage = dcGet<ActivityRun[]>('/api/feed/activities?limit=20&offset=0'); // item ⑩
+  const [items, setItems] = useState<ActivityRun[]>(seedPage ?? []);
+  const [loading, setLoading]         = useState(!seedPage);
   const [refreshing, setRefreshing]   = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore]         = useState(true);
@@ -33,13 +35,13 @@ export function useFeed() {
   const busyRef = useRef(false);
   // Mirrors items.length for the focus callback — written in an effect, never
   // during render (React Compiler purity contract, the frozen-clock lesson).
-  const countRef = useRef(0);
+  const countRef = useRef(seedPage?.length ?? 0);
   useEffect(() => { countRef.current = items.length; }, [items.length]);
 
   const load = useCallback(async (mode: 'initial' | 'refresh') => {
     if (busyRef.current) return;
     busyRef.current = true;
-    if (mode === 'initial') setLoading(true); else setRefreshing(true);
+    if (mode === 'initial') { if (countRef.current === 0) setLoading(true); } else setRefreshing(true); // item ⑩: warm = silent
     setError(null);
     try {
       const page = await getActivityFeed(0);

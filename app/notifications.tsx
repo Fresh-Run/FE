@@ -15,11 +15,12 @@
  * Read-marking is optimistic; single-row failures revert silently (the
  * row's nav already happened — an alert would be noise).
  */
+import { RowsSkeleton } from '@/components/skeleton';
+import { dcGet } from '@/lib/data-cache';
 import { useFocusEffect } from '@react-navigation/native';
 import { router } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   FlatList,
   Pressable,
@@ -278,7 +279,7 @@ export default function NotificationsScreen() {
   const C = useTokens();
   const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
-  const [rows, setRows]           = useState<AppNotification[] | null>(null);
+  const [rows, setRows]           = useState<AppNotification[] | null>(() => dcGet<AppNotification[]>('/api/notifications?limit=100') ?? null); // item ⑩ seed
   const [error, setError]         = useState(false);
   const [refreshing, setRefresh]  = useState(false);
   const [tab, setTab]             = useState<TabKey>('all');
@@ -357,7 +358,7 @@ export default function NotificationsScreen() {
       </View>
 
       {rows === null && !error ? (
-        <View style={st.centered}><ActivityIndicator size="large" color={C.accent} /></View>
+        <RowsSkeleton />
       ) : error ? (
         <View style={st.centered}>
           <Icon name="warning-outline" size={36} color={C.faint} />

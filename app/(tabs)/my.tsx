@@ -4,6 +4,7 @@
 // 게시물 tabs (the old (tabs)/records screen is retired — post-save redirects
 // land here with ?tab=records). The pre-redesign 프로필 tab lives at
 // app/settings.tsx.
+import { useScreenTiming } from '@/lib/screen-timing';
 import { useFocusEffect } from '@react-navigation/native';
 import { router, useLocalSearchParams, useNavigation } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -49,6 +50,7 @@ export default function MyScreen() {
   }), [navigation]);
 
   const { profile, refetch } = useProfile();
+  useScreenTiming('my', !!profile, !!profile);
   // One run list shared by 기록 and 게시물 (cursor-paginated, newest first)
   const runList = useRuns();
   const refetchRuns = runList.refetch;

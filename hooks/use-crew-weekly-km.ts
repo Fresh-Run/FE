@@ -5,6 +5,7 @@
 // the total = Σ ranking distance_km. Module cache (5 min) so a card
 // re-mount does not re-fetch; null while loading or on failure (card
 // shows a dash — never an invented number).
+import { dcGet } from '@/lib/data-cache';
 import { useEffect, useState } from 'react';
 
 import { getCrewRanking } from '@/lib/crews-api';
@@ -24,7 +25,10 @@ export async function fetchCrewWeeklyKm(crewId: string): Promise<number> {
 export function useCrewWeeklyKm(crewId: string | null): number | null {
   const [km, setKm] = useState<number | null>(() => {
     const hit = crewId ? cache.get(crewId) : undefined;
-    return hit && Date.now() - hit.at < TTL_MS ? hit.km : null;
+    if (hit && Date.now() - hit.at < TTL_MS) return hit.km;
+    // item ⑩: last session's ranking page seeds the number until the refetch lands
+    const rows = crewId ? dcGet<{ distance_km: number }[]>(`/api/crews/${crewId}/ranking`) : undefined;
+    return rows ? rows.reduce((a, r) => a + (r.distance_km ?? 0), 0) : null;
   });
   useEffect(() => {
     if (!crewId) return;

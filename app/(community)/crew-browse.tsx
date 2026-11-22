@@ -5,6 +5,7 @@
  * filter and 정원 toggle live here). NOT REDESIGNED (listed in the ledger).
  * Also hosts the 초대 코드로 가입 entry (owner ruling 2026-11-21).
  */
+import { RowsSkeleton } from '@/components/skeleton';
 import { useFocusEffect } from '@react-navigation/native';
 import { errorMessage } from '@/lib/error-copy';
 import { regionName } from '@/lib/korea-regions';
@@ -85,13 +86,7 @@ function LocationCard({ filter, placeName, onPress }: {
 // ─── Shared states ────────────────────────────────────────────────────────────
 
 function LoadingState() {
-  const C = useTokens();
-  const st = useStyles(makeSt);
-  return (
-    <View style={st.centered}>
-      <ActivityIndicator size="large" color={C.accent} />
-    </View>
-  );
+  return <RowsSkeleton avatar={false} />; // item ⑩
 }
 
 function ErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {

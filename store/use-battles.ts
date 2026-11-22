@@ -3,6 +3,7 @@
 // opponent nickname/avatar are joined from GET /users/{id}/profile and cached
 // here. Every mutation calls the endpoint, then refreshes the list (server
 // truth, no optimistic shape-guessing).
+import { dcGet } from '@/lib/data-cache';
 import { create } from 'zustand';
 
 import { apiFetch } from '@/lib/api';
@@ -36,6 +37,11 @@ export const useBattles = create<BattlesStore>((set, get) => ({
   error: null,
 
   refresh: async () => {
+    // item ⑩: paint the last list first, then the network truth
+    if (!get().loaded) {
+      const cached = dcGet<Battle[]>('/api/battles');
+      if (cached) set({ battles: cached, loaded: true });
+    }
     try {
       const rows = await listBattles();
       // keep already-loaded detail (scores/runs) on rows the list re-serves thin
@@ -62,7 +68,11 @@ export const useBattles = create<BattlesStore>((set, get) => ({
   ensureProfiles: async (uids) => {
     const missing = [...new Set(uids)].filter(u => u && !get().profiles[u]);
     if (missing.length === 0) return;
-    const got = await Promise.all(missing.map(uid =>
+    // item ⑩: profiles seen before come from the cache synchronously
+    const warm: Record<string, BattleProfile> = {};
+    for (const u of missing) { const p = dcGet<BattleProfile>(`/api/users/${u}/profile`); if (p) warm[u] = { user_id: u, nickname: p.nickname, avatar_url: p.avatar_url }; }
+    if (Object.keys(warm).length) set(s => ({ profiles: { ...s.profiles, ...warm } }));
+    const got = await Promise.all(missing.filter(u => !warm[u]).map(uid =>
       apiFetch<BattleProfile>(`/api/users/${uid}/profile`)
         .then(p => ({ user_id: uid, nickname: p.nickname, avatar_url: p.avatar_url }))
         .catch(() => null)));

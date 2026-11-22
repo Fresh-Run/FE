@@ -20,11 +20,12 @@
  * only. Own rows run DIRECT (is_mine on the pending payload → preview skips
  * the copy).
  */
+import { RowsSkeleton } from '@/components/skeleton';
+import { dcGet } from '@/lib/data-cache';
 import { useFocusEffect } from '@react-navigation/native';
 import { router } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   FlatList,
   Pressable,
@@ -203,9 +204,9 @@ export default function SavedCoursesScreen() {
   const st = useStyles(makeSt);
   const insets = useSafeAreaInsets();
   const [tab, setTab]         = useState<'saved' | 'mine'>('saved');
-  const [all, setAll]         = useState<PublicRoute[] | null>(null);
+  const [all, setAll]         = useState<PublicRoute[] | null>(() => dcGet<PublicRoute[]>('/api/routes/bookmarked?limit=100') ?? null); // item ⑩ seed
   const [error, setError]     = useState(false);
-  const [mine, setMine]       = useState<StoredRoute[] | null>(null);
+  const [mine, setMine]       = useState<StoredRoute[] | null>(() => dcGet<StoredRoute[]>('/api/routes?limit=100') ?? null);
   const [mineError, setMineError] = useState(false);
   const [regions, setRegions] = useState<string[]>([]);
   const [dists, setDists]     = useState<string[]>([]);
@@ -448,7 +449,7 @@ export default function SavedCoursesScreen() {
 
       {tab === 'saved' ? (
         all === null && !error ? (
-          <View style={st.centered}><ActivityIndicator size="large" color={C.accent} /></View>
+          <RowsSkeleton avatar={false} />
         ) : error ? (
           <View style={st.centered}>
             <Icon name="warning-outline" size={36} color={C.faint} />
@@ -482,7 +483,7 @@ export default function SavedCoursesScreen() {
         )
       ) : (
         mine === null && !mineError ? (
-          <View style={st.centered}><ActivityIndicator size="large" color={C.accent} /></View>
+          <RowsSkeleton avatar={false} />
         ) : mineError ? (
           <View style={st.centered}>
             <Icon name="warning-outline" size={36} color={C.faint} />

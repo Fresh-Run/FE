@@ -15,11 +15,11 @@
  *    (own runs' comments live on the run-post own-mode);
  *  - 프로필 공유 → 준비 중 (no shareable URL yet).
  */
+import { ProfileSkeleton } from '@/components/skeleton';
 import { useFocusEffect } from '@react-navigation/native';
 import { router } from 'expo-router';
 import React, { useCallback, useEffect } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   FlatList,
   Pressable,
@@ -270,7 +270,7 @@ export default function MyProfileScreen() {
       </View>
 
       {loading ? (
-        <View style={st.centered}><ActivityIndicator size="large" color={C.accent} /></View>
+        <ProfileSkeleton />
       ) : error || !profile ? (
         <View style={st.centered}>
           <Icon name="warning-outline" size={36} color={C.faint} />

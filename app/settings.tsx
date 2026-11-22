@@ -1,3 +1,4 @@
+import { timingReport } from '@/lib/screen-timing';
 import { useFocusEffect } from '@react-navigation/native';
 import Constants from 'expo-constants';
 import * as Updates from 'expo-updates';
@@ -504,7 +505,9 @@ export default function SettingsScreen() {
             Phase 5's real picker (테마 row above). */}
         <Text style={st.versionFooter}>{`FreshRun ${APP_VERSION} · Made in Seoul`}</Text>
         {/* the identity line — see bundleIdentity's conviction comment */}
-        <Text style={st.bundleIdent}>{bundleIdentity()}</Text>
+        <Pressable onLongPress={() => Alert.alert('화면 타이밍 (open → paint)', timingReport())} delayLongPress={600}>
+          <Text style={st.bundleIdent}>{bundleIdentity()}</Text>
+        </Pressable>
       </ScrollView>
     </View>
   );

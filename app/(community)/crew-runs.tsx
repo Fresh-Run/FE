@@ -24,6 +24,8 @@
  * the card header below. The field is NOT in CrewRunItem yet — nothing is
  * rendered until it lands (no faked badge).
  */
+import { RowsSkeleton } from '@/components/skeleton';
+import { dcGet } from '@/lib/data-cache';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import React, { useCallback, useRef, useState } from 'react';
@@ -180,7 +182,7 @@ export default function CrewRunsScreen() {
   const T = useT();
   const units = useSettings(s => s.settings.units);
 
-  const [rows, setRows]     = useState<CrewRunItem[] | null>(null);
+  const [rows, setRows]     = useState<CrewRunItem[] | null>(() => (crewId ? dcGet<CrewRunItem[]>(`/api/crews/${crewId}/runs?limit=${CREW_FEED_PAGE}&offset=0&session_only=true`) : undefined) ?? null); // item ⑩ seed
   // K1 kudos machinery (user-profile pattern verbatim): optimistic overlay,
   // wholesale clear on data arrival, per-run 403 race net, likers sheet door
   const [kudosOv, setKudosOv] = useState<Record<string, { on: boolean; delta: number }>>({});
@@ -287,7 +289,7 @@ export default function CrewRunsScreen() {
       </View>
 
       {rows === null ? (
-        <View style={st.centered}><ActivityIndicator size="large" color={C.accent} /></View>
+        <RowsSkeleton />
       ) : rows.length === 0 ? (
         <View style={st.centered}>
           <View style={st.emptyIcon}><Icon name={error ? 'footsteps-outline' : 'people-outline'} size={28} color={C.faint} /></View>

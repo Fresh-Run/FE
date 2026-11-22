@@ -8,6 +8,7 @@
  * rows — 지연 ask logged); 활동 = public_run_count with the 공개 N개
  * framing explaining the number.
  */
+import { ProfileSkeleton } from '@/components/skeleton';
 import { useFocusEffect } from '@react-navigation/native';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -316,12 +317,10 @@ export default function UserProfileScreen() {
               <Avatar name={identity.nickname} size={76} photoUrl={identity.avatar_url} ring={C.border} initialsRatio={0.38} upper />
               <Text style={st.name} numberOfLines={1}>{identity.nickname}</Text>
             </View>
-            <View style={[st.centered, { paddingTop: 60 }]}>
-              <ActivityIndicator size="large" color={C.accent} />
-            </View>
+            <ProfileSkeleton identity={false} />
           </View>
         ) : (
-          <View style={st.centered}><ActivityIndicator size="large" color={C.accent} /></View>
+          <ProfileSkeleton />
         )
       ) : error || !profile ? (
         <View style={st.centered}>

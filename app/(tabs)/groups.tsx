@@ -12,6 +12,9 @@
  * inside-crew screen, crew-create, crew-browse (today's 둘러보기 verbatim),
  * user-search, the battle create/invite/detail/settle screens.
  */
+import { GroupsSkeleton, RowsSkeleton } from '@/components/skeleton';
+import { dcGet } from '@/lib/data-cache';
+import { useScreenTiming } from '@/lib/screen-timing';
 import { useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams, useNavigation } from 'expo-router';
@@ -153,6 +156,7 @@ function CrewTab({ scrollRef }: { scrollRef: React.RefObject<ScrollView | null> 
   const T = useT();
   const tabBarInset = useTabBarInset();
   const { crews, loading, error, signedOut, refetch } = useMyCrews();
+  useScreenTiming('groups', !loading, !!dcGet('/api/crews/mine'));
   const { coordinate, status: locStatus } = useCurrentLocation();
   // 둘러보기: nearest first when location is granted (server distance order),
   // server order otherwise; full crews excluded server-side.
@@ -186,7 +190,7 @@ function CrewTab({ scrollRef }: { scrollRef: React.RefObject<ScrollView | null> 
     }
   }
 
-  if (loading) return <Centered><ActivityIndicator size="large" color={C.accent} /></Centered>;
+  if (loading) return <GroupsSkeleton />; // item ⑩
   if (signedOut) return <Centered><Icon name="people-outline" size={42} color={C.faint} /><Text style={st.stateTitle}>{T('com.loginNeeded')}</Text></Centered>;
   if (error) return <ErrorState message={error} onRetry={refetch} />;
 
@@ -300,7 +304,7 @@ function BattleTab({ scrollRef }: { scrollRef: React.RefObject<ScrollView | null
   const { battles, profiles, loaded, error, refresh } = useBattles();
   useFocusEffect(useCallback(() => { void refresh(); }, [refresh]));
   if (!loaded && error) return <ErrorState message={error} onRetry={() => { void refresh(); }} />;
-  if (!loaded) return <Centered><ActivityIndicator size="large" color={C.accent} /></Centered>;
+  if (!loaded) return <RowsSkeleton rows={3} avatar={false} />; // item ⑩
 
   const active = battles.filter(b => b.status === 'active');
   const pendingIn = battles.filter(b => b.status === 'pending' && b.opponent === myUid);

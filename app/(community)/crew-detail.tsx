@@ -17,6 +17,9 @@
  * challenge-create, crew-admin, crew-edit, crew-members (manage), crew-requests,
  * crew-invite, crew-runs (full feed), meet-map, tracking hand-off.
  */
+import { CrewDetailSkeleton } from '@/components/skeleton';
+import { dcGet } from '@/lib/data-cache';
+import { useScreenTiming } from '@/lib/screen-timing';
 import { useFocusEffect } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -110,6 +113,7 @@ export default function CrewDetailScreen() {
   const weeklyKm = useCrewWeeklyKm(crewId ?? null);
 
   const [tab, setTab] = useState<Tab>('home');
+  useScreenTiming('crew-detail', !loading && !!crew, !!(crewId && dcGet(`/api/crews/${crewId}`)));
   const [busy, setBusy] = useState(false);
   const [mutErr, setMutErr] = useState<string | null>(null);
 
@@ -119,7 +123,7 @@ export default function CrewDetailScreen() {
   const canEditCrew = !!myPerms?.edit_crew;
 
   // ── 공지 (members only; the next-run card + notice row + the 크루 러닝 시작 window scan) ──
-  const [anns, setAnns] = useState<Announcement[] | null>(null);
+  const [anns, setAnns] = useState<Announcement[] | null>(() => (crewId ? dcGet<Announcement[]>(`/api/crews/${crewId}/announcements?limit=20&offset=0`) : undefined) ?? null); // item ⑩ seed
   const loadAnns = useCallback(() => {
     if (!crewId || !isMember) { setAnns(null); return; }
     let cancelled = false;
@@ -148,7 +152,7 @@ export default function CrewDetailScreen() {
   }, [crewId, crew?.myRole]));
 
   // ── 채팅 unread (members) → dot on the chat button ────────────────────────────
-  const [chatUnread, setChatUnread] = useState(0);
+  const [chatUnread, setChatUnread] = useState(() => (crewId ? dcGet<{ unread_count: number }>(`/api/crews/${crewId}/chat/unread`)?.unread_count : undefined) ?? 0);
   useFocusEffect(useCallback(() => {
     if (!crewId || !isMember) { setChatUnread(0); return; }
     let cancelled = false;
@@ -179,8 +183,8 @@ export default function CrewDetailScreen() {
   }
 
   // ── 챌린지 + 랭킹 (readable by all, probed) · 피드 (members, paged) ─────────────
-  const [challenge, setChallenge] = useState<Challenge | null | undefined>(undefined);
-  const [ranking, setRanking] = useState<CrewRankingEntry[] | null>(null);
+  const [challenge, setChallenge] = useState<Challenge | null | undefined>(() => (crewId ? dcGet<Challenge | null>(`/api/crews/${crewId}/challenges/current`) : undefined));
+  const [ranking, setRanking] = useState<CrewRankingEntry[] | null>(() => (crewId ? dcGet<CrewRankingEntry[]>(`/api/crews/${crewId}/ranking`) : undefined) ?? null);
   useFocusEffect(useCallback(() => {
     if (!crewId) return;
     let cancelled = false;
@@ -188,7 +192,7 @@ export default function CrewDetailScreen() {
     getCrewRanking(crewId).then(rows => { if (!cancelled) setRanking(rows); }).catch(() => { if (!cancelled) setRanking([]); });
     return () => { cancelled = true; };
   }, [crewId]));
-  const [feed, setFeed] = useState<CrewRunItem[] | null>(null);
+  const [feed, setFeed] = useState<CrewRunItem[] | null>(() => (crewId ? dcGet<CrewRunItem[]>(`/api/crews/${crewId}/runs?limit=${FEED_PAGE}&offset=0&session_only=true`) : undefined) ?? null);
   const [feedMore, setFeedMore] = useState(true);
   const [feedBusy, setFeedBusy] = useState(false);
   useFocusEffect(useCallback(() => {
@@ -281,7 +285,15 @@ export default function CrewDetailScreen() {
 
   // ── Loading / error ───────────────────────────────────────────────────────────
   if (loading) {
-    return <View style={[st.root, { paddingTop: insets.top, alignItems: 'center', justifyContent: 'center' }]}><ActivityIndicator size="large" color={C.accent} /></View>;
+    // item ⑩: first-ever open = the screen's shape, never a centered spinner
+    return (
+      <View style={st.root}>
+        <CrewDetailSkeleton />
+        <Pressable onPress={() => router.back()} hitSlop={8} style={[st.circle, { position: 'absolute', left: 16, top: insets.top + 10 }]} accessibilityRole="button" accessibilityLabel={T('common.back')}>
+          <Icon name="chevron-back" size={22} color="#121712" />
+        </Pressable>
+      </View>
+    );
   }
   if (error || !crew) {
     return (

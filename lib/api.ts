@@ -2,6 +2,7 @@
 // Error mapping follows the pattern established in use-generate-route.ts
 // (which stays frozen and keeps its own copy).
 
+import { dcSet } from '@/lib/data-cache';
 import { quotaExceededMessage } from '@/lib/quota-message';
 import { t, tf } from '@/lib/i18n';
 import { supabase } from '@/lib/supabase';
@@ -27,6 +28,8 @@ function refreshSessionOnce(): Promise<boolean> {
 
 type ApiOptions = {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+  /** false = do not write this GET into the persistent data cache (item ⑩). */
+  cache?: boolean;
   body?: unknown;
   timeoutMs?: number;
 };
@@ -139,6 +142,9 @@ export async function apiRequest<T>(path: string, opts: ApiOptions = {}, _retrie
   // non-empty fixes the whole class; non-empty bodies parse exactly as before.
   const text = res.status === 204 ? '' : await res.text();
   const data = (text.trim() ? JSON.parse(text) : undefined) as T;
+  // item ⑩: every successful GET lands in the persistent cache (user-scoped,
+  // keyed by path) so the next open of the same screen paints instantly.
+  if ((opts.method ?? 'GET') === 'GET' && opts.cache !== false && res.status === 200 && data !== undefined) dcSet(path, data);
   return { status: res.status, data };
 }
 

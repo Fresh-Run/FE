@@ -4,6 +4,7 @@
 // immutable), progressive blocky→smooth as fetches land; failure/offline →
 // the thumb stands, honestly. Retires wholesale if 지연 ships the denser
 // feed payload (the non-blocking (c) ask).
+import { dcGet } from '@/lib/data-cache';
 import { useEffect, useState } from 'react';
 import { AppState } from 'react-native';
 
@@ -41,7 +42,15 @@ export function useRunTrack(
   runId: string | null | undefined,
   thumb: Coordinate[] | null | undefined,
 ): { line: TrackPoint[] | null; pending: boolean } {
-  const [track, setTrack] = useState<TrackPoint[] | null>(() => (runId && cache.get(runId)) || null);
+  const [track, setTrack] = useState<TrackPoint[] | null>(() => {
+    if (!runId) return null;
+    const hit = cache.get(runId);
+    if (hit) return hit;
+    // item ⑩: tracks are immutable — a track seen in any past session is a first-frame hit
+    const persisted = dcGet<{ polyline?: TrackPoint[] | null }>(`/api/runs/${runId}/track`)?.polyline;
+    if (persisted && persisted.length >= 2) { cache.set(runId, persisted); return persisted; }
+    return null;
+  });
   const [inFlight, setInFlight] = useState(false);
   useEffect(() => {
     if (!runId) return;

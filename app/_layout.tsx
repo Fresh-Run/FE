@@ -2,7 +2,7 @@ import { Montserrat_500Medium, Montserrat_600SemiBold } from '@expo-google-fonts
 import { DarkTheme, DefaultTheme, ThemeProvider as NavThemeProvider } from '@react-navigation/native';
 import { router, Stack, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { useFonts } from 'expo-font';
 import 'react-native-reanimated';
@@ -10,6 +10,7 @@ import 'react-native-reanimated';
 import { useTokens } from '@/hooks/use-tokens';
 import { track } from '@/lib/analytics';
 import { setIdleAudioPosture } from '@/lib/audio-session';
+import { hydrateDataCache } from '@/lib/data-cache';
 import { hydrateHealthAndReask } from '@/lib/health';
 import { initSentry } from '@/lib/sentry';
 import { maybeSeedDeviceLang } from '@/lib/i18n';
@@ -100,6 +101,17 @@ function LoadingScreen() {
 
 function RootLayoutInner() {
   const sessionLoading = useStore((s) => s.sessionLoading);
+  const session = useStore((s) => s.session);
+  // item ⑩ (2026-11-21): load this user's cached GETs into memory before any
+  // screen mounts — one multiGet; every hook then seeds synchronously.
+  const uid = session?.user.id ?? null;
+  const [dcReadyFor, setDcReadyFor] = useState<string | null>(null);
+  useEffect(() => {
+    if (!uid) return;
+    let alive = true;
+    hydrateDataCache(uid).then(() => { if (alive) setDcReadyFor(uid); });
+    return () => { alive = false; };
+  }, [uid]);
   // Phase 5 (epic complete): resolution is LIVE — mode 시스템/라이트/다크
   // (default 시스템 follows the OS via the scheme store's Appearance
   // listener). Navigator chrome + status bar ride `resolved` with the rest
@@ -111,7 +123,7 @@ function RootLayoutInner() {
   const schemeHydrated = useScheme((s) => s.hydrated);
 
   // Block rendering until we know the session state to prevent flash.
-  if (sessionLoading || !schemeHydrated) return <LoadingScreen />;
+  if (sessionLoading || !schemeHydrated || (uid && dcReadyFor !== uid)) return <LoadingScreen />;
 
   return (
     <NavThemeProvider value={resolved === 'dark' ? DarkTheme : DefaultTheme}>

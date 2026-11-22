@@ -1,3 +1,4 @@
+import { PostSkeleton } from '@/components/skeleton';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
@@ -119,9 +120,7 @@ export default function ActivityScreen() {
   if (loading) {
     return (
       <View style={[st.root, { paddingTop: insets.top }]}>
-        <View style={st.loadingWrap}>
-          <ActivityIndicator size="large" color={C.accent} />
-        </View>
+        <PostSkeleton />
       </View>
     );
   }

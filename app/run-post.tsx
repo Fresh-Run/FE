@@ -27,6 +27,9 @@
  * sanitized route_id is null unless the linked course is public, and the
  * public single-route GET is a standing 지연-ask; graduates when it lands.
  */
+import { PostSkeleton } from '@/components/skeleton';
+import { dcGet } from '@/lib/data-cache';
+import { useScreenTiming } from '@/lib/screen-timing';
 import { useFocusEffect } from '@react-navigation/native';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -122,6 +125,7 @@ export default function RunPostScreen() {
   const units = useSettings(s => s.settings.units);
 
   const { run, loading, error, refetch } = useRunDetail(params.runId ?? null);
+  useScreenTiming('run-post', !loading && !!run, !!(params.runId && dcGet(`/api/runs/${params.runId}`)));
   const myUid = useStore(s => s.session?.user.id);
 
   // ── OWNERSHIP (8/4 P1 hotfix — 지연 repro: a notification door opened a
@@ -454,7 +458,7 @@ export default function RunPostScreen() {
       </View>
 
       {loading ? (
-        <View style={st.centered}><ActivityIndicator size="large" color={C.accent} /></View>
+        <PostSkeleton />
       ) : error || !run ? (
         <Text style={st.emptyTxt}>{error ?? T('rp.notFound')}</Text>
       ) : (

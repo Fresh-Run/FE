@@ -8,6 +8,7 @@
 // `weeks[]`, so the last bucket agrees with the server's this-week number.
 // When ask ② lands, swap the fetch and keep the `WeekBucket` shape.
 
+import { dcGet } from '@/lib/data-cache';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { getMonthlyStats, type MonthlyStats } from '@/lib/stats-api';
@@ -90,12 +91,23 @@ export function currentStreakDays(days: { date: string; run_count: number }[], n
   return n;
 }
 
+/** item ⑩: the window's months from the persistent cache (partial hits still seed). */
+function seedMonths(weeks: number): Record<string, MonthlyStats> {
+  const out: Record<string, MonthlyStats> = {};
+  for (const { year, month } of monthsInWindow(weeks)) {
+    const m = dcGet<MonthlyStats>(`/api/me/stats/monthly?year=${year}&month=${month}`);
+    if (m) out[`${year}-${month}`] = m;
+  }
+  return out;
+}
 export function useWeeklyDistance(weeks = 12) {
-  const [buckets, setBuckets] = useState<WeekBucket[]>(() => bucketWeeks([], weeks));
-  const [monthly, setMonthly] = useState<Record<string, MonthlyStats>>({});
-  const [loading, setLoading] = useState(true);
+  const seed = seedMonths(weeks);
+  const seeded = Object.keys(seed).length > 0;
+  const [buckets, setBuckets] = useState<WeekBucket[]>(() => bucketWeeks(Object.values(seed).flatMap(r => r.days), weeks));
+  const [monthly, setMonthly] = useState<Record<string, MonthlyStats>>(seed);
+  const [loading, setLoading] = useState(!seeded);
   const [error, setError] = useState<string | null>(null);
-  const cacheRef = useRef<Record<string, MonthlyStats>>({});
+  const cacheRef = useRef<Record<string, MonthlyStats>>(seed);
 
   const refetch = useCallback(async () => {
     const months = monthsInWindow(weeks);

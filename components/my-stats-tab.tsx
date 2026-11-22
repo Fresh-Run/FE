@@ -6,6 +6,7 @@
 // buckets (use-weekly-distance) · GET /me/stats/monthly for the calendar month.
 // 10K 최고 tile → 최고 페이스 INTERIM (owner-ruled 2026-11-19) until
 // `records.best_10k` lands (지연 ask ①).
+import { dcGet } from '@/lib/data-cache';
 import { useFocusEffect } from '@react-navigation/native';
 import { router } from 'expo-router';
 import React, { useCallback, useRef, useState } from 'react';
@@ -218,7 +219,7 @@ function ReportRow({ month }: { month: MonthlyStats | null }) {
 
 export function MyStatsTab() {
   const { buckets, monthly } = useWeeklyDistance(WEEKS);
-  const [stats, setStats] = useState<MyStats | null>(null);
+  const [stats, setStats] = useState<MyStats | null>(() => dcGet<MyStats>('/api/me/stats') ?? null); // item ⑩ seed
   useFocusEffect(useCallback(() => {
     let cancelled = false;
     getMyStats().then(res => { if (!cancelled) setStats(res); }).catch(() => { /* last data stands */ });

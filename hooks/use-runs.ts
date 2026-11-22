@@ -4,6 +4,7 @@
 // History cap: /api/runs takes limit only (offset ignored server-side) —
 // Cursor-paged (S-batch2 #9): RUNS_PAGE_SIZE per page, before= for older.
 
+import { dcGet } from '@/lib/data-cache';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { ApiError, apiFetch } from '@/lib/api';
@@ -85,8 +86,9 @@ export type Run = {
 // ─── useRuns — full list for the signed-in user ───────────────────────────────
 
 export function useRuns() {
-  const [runs, setRuns]           = useState<Run[]>([]);
-  const [loading, setLoading]     = useState(true);
+  const seedRuns = dcGet<Run[]>(`/api/runs?limit=${RUNS_PAGE_SIZE}`); // item ⑩
+  const [runs, setRuns]           = useState<Run[]>(seedRuns ?? []);
+  const [loading, setLoading]     = useState(!seedRuns);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore]     = useState(true);
   const [error, setError]         = useState<string | null>(null);
@@ -94,7 +96,7 @@ export function useRuns() {
   const [key, setKey]             = useState(0);
   // SWR-lite (2026-07-08): mirrors `runs` so the effect can tell a true
   // first load from a focus-refetch without depending on state.
-  const hasDataRef = useRef(false);
+  const hasDataRef = useRef(!!seedRuns?.length);
   const runsRef = useRef<Run[]>([]);
   runsRef.current = runs;
   const loadingMoreRef = useRef(false);
@@ -181,14 +183,15 @@ export function useRuns() {
 // invisible ids 404 → the graceful "not found".
 
 export function useRunDetail(runId: string | null) {
-  const [run, setRun]         = useState<Run | null>(null);
-  const [loading, setLoading] = useState(true);
+  const seedRun = runId ? dcGet<Run>(`/api/runs/${runId}`) : undefined; // item ⑩
+  const [run, setRun]         = useState<Run | null>(seedRun ?? null);
+  const [loading, setLoading] = useState(!seedRun);
   const [error, setError]     = useState<string | null>(null);
   const [key, setKey]         = useState(0);
 
   // SWR-lite (edit-run slice): refetches with data on screen run silently —
   // the spinner and the run-reset are reserved for the true first load.
-  const hasDataRef = useRef(false);
+  const hasDataRef = useRef(!!seedRun);
 
   useEffect(() => {
     if (!runId) { setLoading(false); return; }
