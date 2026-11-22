@@ -6,6 +6,7 @@
  * left home entirely (owner ruling — 코스 surfaces keep courses; the
  * canvas home-cards.jsx 친구 feed is run cards).
  */
+import { prefetchRunPost } from '@/lib/prefetch';
 import { FeedSkeleton } from '@/components/skeleton';
 import { useScreenTiming } from '@/lib/screen-timing';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -373,6 +374,8 @@ export default function HomeScreen() {
   // Maps slice 2 — real-map-only-for-viewable-cells. Stable refs (FlatList
   // forbids changing these props mid-list); 25% visibility flips a cell live.
   const [liveIds, setLiveIds] = useState<Set<string>>(new Set());
+  // item ⑩-3: the posts behind the top viewable cards open painted
+  useEffect(() => { [...liveIds].slice(0, 3).forEach(id => { if (!id.startsWith('banner') && id !== 'suggest') prefetchRunPost(id); }); }, [liveIds]);
   // 홈 재탭 = 맨 위로 (owner-ruled 8/3): the tab bar emits tabPress
   // (fresh-tab-bar handlePress); this screen's listener receives its OWN
   // tab's presses only. isFocused() at emit time distinguishes the re-tap
@@ -508,6 +511,7 @@ export default function HomeScreen() {
                 // K1: count tap → likers sheet (my-profile pattern; shown =
                 // overlay-adjusted so the sheet header count matches the card)
                 onCountPress={() => setKudosSheetRun({ id: shown.run_id, count: shown.kudos_count })}
+                onPrefetch={() => prefetchRunPost(item.run_id)}
                 onOpen={() => router.push({
                   pathname: '/run-post' as never,
                   params: {

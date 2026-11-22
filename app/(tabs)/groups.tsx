@@ -12,6 +12,7 @@
  * inside-crew screen, crew-create, crew-browse (today's 둘러보기 verbatim),
  * user-search, the battle create/invite/detail/settle screens.
  */
+import { prefetchCrew } from '@/lib/prefetch';
 import { GroupsSkeleton, RowsSkeleton } from '@/components/skeleton';
 import { dcGet } from '@/lib/data-cache';
 import { useScreenTiming } from '@/lib/screen-timing';
@@ -173,6 +174,8 @@ function CrewTab({ scrollRef }: { scrollRef: React.RefObject<ScrollView | null> 
   const others = crews.filter(c => c.myRole !== 'owner');
   const mine = [...owned, ...others];
   const picks = browse.crews.filter(c => !memberIds.has(c.id)).slice(0, 2);
+  // item ⑩-3: the crew screens behind my cards open painted
+  useEffect(() => { mine.slice(0, 3).forEach(c => prefetchCrew(c.id, true)); }, [mine.map(c => c.id).join(',')]); // eslint-disable-line react-hooks/exhaustive-deps
   const createLocked = !isPremium && owned.length >= 1;
 
   const openCrew = (c: Crew) => router.push({ pathname: '/(community)/crew-detail' as any, params: { crewId: c.id } });

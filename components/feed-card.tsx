@@ -32,13 +32,15 @@ const MEDIA_H = 290;
 const THUMB = 88;
 const PILL_OVERLAP = 30;
 
-export function FeedCard({ run, units, mapLive, onKudos, kudosOff, onOpen, onAvatarPress, onCountPress }: {
+export function FeedCard({ run, units, mapLive, onKudos, kudosOff, onOpen, onPrefetch, onAvatarPress, onCountPress }: {
   run: UserRun & { area?: string | null; photo_thumb?: string | null };
   units: ReturnType<typeof useSettings.getState>['settings']['units'];
   mapLive: boolean;
   onKudos: () => void;
   kudosOff?: boolean;
   onOpen?: () => void;
+  /** item ⑩-3: fired on press-in (≈100 ms before onPress) — warm the post */
+  onPrefetch?: () => void;
   onAvatarPress?: () => void;
   onCountPress?: () => void;
 }) {
@@ -76,7 +78,7 @@ export function FeedCard({ run, units, mapLive, onKudos, kudosOff, onOpen, onAva
       {/* Media: photo thumb (owner: ship the thumb, sharpness judged on
           device) with the route thumb overlaid; no photo → the map fills
           the slot and the overlay is dropped. Tap → post. */}
-      <Pressable onPress={onOpen} disabled={!onOpen} style={({ pressed }) => [st.media, { width }, pressed && !!onOpen && { opacity: 0.92 }]}>
+      <Pressable onPress={onOpen} onPressIn={onPrefetch} disabled={!onOpen} style={({ pressed }) => [st.media, { width }, pressed && !!onOpen && { opacity: 0.92 }]}>
         <SafeImage
           uri={run.photo_thumb}
           style={{ width, height: MEDIA_H }}

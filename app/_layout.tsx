@@ -1,3 +1,4 @@
+import { prefetchAppStart } from '@/lib/prefetch';
 import { Montserrat_500Medium, Montserrat_600SemiBold } from '@expo-google-fonts/montserrat';
 import { DarkTheme, DefaultTheme, ThemeProvider as NavThemeProvider } from '@react-navigation/native';
 import { router, Stack, useSegments } from 'expo-router';
@@ -109,7 +110,7 @@ function RootLayoutInner() {
   useEffect(() => {
     if (!uid) return;
     let alive = true;
-    hydrateDataCache(uid).then(() => { if (alive) setDcReadyFor(uid); });
+    hydrateDataCache(uid).then(() => { if (alive) { setDcReadyFor(uid); prefetchAppStart(); } }); // item ⑩-3
     return () => { alive = false; };
   }, [uid]);
   // Phase 5 (epic complete): resolution is LIVE — mode 시스템/라이트/다크
