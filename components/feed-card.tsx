@@ -51,12 +51,14 @@ export function FeedCard({ run, units, mapLive, onKudos, kudosOff, onOpen, onPre
   const { width } = useWindowDimensions();
   const { line: cardLine, pending: linePending } = useRunTrack(run.run_id, run.polyline_thumb); // item ⑩-2: every card — the pool renders ahead
   const plausible = isPlausibleTrack(cardLine ?? run.polyline_thumb, run.distance_km);
-  // item ⑩-2: RouteMap = snapshot → SVG curtain → (live only on the viewable
-  // card) native map fading in once the track is ready. The 88 overlay is
-  // snapshot-or-SVG, never MapKit.
+  // item ⑩-2 / ⑫ fix (2026-11-21): RouteMap = snapshot → neutral tile → native
+  // map through the render pool once the track is ready. The 88 overlay
+  // renders ITS OWN thumbnail through the pool too: a photo card never mounts
+  // a map in the media slot, so it would otherwise wait forever for a square
+  // snapshot nobody produces (the overlays vanished after the ⑫ purge).
   const mapAt = (h: number, r: number, sq: boolean) => (
     <RouteMap id={run.run_id} polyline={plausible ? run.polyline_thumb : null} line={plausible ? cardLine : null} pending={linePending}
-      height={h} width={sq ? h : width} borderRadius={r} live={!sq && plausible} priority={mapLive ? 0 : 1} square={sq} />
+      height={h} width={sq ? h : width} borderRadius={r} live={plausible} priority={mapLive ? 0 : 1} square={sq} />
   );
   const meta = fmtMonthDayTime(new Date(run.ran_at), lang, { weekday: 'short', monthStyle: 'numeric' }) + (run.area ? ` · ${run.area}` : '');
 
