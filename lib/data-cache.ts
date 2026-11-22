@@ -19,6 +19,14 @@ const MAX_KEYS = 400;
 let uid: string | null = null;
 let ready = false;
 const mem = new Map<string, { v: unknown; at: number }>();
+const subs = new Map<string, Set<() => void>>();
+/** Notify on writes to `key` (snapshot arrivals etc.). Returns the unsubscribe. */
+export function dcSubscribe(key: string, fn: () => void): () => void {
+  let set = subs.get(key);
+  if (!set) { set = new Set(); subs.set(key, set); }
+  set.add(fn);
+  return () => { set!.delete(fn); if (set!.size === 0) subs.delete(key); };
+}
 const fullKey = (k: string) => `${PREFIX}${uid}:${k}`;
 
 /** Load this user's cached GETs into memory. Idempotent per user. */
@@ -52,6 +60,7 @@ export function dcSet(key: string, v: unknown): void {
   const e = { v, at: Date.now() };
   mem.set(key, e);
   AsyncStorage.setItem(fullKey(key), JSON.stringify(e)).catch(() => {});
+  subs.get(key)?.forEach(fn => fn());
   if (mem.size > MAX_KEYS) {
     const drop = [...mem.entries()].sort((a, b) => a[1].at - b[1].at).slice(0, mem.size - MAX_KEYS + 40);
     for (const [k] of drop) mem.delete(k);

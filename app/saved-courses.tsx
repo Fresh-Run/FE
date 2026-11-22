@@ -110,7 +110,7 @@ function CourseRow({ route, onOpen, onUnsave }: { route: PublicRoute; onOpen: ()
   return (
     <Pressable onPress={onOpen} style={({ pressed }) => [st.row, shadows.sm, pressed && { opacity: 0.8 }]}>
       <View style={{ width: 82 }}>
-        <RouteMap id={route.id} polyline={route.polyline} height={82} width={82} borderRadius={14} square live={false} />
+        <RouteMap id={route.id} polyline={route.polyline} height={82} width={82} borderRadius={14} square />
       </View>
       <View style={{ flex: 1, minWidth: 0, paddingRight: 26 }}>
         <Text style={st.rowTitle} numberOfLines={1}>{route.summary}</Text>
@@ -158,7 +158,7 @@ function MyCourseRow({ route, onOpen, onTogglePublic, onDelete }: {
         <Icon name="trash-outline" size={16} color={C.faint} />
       </Pressable>
       <View style={{ width: 82 }}>
-        <RouteMap id={route.id} polyline={route.polyline} height={82} width={82} borderRadius={14} square live={false} />
+        <RouteMap id={route.id} polyline={route.polyline} height={82} width={82} borderRadius={14} square />
       </View>
       <View style={{ flex: 1, minWidth: 0 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>

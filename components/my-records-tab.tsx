@@ -59,7 +59,7 @@ function RunCard({ run }: { run: Run }) {
     >
       <View style={st.thumb}>
         <SafeImage uri={run.photo_thumb} style={st.thumbImg}
-          fallback={<RouteMap id={run.id} polyline={hasTrack ? run.polyline_thumb : null} height={THUMB} width={THUMB} borderRadius={R.lg} square live={false} />} />
+          fallback={<RouteMap id={run.id} polyline={hasTrack ? run.polyline_thumb : null} height={THUMB} width={THUMB} borderRadius={R.lg} square />} />
       </View>
       <View style={{ flex: 1, minWidth: 0, justifyContent: 'center', gap: 6 }}>
         <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.title} numberOfLines={1}>{run.title ?? timeTitle(run.ran_at, lang)}</Text>

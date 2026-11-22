@@ -1,58 +1,58 @@
 /**
- * RouteMap — item ⑩-2 (2026-11-21): the one map door for cards and thumbnails.
+ * RouteMap — item ⑩-2 (2026-11-21, owner-corrected the same day): the one map
+ * door for route maps on cards and thumbnails.
  *
- * Paint order (owner standard — no slow maps, no half-loaded map):
- *  1. SNAPSHOT: a map rendered on this device before (same run, size, scheme)
- *     comes back as a plain image on the first frame — no MapKit at all.
- *  2. CURTAIN: otherwise the route-shaped SVG (MiniMap) paints instantly from
- *     the row's thumb polyline — the placeholder the owner asked for.
- *  3. LIVE (only when `live`): once the track is ready (not `pending`) the
- *     native map mounts UNDER the curtain at opacity 0, fades in ~300 ms after
- *     it reports ready (tiles painted), and ~0.9 s later freezes a snapshot
- *     (card size + a 160² square for list thumbs) into the data cache for the
- *     next mount. The line is never drawn before the track exists, and the
- *     tiles are never shown before they loaded.
+ * Paint order (owner standard):
+ *  1. SNAPSHOT — a map this device rendered before (same run, size, scheme)
+ *     is a plain image on the first frame. No MapKit.
+ *  2. NEUTRAL TILE — otherwise a flat surface-colored tile. Nothing drawn on
+ *     it: no route outline, no placeholder art (owner ruling).
+ *  3. LIVE — when the track is ready and the render pool grants a slot
+ *     (≤ 3 native maps at once, viewable cards first), the native map mounts
+ *     INVISIBLE, and once the tiles have painted it simply appears, complete,
+ *     with the line already on it. No fade. ~0.9 s later it freezes a card
+ *     snapshot + a 160² square snapshot into the data cache (next mount =
+ *     image; list thumbs of the same run = image) and releases its slot, so
+ *     off-screen cards get rendered before the user scrolls to them.
  *
- * List surfaces pass `live={false}`: snapshot or SVG, never MapKit — the
- * 기록 rows, posts grid, feed overlay thumb and saved-course rows mount no
- * native maps anymore (MapKit stays on the viewable full-size card and the
- * detail heroes, which are where the square snapshots get produced).
+ * `live={false}` = snapshot-or-tile only (the feed's 88 overlay, which
+ * picks up the square snapshot its own card produces via dcSubscribe).
  */
 import { Image } from 'expo-image';
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
-import { MiniMap } from '@/components/mini-map';
 import { RealMap } from '@/components/real-map';
-import { dcGet, dcSet } from '@/lib/data-cache';
+import { useTokens } from '@/hooks/use-tokens';
+import { dcGet, dcSet, dcSubscribe } from '@/lib/data-cache';
+import { useMapSlot } from '@/lib/map-pool';
 import { useScheme } from '@/store/use-scheme';
 import type { Coordinate } from '@/types';
 
+const TILE_SETTLE_MS = 300;   // after onMapReady: let the tiles paint before showing
+const SLOT_TIMEOUT_MS = 8000; // a map that never snapshots still frees its slot
+
 type Props = {
-  /** cache identity — run id or route id */
   id: string;
-  /** thumb geometry from the row (curtain + region) */
   polyline?: Coordinate[] | null;
-  /** full track when fetched (null = use the thumb) */
   line?: Coordinate[] | null;
-  /** track fetch in flight — the live map waits (no half-loaded line) */
   pending?: boolean;
   height: number;
-  /** known width (skips a layout pass); measured otherwise */
   width?: number;
   borderRadius?: number;
-  /** may mount a native map (viewable card / hero); false = snapshot-or-SVG only */
+  /** may render a native map (pool-bounded); false = snapshot-or-tile only */
   live?: boolean;
-  /** use the square snapshot variant (thumbnails) */
+  /** 0 = viewable now (renders first), 1 = next in line */
+  priority?: 0 | 1;
   square?: boolean;
   distanceMarkers?: boolean;
   units?: 'km' | 'mi';
   officialDistanceKm?: number;
-  /** RealMap static-snapshot flag (heroes pass false) */
   cache?: boolean;
 };
 
-export function RouteMap({ id, polyline, line, pending = false, height, width, borderRadius = 0, live = false, square = false, distanceMarkers, units, officialDistanceKm, cache = true }: Props) {
+export function RouteMap({ id, polyline, line, pending = false, height, width, borderRadius = 0, live = true, priority = 1, square = false, distanceMarkers, units, officialDistanceKm, cache = true }: Props) {
+  const C = useTokens();
   const scheme = useScheme(s => s.resolved);
   const [w, setW] = useState(width ?? 0);
   const geom = line && line.length >= 2 ? line : polyline && polyline.length >= 2 ? polyline : null;
@@ -60,16 +60,24 @@ export function RouteMap({ id, polyline, line, pending = false, height, width, b
   const keySq = `snap:${id}:sq:${scheme}`;
   const key = square ? keySq : keyCard;
   const [snap, setSnap] = useState<string | null>(() => dcGet<string>(key) ?? null);
-  useEffect(() => { setSnap(dcGet<string>(key) ?? null); }, [key]);
+  useEffect(() => {
+    setSnap(dcGet<string>(key) ?? null);
+    return dcSubscribe(key, () => setSnap(dcGet<string>(key) ?? null));
+  }, [key]);
 
-  const opacity = useRef(new Animated.Value(0)).current;
-  const onReady = () => {
-    setTimeout(() => Animated.timing(opacity, { toValue: 1, duration: 250, useNativeDriver: true }).start(), 300);
-  };
-  const canLive = live && !snap && !!geom && !pending && w > 0;
+  const [shown, setShown] = useState(false);
+  const [done, setDone] = useState(false);
+  const wanted = live && !snap && !!geom && !pending && w > 0 && !done;
+  const slot = useMapSlot(wanted, priority);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (!slot) return;
+    timer.current = setTimeout(() => setDone(true), SLOT_TIMEOUT_MS);
+    return () => { if (timer.current) clearTimeout(timer.current); };
+  }, [slot]);
 
   return (
-    <View style={{ height, borderRadius, overflow: 'hidden' }} onLayout={width == null ? e => setW(Math.round(e.nativeEvent.layout.width)) : undefined}>
+    <View style={{ height, borderRadius, overflow: 'hidden', backgroundColor: C.surfaceAlt }} onLayout={width == null ? e => setW(Math.round(e.nativeEvent.layout.width)) : undefined}>
       {snap ? (
         <Image
           source={{ uri: snap }}
@@ -79,11 +87,9 @@ export function RouteMap({ id, polyline, line, pending = false, height, width, b
           transition={0}
           onError={() => { dcSet(key, null); setSnap(null); }}
         />
-      ) : (
-        <MiniMap seed={id} height={height} borderRadius={0} polyline={geom ?? undefined} />
-      )}
-      {canLive && (
-        <Animated.View style={[StyleSheet.absoluteFillObject, { opacity }]} pointerEvents="none">
+      ) : null}
+      {!snap && slot && geom && (
+        <View style={[StyleSheet.absoluteFillObject, { opacity: shown ? 1 : 0 }]} pointerEvents="none">
           <RealMap
             height={height}
             polyline={geom}
@@ -91,13 +97,16 @@ export function RouteMap({ id, polyline, line, pending = false, height, width, b
             distanceMarkers={distanceMarkers}
             units={units}
             officialDistanceKm={officialDistanceKm}
-            onReady={onReady}
+            onReady={() => { setTimeout(() => setShown(true), TILE_SETTLE_MS); }}
             onSnapshot={({ card, square: sq }) => {
               if (card) dcSet(keyCard, card);
               if (sq) dcSet(keySq, sq);
+              // keep THIS map on screen (no swap to the image mid-view); the
+              // snapshot serves the next mount. Free the pool slot now.
+              setDone(true);
             }}
           />
-        </Animated.View>
+        </View>
       )}
     </View>
   );

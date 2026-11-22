@@ -58,7 +58,7 @@ export function MyPostsTab({ runs, loading, loadingMore }: { runs: Run[]; loadin
                 accessibilityLabel={run.title ?? T('my.tabPosts')}
               >
                 <SafeImage uri={run.photo_thumb} style={{ width: cell, height: cell }}
-                  fallback={<RouteMap id={run.id} polyline={hasTrack ? run.polyline_thumb : null} height={cell} width={cell} square live={false} />} />
+                  fallback={<RouteMap id={run.id} polyline={hasTrack ? run.polyline_thumb : null} height={cell} width={cell} square />} />
               </Pressable>
             );
           })}

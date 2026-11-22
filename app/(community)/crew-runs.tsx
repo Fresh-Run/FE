@@ -71,7 +71,7 @@ export function RunCard({ run, units, mapLive, onOpen, kudosOff, onKudos, onCoun
   const lang = useLang(); // compiler-visible locale for the date/title formatters (2026-08-03 formatter-cache fix)
   const T = useT();
   // visual-split ruling: full track when fetched, thumb while loading
-  const { line: cardLine, pending: linePending } = useRunTrack(mapLive ? run.run_id : null, run.polyline_thumb);
+  const { line: cardLine, pending: linePending } = useRunTrack(run.run_id, run.polyline_thumb); // item ⑩-2: every card — the pool renders ahead
   return (
     <Pressable onPress={onOpen} style={({ pressed }) => [st.card, shadows.sm, pressed && { opacity: 0.85 }]}>
       <View style={st.cardHead}>
@@ -127,7 +127,7 @@ export function RunCard({ run, units, mapLive, onOpen, kudosOff, onKudos, onCoun
         // 실측성 게이트 (9/7): 지터-런은 트랙리스 취급 (스크리블 금지)
         if (!line || !isPlausibleTrack(line, run.distance_km)) return <RouteMap id={run.run_id} polyline={null} height={160} live={false} />;
         // item ⑩-2: snapshot → SVG curtain → live map (viewable only), track-gated
-        return <RouteMap id={run.run_id} polyline={run.polyline_thumb} line={cardLine} pending={linePending} height={160} live={mapLive} />;
+        return <RouteMap id={run.run_id} polyline={run.polyline_thumb} line={cardLine} pending={linePending} height={160} priority={mapLive ? 0 : 1} />;
       })()}
       <View style={st.cardBody}>
         <Text style={st.cardTitle}>{run.title ?? timeTitle(run.ran_at, lang)}</Text>

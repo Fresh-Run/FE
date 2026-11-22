@@ -60,7 +60,7 @@ function RunCard({ run, name, photoUrl, units, mapLive, kudosOff, onKudos, onCou
   const C = useTokens();
   const st = useStyles(makeSt);
   // visual-split ruling: full track when fetched, thumb while loading
-  const { line: cardLine, pending: linePending } = useRunTrack(mapLive ? run.id : null, run.polyline_thumb);
+  const { line: cardLine, pending: linePending } = useRunTrack(run.id, run.polyline_thumb); // item ⑩-2: every card — the pool renders ahead
   // 실측성 게이트 (9/7) — 공유 RunCard와 동일 문법 (지터-런 → 트랙리스 페이스)
   const plausible = isPlausibleTrack(cardLine ?? run.polyline_thumb, run.distance_km);
   return (
@@ -94,7 +94,7 @@ function RunCard({ run, name, photoUrl, units, mapLive, kudosOff, onKudos, onCou
           perf pattern as the feed); off-screen/trackless → route-shaped or
           seed SVG per the ledger rulings */}
       {/* item ⑩-2: snapshot → SVG curtain → live map (viewable only), track-gated */}
-      <RouteMap id={run.id} polyline={plausible ? run.polyline_thumb : null} line={plausible ? cardLine : null} pending={linePending} height={150} live={mapLive && plausible} />
+      <RouteMap id={run.id} polyline={plausible ? run.polyline_thumb : null} line={plausible ? cardLine : null} pending={linePending} height={150} live={plausible} priority={mapLive ? 0 : 1} />
       <View style={st.cardBody}>
         <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.cardTitle}>{run.title ?? timeTitle(run.ran_at, lang)}</Text>
         <View style={st.statsRow}>

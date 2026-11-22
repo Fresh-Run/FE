@@ -48,7 +48,7 @@ export function RunCard({ run, units, mapLive, onKudos, kudosOff, onOpen, onAvat
   const C = useTokens();
   const st = useStyles(makeSt);
   // visual-split ruling: full track when fetched, thumb while loading
-  const { line: cardLine, pending: linePending } = useRunTrack(mapLive ? run.run_id : null, run.polyline_thumb);
+  const { line: cardLine, pending: linePending } = useRunTrack(run.run_id, run.polyline_thumb); // item ⑩-2: every card — the pool renders ahead
   // 실측성 게이트 (9/7): 지터-런 (거리 대비 bbox 극소)은 지도 대신 트랙리스
   // 페이스 — 숫자와 모순되는 스크리블 금지 (lib/track-plausibility 진단 참조)
   const plausible = isPlausibleTrack(cardLine ?? run.polyline_thumb, run.distance_km);
@@ -80,7 +80,7 @@ export function RunCard({ run, units, mapLive, onKudos, kudosOff, onOpen, onAvat
       {/* polyline_thumb slice: viewable + thumb → real map; off-screen /
           trackless → route-shaped or seed SVG (ledger rulings) */}
       {/* item ⑩-2: snapshot → SVG curtain → live map (viewable only), track-gated */}
-      <RouteMap id={run.run_id} polyline={plausible ? run.polyline_thumb : null} line={plausible ? cardLine : null} pending={linePending} height={200} live={mapLive && plausible} />
+      <RouteMap id={run.run_id} polyline={plausible ? run.polyline_thumb : null} line={plausible ? cardLine : null} pending={linePending} height={200} live={plausible} priority={mapLive ? 0 : 1} />
       <View style={st.cardBody}>
         <Text maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE} style={st.cardTitle}>{run.title ?? timeTitle(run.ran_at, lang)}</Text>
         <View style={st.statsRow}>

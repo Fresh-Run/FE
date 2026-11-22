@@ -47,14 +47,14 @@ export function FeedCard({ run, units, mapLive, onKudos, kudosOff, onOpen, onAva
   const C = useTokens();
   const st = useStyles(makeSt);
   const { width } = useWindowDimensions();
-  const { line: cardLine, pending: linePending } = useRunTrack(mapLive ? run.run_id : null, run.polyline_thumb);
+  const { line: cardLine, pending: linePending } = useRunTrack(run.run_id, run.polyline_thumb); // item ⑩-2: every card — the pool renders ahead
   const plausible = isPlausibleTrack(cardLine ?? run.polyline_thumb, run.distance_km);
   // item ⑩-2: RouteMap = snapshot → SVG curtain → (live only on the viewable
   // card) native map fading in once the track is ready. The 88 overlay is
   // snapshot-or-SVG, never MapKit.
   const mapAt = (h: number, r: number, sq: boolean) => (
     <RouteMap id={run.run_id} polyline={plausible ? run.polyline_thumb : null} line={plausible ? cardLine : null} pending={linePending}
-      height={h} width={sq ? h : width} borderRadius={r} live={!sq && mapLive && plausible} square={sq} />
+      height={h} width={sq ? h : width} borderRadius={r} live={!sq && plausible} priority={mapLive ? 0 : 1} square={sq} />
   );
   const meta = fmtMonthDayTime(new Date(run.ran_at), lang, { weekday: 'short', monthStyle: 'numeric' }) + (run.area ? ` · ${run.area}` : '');
 
