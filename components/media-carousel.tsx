@@ -5,9 +5,11 @@
  * photos stays [] until run media lands server-side (R2, 지연-ask) — the
  * pager path ships typed but dormant.
  */
+import { Image } from 'expo-image';
+import { imageCacheKey } from '@/components/safe-image';
 import { RouteMap } from '@/components/route-map';
 import React, { useRef, useState } from 'react';
-import { FlatList, Pressable, Image, StyleSheet, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 
 import { MiniMap } from '@/components/mini-map';
 import { type Tokens } from '@/lib/theme';
@@ -87,9 +89,9 @@ export function MediaCarousel({ polyline, seed, photos = [], height, onMapPress,
                 ? <MapSlide polyline={polyline} seed={seed} height={height} onPress={onMapPress} distanceMarkers={distanceMarkers} units={units} officialDistanceKm={officialDistanceKm} lineHidden={lineHidden} />
                 : onPhotoPress
                   ? <Pressable onPress={() => onPhotoPress(slides.findIndex(s => s.key === item.key) - 1)}>
-                      <Image source={{ uri: item.uri }} style={{ width, height }} resizeMode="cover" />
+                      <Image source={{ uri: item.uri, cacheKey: imageCacheKey(item.uri) }} recyclingKey={imageCacheKey(item.uri)} style={{ width, height }} contentFit="cover" cachePolicy="memory-disk" transition={0} />
                     </Pressable>
-                  : <Image source={{ uri: item.uri }} style={{ width, height }} resizeMode="cover" />}
+                  : <Image source={{ uri: item.uri, cacheKey: imageCacheKey(item.uri) }} recyclingKey={imageCacheKey(item.uri)} style={{ width, height }} contentFit="cover" cachePolicy="memory-disk" transition={0} />}
             </View>
           )}
         />

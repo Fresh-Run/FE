@@ -5,8 +5,10 @@
  * paging + contain-fit only — NO pinch-zoom yet (stated scope; the modal
  * owns the surface a zoom gesture would later live on).
  */
+import { Image } from 'expo-image';
+import { imageCacheKey } from '@/components/safe-image';
 import React, { useRef, useState } from 'react';
-import { FlatList, Modal, Pressable, Image, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { FlatList, Modal, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/ui';
@@ -45,7 +47,7 @@ export function PhotoViewer({ visible, photos, initialIndex, onClose }: Props) {
           }}
           renderItem={({ item }) => (
             <Pressable onPress={onClose} style={{ width, height, alignItems: 'center', justifyContent: 'center' }}>
-              <Image source={{ uri: item }} style={{ width, height: height * 0.82 }} resizeMode="contain" />
+              <Image source={{ uri: item, cacheKey: imageCacheKey(item) }} style={{ width, height: height * 0.82 }} contentFit="contain" cachePolicy="memory-disk" transition={0} />
             </Pressable>
           )}
         />
